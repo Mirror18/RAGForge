@@ -1,0 +1,22 @@
+{
+  "parseReportId": "0190f5c2-7c1e-7abc-8def-1234567890b3",
+  "spaceId": "0190f5c2-7c1e-7abc-8def-1234567890ab",
+  "documentRevisionId": "0190f5c2-7c1e-7abc-8def-1234567890b1",
+  "artifactId": "0190f5c2-7c1e-7abc-8def-1234567890b2",
+  "version": 1,
+  "status": "SUCCEEDED",
+  "mediaType": "application/pdf",
+  "pageCount": 1,
+  "characterCount": 0,
+  "tokenCount": 0,
+  "nativePageCount": 0,
+  "ocrPageCount": 0,
+  "parserName": "native-pdf",
+  "parserVersion": "1.0.0",
+  "durationMs": 20,
+  "warnings": [],
+  "errors": [],
+  "extractedTextArtifactId": null,
+  "ocr": {"requested": true, "status": "UNAVAILABLE", "engine": null, "engineVersion": null, "triggerReason": "IMAGE_ONLY_PDF", "pages": [1], "sourceArtifactId": "0190f5c2-7c1e-7abc-8def-1234567890b2", "auditState": "BLOCKED"},
+  "createdAt": "2026-08-13T00:00:00Z"
+}

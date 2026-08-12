@@ -1,0 +1,9 @@
+{
+  "changeSetId": "0190f5c2-7c1e-7abc-8def-1234567890ae",
+  "spaceId": "0190f5c2-7c1e-7abc-8def-1234567890ab",
+  "sourceId": "0190f5c2-7c1e-7abc-8def-1234567890ac",
+  "baseCheckpointId": null,
+  "candidateCheckpoint": "scan-2",
+  "changes": [{"changeId": "0190f5c2-7c1e-7abc-8def-1234567890af", "sourceDocumentId": "0190f5c2-7c1e-7abc-8def-1234567890b0", "stableSourceObjectId": "file:bad", "kind": "ADD", "canonicalSourcePath": "notes\\bad.md", "oldCanonicalSourcePath": null, "basename": "bad.md", "sourceVersion": "v1", "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+  "discoveredAt": "2026-08-13T00:00:00Z"
+}

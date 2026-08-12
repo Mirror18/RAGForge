@@ -4,13 +4,14 @@
   "info": {
     "title": "RAGForge API",
     "version": "1.0.0",
-    "description": "Phase 1 and Phase 2 public REST/SSE contract. The operations are planned contracts; they do not claim that a server implementation is available.",
+    "description": "Phase 1, Phase 2 and Phase 3 public REST/SSE contract. The operations are planned contracts; they do not claim that a server implementation is available. Phase 3 source, sync-job, document and revision projections are versioned and space-scoped.",
     "license": {
       "name": "Proprietary project contract"
     }
   },
   "x-ragforge-contract-status": "planned",
   "x-ragforge-phase2-status": "phase2-contract",
+  "x-ragforge-phase3-status": "phase3-contract",
   "servers": [
     {
       "url": "/",
@@ -35,6 +36,12 @@
     },
     {
       "name": "runs"
+    },
+    {
+      "name": "sources"
+    },
+    {
+      "name": "ingestion"
     }
   ],
   "paths": {
@@ -504,6 +511,108 @@
         "requestBody": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RetryRunRequest"}}}},
         "responses": {"202": {"description": "Retry accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Run"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "429": {"$ref": "#/components/responses/TooManyRequests"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
+    },
+    "/api/v1/spaces/{spaceId}/sources": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["sources"],
+        "operationId": "listSources",
+        "summary": "List source connectors in a space",
+        "description": "Space-scoped source projections never return credentialRef, source credentials, source bytes or document text.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}],
+        "responses": {"200": {"description": "Sources", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SourcePage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      },
+      "post": {
+        "tags": ["sources"],
+        "operationId": "createSource",
+        "summary": "Create a read-only source connector",
+        "description": "Creates a versioned source projection. Credential configuration is resolved out-of-band and is never accepted in or returned from this resource payload.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SourceCreateRequest"}}}},
+        "responses": {"201": {"description": "Source created", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Source"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/sources/{sourceId}": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/SourceId"}],
+      "get": {
+        "tags": ["sources"], "operationId": "getSource", "summary": "Get a source connector projection", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Source", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Source"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      },
+      "put": {
+        "tags": ["sources"], "operationId": "updateSource", "summary": "Create the next immutable source configuration version", "description": "The update is space-checked and versioned; it cannot mutate a prior source version or introduce a credential into an event/log payload.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}, {"$ref": "#/components/parameters/IfMatch"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SourceUpdateRequest"}}}},
+        "responses": {"200": {"description": "Source version created", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Source"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/sources/{sourceId}/sync-jobs": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/SourceId"}],
+      "post": {
+        "tags": ["ingestion"], "operationId": "startSourceSync", "summary": "Request a source synchronization job", "description": "The request is idempotent by Idempotency-Key and returns a job projection. It only references source/revision/pipeline identities; it does not carry source bytes, full text or credentials.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SyncJobRequest"}}}},
+        "responses": {"202": {"description": "Sync job accepted", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SyncJob"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/sync-jobs": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["ingestion"], "operationId": "listSyncJobs", "summary": "List synchronization jobs", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}, {"$ref": "#/components/parameters/SyncJobStatus"}],
+        "responses": {"200": {"description": "Sync jobs", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SyncJobPage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/sync-jobs/{jobId}": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/SyncJobId"}],
+      "get": {
+        "tags": ["ingestion"], "operationId": "getSyncJob", "summary": "Get synchronization job status", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Sync job status", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SyncJob"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/documents": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["ingestion"], "operationId": "listDocuments", "summary": "List versioned source documents", "description": "The projection exposes source identity and active revision references, never source bytes or full extracted text.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}],
+        "responses": {"200": {"description": "Documents", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DocumentPage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/documents/{documentId}": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/DocumentId"}],
+      "get": {
+        "tags": ["ingestion"], "operationId": "getDocument", "summary": "Get a source document projection", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Document", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Document"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/documents/{documentId}/revisions": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/DocumentId"}],
+      "get": {
+        "tags": ["ingestion"], "operationId": "listDocumentRevisions", "summary": "List immutable document revisions", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}],
+        "responses": {"200": {"description": "Document revisions", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevisionPage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/documents/{documentId}/revisions/{revisionId}": {
+      "x-ragforge-implementation-status": "phase3-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/DocumentId"}, {"$ref": "#/components/parameters/DocumentRevisionId"}],
+      "get": {
+        "tags": ["ingestion"], "operationId": "getDocumentRevision", "summary": "Get an immutable document revision projection", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Document revision", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DocumentRevision"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
     }
   },
   "components": {
@@ -585,6 +694,36 @@
         "in": "path",
         "required": true,
         "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "SourceId": {
+        "name": "sourceId",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "SyncJobId": {
+        "name": "jobId",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "DocumentId": {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "DocumentRevisionId": {
+        "name": "revisionId",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "SyncJobStatus": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {"type": "string", "enum": ["REQUESTED", "RUNNING", "SUCCEEDED", "FAILED", "RETRY_SCHEDULED", "DLQ"]}
       },
       "IfMatch": {
         "name": "If-Match",
@@ -839,6 +978,51 @@
       "StepPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Step"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
       "ModelInvocation": {"type": "object", "additionalProperties": false, "required": ["modelInvocationId", "spaceId", "runId", "stepId", "version", "correlationId", "modelProfileId", "modelProfileVersion", "status", "attempt", "usageLedgerId", "createdAt"], "properties": {"modelInvocationId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "stepId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileVersion": {"type": "integer", "minimum": 1}, "status": {"$ref": "#/components/schemas/RunStatus"}, "attempt": {"type": "integer", "minimum": 1, "maximum": 5}, "usageLedgerId": {"$ref": "#/components/schemas/UuidV7"}, "error": {"oneOf": [{"$ref": "#/components/schemas/RunError"}, {"type": "null"}]}, "createdAt": {"type": "string", "format": "date-time"}, "finishedAt": {"type": ["string", "null"], "format": "date-time"}}},
       "UsageLedger": {"type": "object", "additionalProperties": false, "required": ["usageLedgerId", "spaceId", "runId", "modelInvocationId", "version", "correlationId", "source", "dedupeKey", "inputTokens", "outputTokens", "totalTokens", "isFinal", "recordedAt"], "properties": {"usageLedgerId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "modelInvocationId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "source": {"$ref": "#/components/schemas/UsageSource"}, "dedupeKey": {"type": "string", "minLength": 10, "maxLength": 512, "pattern": "^[A-Za-z0-9._:-]+$"}, "inputTokens": {"type": "integer", "minimum": 0}, "outputTokens": {"type": "integer", "minimum": 0}, "totalTokens": {"type": "integer", "minimum": 0}, "isFinal": {"type": "boolean"}, "recordedAt": {"type": "string", "format": "date-time"}}, "description": "Usage is upserted by (spaceId, modelInvocationId, source, dedupeKey); duplicate provider reports do not create a second ledger row.", "x-ragforge-uniqueness": ["spaceId", "modelInvocationId", "source", "dedupeKey"], "x-ragforge-on-duplicate": "upsert-same-ledger-row"},
+      "Source": {"$ref": "../ingestion/ingestion-domain.v1.schema.json#/$defs/source"},
+      "SourceCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["connectorType", "displayName", "rootRef", "include", "exclude"],
+        "properties": {
+          "connectorType": {"type": "string", "enum": ["FILESYSTEM", "LOCAL_DIRECTORY", "GIT", "OBSIDIAN_VAULT"]},
+          "displayName": {"type": "string", "minLength": 1, "maxLength": 120},
+          "rootRef": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"},
+          "include": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+          "exclude": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 512}}
+        },
+        "description": "Credential binding is configured out-of-band; credentialRef is intentionally not an API request field."
+      },
+      "SourceUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "displayName", "rootRef", "include", "exclude", "sourceState"],
+        "properties": {
+          "version": {"type": "integer", "minimum": 1},
+          "displayName": {"type": "string", "minLength": 1, "maxLength": 120},
+          "rootRef": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"},
+          "include": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+          "exclude": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+          "sourceState": {"type": "string", "enum": ["ACTIVE", "PAUSED"]}
+        }
+      },
+      "SourcePage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Source"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
+      "PipelineVersion": {"$ref": "../ingestion/ingestion-domain.v1.schema.json#/$defs/pipelineVersion"},
+      "SyncJobRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode", "pipelineVersionId"],
+        "properties": {
+          "mode": {"type": "string", "enum": ["FULL_SYNC", "INCREMENTAL_SYNC", "DOCUMENT_UPSERT", "DOCUMENT_DELETE"]},
+          "pipelineVersionId": {"$ref": "#/components/schemas/UuidV7"},
+          "documentIds": {"type": "array", "maxItems": 1000, "items": {"$ref": "#/components/schemas/UuidV7"}}
+        }
+      },
+      "SyncJob": {"$ref": "../ingestion/ingestion-domain.v1.schema.json#/$defs/ingestionJob"},
+      "SyncJobPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/SyncJob"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
+      "Document": {"$ref": "../ingestion/ingestion-domain.v1.schema.json#/$defs/sourceDocument"},
+      "DocumentPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Document"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
+      "DocumentRevision": {"$ref": "../ingestion/ingestion-domain.v1.schema.json#/$defs/documentRevision"},
+      "RevisionPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/DocumentRevision"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
       "SseEvent": {"type": "object", "additionalProperties": false, "required": ["id", "sequence", "runId", "spaceId", "correlationId", "occurredAt", "type", "version", "payload"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "sequence": {"type": "integer", "minimum": 1}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "occurredAt": {"type": "string", "format": "date-time"}, "type": {"type": "string", "enum": ["run.snapshot", "run.status", "step.status", "answer.delta", "citation.added", "usage.updated", "run.error", "run.completed"]}, "version": {"type": "string", "pattern": "^v[1-9][0-9]*$"}, "payload": {"type": "object", "propertyNames": {"not": {"enum": ["password", "secret", "apiKey", "accessToken", "documentContent", "fullText", "rawDocument"]}}}}, "description": "SSE IDs are monotonic by sequence per run. Last-Event-ID replay is followed by live events; snapshot recovery is used when the cursor is unavailable."},
       "CancelRunRequest": {"type": "object", "additionalProperties": false, "properties": {"reason": {"type": "string", "maxLength": 500}}},
       "RetryRunRequest": {"type": "object", "additionalProperties": false, "properties": {"reason": {"type": "string", "maxLength": 500}, "maxAttempts": {"type": "integer", "minimum": 1, "maximum": 5}}},
