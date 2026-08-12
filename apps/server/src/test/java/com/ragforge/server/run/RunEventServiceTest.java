@@ -42,7 +42,7 @@ class RunEventServiceTest {
         RunRepository.RunRecord running = run(RunRepository.RunStatus.RUNNING, 3);
         RunRepository.RunRecord cancelled = run(RunRepository.RunStatus.CANCELLED, 4);
         RunEvent event = new RunEvent(UUID.randomUUID(), 1, RUN_ID, SPACE_ID, CORRELATION_ID,
-                Instant.now(), "run.cancelled", 1, "{\"status\":\"CANCELLED\"}");
+                Instant.now(), "run.status", 1, "{\"status\":\"CANCELLED\"}");
         when(repository.findRun(SPACE_ID, RUN_ID)).thenReturn(Optional.of(running));
         when(repository.transitionRun(eq(SPACE_ID), eq(RUN_ID), eq(RunRepository.RunStatus.CANCELLED),
                 eq(RunRepository.ErrorClass.CANCELLED), eq("run_cancelled"), any(), eq(3L)))

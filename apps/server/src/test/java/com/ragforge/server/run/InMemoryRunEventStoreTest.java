@@ -70,7 +70,7 @@ class InMemoryRunEventStoreTest {
         assertThatThrownBy(() -> store.append(event("answer.delta", "{\"text\":\"late\"}")))
                 .isInstanceOf(RunCancelledException.class);
         assertThat(store.replay(SPACE_ID, RUN_ID, null).events())
-                .extracting(RunEvent::type).containsExactly("run.status", "run.cancelled");
+                .extracting(RunEvent::type).containsExactly("run.status", "run.status");
     }
 
     @Test

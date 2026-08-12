@@ -4,12 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.common.CorrelationIdFilter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -57,8 +62,11 @@ public class RunEventController {
     }
 
     @PostMapping("/cancel")
+    @ResponseStatus(HttpStatus.ACCEPTED)
     public CancelResponse cancel(@PathVariable UUID spaceId, @PathVariable UUID runId,
+                                @Valid @RequestBody(required = false) CancelRunRequest cancelRequest,
                                 HttpServletRequest request) {
+        // The reason is accepted for the public contract and is intentionally not persisted in this slice.
         UUID correlationId = UUID.fromString(CorrelationIdFilter.current(request));
         RunEventStore.CancellationResult result = service.cancel(spaceId, runId, correlationId);
         return new CancelResponse("CANCELLED", result.firstCancellation(), result.event().eventId(),
@@ -86,16 +94,16 @@ public class RunEventController {
         }
     }
 
-    private ObjectNode eventEnvelope(RunEvent event) {
+    ObjectNode eventEnvelope(RunEvent event) {
         ObjectNode envelope = objectMapper.createObjectNode();
-        envelope.put("eventId", event.eventId().toString());
+        envelope.put("id", event.eventId().toString());
         envelope.put("sequence", event.sequence());
         envelope.put("runId", event.runId().toString());
         envelope.put("spaceId", event.spaceId().toString());
         envelope.put("correlationId", event.correlationId().toString());
         envelope.put("occurredAt", event.occurredAt().toString());
         envelope.put("type", event.type());
-        envelope.put("version", event.version());
+        envelope.put("version", "v" + event.version());
         envelope.set("payload", PayloadPolicy.parse(event.payloadJson()));
         return envelope;
     }
@@ -113,5 +121,8 @@ public class RunEventController {
     }
 
     public record CancelResponse(String status, boolean firstCancellation, UUID eventId, long sequence) {
+    }
+
+    public record CancelRunRequest(@Size(max = 500) String reason) {
     }
 }

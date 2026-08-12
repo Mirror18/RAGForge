@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 
 /** Replaceable port for short-lived run event retention and live delivery. */
 public interface RunEventStore {
-    String CANCELLED_EVENT_TYPE = "run.cancelled";
+    String RUN_STATUS_EVENT_TYPE = "run.status";
 
     RunEvent append(RunEventDraft draft);
 
