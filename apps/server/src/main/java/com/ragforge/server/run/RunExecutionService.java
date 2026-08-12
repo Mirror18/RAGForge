@@ -12,7 +12,6 @@ import com.ragforge.server.provider.adapter.EgressClass;
 import com.ragforge.server.provider.adapter.EgressDecision;
 import com.ragforge.server.provider.adapter.EgressPolicy;
 import com.ragforge.server.provider.adapter.ModelCapability;
-import com.ragforge.server.provider.adapter.ProviderAdapter;
 import com.ragforge.server.provider.adapter.ProviderAdapterException;
 import com.ragforge.server.provider.adapter.ProviderChatRequest;
 import com.ragforge.server.provider.adapter.ProviderChatResponse;
@@ -33,8 +32,11 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /** Minimal synchronous no-RAG conversation execution boundary. */
@@ -48,6 +50,11 @@ public class RunExecutionService {
     private final PromptRepository prompts;
     private final ProviderAdapterRegistry providerAdapters;
     private final ObjectMapper objectMapper;
+    private final ConcurrentHashMap<UUID, ExecutionControl> controls = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, RunRequest> executionRequests = new ConcurrentHashMap<>();
+    private static final Set<RunRepository.ErrorClass> RETRYABLE_ERRORS = Set.of(
+            RunRepository.ErrorClass.TIMEOUT, RunRepository.ErrorClass.UNAVAILABLE,
+            RunRepository.ErrorClass.RATE_LIMIT);
 
     public RunExecutionService(ConversationRepository conversations, RunRepository runs, RunEventService events,
                                SpaceRepository spaces, ProviderRepository providers, PromptRepository prompts,
@@ -86,9 +93,60 @@ public class RunExecutionService {
         RunRepository.RunRecord run = runs.createRun(new RunRepository.NewRun(runId, spaceId, conversationId,
                 principal.userId(), correlationId, RunRepository.RequestKind.CHAT, RunRepository.RunStatus.QUEUED,
                 route.route().id(), prompt.id(), inputHash, null, null, null, null, null, now));
+        executionRequests.put(runId, request);
+        ExecutionControl control = new ExecutionControl();
+        controls.put(runId, control);
         emit(run, "run.status", statusPayload("QUEUED", null));
-        execute(run, request, route, prompt);
+        try {
+            execute(run, request, route, prompt, control);
+        } finally {
+            controls.remove(runId, control);
+        }
         return runs.findRun(spaceId, runId).orElseThrow();
+    }
+
+    public RunRepository.RunRecord cancel(UUID spaceId, UUID runId, SessionPrincipal principal,
+                                          UUID correlationId) {
+        requireRole(spaceId, principal, true);
+        ExecutionControl control = controls.get(runId);
+        if (control != null) {
+            control.cancel();
+        }
+        RunRepository.RunRecord current = runs.findRun(spaceId, runId)
+                .orElseThrow(() -> notFound("run_not_found", "Run not found"));
+        if (current.status() == RunRepository.RunStatus.QUEUED
+                || current.status() == RunRepository.RunStatus.RUNNING
+                || current.status() == RunRepository.RunStatus.CANCELLED) {
+            try {
+                events.cancel(spaceId, runId, correlationId);
+            } catch (IllegalStateException race) {
+                RunRepository.RunRecord afterRace = runs.findRun(spaceId, runId).orElseThrow();
+                if (afterRace.status() != RunRepository.RunStatus.SUCCEEDED
+                        && afterRace.status() != RunRepository.RunStatus.FAILED
+                        && afterRace.status() != RunRepository.RunStatus.CANCELLED) {
+                    throw race;
+                }
+            }
+        }
+        return runs.findRun(spaceId, runId).orElseThrow();
+    }
+
+    public RunRepository.RunRecord retry(UUID spaceId, UUID runId, SessionPrincipal principal,
+                                         UUID correlationId) {
+        requireRole(spaceId, principal, true);
+        RunRepository.RunRecord failed = runs.findRun(spaceId, runId)
+                .orElseThrow(() -> notFound("run_not_found", "Run not found"));
+        if (failed.status() != RunRepository.RunStatus.FAILED
+                || !RETRYABLE_ERRORS.contains(failed.errorClass())) {
+            throw new ApiException(HttpStatus.CONFLICT, "run_not_retryable", "Run is not retryable",
+                    "Only retryable failed runs can be retried");
+        }
+        RunRequest request = executionRequests.get(runId);
+        if (request == null || failed.conversationId() == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "retry_context_unavailable", "Retry is unavailable",
+                    "The execution request is no longer available");
+        }
+        return createRun(spaceId, failed.conversationId(), principal, request, correlationId);
     }
 
     public RunRepository.RunRecord getRun(UUID spaceId, UUID runId, SessionPrincipal principal) {
@@ -102,18 +160,30 @@ public class RunExecutionService {
     }
 
     private void execute(RunRepository.RunRecord run, RunRequest request, ValidatedRoute route,
-                         PromptRepository.PromptVersion prompt) {
+                         PromptRepository.PromptVersion prompt, ExecutionControl control) {
         UUID spaceId = run.spaceId();
         Instant now = Instant.now();
-        RunRepository.RunRecord running = runs.transitionRun(spaceId, run.id(), RunRepository.RunStatus.RUNNING,
-                null, null, now, run.version());
+        RunRepository.RunRecord running;
+        try {
+            if (control.token.isCancellationRequested()) {
+                return;
+            }
+            running = runs.transitionRun(spaceId, run.id(), RunRepository.RunStatus.RUNNING,
+                    null, null, now, run.version());
+        } catch (IllegalStateException transitionFailure) {
+            RunRepository.RunRecord current = runs.findRun(spaceId, run.id()).orElseThrow();
+            if (current.status() == RunRepository.RunStatus.CANCELLED) {
+                return;
+            }
+            throw transitionFailure;
+        }
         emit(running, "run.status", statusPayload("RUNNING", null));
         UUID stepId = UUID.randomUUID();
         RunRepository.StepRecord step = runs.createStep(new RunRepository.NewStep(stepId, spaceId, run.id(),
                 "generate", RunRepository.StepType.GENERATE, 1, 1, RunRepository.RunStatus.QUEUED,
                 null, null, now, run.correlationId()));
         emitStep(step);
-        CancellationToken cancellation = new CancellationToken();
+        CancellationToken cancellation = control.token;
         UUID invocationId = UUID.randomUUID();
         String providerIdentity = "run-" + run.id();
         try {
@@ -123,25 +193,33 @@ public class RunExecutionService {
                             new ChatMessage("user", request.message())),
                     Duration.ofSeconds(request.timeoutSeconds()), route.profile().maxOutputTokens(),
                     java.util.Set.of(ModelCapability.CHAT), false);
-            ProviderChatResponse response = providerAdapters.require(route.connection().providerType())
-                    .chat(route.connection(), route.egressDecision(), providerRequest,
-                            cancellation).toCompletableFuture().get(request.timeoutSeconds() + 1L, TimeUnit.SECONDS);
-            String outputHash = sha256(response.content());
-            runs.createInvocation(new RunRepository.NewModelInvocation(invocationId, spaceId, run.id(), stepId,
-                    route.connectionRecord().id(), route.profile().id(), route.route().id(), prompt.id(), providerIdentity,
-                    sha256(prompt.template() + "\n" + request.message()), "{\"messageCount\":2}", outputHash,
-                    RunRepository.InvocationStatus.SUCCEEDED, null, null, Instant.now(), run.correlationId()));
-            recordUsage(response, spaceId, invocationId, providerIdentity, run.correlationId(), request.message(), response.content());
-            RunRepository.StepRecord completedStep = runs.updateStep(spaceId, stepId, RunRepository.RunStatus.SUCCEEDED,
-                    null, null, Instant.now());
-            emitStep(completedStep);
-            RunRepository.RunRecord completed = runs.transitionRun(spaceId, run.id(), RunRepository.RunStatus.SUCCEEDED,
-                    null, null, Instant.now(), running.version(), outputHash);
-            emit(completed, "run.status", statusPayload("SUCCEEDED", null));
-            emit(completed, "run.completed", answerPayload(outputHash));
+            CompletableFuture<ProviderChatResponse> providerFuture = providerAdapters.require(route.connection().providerType())
+                    .chat(route.connection(), route.egressDecision(), providerRequest, cancellation).toCompletableFuture();
+            control.providerFuture = providerFuture;
+            ProviderChatResponse response = providerFuture.get(request.timeoutSeconds() + 1L, TimeUnit.SECONDS);
+            synchronized (control) {
+                if (control.token.isCancellationRequested()) {
+                    throw new ProviderAdapterException(ProviderErrorClass.CANCELLED,
+                            "Provider request cancelled", providerRequest.identity().requestId(), 0);
+                }
+                String outputHash = sha256(response.content());
+                runs.createInvocation(new RunRepository.NewModelInvocation(invocationId, spaceId, run.id(), stepId,
+                        route.connectionRecord().id(), route.profile().id(), route.route().id(), prompt.id(), providerIdentity,
+                        sha256(prompt.template() + "\n" + request.message()), "{\"messageCount\":2}", outputHash,
+                        RunRepository.InvocationStatus.SUCCEEDED, null, null, Instant.now(), run.correlationId()));
+                recordUsage(response, spaceId, invocationId, providerIdentity, run.correlationId(), request.message(), response.content());
+                RunRepository.StepRecord completedStep = runs.updateStep(spaceId, stepId, RunRepository.RunStatus.SUCCEEDED,
+                        null, null, Instant.now());
+                emitStep(completedStep);
+                RunRepository.RunRecord completed = runs.transitionRun(spaceId, run.id(), RunRepository.RunStatus.SUCCEEDED,
+                        null, null, Instant.now(), running.version(), outputHash);
+                emit(completed, "run.status", statusPayload("SUCCEEDED", null));
+                emit(completed, "run.completed", answerPayload(outputHash));
+            }
         } catch (Exception failure) {
             Throwable cause = unwrap(failure);
-            ProviderErrorClass providerError = cause instanceof ProviderAdapterException exception
+            ProviderErrorClass providerError = control.token.isCancellationRequested()
+                    ? ProviderErrorClass.CANCELLED : cause instanceof ProviderAdapterException exception
                     ? exception.errorClass() : ProviderErrorClass.INVALID_RESPONSE;
             RunRepository.ErrorClass errorClass = mapError(providerError);
             String errorCode = providerError.name().toLowerCase(java.util.Locale.ROOT);
@@ -155,10 +233,27 @@ public class RunExecutionService {
                     providerError == ProviderErrorClass.CANCELLED ? RunRepository.RunStatus.CANCELLED : RunRepository.RunStatus.FAILED,
                     errorClass, errorCode, Instant.now());
             emitStep(failedStep);
-            RunRepository.RunRecord failed = runs.transitionRun(spaceId, run.id(),
+            RunRepository.RunRecord current = runs.findRun(spaceId, run.id()).orElseThrow();
+            RunRepository.RunRecord failed = current.status() == RunRepository.RunStatus.CANCELLED
+                    ? current : runs.transitionRun(spaceId, run.id(),
                     providerError == ProviderErrorClass.CANCELLED ? RunRepository.RunStatus.CANCELLED : RunRepository.RunStatus.FAILED,
                     errorClass, errorCode, Instant.now(), running.version());
-            emit(failed, "run.status", statusPayload(failed.status().name(), errorCode));
+            if (current.status() != RunRepository.RunStatus.CANCELLED) {
+                emit(failed, "run.status", statusPayload(failed.status().name(), errorCode));
+            }
+        }
+    }
+
+    private static final class ExecutionControl {
+        private final CancellationToken token = new CancellationToken();
+        private volatile CompletableFuture<?> providerFuture;
+
+        private synchronized void cancel() {
+            token.cancel();
+            CompletableFuture<?> future = providerFuture;
+            if (future != null) {
+                future.cancel(true);
+            }
         }
     }
 

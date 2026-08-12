@@ -71,6 +71,9 @@ public class RunEventService {
         Object lock = cancellationLocks.computeIfAbsent(new RunKey(spaceId, runId), ignored -> new Object());
         synchronized (lock) {
             RunRepository.RunRecord current = requireRun(spaceId, runId);
+            if (isTerminal(current.status())) {
+                return new RunEventStore.CancellationResult(false, latestStatusEvent(spaceId, runId));
+            }
             if (current.status() != RunRepository.RunStatus.CANCELLED) {
                 try {
                     runRepository.transitionRun(spaceId, runId, RunRepository.RunStatus.CANCELLED,
@@ -78,6 +81,10 @@ public class RunEventService {
                             current.version());
                 } catch (IllegalStateException exception) {
                     RunRepository.RunRecord afterRace = requireRun(spaceId, runId);
+                    if (afterRace.status() == RunRepository.RunStatus.SUCCEEDED
+                            || afterRace.status() == RunRepository.RunStatus.FAILED) {
+                        return new RunEventStore.CancellationResult(false, latestStatusEvent(spaceId, runId));
+                    }
                     if (afterRace.status() != RunRepository.RunStatus.CANCELLED) {
                         throw exception;
                     }
@@ -95,6 +102,17 @@ public class RunEventService {
     private RunRepository.RunRecord requireRun(UUID spaceId, UUID runId) {
         return runRepository.findRun(spaceId, runId).orElseThrow(() ->
                 new ApiException(HttpStatus.NOT_FOUND, "run_not_found", "Run not found", "Run not found"));
+    }
+
+    private boolean isTerminal(RunRepository.RunStatus status) {
+        return status == RunRepository.RunStatus.SUCCEEDED || status == RunRepository.RunStatus.FAILED;
+    }
+
+    private RunEvent latestStatusEvent(UUID spaceId, UUID runId) {
+        return eventStore.replay(spaceId, runId, null).events().stream()
+                .filter(event -> RunEventStore.RUN_STATUS_EVENT_TYPE.equals(event.type()))
+                .reduce((first, second) -> second)
+                .orElse(null);
     }
 
     private RunEventStore.ReplayResult withRunStatus(RunEventStore.ReplayResult replay,
