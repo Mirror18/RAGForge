@@ -124,7 +124,7 @@ public class InMemoryRunEventStore implements RunEventStore {
             }
             buffer.cancelled = true;
             RunEvent event = new RunEvent(UuidV7.random(), ++buffer.latestSequence, runId, spaceId, correlationId,
-                    now, CANCELLED_EVENT_TYPE, 1,
+                    now, RUN_STATUS_EVENT_TYPE, 1,
                     "{\"runId\":\"%s\",\"spaceId\":\"%s\",\"status\":\"CANCELLED\"}"
                             .formatted(runId, spaceId));
             buffer.cancellationEvent = event;
