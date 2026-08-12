@@ -61,4 +61,3 @@
 - OCR 与普通任务不同队列/worker concurrency。
 - context/token 上限和文档/网页/上传大小限制。
 - backpressure 优先于无界排队；向用户返回可解释的 retry-after。
-

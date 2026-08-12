@@ -25,4 +25,3 @@
 ## Third-party changes
 
 <!-- Dependency/license/SBOM/reuse-register impact. -->
-

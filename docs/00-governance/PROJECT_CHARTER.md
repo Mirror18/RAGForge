@@ -82,4 +82,3 @@ RAGForge 用一个真实 Obsidian 仓库作为首批数据源，系统性学习�
 3. S3-compatible 实现的开发/生产选型。
 4. 对外开放 REST API 时 service token 的轮换周期和细粒度 scope。
 5. 是否在 MVP 后支持 OIDC/LDAP，以及迁移策略。
-

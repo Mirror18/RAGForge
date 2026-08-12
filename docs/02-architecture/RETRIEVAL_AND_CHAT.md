@@ -87,4 +87,3 @@ MVP 工具：
 - 服务端短期保存事件，客户端可用 `Last-Event-ID` 重连。
 - cancel 是幂等操作；Run 进入 `CANCELLED` 后不再接受新增 answer delta。
 - 调用重试创建新 invocation；usage ledger 用供应商 request ID 或本地幂等键去重。
-

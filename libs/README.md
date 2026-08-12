@@ -7,4 +7,3 @@
 - `python/`：AI Runtime 的内部 schema/client，优先从 contracts 生成。
 
 业务聚合、JPA entity、Spring bean 和供应商 SDK 不放共享库。新增共享库需说明 owner、消费者、兼容政策和发布方式。
-

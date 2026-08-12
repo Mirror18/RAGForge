@@ -15,4 +15,3 @@ ADR 采用不可变历史：决策变更时新增 ADR 并把旧文档标记为 `
 | [0009](0009-upstream-reuse-policy.md) | Accepted | 依赖优先、源码复用登记和许可证闸门 |
 
 模板必填项：Status、Date、Context、Decision、Consequences、Alternatives、References。
-

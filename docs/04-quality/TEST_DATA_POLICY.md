@@ -18,4 +18,3 @@
 ## 3. 可复现性
 
 大数据集不直接进 Git 时，提供固定 seed 的生成器、manifest、文件 hash、大小和版本。每个 Evaluation Run 保存 dataset manifest hash。
-

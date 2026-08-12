@@ -51,4 +51,3 @@ flowchart LR
 ## 5. 待完成分析
 
 Phase 1 后对实际数据流做 STRIDE review；Phase 5 对 Agent/tool 做专门 misuse-case review；每次新增 connector/provider/tool 或文档级 ACL 前更新本模型。
-

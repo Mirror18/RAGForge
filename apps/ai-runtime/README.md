@@ -12,4 +12,3 @@ Python 内部服务仅承担 Java 生态不适合或模型运行更方便的能�
 - API 使用 versioned contract、请求/响应大小限制、超时和取消。
 - 模型在启动时加载，提供 readiness/capabilities，不在每次请求临时下载。
 - 默认无任意外网和文件系统访问。
-

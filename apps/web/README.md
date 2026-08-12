@@ -10,4 +10,3 @@
 - Platform Admin：用户、Provider、审计、评估和系统健康。
 
 前端角色只控制导航和交互，不构成安全边界。OpenAPI 生成的 TypeScript client 放 `libs/typescript/`，手写请求必须有明确理由。
-

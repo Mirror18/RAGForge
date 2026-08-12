@@ -93,4 +93,3 @@ Parse Report 包含：
 - 每 Step 时延、重试、DLQ、队列深度、最老消息年龄。
 - embedding token、成本、cache hit 和 provider error。
 - published/failed index count、索引大小、孤儿 point count。
-

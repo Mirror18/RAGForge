@@ -40,4 +40,3 @@
 ## 6. Obsidian 特别规则
 
 个人 Obsidian 仓库属于 Private local：默认不允许云出境，不进入 GitHub、CI fixtures 或长期调试 artifacts。若以后批准某个脱敏空间使用云模型，必须以空间级清单和评估数据记录范围。
-

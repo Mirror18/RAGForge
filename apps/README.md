@@ -10,4 +10,3 @@
 | `ai-runtime` | Python | OCR、rerank 等窄职责内部能力 |
 
 真正创建 build files 时，根级 task runner 提供统一的 `dev`、`test`、`lint`、`build`、`compose-up` 入口；各应用仍可独立执行测试。
-

@@ -84,4 +84,3 @@ MVP 门槛：faithfulness、citation precision、abstention accuracy 各 `>= 0.9
 - 能力声明变化运行 provider contract + 相关评估切片。
 - 零容忍：跨空间泄漏、Evidence 外引用、未授权云端调用。
 - 未达门槛的候选不得成为 active；接受质量退化必须有明确业务收益和 ADR。
-

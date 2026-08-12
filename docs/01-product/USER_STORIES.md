@@ -75,4 +75,3 @@
 ### US-OP-02 恢复备份
 
 验收：在隔离环境按 Runbook 恢复 PostgreSQL、对象和 Qdrant，验证引用一致性，并记录实际 RPO/RTO。
-

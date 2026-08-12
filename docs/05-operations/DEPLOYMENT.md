@@ -56,4 +56,3 @@ Ollama 默认运行在宿主机，通过明确地址连接；生产可替换为�
 ## 8. Kubernetes
 
 `deploy/kubernetes/` 仅预留。没有证明 Compose 无法满足可靠性、组织或容量需求前，不维护第二套生产部署面。
-

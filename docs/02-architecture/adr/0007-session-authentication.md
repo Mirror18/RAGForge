@@ -16,4 +16,3 @@
 - 权限撤销直接可靠。
 - 多实例依赖共享 Session store。
 - API token 和 Web Session 必须走不同认证链与测试集。
-

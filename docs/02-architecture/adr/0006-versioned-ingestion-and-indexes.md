@@ -16,4 +16,3 @@ Document Revision、Pipeline Version、Artifact、Chunk、Embedding 和 Index Ve
 - 可回滚、A/B 比较和复现回答。
 - 构建期需要额外存储容量。
 - Schema 和任务必须显式携带版本，不能依赖“当前配置”。
-

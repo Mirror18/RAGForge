@@ -20,4 +20,3 @@ RAG 质量不能只依赖人工感觉，也不应被某个观测产品锁定。�
 ## References
 
 - [Langfuse Spring AI via OpenTelemetry](https://langfuse.com/integrations/frameworks/spring-ai)
-

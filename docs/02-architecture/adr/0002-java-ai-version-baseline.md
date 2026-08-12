@@ -22,4 +22,3 @@
 - [Spring AI](https://github.com/spring-projects/spring-ai)
 - [Spring AI Alibaba Extensions](https://github.com/spring-ai-alibaba/spring-ai-extensions)
 - [Extensions parent POM](https://github.com/spring-ai-alibaba/spring-ai-extensions/blob/main/pom.xml)
-

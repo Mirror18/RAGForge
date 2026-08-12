@@ -5,4 +5,3 @@ Java Worker 消费 RabbitMQ 任务，执行 [版本化摄取流水线](../../doc
 计划队列按资源类型区分：普通 parse/index、OCR-heavy、maintenance/rebuild。并发、prefetch、timeout 和 retry 必须有界；消息至少一次投递，处理器幂等。
 
 Worker 只发布候选索引和结果事件，active index 的最终切换由主系统验证并授权。
-

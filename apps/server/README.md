@@ -23,4 +23,3 @@ com.ragforge
 每个业务模块内部使用 `domain`、`application`、`adapter.in`、`adapter.out`，但不为了目录美观创建空层。模块公共类型保持最小；Spring AI、JPA、Qdrant 或供应商 SDK 类型不穿透到 domain。
 
 入口能力：REST `/api/v1`、SSE、Session/security、Outbox relay、online retrieval/chat、admin API。批量解析不在本进程执行。
-

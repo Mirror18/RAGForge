@@ -118,4 +118,3 @@ SPI 输入输出必须使用仓库自有的稳定领域对象；第三方 SDK �
 - 文档读取能力优先评估 [Spring AI Alibaba Extensions](https://github.com/spring-ai-alibaba/spring-ai-extensions)，但企业 Obsidian 增量连接器由本项目掌控。
 - 摄取可解释性、父子分块和 Retrieval Test 参考 [RAGFlow](https://github.com/infiniflow/ragflow)，复用代码时遵守 Apache-2.0 Notice。
 - 工作区和本地优先体验参考 [AnythingLLM](https://github.com/Mintplex-Labs/anything-llm)，不照搬其整体架构。
-

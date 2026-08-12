@@ -18,4 +18,3 @@
 选择 RAGForge 自有许可证不能改变第三方组件的义务。Apache/MIT 源码的 attribution、GPL/修改许可的限制、Langfuse EE 等目录边界仍按上游精确版本处理。具体流程见 [开源合规](../06-security-compliance/OSS_COMPLIANCE.md)。
 
 正式公开前应根据实际商业模式进行法律复核；本文件是工程治理基线，不是法律意见。
-

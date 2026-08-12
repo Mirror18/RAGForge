@@ -124,4 +124,3 @@ RAGForge 是供企业内部团队部署的通用知识助手。它把分散文�
 - [RAGFlow：数据摄取与 Retrieval Test 产品参考](https://github.com/infiniflow/ragflow)
 - [AnythingLLM：工作区和本地优先体验参考](https://github.com/Mintplex-Labs/anything-llm)
 - [Spring AI：Java AI 应用抽象](https://github.com/spring-projects/spring-ai)
-

@@ -38,4 +38,3 @@ Approval date:
 ## 3. 当前声明
 
 当前所有可用项仍为 `CANDIDATE`，本仓库没有 vendored third-party source。开始编码时精确锁定版本并更新 `THIRD_PARTY_NOTICES.md`、`licenses/` 和 SBOM。
-

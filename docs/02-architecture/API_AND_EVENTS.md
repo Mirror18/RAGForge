@@ -79,4 +79,3 @@ POST   /api/v1/spaces/{spaceId}/runs/{runId}/cancel
 ## 6. OpenAPI 生命周期
 
 OpenAPI 是对外 REST 契约的事实来源。CI 至少检查语法、lint、breaking change、生成客户端一致性和敏感字段示例。API 尚未实现前，`contracts/openapi/` 只保留规范和 README，不提交虚假可用接口。
-

@@ -55,4 +55,3 @@
 - 风险较高的 prompt injection/SSRF/upload 用例进入持续回归。
 
 设计参考后续实现时应核对最新 [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/)、[OWASP Top 10 for LLM Applications](https://genai.owasp.org/llm-top-10/) 和所用框架官方安全指南。
-
