@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,11 +24,11 @@ public class RunRepository {
     public RunRecord createRun(NewRun input) {
         jdbc.update("""
                         INSERT INTO runs
-                            (id, space_id, actor_user_id, correlation_id, request_kind, status,
+                            (id, space_id, conversation_id, actor_user_id, correlation_id, request_kind, status,
                              model_route_version_id, prompt_version_id, input_hash, output_hash,
                              error_class, error_code, started_at, completed_at, created_at, updated_at, version)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-                        """, input.id(), input.spaceId(), input.actorUserId(), input.correlationId(),
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                        """, input.id(), input.spaceId(), input.conversationId(), input.actorUserId(), input.correlationId(),
                 input.requestKind().name(), input.status().name(), input.routeVersionId(), input.promptVersionId(),
                 input.inputHash(), input.outputHash(), nullableError(input.errorClass()), input.errorCode(),
                 timestamp(input.startedAt()), timestamp(input.completedAt()), timestamp(input.now()),
@@ -38,7 +39,7 @@ public class RunRepository {
     public Optional<RunRecord> findRun(UUID spaceId, UUID id) {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""
-                            SELECT id, space_id, actor_user_id, correlation_id, request_kind, status,
+                            SELECT id, space_id, conversation_id, actor_user_id, correlation_id, request_kind, status,
                                    model_route_version_id, prompt_version_id, input_hash, output_hash,
                                    error_class, error_code, started_at, completed_at, created_at, updated_at, version
                             FROM runs WHERE id = ? AND space_id = ?
@@ -51,16 +52,22 @@ public class RunRepository {
     @Transactional
     public RunRecord transitionRun(UUID spaceId, UUID runId, RunStatus nextStatus, ErrorClass errorClass,
                                    String errorCode, Instant now, long expectedVersion) {
+        return transitionRun(spaceId, runId, nextStatus, errorClass, errorCode, now, expectedVersion, null);
+    }
+
+    @Transactional
+    public RunRecord transitionRun(UUID spaceId, UUID runId, RunStatus nextStatus, ErrorClass errorClass,
+                                   String errorCode, Instant now, long expectedVersion, String outputHash) {
         RunRecord current = findRun(spaceId, runId).orElseThrow();
         assertTransition(current.status(), nextStatus);
         int updated = jdbc.update("""
                         UPDATE runs
-                        SET status = ?, error_class = ?, error_code = ?,
+                        SET status = ?, error_class = ?, error_code = ?, output_hash = COALESCE(?, output_hash),
                             started_at = CASE WHEN ? = 'RUNNING' AND started_at IS NULL THEN ? ELSE started_at END,
                             completed_at = CASE WHEN ? IN ('SUCCEEDED', 'FAILED', 'CANCELLED') THEN ? ELSE completed_at END,
                             updated_at = ?, version = version + 1
                         WHERE id = ? AND space_id = ? AND version = ?
-                        """, nextStatus.name(), nullableError(errorClass), errorCode, nextStatus.name(), timestamp(now),
+                        """, nextStatus.name(), nullableError(errorClass), errorCode, outputHash, nextStatus.name(), timestamp(now),
                 nextStatus.name(), timestamp(now), timestamp(now), runId, spaceId, expectedVersion);
         if (updated != 1) {
             throw new IllegalStateException("Run version changed while transitioning");
@@ -91,6 +98,28 @@ public class RunRepository {
         } catch (EmptyResultDataAccessException ignored) {
             return Optional.empty();
         }
+    }
+
+    public List<StepRecord> findSteps(UUID spaceId, UUID runId) {
+        return jdbc.query("""
+                        SELECT id, space_id, run_id, step_key, step_type, attempt, sequence_no,
+                               status, error_class, error_code, created_at, updated_at, correlation_id
+                        FROM run_steps WHERE run_id = ? AND space_id = ?
+                        ORDER BY sequence_no, attempt, created_at, id
+                        """, (rs, rowNum) -> mapStep(rs), runId, spaceId);
+    }
+
+    @Transactional
+    public StepRecord updateStep(UUID spaceId, UUID stepId, RunStatus status, ErrorClass errorClass,
+                                 String errorCode, Instant now) {
+        int updated = jdbc.update("""
+                        UPDATE run_steps SET status = ?, error_class = ?, error_code = ?, updated_at = ?
+                        WHERE id = ? AND space_id = ?
+                        """, status.name(), nullableError(errorClass), errorCode, timestamp(now), stepId, spaceId);
+        if (updated != 1) {
+            throw new IllegalStateException("Run step is not available in the requested space");
+        }
+        return findStep(spaceId, stepId).orElseThrow();
     }
 
     @Transactional
@@ -172,7 +201,8 @@ public class RunRepository {
 
     private RunRecord mapRun(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new RunRecord(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
-                rs.getObject("actor_user_id", UUID.class), rs.getObject("correlation_id", UUID.class),
+                rs.getObject("conversation_id", UUID.class), rs.getObject("actor_user_id", UUID.class),
+                rs.getObject("correlation_id", UUID.class),
                 RequestKind.valueOf(rs.getString("request_kind")), RunStatus.valueOf(rs.getString("status")),
                 rs.getObject("model_route_version_id", UUID.class), rs.getObject("prompt_version_id", UUID.class),
                 rs.getString("input_hash"), rs.getString("output_hash"), readError(rs.getString("error_class")),
@@ -266,16 +296,31 @@ public class RunRepository {
         CANCELLED, SPACE_EGRESS_DENIED, IDEMPOTENCY_CONFLICT
     }
 
-    public record NewRun(UUID id, UUID spaceId, UUID actorUserId, UUID correlationId, RequestKind requestKind,
+    public record NewRun(UUID id, UUID spaceId, UUID conversationId, UUID actorUserId, UUID correlationId, RequestKind requestKind,
                           RunStatus status, UUID routeVersionId, UUID promptVersionId, String inputHash,
                           String outputHash, ErrorClass errorClass, String errorCode, Instant startedAt,
                           Instant completedAt, Instant now) {
+        public NewRun(UUID id, UUID spaceId, UUID actorUserId, UUID correlationId, RequestKind requestKind,
+                      RunStatus status, UUID routeVersionId, UUID promptVersionId, String inputHash,
+                      String outputHash, ErrorClass errorClass, String errorCode, Instant startedAt,
+                      Instant completedAt, Instant now) {
+            this(id, spaceId, null, actorUserId, correlationId, requestKind, status, routeVersionId,
+                    promptVersionId, inputHash, outputHash, errorClass, errorCode, startedAt, completedAt, now);
+        }
     }
 
-    public record RunRecord(UUID id, UUID spaceId, UUID actorUserId, UUID correlationId, RequestKind requestKind,
+    public record RunRecord(UUID id, UUID spaceId, UUID conversationId, UUID actorUserId, UUID correlationId, RequestKind requestKind,
                             RunStatus status, UUID routeVersionId, UUID promptVersionId, String inputHash,
                             String outputHash, ErrorClass errorClass, String errorCode, Instant startedAt,
                             Instant completedAt, Instant createdAt, Instant updatedAt, long version) {
+        public RunRecord(UUID id, UUID spaceId, UUID actorUserId, UUID correlationId, RequestKind requestKind,
+                         RunStatus status, UUID routeVersionId, UUID promptVersionId, String inputHash,
+                         String outputHash, ErrorClass errorClass, String errorCode, Instant startedAt,
+                         Instant completedAt, Instant createdAt, Instant updatedAt, long version) {
+            this(id, spaceId, null, actorUserId, correlationId, requestKind, status, routeVersionId,
+                    promptVersionId, inputHash, outputHash, errorClass, errorCode, startedAt, completedAt,
+                    createdAt, updatedAt, version);
+        }
     }
 
     public record NewStep(UUID id, UUID spaceId, UUID runId, String stepKey, StepType stepType, int attempt,
