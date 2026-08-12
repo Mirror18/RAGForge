@@ -1,7 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-12
-- Current stage: Foundation / Phase 1 Ready
+- Current stage: Foundation / Phase 1 Evidence Ready; CI closure pending
 - Repository: local private Git repository
 - Branch: `main`
 - External remote: not configured
@@ -21,19 +21,22 @@
 - Phase 0 可复现验收资产、33 条问题和真实 benchmark 结果；见 [`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md)。
 - Phase 0 上游许可证、精确 commit、LICENSE/NOTICE 和 use mode 闸门；见 [`UPSTREAM_REUSE_REGISTER.md`](../07-research/UPSTREAM_REUSE_REGISTER.md)。
 - Phase 0 checklist、风险、追溯矩阵和 retrospective 已闭环。
+- Phase 1 工程/领域骨架已实现：契约、Java server/worker、Vue/Python 骨架、core Compose、Flyway、Valkey Session、CSRF、空间 RBAC、audit/outbox、幂等和 CI 门禁；见 [`PHASE_1_IMPLEMENTATION_RESULTS.md`](phase-1/PHASE_1_IMPLEMENTATION_RESULTS.md)。
+- Phase 1 本地 Compose 启动、健康、备份冒烟、跨空间 API smoke、Python contract 和前端门禁已取得证据；见 [`PHASE_1_CHECKLIST.md`](../03-delivery/PHASE_1_CHECKLIST.md)。
 
 ## 2. 当前声明
 
-- 尚未开发 RAGForge 业务代码；竞品 benchmark 已在独立 Compose/容器中完成，临时探针未进入仓库，RAGFlow dataset 中的探针已删除。
+- Phase 1 只完成可运行骨架和安全边界，尚未开发 Provider、摄取、检索、引用回答等 RAG 业务能力。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
 - 尚未创建 GitHub remote 或 release。
 - Obsidian 仓库没有被写入项目进度。
 - Phase 0 实验发现的跨空间、provenance、OCR、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收。
+- 本机全量 Maven Testcontainers 因 Docker Desktop npipe `/version` 返回 HTTP 400 未完成；没有 GitHub remote，故尚无 Linux CI Run ID、SBOM 或 Grype 实际结果。Phase 1 正式关闭的唯一证据缺口是这次外部 CI 运行。
 
 ## 3. 下一入口
 
-进入 Phase 1 工程与领域骨架：先落实 `space_id` 安全边界、API/event contract、稳定 provenance/citation 和本地 provider contract，再扩展 ingestion/retrieval。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)。
+Phase 1 代码入口已具备；待外部 CI 取证后进入 Phase 2 Provider、Prompt 与 Run 纵向切片。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)，Phase 1 复盘见 [`PHASE_1_RETROSPECTIVE.md`](retrospectives/PHASE_1_RETROSPECTIVE.md)。
 
 ## 4. 更新规则
 

@@ -2,7 +2,7 @@
 
 RAGForge 是一个面向企业内部、单租户多用户场景的通用 RAG 知识助手学习型工程。仓库的首要目标不是快速堆出一个聊天页面，而是完整实践商业项目从产品定义、架构决策、研发、测试、安全、交付到运维复盘的全过程。
 
-当前阶段为 **Planning / Foundation**：只建立工程骨架、决策基线和可追溯文档，尚未进入业务代码开发。
+当前阶段为 **Foundation / Phase 1 Evidence Ready**：工程与领域骨架已可在隔离 Compose 中运行；Phase 1 的 Linux CI 取证仍待配置 remote 后完成，RAG 业务纵向能力尚未开始。
 
 ## 1. 已确认的产品边界
 
@@ -58,6 +58,7 @@ RAGForge/
 - [总体架构](docs/02-architecture/ARCHITECTURE.md)
 - [交付路线图](docs/03-delivery/ROADMAP.md)
 - [Phase 0 执行清单](docs/03-delivery/PHASE_0_CHECKLIST.md)
+- [Phase 1 执行清单](docs/03-delivery/PHASE_1_CHECKLIST.md)
 - [多 Agent 循环执行提示词](docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md)
 - [测试策略](docs/04-quality/TEST_STRATEGY.md)
 - [部署与运行](docs/05-operations/DEPLOYMENT.md)
@@ -65,6 +66,7 @@ RAGForge/
 - [GitHub 成熟项目调研](docs/07-research/GITHUB_BENCHMARK.md)
 - [风险登记表](docs/08-records/RISK_REGISTER.md)
 - [当前项目状态](docs/08-records/PROJECT_STATUS.md)
+- [Phase 1 实施与验收结果](docs/08-records/phase-1/PHASE_1_IMPLEMENTATION_RESULTS.md)
 
 ## 4. 当前工作的完成标准
 

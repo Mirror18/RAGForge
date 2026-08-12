@@ -1,0 +1,19 @@
+{
+  "name": "ragforge-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "format:check": "tsc --noEmit",
+    "dev": "vite --host 0.0.0.0"
+  },
+  "dependencies": {
+    "vue": "3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "5.2.1",
+    "typescript": "5.7.3",
+    "vite": "6.4.3"
+  }
+}

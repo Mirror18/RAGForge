@@ -22,6 +22,10 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-014 | 真实个人笔记误进 Git/CI/云模型 | 3 | 5 | 15 | private-local 分类、只读 mount、ignore/scan、默认禁出境 | Security | OPEN |
 | R-015 | 组件较多导致 Compose 运维复杂 | 4 | 3 | 12 | core/observability/llmops profiles、健康检查、Runbooks | Operations | OPEN |
 | R-016 | 备份存在但无法一致恢复引用 | 3 | 5 | 15 | manifest、以 PG 为真相、Qdrant 重建、季度恢复演练 | Operations | OPEN |
+| R-017 | Windows Docker Desktop npipe 使 Testcontainers 无法连接真实 engine | 4 | 3 | 12 | Compose 黑盒已通过；Linux CI 重跑 `mvn test`；记录 Docker API 与镜像版本 | Platform | MITIGATING |
+| R-018 | 未配置 GitHub remote，SBOM/Grype 和完整 Linux CI 尚无真实 Run 证据 | 3 | 4 | 12 | workflow 已固定 action 与 High 阈值；配置受控 remote 后运行并保存 Run ID/artifact | Compliance / Platform | OPEN |
+| R-019 | 完整 service token 生命周期尚未进入 Phase 1 | 3 | 4 | 12 | 当前浏览器只走 HttpOnly Session Cookie + CSRF；Phase 2 实现 hash/scope/expiry/revoke/last-used 后关闭 | Security | ACCEPTED |
+| R-020 | MinIO 等运行时镜像使用 tag，许可证和生产 digest 尚未锁定 | 2 | 5 | 10 | Phase 1 依赖登记；发布前 SBOM、许可证复核、immutable digest 和镜像扫描 | Compliance / Operations | MITIGATING |
 
 ## 2. 维护规则
 
@@ -38,3 +42,10 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | P0-BENCH-002 | AnythingLLM 对 image-only PDF 生成伪 OCR，且 q-032 泄漏 `BETA-COMET-29` | 4 | 5 | 20 | parser/OCR 必须暴露状态、证据和失败原因；生成前后执行 provenance/forbidden-source 校验；纳入 Phase 1 安全验收 | Ingestion / Security | OPEN |
 | P0-BENCH-003 | AnythingLLM 重复 basename 导致 36 份中只有 35 份入库，同名来源也使 citation 无法安全区分 | 4 | 4 | 16 | source identity 使用稳定 source/document ID，不以 basename 作为唯一键；增加 duplicate-name contract test | Ingestion / Retrieval | OPEN |
 | P0-BENCH-004 | RAGFlow 重启约 37 秒才 ready，并出现 `Load term.freq FAIL!`；Elasticsearch 达服务限制约 69% | 3 | 4 | 12 | 建立 readiness probe、启动超时预算、ES 资源基线和告警；重启恢复作为 Phase 1 integration gate | Operations | MITIGATING |
+
+## 4. Phase 1 复审（2026-08-12）
+
+- `R-003` 仍为 OPEN：Phase 1 已验证身份/空间 membership 的 no-leak，但 Qdrant payload、对象 URI、缓存 key 和未来内容查询尚未实现，不能关闭跨空间总风险。
+- `R-017` 是本机环境限制，不是代码通过；不能用定向单测替代 Testcontainers 或 Linux CI。
+- `R-018` 是当前阶段关闭阻塞项；没有 remote/Run ID 时不把 GitHub Actions YAML 当作执行证据。
+- 未发现新的 P0/P1 代码缺陷；`R-019` 的接受范围仅限 Phase 1 浏览器 Session 骨架，不授权新增 bearer/service-token 用途。

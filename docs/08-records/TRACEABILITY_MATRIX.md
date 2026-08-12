@@ -37,3 +37,16 @@
 | P0-ANYTHINGLLM-001 | AnythingLLM workspace、33 条回答、导入限制、重启和模型切换 | [`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md) | `P1-CIT-PROV-001`, `P1-ING-DUP-001` | 0 → 1 |
 | P0-SEC-001 | 跨空间、禁止来源、同名 provenance 和 OCR hallucination 失败证据 | [`RISK_REGISTER.md`](RISK_REGISTER.md)；q-013/q-014/q-015/q-016/q-028/q-032 | `P1-SEC-SPACE-001`, `P1-CIT-FORBIDDEN-001`, `P1-OCR-ABSTAIN-001` | 0 → 1 |
 | P0-LICENSE-001 | 上游 release/tag、精确 commit、LICENSE/NOTICE 和 use mode | [`UPSTREAM_REUSE_REGISTER.md`](../07-research/UPSTREAM_REUSE_REGISTER.md)、[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) | `P1-COMPLIANCE-001` | 0 → 1 |
+
+## Phase 1 实施证据
+
+| 证据 ID | 交付/风险 | 实现与验证 | 结果 | 后续 |
+|---|---|---|---|---|
+| P1-ENG-001 | Java 多模块与独立 worker 生命周期 | [`pom.xml`](../../pom.xml)、`apps/server/pom.xml`、`apps/ingestion-worker/pom.xml`；`mvn -B -ntp -DskipTests compile` | 本地通过 | P2 继续保持模块化单体 + 独立 worker |
+| P1-CONTRACT-001 | OpenAPI、事件 Envelope 和幂等/错误基线 | [`contracts/`](../../contracts/)、`python scripts/ci/contract_test.py`、`tests/contract` 14/14 | 通过 | P2 先扩展 Provider/Run contract |
+| P1-OPS-001 | Compose 隔离、健康和新环境启动 | [`deploy/compose/README.md`](../../deploy/compose/README.md)、`validate_compose.py`、真实项目 `ragforge-p1-api-check` | 本地通过 | Linux CI/Phase 7 固定 digest |
+| P1-DATA-001 | Flyway、UUIDv7、audit/outbox/idempotency | [`apps/server/src/main/resources/db/migration/`](../../apps/server/src/main/resources/db/migration/)、`ServerIntegrationTest`、真实 PostgreSQL schema 查询 | 本地通过 | P3 扩展重投/DLQ/checkpoint |
+| P1-IAM-001 | Cookie Session、CSRF、Valkey、空间 RBAC 和 no-leak | [`tests/acceptance/test_phase1_api_smoke.py`](../../tests/acceptance/test_phase1_api_smoke.py)、`ServerIntegrationTest` | 3/3 smoke；本地 Compose 黑盒通过 | P2 扩展 token/route policy |
+| P1-RECOVERY-001 | PostgreSQL backup smoke 与健康探针 | [`scripts/ops/backup_smoke.py`](../../scripts/ops/backup_smoke.py)、[`scripts/ops/health_probe.py`](../../scripts/ops/health_probe.py)、实际 `.sql` + SHA-256 | 本地通过 | P6 完成隔离恢复演练 |
+| P1-CI-001 | 格式、架构、秘密、链接、依赖、SBOM、Maven/npm 质量门禁 | [`.github/workflows/quality.yml`](../../.github/workflows/quality.yml)、本地 `scripts/ci/*` | 本地静态门禁通过；无 remote Run | 配置 remote 后保留 Run ID/artifact |
+| P1-OSS-001 | 依赖锁定和无源码复制 | [`DEPENDENCY_LEDGER.md`](phase-1/DEPENDENCY_LEDGER.md)、`dependency_inventory.py --require-lockfiles`、Phase 0 reuse register | 本地登记通过；生产扫描待 CI | 发布前重跑 SBOM/license/SCA |

@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: ragforge-ingestion-worker
+  main:
+    web-application-type: none
+  rabbitmq:
+    host: ${RAGFORGE_RABBITMQ_HOST:localhost}
+    port: ${RAGFORGE_RABBITMQ_PORT:5672}
+    username: ${RAGFORGE_RABBITMQ_USER:ragforge}
+    password: ${RAGFORGE_RABBITMQ_PASSWORD:change-me}
+
+ragforge:
+  ingestion:
+    enabled: ${RAGFORGE_INGESTION_ENABLED:false}
