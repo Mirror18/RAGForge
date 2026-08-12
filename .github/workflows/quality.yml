@@ -70,6 +70,12 @@ jobs:
           fi
           exit "$status"
 
+      - name: Run deterministic Phase 2 cloud, concurrency, and egress gates
+        run: |
+          python -m unittest discover -s tests/integration -p "test_phase2_cloud_*.py" -v
+          python -m unittest discover -s tests/performance -p "test_phase2_*.py" -v
+          python -m unittest discover -s tests/security -p "test_phase2_*.py" -v
+
       - name: Check dependency manifest and lockfile inventory
         run: python scripts/ci/dependency_inventory.py --require-lockfiles
 
