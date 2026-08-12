@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.common.CorrelationIdFilter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.MediaType;
@@ -38,7 +39,11 @@ public class RunEventController {
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter events(@PathVariable UUID spaceId, @PathVariable UUID runId,
-                             @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+                             @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
+                             HttpServletRequest request,
+                             HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader(CorrelationIdFilter.HEADER, CorrelationIdFilter.current(request));
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         RunEventStore.OpenedStream opened = service.openStream(spaceId, runId, lastEventId,
                 event -> send(emitter, event));
@@ -49,9 +54,6 @@ public class RunEventController {
         });
         emitter.onError(ignored -> opened.subscription().close());
         try {
-            if (opened.replay().snapshotRecovery() != null) {
-                sendSnapshot(emitter, opened.replay().snapshotRecovery());
-            }
             opened.replay().events().forEach(event -> send(emitter, event));
             opened.subscription().activate();
         } catch (RuntimeException exception) {
@@ -84,16 +86,6 @@ public class RunEventController {
         }
     }
 
-    private void sendSnapshot(SseEmitter emitter, RunEventStore.SnapshotRecovery snapshot) {
-        try {
-            emitter.send(SseEmitter.event()
-                    .name("run.snapshot")
-                    .data(snapshotEnvelope(snapshot), MediaType.APPLICATION_JSON));
-        } catch (IOException exception) {
-            emitter.completeWithError(exception);
-        }
-    }
-
     ObjectNode eventEnvelope(RunEvent event) {
         ObjectNode envelope = objectMapper.createObjectNode();
         envelope.put("id", event.eventId().toString());
@@ -105,18 +97,6 @@ public class RunEventController {
         envelope.put("type", event.type());
         envelope.put("version", "v" + event.version());
         envelope.set("payload", PayloadPolicy.parse(event.payloadJson()));
-        return envelope;
-    }
-
-    private ObjectNode snapshotEnvelope(RunEventStore.SnapshotRecovery snapshot) {
-        ObjectNode envelope = objectMapper.createObjectNode();
-        envelope.put("runId", snapshot.runId().toString());
-        envelope.put("spaceId", snapshot.spaceId().toString());
-        envelope.put("status", snapshot.status());
-        envelope.put("latestSequence", snapshot.latestSequence());
-        envelope.put("earliestSequence", snapshot.earliestSequence());
-        envelope.put("reason", snapshot.reason());
-        envelope.put("resumeFromSequence", snapshot.latestSequence());
         return envelope;
     }
 

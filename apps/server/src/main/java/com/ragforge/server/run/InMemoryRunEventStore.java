@@ -78,6 +78,22 @@ public class InMemoryRunEventStore implements RunEventStore {
     }
 
     @Override
+    public RunEvent snapshot(UUID spaceId, UUID runId, UUID correlationId, String status, String reason) {
+        Objects.requireNonNull(correlationId, "correlationId");
+        RunBuffer buffer = buffer(spaceId, runId);
+        synchronized (buffer) {
+            Instant now = Instant.now(clock);
+            purge(buffer, now);
+            RunEvent event = new RunEvent(UuidV7.random(), ++buffer.latestSequence, runId, spaceId, correlationId,
+                    now, "run.snapshot", 1,
+                    "{\"status\":\"%s\",\"reason\":\"%s\"}".formatted(status, reason));
+            buffer.events.addLast(event);
+            trim(buffer);
+            return event;
+        }
+    }
+
+    @Override
     public ReplayResult replay(UUID spaceId, UUID runId, String lastEventId) {
         RunBuffer buffer = buffer(spaceId, runId);
         synchronized (buffer) {

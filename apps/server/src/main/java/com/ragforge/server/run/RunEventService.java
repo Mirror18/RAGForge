@@ -37,8 +37,27 @@ public class RunEventService {
     public RunEventStore.OpenedStream openStream(UUID spaceId, UUID runId, String lastEventId,
                                                   Consumer<RunEvent> consumer) {
         RunRepository.RunRecord run = requireRun(spaceId, runId);
-        RunEventStore.OpenedStream opened = eventStore.openStream(spaceId, runId, lastEventId, consumer);
-        return new RunEventStore.OpenedStream(withRunStatus(opened.replay(), run), opened.subscription());
+        String effectiveCursor = lastEventId;
+        RunEvent initialSnapshot = null;
+        if (lastEventId == null || lastEventId.isBlank()) {
+            initialSnapshot = eventStore.snapshot(spaceId, runId, run.correlationId(), run.status().name(),
+                    "initial");
+            effectiveCursor = initialSnapshot.eventId().toString();
+        }
+        RunEventStore.OpenedStream opened = eventStore.openStream(spaceId, runId, effectiveCursor, consumer);
+        RunEventStore.ReplayResult replay = withRunStatus(opened.replay(), run);
+        if (initialSnapshot == null && replay.snapshotRecovery() != null) {
+            initialSnapshot = eventStore.snapshot(spaceId, runId, run.correlationId(), run.status().name(),
+                    replay.snapshotRecovery().reason());
+        }
+        if (initialSnapshot != null) {
+            replay = new RunEventStore.ReplayResult(
+                    java.util.stream.Stream.concat(java.util.stream.Stream.of(initialSnapshot), replay.events().stream())
+                            .toList(),
+                    RunEventStore.CursorStatus.NO_CURSOR, null, initialSnapshot.sequence(),
+                    Math.min(replay.earliestSequence(), initialSnapshot.sequence()));
+        }
+        return new RunEventStore.OpenedStream(replay, opened.subscription());
     }
 
     public RunEventStore.Subscription subscribe(UUID spaceId, UUID runId, Consumer<RunEvent> consumer) {
