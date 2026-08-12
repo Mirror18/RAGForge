@@ -15,7 +15,16 @@ public record ProviderConnection(
         ProviderType providerType,
         EgressClass egressClass,
         URI endpoint,
-        String credentialRef) {
+        String credentialRef,
+        String authScheme) {
+
+    /** Backward-compatible constructor for callers that have not yet threaded auth_scheme through. */
+    public ProviderConnection(UUID spaceId, UUID providerConnectionId, long version,
+                              ProviderType providerType, EgressClass egressClass, URI endpoint,
+                              String credentialRef) {
+        this(spaceId, providerConnectionId, version, providerType, egressClass, endpoint,
+                credentialRef, "UNSPECIFIED");
+    }
 
     public ProviderConnection {
         Objects.requireNonNull(spaceId, "spaceId");
@@ -24,6 +33,7 @@ public record ProviderConnection(
         Objects.requireNonNull(egressClass, "egressClass");
         Objects.requireNonNull(endpoint, "endpoint");
         Objects.requireNonNull(credentialRef, "credentialRef");
+        Objects.requireNonNull(authScheme, "authScheme");
         if (version < 1) {
             throw new IllegalArgumentException("Provider connection version must be positive");
         }
@@ -40,6 +50,16 @@ public record ProviderConnection(
         if (!credentialRef.matches("^[a-z][a-z0-9._:-]{1,127}$")) {
             throw new IllegalArgumentException("Provider credential reference is invalid");
         }
+        if (!authScheme.matches("^[A-Za-z][A-Za-z0-9_-]{0,39}$")) {
+            throw new IllegalArgumentException("Provider auth scheme is invalid");
+        }
+    }
+
+    /** Only this explicitly local, no-auth connection may bypass credential resolution. */
+    public boolean isExplicitLocalNoAuth() {
+        return providerType == ProviderType.OLLAMA
+                && egressClass == EgressClass.LOCAL
+                && "NONE".equalsIgnoreCase(authScheme);
     }
 
     @Override

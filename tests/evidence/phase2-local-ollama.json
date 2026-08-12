@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "provider": "OLLAMA",
+  "model": "qwen3.5:9b",
+  "status": "SUCCEEDED",
+  "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "request": {
+    "method": "POST",
+    "path": "/api/chat",
+    "stream": false,
+    "authorization_header_sent": false,
+    "prompt_stored": false,
+    "raw_request_stored": false
+  },
+  "response": {
+    "parsed": true,
+    "raw_output_stored": false,
+    "http_status": 200,
+    "latency_ms": 1740.742,
+    "usage_source": "PROVIDER_REPORTED",
+    "usage_counts": {
+      "prompt_tokens": 20,
+      "completion_tokens": 8,
+      "total_tokens": 28
+    },
+    "response_model": "qwen3.5:9b",
+    "content_present": false
+  },
+  "network_policy": {
+    "loopback_only": true,
+    "proxy_disabled": true
+  },
+  "error": null,
+  "endpoint": "http://127.0.0.1:11434"
+}
