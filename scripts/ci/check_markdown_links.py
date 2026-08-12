@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -13,10 +14,29 @@ from urllib.parse import unquote
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\((?:<([^>]+)>|([^\s)]+))")
 SKIP_SCHEMES = ("http://", "https://", "mailto:", "tel:", "data:")
+SKIP_DIR_NAMES = frozenset(
+    {
+        ".git",
+        ".vite",
+        "__pycache__",
+        "coverage",
+        "dist",
+        "generated",
+        "node_modules",
+        "reports",
+        "target",
+        "tmp",
+    }
+)
 
 
 def iter_markdown(root: Path):
-    yield from sorted(root.rglob("*.md"))
+    """Yield repository Markdown while pruning ignored/generated directories."""
+    for current, directories, filenames in os.walk(root):
+        directories[:] = sorted(directory for directory in directories if directory not in SKIP_DIR_NAMES)
+        for filename in sorted(filenames):
+            if filename.endswith(".md"):
+                yield Path(current) / filename
 
 
 def check_file(path: Path) -> list[str]:

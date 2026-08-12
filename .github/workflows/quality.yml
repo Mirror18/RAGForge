@@ -46,6 +46,9 @@ jobs:
       - name: Check Markdown links
         run: python scripts/ci/check_markdown_links.py
 
+      - name: Test Markdown traversal boundaries
+        run: python -m unittest discover -s scripts/ci -p "test_*.py" -v
+
       - name: Scan tracked files for secrets
         run: python scripts/ci/secret_scan.py
 
