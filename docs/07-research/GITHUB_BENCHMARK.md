@@ -1,92 +1,63 @@
 # GitHub 成熟 RAG 项目调研与借鉴计划
 
-> 调研日期：2026-08-12。项目版本、许可证和目录可能变化；真正引入时必须针对精确 release/commit 复核。
+> 调研日期：`2026-08-12`。本记录使用官方 GitHub 仓库的 release/tag、解引用 commit 和同一 SHA 下的 LICENSE/NOTICE 文件核验。版本、目录和许可证可能变化；真正引入时仍须重新复核。精确版本与许可证闸门详见[上游复用登记表](UPSTREAM_REUSE_REGISTER.md)。
 
 ## 1. 结论先行
 
-RAGForge 不以 Fork/换皮方式建设。最适合的策略是保留 Java 商业项目架构，把成熟项目拆成四类使用：
+RAGForge 不采用 Fork 或换皮路线。Phase 0 的使用边界分为：
 
-1. **正式依赖**：Spring AI、Spring AI Alibaba Extensions。
-2. **测试/运行工具**：Promptfoo；Langfuse 可选 OTel/API 集成。
-3. **允许许可证下的选择性借鉴**：RAGFlow 算法/测试思想，AnythingLLM 本地优先交互模式。
-4. **仅产品/架构参考**：Dify、FastGPT、MaxKB、Open WebUI 等附加许可或 copyleft 项目源码。
+1. **候选正式依赖**：Spring AI、Spring AI Alibaba Extensions；当前只完成版本和许可证核验，未添加依赖。
+2. **候选开发/外部服务**：Promptfoo 作为 dev/CI 工具，Langfuse 作为可选 OTel/API 服务；当前未引入或部署。
+3. **选择性借鉴候选**：RAGFlow 只借鉴 parent-child chunking 和 retrieval-test 思路；当前不复制代码。
+4. **reference-only**：AnythingLLM、Dify、FastGPT、MaxKB、Open WebUI 只观察产品/交互行为；Dify/FastGPT/MaxKB/Open WebUI 明确拒绝代码复用。
 
-## 2. 项目比较
+## 2. 固定版本与许可证核验
 
-| 项目 | 值得学习 | 许可观察 | RAGForge 使用方式 |
-|---|---|---|---|
-| [RAGFlow](https://github.com/infiniflow/ragflow) | 深度文档理解、摄取可视化、父子 chunk、Retrieval Test | Apache-2.0（引入时复核精确 commit） | 基准产品；参考/选择性复用算法和测试，登记来源 |
-| [AnythingLLM](https://github.com/Mintplex-Labs/anything-llm) | workspace、本地优先、桌面/自托管体验、Provider UX | MIT | 基准产品；可借鉴模式，小片段复用需保留版权 |
-| [Spring AI](https://github.com/spring-projects/spring-ai) | Java Chat/Embedding/Vector/Tool/Observability 抽象 | Apache-2.0 | 直接依赖，adapter 隔离框架类型 |
-| [Spring AI Alibaba Extensions](https://github.com/spring-ai-alibaba/spring-ai-extensions) | Markdown/PDFBox/Tika/POI/Obsidian/GitHub reader 模块 | Apache-2.0 | 逐模块评估，优先 dependency；自建企业 Connector |
-| [Promptfoo](https://github.com/promptfoo/promptfoo) | prompt/model matrix、assertions、red-team、CI | MIT | 开发/CI 工具，结果回写自有 Evaluation Run |
-| [Langfuse](https://github.com/langfuse/langfuse) | LLM traces、prompt/evaluation UI | core MIT，仓库部分 EE/商业许可目录 | 仅 OTel/API 可选集成，不复制 EE code |
-| [Dify](https://github.com/langgenius/dify) | 模型供应商、工作流、数据集和运营产品设计 | 修改版 Apache，含附加条件 | 仅产品/架构参考，不复制源码 |
-| [FastGPT](https://github.com/labring/FastGPT) | 知识库、流程和中文产品体验 | 含 SaaS/品牌等附加条款 | 仅产品/架构参考 |
-| [MaxKB](https://github.com/1Panel-dev/MaxKB) | 企业知识库功能覆盖和中文管理体验 | GPL-3.0 | 行为参考，不进入核心源码 |
-| [Open WebUI](https://github.com/open-webui/open-webui) | 本地模型聊天和管理体验 | 自定义许可/品牌边界 | UI 行为参考，不复制源码 |
+| 项目 | 精确 release/tag；commit SHA | SPDX license / scope | 官方 LICENSE / NOTICE（同一 SHA） | RAGForge 决策 |
+|---|---|---|---|---|
+| [RAGFlow](https://github.com/infiniflow/ragflow) | `v0.26.4`；`cb93883f3f8c975eecb2fed81210effeb3bdb06f` | Apache-2.0 | [LICENSE](https://github.com/infiniflow/ragflow/blob/cb93883f3f8c975eecb2fed81210effeb3bdb06f/LICENSE)；无根 `NOTICE` | selective reuse 候选；只作参考，未经审批不复制 |
+| [AnythingLLM](https://github.com/Mintplex-Labs/anything-llm) | `v1.15.0`；`70e0d2eb1dcb08cbb18a44b927d94f8667f57a7f` | MIT | [LICENSE](https://github.com/Mintplex-Labs/anything-llm/blob/70e0d2eb1dcb08cbb18a44b927d94f8667f57a7f/LICENSE)；无根 `NOTICE` | reference-only；不复制源码 |
+| [Spring AI](https://github.com/spring-projects/spring-ai) | `v2.0.0`；`ef502dab692e26b953a75be4029dba7f1acdc88c` | Apache-2.0 | [LICENSE.txt](https://github.com/spring-projects/spring-ai/blob/ef502dab692e26b953a75be4029dba7f1acdc88c/LICENSE.txt)；无根 `NOTICE` | dependency 候选；当前未引入 |
+| [Spring AI Alibaba Extensions](https://github.com/spring-ai-alibaba/spring-ai-extensions) | `v1.1.2.3`；`9ca462036d783f3069645ee0efaf925b5f9e2295` | Apache-2.0 | [LICENSE](https://github.com/spring-ai-alibaba/spring-ai-extensions/blob/9ca462036d783f3069645ee0efaf925b5f9e2295/LICENSE)；无根 `NOTICE` | dependency 候选；逐模块复核，当前未引入 |
+| [Promptfoo](https://github.com/promptfoo/promptfoo) | `promptfoo-v0.119.13`；`d1419964849e897b61e3871af8d009fc217be93e` | MIT | [LICENSE](https://github.com/promptfoo/promptfoo/blob/d1419964849e897b61e3871af8d009fc217be93e/LICENSE)；无根 `NOTICE` | dependency 候选；仅 dev/CI，当前未引入 |
+| [Langfuse](https://github.com/langfuse/langfuse) | `v4.9.0`；`537cd0181d97926437f84be8e6f275772d9819ca` | MIT（根目录 core/API/OTel）；`ee/` 独立许可，第三方组件各自适用 | [LICENSE](https://github.com/langfuse/langfuse/blob/537cd0181d97926437f84be8e6f275772d9819ca/LICENSE)、[ee/LICENSE](https://github.com/langfuse/langfuse/blob/537cd0181d97926437f84be8e6f275772d9819ca/ee/LICENSE)；无根 `NOTICE` | optional service 候选；只评估 OTel/API，禁止 EE 代码复用 |
+| [Dify](https://github.com/langgenius/dify) | `1.16.1`；`6f8ed69ee15f9a2e7189ca066275e973d091d1e9` | `LicenseRef-Dify-Modified-Apache-2.0` | [LICENSE](https://github.com/langgenius/dify/blob/6f8ed69ee15f9a2e7189ca066275e973d091d1e9/LICENSE)；无根 `NOTICE` | reference-only / rejected-for-code；不复制 |
+| [FastGPT](https://github.com/labring/FastGPT) | `v4.15.7`；`ecac36283bcb37196d2b42ddb5bddaa5af29d59a` | `LicenseRef-FastGPT-Modified-Apache-2.0` | [LICENSE](https://github.com/labring/FastGPT/blob/ecac36283bcb37196d2b42ddb5bddaa5af29d59a/LICENSE)；无根 `NOTICE` | reference-only / rejected-for-code；不复制 |
+| [MaxKB](https://github.com/1Panel-dev/MaxKB) | `v2.10.5-lts`；`01b21db88145278d98bf5e9bd55e6abd6b3aad43` | GPL-3.0-only | [LICENSE](https://github.com/1Panel-dev/MaxKB/blob/01b21db88145278d98bf5e9bd55e6abd6b3aad43/LICENSE)；无根 `NOTICE` | reference-only / rejected-for-core-code；不复制 |
+| [Open WebUI](https://github.com/open-webui/open-webui) | `v0.11.0`；`f9590b8017199e56d5e953657e6498e3cef1d246` | `LicenseRef-Open-WebUI-Custom`；历史代码按文件/commit 可能为 MIT/BSD-3-Clause | [LICENSE](https://github.com/open-webui/open-webui/blob/f9590b8017199e56d5e953657e6498e3cef1d246/LICENSE)、[LICENSE_NOTICE](https://github.com/open-webui/open-webui/blob/f9590b8017199e56d5e953657e6498e3cef1d246/LICENSE_NOTICE)、[LICENSE_HISTORY](https://github.com/open-webui/open-webui/blob/f9590b8017199e56d5e953657e6498e3cef1d246/LICENSE_HISTORY)；无根 `NOTICE` | reference-only / rejected-for-code；不复制 |
 
-许可证判断只用于项目技术规划，不构成法律意见。
+说明：`LicenseRef-*` 用于标记官方许可证包含项目特有附加条件或多许可证边界，不把它们伪装成纯 Apache-2.0/BSD/MIT。无根 `NOTICE` 是在上述固定 SHA 下的核验结果，不代表未来引入时无需保留传递依赖的 Notice。
 
-## 3. 已观察到的可借鉴设计
+## 3. 可借鉴设计与边界
 
 ### 3.1 RAGFlow
 
-- parent-child chunking：小 child 用于检索，大 parent 用于补足上下文；RAGForge 保留 child 级精确引用。参见 [child chunking guide](https://github.com/infiniflow/ragflow/blob/main/docs/guides/dataset/configure_child_chunking_strategy.md)。
-- Retrieval Test：展示召回片段和参数，启发 RAGForge 的 Retrieval Playground。参见 [retrieval test guide](https://github.com/infiniflow/ragflow/blob/main/docs/guides/dataset/run_retrieval_test.md)。
-- 摄取过程对用户可见，启发 Parse Report、Chunk Studio 和 versioned pipeline。
+- parent-child chunking 可启发“小 child 用于检索、较大 parent 用于补足上下文”的设计；RAGForge 仍需保留自己的 chunk/provenance 契约。
+- Retrieval Test 可启发召回片段和参数的可见性；不得把上游测试代码直接复制到 RAGForge。
+- 参考资料：[child chunking guide](https://github.com/infiniflow/ragflow/blob/cb93883f3f8c975eecb2fed81210effeb3bdb06f/docs/guides/dataset/configure_child_chunking_strategy.md)、[retrieval test guide](https://github.com/infiniflow/ragflow/blob/cb93883f3f8c975eecb2fed81210effeb3bdb06f/docs/guides/dataset/run_retrieval_test.md)。
 
 ### 3.2 Spring AI Alibaba Extensions
 
-扩展仓库包含 Obsidian、Markdown、PDFBox、Tika、POI 等 reader，可减少基础格式适配工作，参见 [document readers](https://github.com/spring-ai-alibaba/spring-ai-extensions/tree/main/document-readers)。
+Document readers 可作为 Markdown/PDF/Obsidian 等适配的候选依赖；不能把公开 reader 当成完整企业同步系统。RAGForge 仍需自行定义 include/exclude、Git checkpoint、增删改同步、路径规范、幂等和 provenance 契约，并逐模块核对兼容性与传递许可证。
 
-公开 Obsidian reader 可递归读取 Markdown、解析部分 YAML/wikilink 等，但企业 Connector 还需要 include/exclude、Git checkpoint、完整增删改移、路径规范化、幂等和 provenance。评估时重点查看：
+### 3.3 Promptfoo 与 Langfuse
 
-- [ObsidianDocumentReader.java](https://github.com/spring-ai-alibaba/spring-ai-extensions/blob/main/document-readers/spring-ai-alibaba-starter-document-reader-obsidian/src/main/java/com/alibaba/cloud/ai/reader/obsidian/ObsidianDocumentReader.java)
-- [ObsidianResource.java](https://github.com/spring-ai-alibaba/spring-ai-extensions/blob/main/document-readers/spring-ai-alibaba-starter-document-reader-obsidian/src/main/java/com/alibaba/cloud/ai/reader/obsidian/ObsidianResource.java)
+- Promptfoo 只考虑在 CI 中运行固定 prompt/model/provider 矩阵和安全评估；评估集、结果和最终指标的所有权及保留策略属于 RAGForge 自己。
+- Langfuse 只考虑通过 OTel/API 作为可拔插观测消费者；不能复制 `ee/` 或把整个仓库视为 MIT。接入还需满足空间级云数据出境 opt-in，不能从本地路由静默切换到云路由。
 
-不要直接把 reader 当成完整企业同步系统；在 Windows/Linux 路径、标题/YAML/wikilink fidelity 上建立自己的契约测试。
+### 3.4 reference-only 项目
 
-### 3.3 Langfuse 与 Promptfoo
-
-- Langfuse 可通过 OpenTelemetry 接入 Spring AI，参见 [官方 integration](https://langfuse.com/integrations/frameworks/spring-ai)。因此它应是可插拔观测消费者，不侵入核心领域。
-- Promptfoo 作为 CI 工具运行固定 prompt/model/provider 矩阵和安全测试；RAGForge 保留评估集与最终指标的所有权。
+Dify、FastGPT、MaxKB、Open WebUI 只用于产品行为和架构观察。它们的附加许可、GPL 或品牌/多许可证边界不进入 RAGForge 核心代码；RAGForge 不复制这些项目的源码、UI、logo、copyright 或许可证文本。
 
 ## 4. Phase 0 基准方法
 
-### 4.1 数据集
-
-- 30–50 份公开/合成文档：Markdown/YAML/wikilink、PDF、DOCX、表格、长文、扫描件、重复标题、冲突版本。
-- 30 个问题：事实、结构、多跳、无答案、冲突、注入和权限边界。
-- 同一原始数据、同一问题和同一人工 relevance 判断用于两个系统。
-
-### 4.2 记录项
-
 | 维度 | 记录 |
 |---|---|
-| 安装 | OS、Compose、启动时间、服务数、CPU/RAM/VRAM/磁盘 |
-| 数据 | 支持格式、增量同步、失败恢复、解析/分块可见性 |
-| 检索 | Recall@10、MRR@10、过滤、rerank、可调参数 |
+| 数据 | 30–50 份公开/合成文档，覆盖 Markdown/YAML/wikilink、PDF、DOCX、表格、长文、扫描件、重复标题和冲突版本 |
+| 问题 | 30 个事实、结构、多跳、无答案、冲突、注入和权限边界问题 |
+| 检索 | Recall@10、MRR@10、过滤、rerank 和可调参数 |
 | 回答 | faithfulness、citation、abstention、stream/cancel |
-| 治理 | 用户、空间、权限、Provider、出境和审计 |
-| 运维 | logs/metrics/traces、backup、upgrade、resource usage |
-| 体验 | 导入、排障、引用核验、配置学习成本 |
+| 治理 | 用户、空间、权限、provider、出境和审计 |
+| 运维 | logs/metrics/traces、备份、升级和资源使用 |
 
-### 4.3 公平性说明
-
-如果两套产品无法使用完全相同 embedding/reranker，应分别报告“默认最佳实践”和“尽可能相同模型”两组结果。不要用本机 9B 推理吞吐代表产品检索能力；模型生成和 retrieval 指标分开。
-
-## 5. 待填写实验结果
-
-| 指标 | RAGFlow | AnythingLLM | RAGForge 目标/启示 |
-|---|---:|---:|---|
-| 安装峰值 RAM | TBD | TBD | core profile 可在本机稳定运行 |
-| 首次摄取耗时 | TBD | TBD | 按格式拆分 |
-| 增量摄取耗时 | TBD | TBD | checkpoint + 幂等 |
-| Recall@10 | TBD | TBD | >= 0.90 |
-| MRR@10 | TBD | TBD | >= 0.75 |
-| Citation precision | TBD | TBD | >= 0.90 |
-| Abstention accuracy | TBD | TBD | >= 0.90 |
-| 最值得借鉴 | TBD | TBD | 形成具体 ADR/Backlog |
-
-在 Phase 0 实际运行前，不能把 TBD 替换为推测数字。
+在 Phase 0 实际运行前，不把 `TBD` 替换成推测数字；不同系统无法使用完全相同 embedding/reranker 时，分别报告默认最佳实践和尽可能同模型两组结果。
