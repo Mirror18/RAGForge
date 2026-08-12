@@ -58,6 +58,14 @@ public class RunExecutionController {
         return RunResponse.from(service.getRun(spaceId, runId, principal(authentication)));
     }
 
+    @PostMapping("/runs/{runId}/retry")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public RunResponse retry(@PathVariable UUID spaceId, @PathVariable UUID runId,
+                             Authentication authentication, HttpServletRequest servletRequest) {
+        UUID correlationId = UUID.fromString(CorrelationIdFilter.current(servletRequest));
+        return RunResponse.from(service.retry(spaceId, runId, principal(authentication), correlationId));
+    }
+
     @GetMapping("/runs/{runId}/steps")
     public List<StepResponse> getSteps(@PathVariable UUID spaceId, @PathVariable UUID runId,
                                        Authentication authentication) {

@@ -3,12 +3,14 @@ package com.ragforge.server.run;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.common.CorrelationIdFilter;
+import com.ragforge.server.identity.SessionPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,10 +33,13 @@ public class RunEventController {
 
     private final RunEventService service;
     private final ObjectMapper objectMapper;
+    private final RunExecutionService executionService;
 
-    public RunEventController(RunEventService service, ObjectMapper objectMapper) {
+    public RunEventController(RunEventService service, ObjectMapper objectMapper,
+                              RunExecutionService executionService) {
         this.service = service;
         this.objectMapper = objectMapper;
+        this.executionService = executionService;
     }
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -65,14 +70,14 @@ public class RunEventController {
 
     @PostMapping("/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public CancelResponse cancel(@PathVariable UUID spaceId, @PathVariable UUID runId,
+    public RunExecutionController.RunResponse cancel(@PathVariable UUID spaceId, @PathVariable UUID runId,
                                 @Valid @RequestBody(required = false) CancelRunRequest cancelRequest,
-                                HttpServletRequest request) {
+                                HttpServletRequest request, Authentication authentication) {
         // The reason is accepted for the public contract and is intentionally not persisted in this slice.
         UUID correlationId = UUID.fromString(CorrelationIdFilter.current(request));
-        RunEventStore.CancellationResult result = service.cancel(spaceId, runId, correlationId);
-        return new CancelResponse("CANCELLED", result.firstCancellation(), result.event().eventId(),
-                result.event().sequence());
+        SessionPrincipal principal = principal(authentication);
+        executionService.cancel(spaceId, runId, principal, correlationId);
+        return RunExecutionController.RunResponse.from(executionService.getRun(spaceId, runId, principal));
     }
 
     private void send(SseEmitter emitter, RunEvent event) {
@@ -100,9 +105,11 @@ public class RunEventController {
         return envelope;
     }
 
-    public record CancelResponse(String status, boolean firstCancellation, UUID eventId, long sequence) {
+    public record CancelRunRequest(@Size(max = 500) String reason) {
     }
 
-    public record CancelRunRequest(@Size(max = 500) String reason) {
+    private static SessionPrincipal principal(Authentication authentication) {
+        return authentication != null && authentication.getPrincipal() instanceof SessionPrincipal value
+                ? value : null;
     }
 }

@@ -22,7 +22,8 @@ class RunEventControllerTest {
 
     @Test
     void serializesSseEnvelopeWithPublicContractFieldsAndNoSensitiveKeys() throws Exception {
-        RunEventController controller = new RunEventController(mock(RunEventService.class), objectMapper);
+        RunEventController controller = new RunEventController(mock(RunEventService.class), objectMapper,
+                mock(RunExecutionService.class));
         RunEvent event = new RunEvent(UUID.randomUUID(), 7, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 Instant.parse("2026-08-13T00:00:00Z"), "run.status", 1,
                 "{\"status\":\"CANCELLED\",\"text\":\"safe\"}");
@@ -42,7 +43,7 @@ class RunEventControllerTest {
     @Test
     void initialSnapshotIsACompleteSseEventAndResponsePreservesCorrelationHeaders() throws Exception {
         RunEventService service = mock(RunEventService.class);
-        RunEventController controller = new RunEventController(service, objectMapper);
+        RunEventController controller = new RunEventController(service, objectMapper, mock(RunExecutionService.class));
         UUID runId = UUID.randomUUID();
         UUID spaceId = UUID.randomUUID();
         UUID correlationId = UUID.randomUUID();

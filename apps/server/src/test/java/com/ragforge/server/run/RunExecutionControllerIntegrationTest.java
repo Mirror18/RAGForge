@@ -26,6 +26,9 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,6 +70,8 @@ class RunExecutionControllerIntegrationTest {
     @Autowired ProviderRepository providers;
     @Autowired PromptRepository prompts;
     @Autowired RunRepository runs;
+    @Autowired RunExecutionService executionService;
+    @Autowired RunEventService eventService;
 
     private UUID user;
     private UUID space;
@@ -162,6 +167,121 @@ class RunExecutionControllerIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void cancelEndpointIsIdempotentCancelsProviderFutureAndPersistsConsistentState() throws Exception {
+        UUID conversation = createConversation(space, "Cancellation chat");
+        CompletableFuture<RunRepository.RunRecord> execution = CompletableFuture.supplyAsync(() ->
+                executionService.createRun(space, conversation, principal,
+                        runRequest("__fake_block__-" + UUID.randomUUID()), UUID.randomUUID()));
+        UUID runId = awaitLatestRun();
+
+        MvcResult cancelResult = withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/runs/{run}/cancel", space, runId)
+                        .with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"client disconnected\"}"))).andReturn();
+        if (cancelResult.getResolvedException() != null) {
+            throw new AssertionError("cancel endpoint failed: "
+                    + cancelResult.getResolvedException().getClass().getName() + ": "
+                    + cancelResult.getResolvedException().getMessage(), cancelResult.getResolvedException());
+        }
+        assertThat(cancelResult.getResponse().getStatus()).isEqualTo(202);
+        JsonNode cancelBody = objectMapper.readTree(cancelResult.getResponse().getContentAsString());
+        assertThat(cancelBody.get("status").asText()).isEqualTo("CANCELLED");
+        assertThat(cancelBody.has("inputHash")).isTrue();
+        assertThat(cancelBody.has("message")).isFalse();
+
+        RunRepository.RunRecord cancelled = execution.get(10, TimeUnit.SECONDS);
+        assertThat(cancelled.status()).isEqualTo(RunRepository.RunStatus.CANCELLED);
+        assertThat(jdbc.queryForObject("SELECT status FROM run_steps WHERE run_id = ?", String.class, runId))
+                .isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT status FROM model_invocations WHERE run_id = ?", String.class, runId))
+                .isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM usage_ledger u
+                JOIN model_invocations i ON i.id = u.model_invocation_id
+                WHERE i.run_id = ?
+                """, Integer.class, runId))
+                .isEqualTo(0);
+
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/runs/{run}/cancel", space, runId)
+                        .with(auth()).contentType(MediaType.APPLICATION_JSON)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+        List<RunEvent> retained = eventService.replay(space, runId, null).events();
+        assertThat(retained.stream().filter(event -> event.type().equals("run.status")
+                && event.payloadJson().contains("CANCELLED")).count()).isEqualTo(1);
+    }
+
+    @Test
+    void timeoutIsRetryableAndRetryCreatesNewInvocationWithOneUsageRow() throws Exception {
+        UUID conversation = createConversation(space, "Retry chat");
+        String message = "__fake_timeout_once__-" + UUID.randomUUID();
+        MvcResult failedResult = withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody(message))))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.errorClass").value("TIMEOUT"))
+                .andReturn();
+        UUID failedRunId = responseId(failedResult);
+
+        MvcResult retriedResult = withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/runs/{run}/retry",
+                        space, failedRunId).with(auth()).header("X-Correlation-Id", UUID.randomUUID().toString())))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.id").exists())
+                .andReturn();
+        UUID retriedRunId = responseId(retriedResult);
+
+        assertThat(retriedRunId).isNotEqualTo(failedRunId);
+        assertThat(jdbc.queryForObject("SELECT status FROM runs WHERE id = ?", String.class, failedRunId))
+                .isEqualTo("FAILED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM model_invocations WHERE run_id IN (?, ?)", Integer.class,
+                failedRunId, retriedRunId)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT status FROM model_invocations WHERE run_id = ?", String.class, failedRunId))
+                .isEqualTo("FAILED");
+        assertThat(jdbc.queryForObject("SELECT status FROM model_invocations WHERE run_id = ?", String.class, retriedRunId))
+                .isEqualTo("SUCCEEDED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM usage_ledger WHERE space_id = ?", Integer.class, space))
+                .isEqualTo(1);
+
+        List<RunEvent> all = eventService.replay(space, retriedRunId, null).events();
+        assertThat(all).isNotEmpty();
+        RunEvent cursor = all.getFirst();
+        RunEventStore.OpenedStream replay = eventService.openStream(space, retriedRunId,
+                cursor.eventId().toString(), ignored -> { });
+        assertThat(replay.replay().cursorStatus()).isEqualTo(RunEventStore.CursorStatus.AVAILABLE);
+        assertThat(replay.replay().events()).allMatch(event -> event.sequence() > cursor.sequence());
+        replay.subscription().close();
+
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/runs/{run}/retry", space, retriedRunId)
+                        .with(auth())))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void disconnectedStreamStopsDeliveryAndCrossSpaceCancelIsDenied() throws Exception {
+        UUID conversation = createConversation(space, "Replay chat");
+        MvcResult result = withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody("replay-" + UUID.randomUUID()))))
+                .andExpect(status().isAccepted()).andReturn();
+        UUID runId = responseId(result);
+        List<RunEvent> all = eventService.replay(space, runId, null).events();
+        RunEvent cursor = all.getFirst();
+        List<RunEvent> delivered = new java.util.concurrent.CopyOnWriteArrayList<>();
+        RunEventStore.OpenedStream opened = eventService.openStream(space, runId, cursor.eventId().toString(), delivered::add);
+        opened.subscription().activate();
+        opened.subscription().close();
+        eventService.append(space, runId, UUID.randomUUID(), "step.status", 1,
+                "{\"status\":\"SUCCEEDED\",\"step\":\"generate\"}");
+        assertThat(delivered).isEmpty();
+        assertThat(opened.replay().events()).allMatch(event -> event.sequence() > cursor.sequence());
+
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/runs/{run}/cancel", otherSpace, runId)
+                        .with(auth()).contentType(MediaType.APPLICATION_JSON)))
+                .andExpect(status().isNotFound());
+    }
+
     private UUID createConversation(UUID requestedSpace, String title) throws Exception {
         MvcResult result = withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations", requestedSpace).with(auth())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -173,6 +293,28 @@ class RunExecutionControllerIntegrationTest {
     private String runBody(String message) throws Exception {
         return objectMapper.writeValueAsString(new RunExecutionController.CreateRunRequest(setup.route.id(), setup.profile.id(),
                 setup.provider.id(), setup.prompt.id(), message, false, 5));
+    }
+
+    private RunExecutionService.RunRequest runRequest(String message) {
+        return new RunExecutionService.RunRequest(setup.route.id(), setup.profile.id(), setup.provider.id(),
+                setup.prompt.id(), message, false, 5);
+    }
+
+    private UUID responseId(MvcResult result) throws Exception {
+        return UUID.fromString(objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asText());
+    }
+
+    private UUID awaitLatestRun() throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM runs WHERE space_id = ?", Integer.class, space);
+            if (count != null && count > 0) {
+                return jdbc.queryForObject("SELECT id FROM runs WHERE space_id = ? ORDER BY created_at DESC LIMIT 1",
+                        UUID.class, space);
+            }
+            Thread.sleep(20);
+        }
+        throw new AssertionError("Timed out waiting for queued run");
     }
 
     private Setup setup(UUID requestedSpace, Instant now) {
