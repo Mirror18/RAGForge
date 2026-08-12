@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/run.usage.recorded.v1.schema.json",
+  "title": "run.usage.recorded.v1",
+  "description": "Phase 2 contract event for deduplicated usage ledger data. A repeated provider report updates the same logical ledger entry.",
+  "x-ragforge-uniqueness": ["spaceId", "modelInvocationId", "usageSource", "dedupeKey"],
+  "x-ragforge-on-duplicate": "upsert-same-ledger-row",
+  "allOf": [
+    {"$ref": "./event-envelope.v1.schema.json"},
+    {
+      "type": "object",
+      "required": ["eventType", "payload"],
+      "properties": {
+        "eventType": {"const": "run.usage.recorded.v1"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runId", "modelInvocationId", "usageLedgerId", "ledgerVersion", "correlationId", "usageSource", "dedupeKey", "inputTokens", "outputTokens", "totalTokens", "isFinal"],
+          "properties": {
+            "runId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "modelInvocationId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "usageLedgerId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "ledgerVersion": {"type": "integer", "minimum": 1},
+            "correlationId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "usageSource": {"type": "string", "enum": ["PROVIDER_REPORTED", "LOCAL_ESTIMATE"]},
+            "dedupeKey": {"type": "string", "minLength": 10, "maxLength": 512, "pattern": "^[A-Za-z0-9._:-]+$"},
+            "inputTokens": {"type": "integer", "minimum": 0},
+            "outputTokens": {"type": "integer", "minimum": 0},
+            "totalTokens": {"type": "integer", "minimum": 0},
+            "isFinal": {"type": "boolean"}
+          }
+        }
+      }
+    }
+  ]
+}

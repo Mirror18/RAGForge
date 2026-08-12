@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/run.model.invocation.recorded.v1.schema.json",
+  "title": "run.model.invocation.recorded.v1",
+  "description": "Phase 2 contract event for an immutable model invocation record. Secrets and raw prompt content stay outside the event.",
+  "allOf": [
+    {"$ref": "./event-envelope.v1.schema.json"},
+    {
+      "type": "object",
+      "required": ["eventType", "payload"],
+      "properties": {
+        "eventType": {"const": "run.model.invocation.recorded.v1"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runId", "stepId", "modelInvocationId", "invocationVersion", "modelProfileId", "modelProfileVersion", "status", "attempt", "usageLedgerId", "correlationId"],
+          "properties": {
+            "runId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "stepId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "modelInvocationId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "invocationVersion": {"type": "integer", "minimum": 1},
+            "modelProfileId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "modelProfileVersion": {"type": "integer", "minimum": 1},
+            "status": {"type": "string", "enum": ["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED"]},
+            "attempt": {"type": "integer", "minimum": 1, "maximum": 5},
+            "usageLedgerId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "correlationId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "errorClass": {"type": ["string", "null"], "enum": ["AUTHENTICATION", "RATE_LIMIT", "QUOTA", "MODEL_NOT_FOUND", "CONTEXT_OVERFLOW", "CONTENT_POLICY", "TIMEOUT", "UNAVAILABLE", "UNSUPPORTED_CAPABILITY", "INVALID_RESPONSE", "CANCELLED", "SPACE_EGRESS_DENIED", "IDEMPOTENCY_CONFLICT", null]}
+          }
+        }
+      }
+    }
+  ]
+}

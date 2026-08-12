@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/run.status.changed.v1.schema.json",
+  "title": "run.status.changed.v1",
+  "description": "Phase 2 contract event for a Run status transition. The event is planned and does not claim a live producer.",
+  "allOf": [
+    {"$ref": "./event-envelope.v1.schema.json"},
+    {
+      "type": "object",
+      "required": ["eventType", "payload"],
+      "properties": {
+        "eventType": {"const": "run.status.changed.v1"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runId", "runVersion", "previousStatus", "status", "correlationId", "cancelRequested"],
+          "properties": {
+            "runId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "runVersion": {"type": "integer", "minimum": 1},
+            "previousStatus": {"type": "string", "enum": ["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED"]},
+            "status": {"type": "string", "enum": ["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED"]},
+            "correlationId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "cancelRequested": {"type": "boolean"},
+            "errorClass": {"type": ["string", "null"], "enum": ["AUTHENTICATION", "RATE_LIMIT", "QUOTA", "MODEL_NOT_FOUND", "CONTEXT_OVERFLOW", "CONTENT_POLICY", "TIMEOUT", "UNAVAILABLE", "UNSUPPORTED_CAPABILITY", "INVALID_RESPONSE", "CANCELLED", "SPACE_EGRESS_DENIED", "IDEMPOTENCY_CONFLICT", null]}
+          }
+        }
+      }
+    }
+  ]
+}
