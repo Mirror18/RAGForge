@@ -1,0 +1,954 @@
+{
+  "dataset_version": "phase0-benchmark-1.0.0",
+  "documents": [
+    {
+      "byte_size": 338,
+      "categories": [
+        "markdown",
+        "headings",
+        "single_fact"
+      ],
+      "content_sha256": "b588a366c00431efb2a3a1fbd40112036c095d32618ce032b9bdc98eb967242c",
+      "document_id": "doc-001",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-001"
+      },
+      "relative_path": "documents/corpus/markdown/guide.md",
+      "space_id": "space-alpha",
+      "title": "Synthetic RAGForge Guide"
+    },
+    {
+      "byte_size": 218,
+      "categories": [
+        "markdown",
+        "yaml",
+        "frontmatter",
+        "structured"
+      ],
+      "content_sha256": "b1272b5067162b7e8ef401c554f5f824eb166c47b8b07159228f43d65cdac14e",
+      "document_id": "doc-002",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-002"
+      },
+      "relative_path": "documents/corpus/markdown/frontmatter.md",
+      "space_id": "space-alpha",
+      "title": "Frontmatter Fixture"
+    },
+    {
+      "byte_size": 184,
+      "categories": [
+        "markdown",
+        "wikilink",
+        "links"
+      ],
+      "content_sha256": "6c969a0d3f793da11ca6501351138612023ae8eed00fcb7f5def848299bb22de",
+      "document_id": "doc-003",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-003"
+      },
+      "relative_path": "documents/corpus/markdown/wikilinks.md",
+      "space_id": "space-alpha",
+      "title": "Wikilink Map"
+    },
+    {
+      "byte_size": 207,
+      "categories": [
+        "markdown",
+        "headings",
+        "duplicate_heading_text"
+      ],
+      "content_sha256": "4a43eb3b4d4a13246a670d64f6ff7d5578ae0eafc7c141e5c13c54d5b61f9774",
+      "document_id": "doc-004",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-004"
+      },
+      "relative_path": "documents/corpus/markdown/headings.md",
+      "space_id": "space-alpha",
+      "title": "Heading Fixture"
+    },
+    {
+      "byte_size": 161,
+      "categories": [
+        "markdown",
+        "table",
+        "structured"
+      ],
+      "content_sha256": "d34fb71393bebf8d86ee76cbdcde021c0cbcdc8360828ab380a711c953243c28",
+      "document_id": "doc-005",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-005"
+      },
+      "relative_path": "documents/corpus/markdown/table.md",
+      "space_id": "space-alpha",
+      "title": "Region Table"
+    },
+    {
+      "byte_size": 173,
+      "categories": [
+        "markdown",
+        "code",
+        "configuration"
+      ],
+      "content_sha256": "7d085e338582356e55bdff46a71cb43a5059b9e8908c74a317c4ad146dec009c",
+      "document_id": "doc-006",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-006"
+      },
+      "relative_path": "documents/corpus/markdown/code.md",
+      "space_id": "space-alpha",
+      "title": "Chunker Code Fixture"
+    },
+    {
+      "byte_size": 141,
+      "categories": [
+        "markdown",
+        "callout",
+        "note"
+      ],
+      "content_sha256": "d8ac4d2219d9c4192ef3547d287019f79b6f4eeee81b3cd24d5beb5d14981112",
+      "document_id": "doc-007",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-007"
+      },
+      "relative_path": "documents/corpus/markdown/callout.md",
+      "space_id": "space-alpha",
+      "title": "Callout Fixture"
+    },
+    {
+      "byte_size": 3900,
+      "categories": [
+        "markdown",
+        "long_text",
+        "multi_section"
+      ],
+      "content_sha256": "563407dd69fa1e3a73476fa9b71576bb00f9f4bf6029370ba10be9e0f5ce4401",
+      "document_id": "doc-008",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-008"
+      },
+      "relative_path": "documents/corpus/markdown/long-design.md",
+      "space_id": "space-alpha",
+      "title": "Long Retrieval Design"
+    },
+    {
+      "byte_size": 278,
+      "categories": [
+        "markdown",
+        "multi_hop",
+        "cross_document"
+      ],
+      "content_sha256": "8a7379726f8eca7b1239f85ad869a7e9da5bd4d46241ecb9edff593e77c92ff4",
+      "document_id": "doc-009",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-009"
+      },
+      "relative_path": "documents/corpus/markdown/multihop.md",
+      "space_id": "space-alpha",
+      "title": "Multi-hop Evidence"
+    },
+    {
+      "byte_size": 249,
+      "categories": [
+        "markdown",
+        "no_answer",
+        "abstention"
+      ],
+      "content_sha256": "1a81571a21faafaa600212a28492e05ec24dfc56b045078efe45808c78738675",
+      "document_id": "doc-010",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-010"
+      },
+      "relative_path": "documents/corpus/markdown/no-answer.md",
+      "space_id": "space-alpha",
+      "title": "No Answer Fixture"
+    },
+    {
+      "byte_size": 158,
+      "categories": [
+        "markdown",
+        "unicode",
+        "multilingual"
+      ],
+      "content_sha256": "541e006c3730e69799710454f0a2eb15dbe2b470326f6fab7bdaef9896c45b9d",
+      "document_id": "doc-011",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-011"
+      },
+      "relative_path": "documents/corpus/markdown/unicode.md",
+      "space_id": "space-alpha",
+      "title": "Unicode Fixture"
+    },
+    {
+      "byte_size": 366,
+      "categories": [
+        "markdown",
+        "prompt_injection",
+        "safety",
+        "untrusted_content"
+      ],
+      "content_sha256": "5bb377861b6a2b72a4fbd597308eea7bac3e9f83fa1299e951cea51d9cf87666",
+      "document_id": "doc-012",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-012"
+      },
+      "relative_path": "documents/corpus/markdown/prompt-injection.md",
+      "space_id": "space-alpha",
+      "title": "Untrusted Prompt Injection Fixture"
+    },
+    {
+      "byte_size": 166,
+      "categories": [
+        "markdown",
+        "space_boundary",
+        "authorization"
+      ],
+      "content_sha256": "f88c90408c343f17088029abf88b7dd171c7c7c24341ecb727df094c1b61c84e",
+      "document_id": "doc-013",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-013"
+      },
+      "relative_path": "documents/corpus/spaces/alpha/alpha-only.md",
+      "space_id": "space-alpha",
+      "title": "Alpha Space Boundary"
+    },
+    {
+      "byte_size": 164,
+      "categories": [
+        "markdown",
+        "space_boundary",
+        "authorization"
+      ],
+      "content_sha256": "7b7e0f3d0e2e25c81626388f0f70080636a5e56294feecc58211364959e99579",
+      "document_id": "doc-014",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-014"
+      },
+      "relative_path": "documents/corpus/spaces/beta/beta-only.md",
+      "space_id": "space-beta",
+      "title": "Beta Space Boundary"
+    },
+    {
+      "byte_size": 108,
+      "categories": [
+        "markdown",
+        "same_name",
+        "space_boundary"
+      ],
+      "content_sha256": "4334ce8413ef3b912661d91db22e67b0f5e7a49f9b86c7b52204a3db2d5dcd8a",
+      "document_id": "doc-015",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-015"
+      },
+      "relative_path": "documents/corpus/same-name/alpha/meeting-notes.md",
+      "space_id": "space-alpha",
+      "title": "Meeting Notes"
+    },
+    {
+      "byte_size": 121,
+      "categories": [
+        "markdown",
+        "same_name",
+        "space_boundary"
+      ],
+      "content_sha256": "968837e0cde71ffd79b1c5d654eb6456c1bc97797b8450c3c6676fc957ff850f",
+      "document_id": "doc-016",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-016"
+      },
+      "relative_path": "documents/corpus/same-name/beta/meeting-notes.md",
+      "space_id": "space-beta",
+      "title": "Meeting Notes"
+    },
+    {
+      "byte_size": 173,
+      "categories": [
+        "markdown",
+        "conflict",
+        "versioned_evidence"
+      ],
+      "content_sha256": "88ebc58827d2fc87f818e3406425a5fcc695ac289693ec1f8fc314ad744a6453",
+      "document_id": "doc-017",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-017"
+      },
+      "relative_path": "documents/corpus/conflicts/policy-v1.md",
+      "space_id": "space-alpha",
+      "title": "Retention Policy v1"
+    },
+    {
+      "byte_size": 213,
+      "categories": [
+        "markdown",
+        "conflict",
+        "versioned_evidence",
+        "freshness"
+      ],
+      "content_sha256": "c63b93a4257f8126f8b8f4e9fdafe2eb5c6ade548ef829be5c185efb595848d7",
+      "document_id": "doc-018",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-018"
+      },
+      "relative_path": "documents/corpus/conflicts/policy-v2.md",
+      "space_id": "space-alpha",
+      "title": "Retention Policy v2"
+    },
+    {
+      "byte_size": 217,
+      "categories": [
+        "markdown",
+        "faq",
+        "single_fact"
+      ],
+      "content_sha256": "420fb89bdbaf6aba0ce59f31e729ea54c9c8f8b55dbc9d580a4325009f421023",
+      "document_id": "doc-019",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-019"
+      },
+      "relative_path": "documents/corpus/markdown/faq.md",
+      "space_id": "space-alpha",
+      "title": "Synthetic FAQ"
+    },
+    {
+      "byte_size": 185,
+      "categories": [
+        "markdown",
+        "headings",
+        "outline"
+      ],
+      "content_sha256": "bca9efb2e63df17c816407bb0e45fb19f6bb5510a3dccece7a27c8dcbe8a16a5",
+      "document_id": "doc-020",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-020"
+      },
+      "relative_path": "documents/corpus/markdown/outline.md",
+      "space_id": "space-alpha",
+      "title": "Outline Fixture"
+    },
+    {
+      "byte_size": 215,
+      "categories": [
+        "markdown",
+        "no_answer",
+        "abstention"
+      ],
+      "content_sha256": "0947f2028a1f420f4ce4a6b7b5454900bc5f9f78295455f477d08e67170d4ed0",
+      "document_id": "doc-021",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-021"
+      },
+      "relative_path": "documents/corpus/markdown/empty-answer.md",
+      "space_id": "space-alpha",
+      "title": "Empty Answer Boundary"
+    },
+    {
+      "byte_size": 131,
+      "categories": [
+        "markdown",
+        "freshness",
+        "versioned_evidence"
+      ],
+      "content_sha256": "229e9fd88c5465def7a9bd2b0f8e549ca23fafe871544a849fd02de5941323b3",
+      "document_id": "doc-022",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-022"
+      },
+      "relative_path": "documents/corpus/markdown/freshness.md",
+      "space_id": "space-alpha",
+      "title": "Freshness Fixture"
+    },
+    {
+      "byte_size": 198,
+      "categories": [
+        "markdown",
+        "security",
+        "space_boundary",
+        "authorization"
+      ],
+      "content_sha256": "53d17ca06e123c1dd18a08c35b751b62d49d418c543d96e571019783074bf340",
+      "document_id": "doc-023",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-023"
+      },
+      "relative_path": "documents/corpus/markdown/permissions.md",
+      "space_id": "space-alpha",
+      "title": "Permission Fixture"
+    },
+    {
+      "byte_size": 208,
+      "categories": [
+        "markdown",
+        "nested_list",
+        "structure"
+      ],
+      "content_sha256": "e4ff34792915bb72da7608285baddfb4089ec50bab51dce0bb93041055f11542",
+      "document_id": "doc-024",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-024"
+      },
+      "relative_path": "documents/corpus/markdown/nested-lists.md",
+      "space_id": "space-alpha",
+      "title": "Nested List Fixture"
+    },
+    {
+      "byte_size": 158,
+      "categories": [
+        "markdown",
+        "links",
+        "provenance"
+      ],
+      "content_sha256": "60ee4042524e3463dab678aa3d8c08f5872d712d4969d7ec4d0722ba283b70ba",
+      "document_id": "doc-025",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-025"
+      },
+      "relative_path": "documents/corpus/markdown/links.md",
+      "space_id": "space-alpha",
+      "title": "External Link Fixture"
+    },
+    {
+      "byte_size": 196,
+      "categories": [
+        "markdown",
+        "table",
+        "metrics"
+      ],
+      "content_sha256": "00bf2b29fdd30fe0e6c9d980a16ec68fd1a6a45ea2ff33db532a2bd2c763bc66",
+      "document_id": "doc-026",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-026"
+      },
+      "relative_path": "documents/corpus/markdown/metrics.md",
+      "space_id": "space-alpha",
+      "title": "Metric Table Fixture"
+    },
+    {
+      "byte_size": 147,
+      "categories": [
+        "markdown",
+        "callout",
+        "warning"
+      ],
+      "content_sha256": "d2e4fcb7e0da41a351e41a213bca415826b7eaad5af132a236c4162837d8d7a1",
+      "document_id": "doc-027",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-027"
+      },
+      "relative_path": "documents/corpus/markdown/callout-warning.md",
+      "space_id": "space-alpha",
+      "title": "Warning Callout Fixture"
+    },
+    {
+      "byte_size": 152,
+      "categories": [
+        "markdown",
+        "yaml",
+        "code",
+        "configuration"
+      ],
+      "content_sha256": "f374d3242a6c7b2ffcd765a6ebcd05f00e1977148be3dac33c67c0ee18ab5676",
+      "document_id": "doc-028",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-028"
+      },
+      "relative_path": "documents/corpus/markdown/code-yaml.md",
+      "space_id": "space-alpha",
+      "title": "YAML Code Fixture"
+    },
+    {
+      "byte_size": 114,
+      "categories": [
+        "markdown",
+        "duplicate_title",
+        "disambiguation"
+      ],
+      "content_sha256": "9b2687e86b165cdd11893bdc50cf760966a76feec2f0346a78fe2a662c166af9",
+      "document_id": "doc-029",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-029"
+      },
+      "relative_path": "documents/corpus/duplicate-title/first.md",
+      "space_id": "space-alpha",
+      "title": "Duplicate Title"
+    },
+    {
+      "byte_size": 117,
+      "categories": [
+        "markdown",
+        "duplicate_title",
+        "disambiguation"
+      ],
+      "content_sha256": "3ebd81e3fcad62d6c4b19888287584748d70eea07632fdd3d10e01a42ca84fa8",
+      "document_id": "doc-030",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-030"
+      },
+      "relative_path": "documents/corpus/duplicate-title/second.md",
+      "space_id": "space-alpha",
+      "title": "Duplicate Title"
+    },
+    {
+      "byte_size": 1003,
+      "categories": [
+        "pdf",
+        "text_pdf",
+        "public_synthetic"
+      ],
+      "content_sha256": "cc1bc4c2906a482b3e3096f4a5b6c02fc73b35bd42bfe4fbac7f434c7629181b",
+      "document_id": "doc-031",
+      "format": "pdf",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-031"
+      },
+      "relative_path": "documents/corpus/pdf/handbook.pdf",
+      "space_id": "space-alpha",
+      "title": "Synthetic PDF Handbook"
+    },
+    {
+      "byte_size": 31411,
+      "categories": [
+        "pdf",
+        "scan_placeholder",
+        "ocr",
+        "limitation"
+      ],
+      "content_sha256": "850884f686aa184a10448b2d24ae50d15ddeeecd2ceb6e2f01390245f8a6132e",
+      "document_id": "doc-032",
+      "format": "pdf",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": "合成扫描页替代样本；没有真实公开扫描图，也没有 OCR 结果，不能用于声称 OCR 准确率。",
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-032"
+      },
+      "relative_path": "documents/corpus/pdf/scan-placeholder.pdf",
+      "space_id": "space-alpha",
+      "title": "Synthetic Scan Placeholder"
+    },
+    {
+      "byte_size": 970,
+      "categories": [
+        "docx",
+        "office_document",
+        "public_synthetic"
+      ],
+      "content_sha256": "42a518fcc97f2ce06cac06589549f724cc7591d928fb55303c235577d045e929",
+      "document_id": "doc-033",
+      "format": "docx",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-033"
+      },
+      "relative_path": "documents/corpus/office/contract.docx",
+      "space_id": "space-alpha",
+      "title": "Synthetic DOCX Contract"
+    },
+    {
+      "byte_size": 1618,
+      "categories": [
+        "xlsx",
+        "spreadsheet",
+        "table",
+        "public_synthetic"
+      ],
+      "content_sha256": "1e72bf1a3eec1a36c680585ddd3adb6ae62543b6bcd8e871d2c75313b4c6bf72",
+      "document_id": "doc-034",
+      "format": "xlsx",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-034"
+      },
+      "relative_path": "documents/corpus/office/metrics.xlsx",
+      "space_id": "space-alpha",
+      "title": "Synthetic XLSX Metrics"
+    },
+    {
+      "byte_size": 3949,
+      "categories": [
+        "markdown",
+        "long_text",
+        "appendix",
+        "unicode"
+      ],
+      "content_sha256": "c9ceb599ea02f6c3ff1be2293d13d65636830920ec0be79e74c5a70b2b6e3929",
+      "document_id": "doc-035",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-035"
+      },
+      "relative_path": "documents/corpus/markdown/long-appendix.md",
+      "space_id": "space-alpha",
+      "title": "Long Appendix Fixture"
+    },
+    {
+      "byte_size": 156,
+      "categories": [
+        "markdown",
+        "terms",
+        "single_fact"
+      ],
+      "content_sha256": "4c6c243b62a84cb37a4f7d5da86dbc95735be44cc73e3431cb9c2f2a0e72fbcb",
+      "document_id": "doc-036",
+      "format": "markdown",
+      "license": {
+        "id": "CC0-1.0",
+        "status": "synthetic_releasable",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "provenance": {
+        "copied_third_party_text": false,
+        "kind": "synthetic",
+        "limitation": null,
+        "source": "RAGForge Phase 0 deterministic asset generator",
+        "source_id": "phase0-assets-generator-1.0.0:doc-036"
+      },
+      "relative_path": "documents/corpus/markdown/contract-terms.md",
+      "space_id": "space-alpha",
+      "title": "Synthetic Contract Terms"
+    }
+  ],
+  "generator_version": "phase0-assets-generator-1.0.0",
+  "immutable_id": "e309814ddef85f66af2a3e6b6110cc2cdc1f653a6b044f8a6f2ad6d3a3b9fbb8",
+  "license_policy": "All generated entries are synthetic and released under CC0-1.0 for repository fixture use.",
+  "schema_version": "phase0-document-manifest-1.0.0",
+  "seed": 20260812
+}
