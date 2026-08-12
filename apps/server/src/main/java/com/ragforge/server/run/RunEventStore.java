@@ -11,6 +11,9 @@ public interface RunEventStore {
 
     RunEvent append(RunEventDraft draft);
 
+    /** Creates an initial/recovery snapshot without broadcasting it to existing live subscribers. */
+    RunEvent snapshot(UUID spaceId, UUID runId, UUID correlationId, String status, String reason);
+
     default RunEvent append(UUID runId, UUID spaceId, UUID correlationId, String type, int version,
                             String payloadJson) {
         return append(new RunEventDraft(runId, spaceId, correlationId, type, version, payloadJson));

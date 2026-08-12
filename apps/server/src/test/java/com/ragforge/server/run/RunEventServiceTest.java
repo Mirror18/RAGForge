@@ -59,6 +59,24 @@ class RunEventServiceTest {
         verify(store).cancel(SPACE_ID, RUN_ID, CORRELATION_ID);
     }
 
+    @Test
+    void noCursorOpensWithACompleteInitialSnapshotEvent() {
+        RunRepository repository = mock(RunRepository.class);
+        InMemoryRunEventStore store = new InMemoryRunEventStore();
+        when(repository.findRun(SPACE_ID, RUN_ID)).thenReturn(Optional.of(run(RunRepository.RunStatus.RUNNING, 0)));
+        RunEventService service = new RunEventService(repository, store);
+
+        RunEventStore.OpenedStream opened = service.openStream(SPACE_ID, RUN_ID, null, ignored -> {
+        });
+
+        assertThat(opened.replay().events()).singleElement().satisfies(event -> {
+            assertThat(event.sequence()).isEqualTo(1);
+            assertThat(event.type()).isEqualTo("run.snapshot");
+            assertThat(event.payloadJson()).contains("\"status\":\"RUNNING\"");
+        });
+        opened.subscription().close();
+    }
+
     private RunRepository.RunRecord run(RunRepository.RunStatus status, long version) {
         return new RunRepository.RunRecord(RUN_ID, SPACE_ID, null, CORRELATION_ID,
                 RunRepository.RequestKind.CHAT, status, null, null, null, null, null, null,
