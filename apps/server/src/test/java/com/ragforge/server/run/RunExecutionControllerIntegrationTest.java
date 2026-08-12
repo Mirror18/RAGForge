@@ -124,17 +124,34 @@ class RunExecutionControllerIntegrationTest {
                         .content(runBody("hello")))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.runId").value(org.hamcrest.Matchers.notNullValue()))
                 .andExpect(jsonPath("$.conversationId").value(conversation.toString()))
-                .andExpect(jsonPath("$.inputHash").exists())
-                .andExpect(jsonPath("$.outputHash").exists())
+                .andExpect(jsonPath("$.modelRouteId").value(setup.route.id().toString()))
+                .andExpect(jsonPath("$.promptVersionId").value(setup.prompt.id().toString()))
+                .andExpect(jsonPath("$.usageLedgerId").value(org.hamcrest.Matchers.notNullValue()))
                 .andExpect(jsonPath("$.message").doesNotExist())
                 .andReturn());
-        UUID runId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText());
+        JsonNode createdBody = objectMapper.readTree(created.getResponse().getContentAsString());
+        UUID runId = UUID.fromString(createdBody.get("runId").asText());
+        UUID responseUsageLedgerId = UUID.fromString(createdBody.get("usageLedgerId").asText());
+        assertThat(jdbc.queryForObject("""
+                SELECT u.id
+                FROM usage_ledger u
+                JOIN model_invocations i ON i.id = u.model_invocation_id AND i.space_id = u.space_id
+                WHERE u.space_id = ? AND i.run_id = ?
+                ORDER BY CASE WHEN u.usage_source = 'PROVIDER_REPORTED' THEN 0 ELSE 1 END, u.created_at, u.id
+                LIMIT 1
+                """, UUID.class, space, runId)).isEqualTo(responseUsageLedgerId);
 
         withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs/{run}", space, runId).with(auth())))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SUCCEEDED"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.runId").value(runId.toString()))
+                .andExpect(jsonPath("$.steps[0].stepId").exists())
+                .andExpect(jsonPath("$.lastSequence").isNumber());
         withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs/{run}/steps", space, runId).with(auth())))
-                .andExpect(status().isOk()).andExpect(jsonPath("$[0].status").value("SUCCEEDED"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.items[0].stepId").exists())
+                .andExpect(jsonPath("$.nextCursor").value(org.hamcrest.Matchers.nullValue()));
 
         UUID invocation = jdbc.queryForObject("SELECT id FROM model_invocations WHERE run_id = ?", UUID.class, runId);
         UUID correlation = UUID.randomUUID();
@@ -159,8 +176,7 @@ class RunExecutionControllerIntegrationTest {
                         .content(runBody("__fake_error__")))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("FAILED"))
-                .andExpect(jsonPath("$.errorClass").value("INVALID_RESPONSE"))
-                .andExpect(jsonPath("$.errorCode").value("invalid_response"))
+                .andExpect(jsonPath("$.error.errorClass").value("INVALID_RESPONSE"))
                 .andExpect(jsonPath("$.message").doesNotExist()));
 
         withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs/{run}", otherSpace, UUID.randomUUID()).with(auth())))
@@ -186,7 +202,8 @@ class RunExecutionControllerIntegrationTest {
         assertThat(cancelResult.getResponse().getStatus()).isEqualTo(202);
         JsonNode cancelBody = objectMapper.readTree(cancelResult.getResponse().getContentAsString());
         assertThat(cancelBody.get("status").asText()).isEqualTo("CANCELLED");
-        assertThat(cancelBody.has("inputHash")).isTrue();
+        assertThat(cancelBody.has("runId")).isTrue();
+        assertThat(cancelBody.get("usageLedgerId").isNull()).isTrue();
         assertThat(cancelBody.has("message")).isFalse();
 
         RunRepository.RunRecord cancelled = execution.get(10, TimeUnit.SECONDS);
@@ -220,7 +237,7 @@ class RunExecutionControllerIntegrationTest {
                         .content(runBody(message))))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("FAILED"))
-                .andExpect(jsonPath("$.errorClass").value("TIMEOUT"))
+                .andExpect(jsonPath("$.error.errorClass").value("TIMEOUT"))
                 .andReturn();
         UUID failedRunId = responseId(failedResult);
 
@@ -228,7 +245,7 @@ class RunExecutionControllerIntegrationTest {
                         space, failedRunId).with(auth()).header("X-Correlation-Id", UUID.randomUUID().toString())))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("SUCCEEDED"))
-                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.runId").exists())
                 .andReturn();
         UUID retriedRunId = responseId(retriedResult);
 
@@ -301,7 +318,7 @@ class RunExecutionControllerIntegrationTest {
     }
 
     private UUID responseId(MvcResult result) throws Exception {
-        return UUID.fromString(objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asText());
+        return UUID.fromString(objectMapper.readTree(result.getResponse().getContentAsString()).get("runId").asText());
     }
 
     private UUID awaitLatestRun() throws InterruptedException {

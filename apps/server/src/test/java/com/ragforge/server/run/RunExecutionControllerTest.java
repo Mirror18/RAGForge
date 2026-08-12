@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 
 class RunExecutionControllerTest {
     @Test
-    void createRunResponseContainsHashesOnlyAndNoRawPromptOrCredential() {
+    void createRunResponseContainsHashesOnlyAndNoRawPromptOrCredential() throws Exception {
         RunExecutionService service = mock(RunExecutionService.class);
         RunExecutionController controller = new RunExecutionController(service);
         UUID space = UUID.randomUUID();
@@ -41,10 +41,42 @@ class RunExecutionControllerTest {
                 new RunExecutionController.CreateRunRequest(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                         UUID.randomUUID(), "raw prompt secret", false, 5), authentication, request);
 
+        assertThat(response.runId()).isEqualTo(run);
+        assertThat(response.spaceId()).isEqualTo(space);
+        assertThat(response.conversationId()).isEqualTo(conversation);
+        assertThat(response.version()).isEqualTo(2);
         assertThat(response.status()).isEqualTo("SUCCEEDED");
-        assertThat(response.inputHash()).isEqualTo("input-hash");
-        String serialized = response.toString();
+        assertThat(response.correlationId()).isEqualTo(correlation);
+        assertThat(response.modelRouteId()).isNotNull();
+        assertThat(response.promptVersionId()).isNotNull();
+        assertThat(response.usageLedgerId()).isNull();
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper()
+                .findAndRegisterModules();
+        String serialized = mapper.writeValueAsString(response);
+        assertThat(mapper.readTree(serialized).fieldNames())
+                .toIterable().containsExactlyInAnyOrder("runId", "spaceId", "conversationId", "version", "status",
+                        "correlationId", "modelRouteId", "promptVersionId", "usageLedgerId", "cancelRequested",
+                        "error", "createdAt", "startedAt", "finishedAt");
         assertThat(serialized).doesNotContain("raw prompt secret", "credential", "apiKey", "accessToken");
+    }
+
+    @Test
+    void usageLedgerIdIsNullWhenNoPersistedLedgerExistsAndNeverFabricated() {
+        RunRepository.RunRecord record = runRecord(RunRepository.RunStatus.CANCELLED,
+                RunRepository.ErrorClass.CANCELLED);
+
+        RunExecutionController.RunResponse response = RunExecutionController.RunResponse.from(record, null);
+
+        assertThat(response.usageLedgerId()).isNull();
+    }
+
+    private RunRepository.RunRecord runRecord(RunRepository.RunStatus status,
+                                               RunRepository.ErrorClass errorClass) {
+        UUID run = UUID.randomUUID();
+        return new RunRepository.RunRecord(run, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), RunRepository.RequestKind.CHAT, status, UUID.randomUUID(), UUID.randomUUID(),
+                "input-hash", null, errorClass, "run_cancelled", Instant.now(), Instant.now(),
+                Instant.now(), Instant.now(), 1);
     }
 
     @Test

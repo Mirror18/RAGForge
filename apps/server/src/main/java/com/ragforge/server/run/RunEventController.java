@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,12 +36,20 @@ public class RunEventController {
     private final RunEventService service;
     private final ObjectMapper objectMapper;
     private final RunExecutionService executionService;
+    private final JdbcTemplate jdbc;
 
     public RunEventController(RunEventService service, ObjectMapper objectMapper,
                               RunExecutionService executionService) {
+        this(service, objectMapper, executionService, null);
+    }
+
+    @Autowired
+    public RunEventController(RunEventService service, ObjectMapper objectMapper,
+                              RunExecutionService executionService, JdbcTemplate jdbc) {
         this.service = service;
         this.objectMapper = objectMapper;
         this.executionService = executionService;
+        this.jdbc = jdbc;
     }
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -77,7 +87,7 @@ public class RunEventController {
         UUID correlationId = UUID.fromString(CorrelationIdFilter.current(request));
         SessionPrincipal principal = principal(authentication);
         executionService.cancel(spaceId, runId, principal, correlationId);
-        return RunExecutionController.RunResponse.from(executionService.getRun(spaceId, runId, principal));
+        return RunExecutionController.RunResponse.from(executionService.getRun(spaceId, runId, principal), jdbc);
     }
 
     private void send(SseEmitter emitter, RunEvent event) {
