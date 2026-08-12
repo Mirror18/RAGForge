@@ -1,7 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-12
-- Current stage: Foundation / Phase 0 Ready
+- Current stage: Foundation / Phase 1 Ready
 - Repository: local private Git repository
 - Branch: `main`
 - External remote: not configured
@@ -18,18 +18,22 @@
 - 风险与需求追溯基线。
 - 多 Agent 一任务一分支一 worktree 的协作、集成与中文提交规则。
 - 可直接复用的多 Agent 循环执行提示词。
+- Phase 0 可复现验收资产、33 条问题和真实 benchmark 结果；见 [`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md)。
+- Phase 0 上游许可证、精确 commit、LICENSE/NOTICE 和 use mode 闸门；见 [`UPSTREAM_REUSE_REGISTER.md`](../07-research/UPSTREAM_REUSE_REGISTER.md)。
+- Phase 0 checklist、风险、追溯矩阵和 retrospective 已闭环。
 
 ## 2. 当前声明
 
-- 尚未开发业务代码或部署 RAGFlow/AnythingLLM benchmark。
+- 尚未开发 RAGForge 业务代码；竞品 benchmark 已在独立 Compose/容器中完成，临时探针未进入仓库，RAGFlow dataset 中的探针已删除。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
 - 尚未创建 GitHub remote 或 release。
 - Obsidian 仓库没有被写入项目进度。
+- Phase 0 实验发现的跨空间、provenance、OCR、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收。
 
 ## 3. 下一入口
 
-执行 [Phase 0 Checklist](../03-delivery/PHASE_0_CHECKLIST.md)，先形成基准和许可证证据，再开始 Phase 1 工程骨架。
+进入 Phase 1 工程与领域骨架：先落实 `space_id` 安全边界、API/event contract、稳定 provenance/citation 和本地 provider contract，再扩展 ingestion/retrieval。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)。
 
 ## 4. 更新规则
 

@@ -60,4 +60,31 @@ Dify、FastGPT、MaxKB、Open WebUI 只用于产品行为和架构观察。它�
 | 治理 | 用户、空间、权限、provider、出境和审计 |
 | 运维 | logs/metrics/traces、备份、升级和资源使用 |
 
-在 Phase 0 实际运行前，不把 `TBD` 替换成推测数字；不同系统无法使用完全相同 embedding/reranker 时，分别报告默认最佳实践和尽可能同模型两组结果。
+运行前不把 `TBD` 替换成推测数字；本次运行后只填入有 UI、日志或脚本证据的结果。不同系统无法使用完全相同 embedding/reranker 时，分别报告默认最佳实践和尽可能同模型两组结果。
+
+## 5. Phase 0 已执行结果
+
+完整逐案例结果、运行日志摘要、生命周期演练和失败证据见 [`PHASE_0_BENCHMARK_RESULTS.md`](../08-records/phase-0/PHASE_0_BENCHMARK_RESULTS.md)。本节只保留可用于阶段退出判断的汇总，避免把不同产品的不可比指标合并成一个总分。
+
+### 5.1 固定配置
+
+- 日期：2026-08-12（Asia/Shanghai）。
+- 数据集：36 份文档、33 条问题；document manifest SHA-256 为 `2ddcc33dc74466acf084a107da4d60e4affebe5148c4159967b5ed243d23823f`，question manifest SHA-256 为 `db45ab719aed4396b0b6d71e116fb02b6111b9a642c8160bc6bfd026e5b55aee`，dataset index SHA-256 为 `aac2e54d6ebffce7970613b597a8302372724619fa2b6102d606abfd6b923d66`。
+- Ollama `0.21.2`，LLM `qwen3.5:9b`（`6488c96fa5fa`），embedding `nomic-embed-text:latest`（`0a109f422b47`，768 维）；未启用云端 fallback。
+- RAGFlow 使用官方 `v0.26.4`，实际镜像 digest 为 `sha256:16d24d1968ab59e2715a85d2590f1569c9539e0362344a42f3a23e8be06a655b`。AnythingLLM 实际运行 `1.14.0`，许可证候选版本的上游固定记录为 `v1.15.0`，两者不混写。
+
+### 5.2 实际结果
+
+| 产品 | 入库 | 结果 | 关键限制 |
+|---|---|---|---|
+| RAGFlow | 36/36 文件；35 份有 chunks，image-only PDF 为 0 chunks | Retrieval Recall@10 `0.879`（29/33），人工文档名映射 MRR@10 `0.971`，平均返回 8.03 条；q-001 Chat 正确回答，q-028 Chat 拒答 | 全局 dataset 无 `space_id` 过滤，q-013/q-014/q-032 等出现跨空间来源；重启约 37 秒 ready，并有 `Load term.freq FAIL!` 警告 |
+| AnythingLLM | 35/36；重复 basename 的第二份 `meeting-notes.md` 上传失败 | 33/33 回答，平均 UI latency `23.57s`，basename 级必需引用匹配 32/33；模型切换、重启恢复完成 | q-028 伪造 image-only PDF OCR；q-032 泄漏 `BETA-COMET-29`；同名 basename 使 q-015/q-016 provenance 不可证明 |
+
+RAGFlow 的指标来自检索测试页面，AnythingLLM 的指标来自生成回答 UI；二者没有相同的 reranker、评分和 citation ID 语义，因此不作“赢家”结论。该实验用于发现 RAGForge 的契约和安全验收缺口。
+
+### 5.3 阶段退出判断
+
+1. 实验结果 section 已真实填写，并链接逐案例记录。
+2. 每个借鉴项已在 [`UPSTREAM_REUSE_REGISTER.md`](UPSTREAM_REUSE_REGISTER.md) 固定许可证、精确 commit 和 use mode。
+3. 首个验收数据集已由仓库内脚本可复现生成，并保留 manifest/hash。
+4. 竞品实验没有改变 RAGForge 的模块化单体 + 独立 ingestion worker 技术基线；Phase 1 入口和未决风险记录在 [`PHASE_0_RETROSPECTIVE.md`](../08-records/retrospectives/PHASE_0_RETROSPECTIVE.md)。

@@ -27,3 +27,13 @@
 | RF-OPS-001 | Compose Linux 交付 | PRD 4 | [Deployment](../05-operations/DEPLOYMENT.md) | clean Ubuntu acceptance | 7 |
 | RF-OPS-002 | RPO24h/RTO4h | Charter 4 | [Backup](../05-operations/BACKUP_RESTORE.md) | isolated restore drill | 6–7 |
 | RF-OSS-001 | 第三方许可证可追溯 | Charter 7 | ADR-0009 | SBOM/license/notice CI | 0–7 |
+
+## Phase 0 验收证据与 Phase 1 入口
+
+| 证据 ID | 验收内容 | 证据文件/命令 | 后续测试 ID | Phase |
+|---|---|---|---|---|
+| P0-ASSET-001 | 可复现 corpus、question manifest、hash 和 image-only 边界 | [`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md)；`python scripts/phase0/validate_assets.py --root fixtures` | `P1-EVAL-ASSET-001` | 0 → 1 |
+| P0-RAGFLOW-001 | RAGFlow 独立 Compose、解析/检索/Chat、重启和资源证据 | [`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md) | `P1-SEC-SPACE-001`, `P1-OPS-READY-001` | 0 → 1 |
+| P0-ANYTHINGLLM-001 | AnythingLLM workspace、33 条回答、导入限制、重启和模型切换 | [`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md) | `P1-CIT-PROV-001`, `P1-ING-DUP-001` | 0 → 1 |
+| P0-SEC-001 | 跨空间、禁止来源、同名 provenance 和 OCR hallucination 失败证据 | [`RISK_REGISTER.md`](RISK_REGISTER.md)；q-013/q-014/q-015/q-016/q-028/q-032 | `P1-SEC-SPACE-001`, `P1-CIT-FORBIDDEN-001`, `P1-OCR-ABSTAIN-001` | 0 → 1 |
+| P0-LICENSE-001 | 上游 release/tag、精确 commit、LICENSE/NOTICE 和 use mode | [`UPSTREAM_REUSE_REGISTER.md`](../07-research/UPSTREAM_REUSE_REGISTER.md)、[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) | `P1-COMPLIANCE-001` | 0 → 1 |
