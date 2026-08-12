@@ -15,6 +15,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -25,6 +27,17 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
+    }
+
+    /**
+     * Password authentication is intentionally not an application entry path; sessions are authenticated by
+     * SessionAuthenticationFilter. Declaring this bean prevents Boot from creating and logging a generated password.
+     */
+    @Bean
+    UserDetailsService disabledPasswordAuthentication() {
+        return username -> {
+            throw new UsernameNotFoundException("Password authentication is not configured");
+        };
     }
 
     @Bean
