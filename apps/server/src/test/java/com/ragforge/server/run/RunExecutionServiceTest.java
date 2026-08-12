@@ -3,6 +3,7 @@ package com.ragforge.server.run;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.identity.SessionPrincipal;
 import com.ragforge.server.provider.ProviderRepository;
+import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.prompt.PromptRepository;
 import com.ragforge.server.space.SpaceRole;
 import org.junit.jupiter.api.Test;
@@ -112,10 +113,14 @@ class RunExecutionServiceTest {
         final RunEventService events = mock(RunEventService.class);
         final com.ragforge.server.space.SpaceRepository spaces = mock(com.ragforge.server.space.SpaceRepository.class);
         final ProviderRepository providers = mock(ProviderRepository.class);
+        final SpaceBindingRepository bindings = mock(SpaceBindingRepository.class);
         final PromptRepository prompts = mock(PromptRepository.class);
 
         Fixtures() {
             when(spaces.findRole(SPACE, USER)).thenReturn(Optional.of(SpaceRole.EDITOR));
+            when(bindings.findCurrent(SPACE)).thenReturn(Optional.of(new SpaceBindingRepository.SpaceBindingRecord(
+                    UUID.randomUUID(), SPACE, 1, ROUTE, null, null, PROMPT, false, null,
+                    Instant.now(), Instant.now(), UUID.randomUUID())));
             when(conversations.find(SPACE, CONVERSATION)).thenReturn(Optional.of(
                     new ConversationRepository.ConversationRecord(CONVERSATION, SPACE, USER, "test",
                             Instant.now(), Instant.now(), 0)));
@@ -139,7 +144,7 @@ class RunExecutionServiceTest {
         }
 
         RunExecutionService service() {
-            return new RunExecutionService(conversations, runs, events, spaces, providers, prompts,
+            return new RunExecutionService(conversations, runs, events, spaces, providers, bindings, prompts,
                     new ProviderAdapterRegistry(List.of(new FakeProviderAdapter())), new ObjectMapper());
         }
 
