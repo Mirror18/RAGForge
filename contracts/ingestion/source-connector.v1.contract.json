@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/ingestion/source-connector.v1.contract.json",
+  "title": "RAGForge SourceConnector SPI v1",
+  "description": "The provider-neutral contract shared by Java and Python connector implementations.",
+  "contractType": "SourceConnector",
+  "version": "v1",
+  "implementationStatus": "contract",
+  "operations": {
+    "discover": {
+      "signature": "discover(checkpoint, rules) -> SourceChangeSet",
+      "input": {"checkpoint": "sourceCheckpoint|null", "rules": "discoveryRules"},
+      "output": "sourceChangeSet",
+      "sideEffects": "none; source is read-only",
+      "errors": ["CHECKPOINT_INVALID", "SOURCE_UNAVAILABLE", "RULES_INVALID", "PATH_INVALID"]
+    },
+    "fetch": {
+      "signature": "fetch(sourceRef, expectedVersion) -> ContentStream + SourceMetadata",
+      "input": {"sourceRef": "sourceChange", "expectedVersion": "string"},
+      "output": {"content": "bounded stream persisted as artifact", "metadata": "source metadata without content text or credentials"},
+      "sideEffects": "source read only; persistence belongs to the ingestion pipeline",
+      "errors": ["VERSION_MISMATCH", "SOURCE_UNAVAILABLE", "OBJECT_NOT_FOUND", "CONTENT_TOO_LARGE", "UNSUPPORTED_MEDIA_TYPE"]
+    },
+    "commitCheckpoint": {
+      "signature": "commitCheckpoint(changeSet, result) -> SourceCheckpoint",
+      "input": {"changeSet": "sourceChangeSet", "result": "checkpointCommitResult"},
+      "output": "sourceCheckpoint",
+      "sideEffects": "atomic checkpoint update after successful persistence evidence",
+      "errors": ["CHECKPOINT_STALE", "PERSISTENCE_INCOMPLETE", "OUTBOX_PERSIST_FAILED"]
+    }
+  },
+  "changeKinds": {
+    "canonical": ["ADD", "MODIFY", "MOVE", "DELETE", "UNCHANGED"],
+    "meaning": {
+      "ADD": "A stable source object was not present at the previous successful checkpoint.",
+      "MODIFY": "The stable source object remains at the same canonical path and its source version or content hash changed.",
+      "MOVE": "The stable source object remains identifiable but its canonical path changed; basename is not identity.",
+      "DELETE": "The stable source object is absent from the current source view; historical revisions remain auditable.",
+      "UNCHANGED": "The stable source object and source version are unchanged; no new revision or artifact is created."
+    },
+    "legacyAliases": {
+      "ADDED": "ADD",
+      "MODIFIED": "MODIFY",
+      "MOVED": "MOVE",
+      "DELETED": "DELETE"
+    },
+    "wireRule": "Only canonical names are emitted on the v1 wire contract."
+  },
+  "pathNormalization": {
+    "algorithm": [
+      "Convert a connector-native separator to '/'.",
+      "Remove a single leading './' only after resolving the source root.",
+      "Reject absolute paths, drive-qualified paths, NUL, empty segments, '.' and '..' segments.",
+      "Apply include/exclude rules to the resulting relative path.",
+      "Preserve case; case sensitivity is a source capability, not a basename identity rule."
+    ],
+    "canonicalForm": "relative slash-separated UTF-8 path without backslash or dot segments",
+    "includeExclude": {
+      "include": "An empty include list means all supported paths.",
+      "exclude": "Exclude wins over include; matching is against canonical paths only.",
+      "unsupportedPath": "A path failing normalization is rejected and never emitted as a change."
+    }
+  },
+  "identity": {
+    "documentKey": ["spaceId", "sourceId", "stableSourceObjectId"],
+    "duplicateBasenameRule": "Two source objects with the same basename remain distinct when their canonical paths or stableSourceObjectId values differ.",
+    "moveRule": "A MOVE retains sourceDocumentId when stableSourceObjectId is stable; it creates a new revision only when content changes or downstream policy requires it.",
+    "crossSpaceRule": "spaceId is mandatory on every source, checkpoint, change set, document and revision reference; mismatches are rejected."
+  },
+  "credentialHandling": {
+    "privateInput": "credentialRef may be resolved into a connector-private configuration object before invocation.",
+    "forbiddenSerialization": ["event envelope payload", "checkpoint", "API response", "structured log fields", "retry or DLQ body"],
+    "loggingRule": "Log only credentialConfigured=true|false and stable identifiers; never log credentialRef or its value.",
+    "egressRule": "A connector never silently switches from a local source route to a cloud route."
+  },
+  "checkpointSafety": {
+    "advanceOnlyWhen": [
+      "Every non-UNCHANGED change has its immutable revision persisted.",
+      "The source and derived artifacts are persisted and content-addressed.",
+      "The parse report is persisted, including an observable OCR_UNAVAILABLE/BLOCKED result when OCR cannot run.",
+      "The active pointer is updated only to a successful immutable revision.",
+      "The corresponding outbox record is durably persisted in the same transaction boundary."
+    ],
+    "failureRule": "Parser, object storage, OCR, database, or outbox failure preserves the previous checkpoint and active pointer and produces an observable retryable or permanent failure.",
+    "unchangedRule": "UNCHANGED may be acknowledged without creating a revision; the checkpoint may advance only after the complete change set is durably committed."
+  },
+  "security": {
+    "sourceMode": "read-only",
+    "payloadProhibitions": ["secret", "credentialRef", "password", "apiKey", "accessToken", "fullText", "rawDocument", "documentContent"],
+    "resourceLimits": {"maxObjectBytes": 10737418240, "maxPathLength": 2048, "maxChangesPerSet": 100000}
+  }
+}

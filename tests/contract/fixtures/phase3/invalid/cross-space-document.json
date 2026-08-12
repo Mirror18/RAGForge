@@ -1,0 +1,30 @@
+{
+  "source": {
+    "sourceId": "0190f5c2-7c1e-7abc-8def-1234567890ac",
+    "spaceId": "0190f5c2-7c1e-7abc-8def-1234567890ab",
+    "version": 1,
+    "connectorType": "LOCAL_DIRECTORY",
+    "displayName": "Space A source",
+    "sourceState": "ACTIVE",
+    "readOnly": true,
+    "rootRef": "file:synthetic",
+    "include": [],
+    "exclude": [],
+    "credentialConfigured": false,
+    "createdAt": "2026-08-13T00:00:00Z",
+    "updatedAt": "2026-08-13T00:00:00Z"
+  },
+  "sourceDocument": {
+    "sourceDocumentId": "0190f5c2-7c1e-7abc-8def-1234567890b0",
+    "spaceId": "0190f5c2-7c1e-7abc-8def-1234567890bb",
+    "sourceId": "0190f5c2-7c1e-7abc-8def-1234567890ac",
+    "version": 1,
+    "stableSourceObjectId": "file:notes/a.md",
+    "canonicalSourcePath": "notes/a.md",
+    "basename": "a.md",
+    "currentState": "ACTIVE",
+    "activeRevisionId": null,
+    "createdAt": "2026-08-13T00:00:00Z",
+    "updatedAt": "2026-08-13T00:00:00Z"
+  }
+}

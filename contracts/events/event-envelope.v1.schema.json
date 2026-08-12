@@ -29,7 +29,7 @@
       "type": "object",
       "propertyNames": {
         "not": {
-          "enum": ["password", "secret", "apiKey", "accessToken", "documentContent", "fullText", "rawDocument"]
+          "enum": ["password", "secret", "apiKey", "accessToken", "credentialRef", "documentContent", "fullText", "rawDocument"]
         }
       }
     }

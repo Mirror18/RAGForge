@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/ingestion.job.status.changed.v1.schema.json",
+  "title": "ingestion.job.status.changed.v1",
+  "description": "Unified observable state event for requested, completed, failed, retry-scheduled and DLQ ingestion jobs. It contains references and bounded failure metadata, never content or credentials.",
+  "x-ragforge-contract-status": "planned",
+  "x-ragforge-implementation-status": "contract",
+  "x-ragforge-delivery-guarantee": "AT_LEAST_ONCE",
+  "x-ragforge-exactly-once": false,
+  "allOf": [
+    {"$ref": "./event-envelope.v1.schema.json"},
+    {
+      "type": "object",
+      "required": ["eventType", "payload"],
+      "properties": {
+        "eventType": {"const": "ingestion.job.status.changed.v1"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["jobId", "sourceId", "documentRevisionId", "pipelineVersionId", "attemptId", "status", "idempotencyKey", "deliveryAttempt", "failure", "retry", "sideEffects"],
+          "properties": {
+            "jobId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "sourceId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "documentRevisionId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "pipelineVersionId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "attemptId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "stepName": {"type": ["string", "null"], "enum": ["DISCOVER", "FETCH", "PARSE", "OCR", "PERSIST", "PUBLISH", null]},
+            "status": {"type": "string", "enum": ["REQUESTED", "RUNNING", "COMPLETED", "FAILED", "RETRY_SCHEDULED", "DLQ"]},
+            "idempotencyKey": {"type": "string", "minLength": 1, "maxLength": 255, "pattern": "^[A-Za-z0-9._~-]+$"},
+            "deliveryAttempt": {"type": "integer", "minimum": 1, "maximum": 20},
+            "failure": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "required": ["code", "retryable", "message"],
+              "properties": {
+                "code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"},
+                "retryable": {"type": "boolean"},
+                "message": {"type": "string", "minLength": 1, "maxLength": 500},
+                "nextRetryAt": {"type": ["string", "null"], "format": "date-time"}
+              }
+            },
+            "retry": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "required": ["attempt", "maxAttempts", "backoffSeconds"],
+              "properties": {
+                "attempt": {"type": "integer", "minimum": 1, "maximum": 20},
+                "maxAttempts": {"type": "integer", "minimum": 1, "maximum": 20},
+                "backoffSeconds": {"type": "integer", "minimum": 1, "maximum": 86400}
+              }
+            },
+            "sideEffects": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["revisionPersisted", "artifactPersisted", "parseReportPersisted", "activePointerUpdated", "checkpointAdvanced"],
+              "properties": {
+                "revisionPersisted": {"type": "boolean"},
+                "artifactPersisted": {"type": "boolean"},
+                "parseReportPersisted": {"type": "boolean"},
+                "activePointerUpdated": {"type": "boolean"},
+                "checkpointAdvanced": {"type": "boolean"}
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

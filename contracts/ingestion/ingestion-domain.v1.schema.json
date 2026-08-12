@@ -1,0 +1,380 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/ingestion/ingestion-domain.v1.schema.json",
+  "title": "RAGForge Versioned Ingestion Domain v1",
+  "description": "Versioned, space-isolated ingestion resources. Content bytes and full extracted text are stored behind artifact references and never represented by these payloads.",
+  "x-ragforge-contract-status": "planned",
+  "x-ragforge-implementation-status": "contract",
+  "$defs": {
+    "uuidV7": {
+      "type": "string",
+      "format": "uuidv7",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "canonicalSourcePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\\\\\x00]+$",
+      "description": "Relative slash-separated path after connector normalization. Backslashes, absolute paths, dot segments and NUL are forbidden."
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9._~-]+$"
+    },
+    "changeKind": {
+      "type": "string",
+      "enum": ["ADD", "MODIFY", "MOVE", "DELETE", "UNCHANGED"]
+    },
+    "connectorType": {
+      "type": "string",
+      "enum": ["FILESYSTEM", "LOCAL_DIRECTORY", "GIT", "OBSIDIAN_VAULT"]
+    },
+    "discoveryRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["include", "exclude"],
+      "properties": {
+        "include": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 100,
+          "items": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[A-Za-z0-9._*?{}-]+(?:/[A-Za-z0-9._*?{}-]+)*$"}
+        },
+        "exclude": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 100,
+          "items": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?(?:/|$))[A-Za-z0-9._*?{}-]+(?:/[A-Za-z0-9._*?{}-]+)*$"}
+        }
+      },
+      "description": "Rules are evaluated against canonical slash paths. Exclude wins when a path matches both lists."
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "spaceId", "version", "connectorType", "displayName", "sourceState", "readOnly", "include", "exclude", "credentialConfigured", "createdAt", "updatedAt"],
+      "properties": {
+        "sourceId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "connectorType": {"$ref": "#/$defs/connectorType"},
+        "displayName": {"type": "string", "minLength": 1, "maxLength": 120},
+        "sourceState": {"type": "string", "enum": ["ACTIVE", "PAUSED", "ERROR"]},
+        "readOnly": {"type": "boolean", "const": true},
+        "rootRef": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"},
+        "include": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+        "exclude": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+        "credentialConfigured": {"type": "boolean"},
+        "createdAt": {"$ref": "#/$defs/timestamp"},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "sourceId"],
+      "description": "The API projection deliberately omits credentialRef. A connector may receive a private credential reference from a secret resolver, but it is never serialized."
+    },
+    "sourceCheckpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceCheckpointId", "spaceId", "sourceId", "version", "cursorType", "cursor", "lastSuccessfulChangeSetId", "updatedAt"],
+      "properties": {
+        "sourceCheckpointId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "sourceId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "cursorType": {"type": "string", "enum": ["NONE", "FILESYSTEM_SCAN", "GIT_COMMIT", "REMOTE_ETAG", "CONNECTOR_CURSOR"]},
+        "cursor": {"type": ["string", "null"], "maxLength": 512, "description": "Connector cursor only; it must not contain credentials."},
+        "lastSuccessfulChangeSetId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "sourceId"],
+      "description": "A checkpoint advances only after the corresponding revision, artifact, parse report, active pointer and outbox state satisfy the commit safety contract."
+    },
+    "sourceChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changeId", "sourceDocumentId", "stableSourceObjectId", "kind", "canonicalSourcePath", "basename", "sourceVersion", "contentHash", "oldCanonicalSourcePath"],
+      "properties": {
+        "changeId": {"$ref": "#/$defs/uuidV7"},
+        "sourceDocumentId": {"$ref": "#/$defs/uuidV7"},
+        "stableSourceObjectId": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"},
+        "kind": {"$ref": "#/$defs/changeKind"},
+        "canonicalSourcePath": {"$ref": "#/$defs/canonicalSourcePath"},
+        "oldCanonicalSourcePath": {"type": ["string", "null"], "maxLength": 2048},
+        "basename": {"type": "string", "minLength": 1, "maxLength": 255},
+        "sourceVersion": {"type": "string", "minLength": 1, "maxLength": 512},
+        "contentHash": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
+      },
+      "description": "stableSourceObjectId, not basename, is the identity used to isolate duplicate basenames and detect moves."
+    },
+    "sourceChangeSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changeSetId", "spaceId", "sourceId", "baseCheckpointId", "candidateCheckpoint", "changes", "discoveredAt"],
+      "properties": {
+        "changeSetId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "sourceId": {"$ref": "#/$defs/uuidV7"},
+        "baseCheckpointId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "candidateCheckpoint": {"type": "string", "minLength": 1, "maxLength": 512},
+        "changes": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/sourceChange"}},
+        "discoveredAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "sourceId", "changeSetId"]
+    },
+    "sourceDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceDocumentId", "spaceId", "sourceId", "version", "stableSourceObjectId", "canonicalSourcePath", "basename", "currentState", "activeRevisionId", "createdAt", "updatedAt"],
+      "properties": {
+        "sourceDocumentId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "sourceId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "stableSourceObjectId": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"},
+        "canonicalSourcePath": {"$ref": "#/$defs/canonicalSourcePath"},
+        "basename": {"type": "string", "minLength": 1, "maxLength": 255},
+        "currentState": {"type": "string", "enum": ["ACTIVE", "DELETED"]},
+        "activeRevisionId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "createdAt": {"$ref": "#/$defs/timestamp"},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "sourceId", "stableSourceObjectId"]
+    },
+    "documentRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documentRevisionId", "spaceId", "sourceDocumentId", "version", "sourceVersion", "canonicalSourcePath", "contentHash", "artifactId", "parseReportId", "revisionState", "immutable", "provenance", "createdAt"],
+      "properties": {
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "sourceDocumentId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "sourceVersion": {"type": "string", "minLength": 1, "maxLength": 512},
+        "canonicalSourcePath": {"$ref": "#/$defs/canonicalSourcePath"},
+        "contentHash": {"$ref": "#/$defs/sha256"},
+        "artifactId": {"$ref": "#/$defs/uuidV7"},
+        "parseReportId": {"$ref": "#/$defs/uuidV7"},
+        "revisionState": {"type": "string", "enum": ["DISCOVERED", "FETCHED", "PARSED", "FAILED", "DELETED"]},
+        "immutable": {"type": "boolean", "const": true},
+        "provenance": {"type": "object", "additionalProperties": false, "required": ["sourceId", "sourceObjectId", "discoveredAt"], "properties": {"sourceId": {"$ref": "#/$defs/uuidV7"}, "sourceObjectId": {"type": "string", "minLength": 1, "maxLength": 512}, "gitCommitSha": {"type": ["string", "null"], "pattern": "^[0-9a-fA-F]{40}$"}, "discoveredAt": {"$ref": "#/$defs/timestamp"}}},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "sourceDocumentId", "version"],
+      "description": "A revision is append-only. Updating a source document creates a new revision and never overwrites an existing revision."
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactId", "spaceId", "sourceDocumentId", "documentRevisionId", "version", "artifactKind", "mediaType", "byteLength", "sha256", "storageUri", "immutable", "createdAt"],
+      "properties": {
+        "artifactId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "sourceDocumentId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "artifactKind": {"type": "string", "enum": ["SOURCE_BYTES", "PARSED_TEXT", "PARSE_REPORT", "CHUNKS"]},
+        "mediaType": {"type": "string", "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"},
+        "byteLength": {"type": "integer", "minimum": 0, "maximum": 10737418240},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "storageUri": {"type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^spaces/[0-9a-fA-F-]{36}/artifacts/[0-9a-fA-F-]{36}$"},
+        "immutable": {"type": "boolean", "const": true},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "artifactId"],
+      "description": "An artifact is a bounded reference to stored bytes or derived output; it never contains document text."
+    },
+    "pipelineVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pipelineVersionId", "spaceId", "version", "pipelineName", "parserName", "parserVersion", "configurationHash", "immutable", "createdAt"],
+      "properties": {
+        "pipelineVersionId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "pipelineName": {"type": "string", "minLength": 1, "maxLength": 120},
+        "parserName": {"type": "string", "minLength": 1, "maxLength": 120},
+        "parserVersion": {"type": "string", "minLength": 1, "maxLength": 120},
+        "configurationHash": {"$ref": "#/$defs/sha256"},
+        "immutable": {"type": "boolean", "const": true},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "pipelineVersionId", "version"]
+    },
+    "ingestionJob": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "spaceId", "version", "sourceId", "sourceDocumentId", "documentRevisionId", "pipelineVersionId", "status", "idempotencyKey", "correlationId", "createdAt", "updatedAt"],
+      "properties": {
+        "jobId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "sourceId": {"$ref": "#/$defs/uuidV7"},
+        "sourceDocumentId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "pipelineVersionId": {"$ref": "#/$defs/uuidV7"},
+        "status": {"type": "string", "enum": ["REQUESTED", "RUNNING", "SUCCEEDED", "FAILED", "RETRY_SCHEDULED", "DLQ"]},
+        "idempotencyKey": {"$ref": "#/$defs/idempotencyKey"},
+        "correlationId": {"$ref": "#/$defs/uuidV7"},
+        "createdAt": {"$ref": "#/$defs/timestamp"},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "jobId", "idempotencyKey"]
+    },
+    "jobAttempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attemptId", "spaceId", "jobId", "version", "attemptNumber", "status", "idempotencyKey", "correlationId", "startedAt", "finishedAt"],
+      "properties": {
+        "attemptId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "jobId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "attemptNumber": {"type": "integer", "minimum": 1, "maximum": 20},
+        "status": {"type": "string", "enum": ["RUNNING", "SUCCEEDED", "FAILED", "RETRY_SCHEDULED", "DLQ"]},
+        "idempotencyKey": {"$ref": "#/$defs/idempotencyKey"},
+        "correlationId": {"$ref": "#/$defs/uuidV7"},
+        "startedAt": {"$ref": "#/$defs/timestamp"},
+        "finishedAt": {"type": ["string", "null"], "format": "date-time"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "jobId", "attemptNumber"]
+    },
+    "pipelineStepExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepExecutionId", "spaceId", "jobId", "attemptId", "version", "stepName", "status", "attemptNumber", "inputArtifactId", "outputArtifactId", "parseReportId", "retryable", "startedAt", "finishedAt"],
+      "properties": {
+        "stepExecutionId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "jobId": {"$ref": "#/$defs/uuidV7"},
+        "attemptId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "stepName": {"type": "string", "enum": ["DISCOVER", "FETCH", "PARSE", "OCR", "PERSIST", "PUBLISH"]},
+        "status": {"type": "string", "enum": ["RUNNING", "SUCCEEDED", "FAILED", "SKIPPED"]},
+        "attemptNumber": {"type": "integer", "minimum": 1, "maximum": 20},
+        "inputArtifactId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "outputArtifactId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "parseReportId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "retryable": {"type": "boolean"},
+        "startedAt": {"$ref": "#/$defs/timestamp"},
+        "finishedAt": {"type": ["string", "null"], "format": "date-time"},
+        "errorCode": {"type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]{1,63}$"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "jobId", "attemptId", "stepName", "attemptNumber"]
+    },
+    "activePointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activePointerId", "spaceId", "sourceDocumentId", "version", "activeRevisionId", "updatedAt"],
+      "properties": {
+        "activePointerId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "sourceDocumentId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "activeRevisionId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "sourceDocumentId"]
+    },
+    "parseReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parseReportId", "spaceId", "documentRevisionId", "artifactId", "version", "status", "mediaType", "pageCount", "characterCount", "tokenCount", "nativePageCount", "ocrPageCount", "parserName", "parserVersion", "durationMs", "warnings", "errors", "extractedTextArtifactId", "ocr", "createdAt"],
+      "properties": {
+        "parseReportId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "artifactId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "status": {"type": "string", "enum": ["SUCCEEDED", "FAILED", "OCR_REQUIRED", "OCR_UNAVAILABLE", "BLOCKED"]},
+        "mediaType": {"type": "string", "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"},
+        "pageCount": {"type": "integer", "minimum": 0},
+        "characterCount": {"type": "integer", "minimum": 0},
+        "tokenCount": {"type": "integer", "minimum": 0},
+        "nativePageCount": {"type": "integer", "minimum": 0},
+        "ocrPageCount": {"type": "integer", "minimum": 0},
+        "parserName": {"type": "string", "minLength": 1, "maxLength": 120},
+        "parserVersion": {"type": "string", "minLength": 1, "maxLength": 120},
+        "durationMs": {"type": "integer", "minimum": 0, "maximum": 86400000},
+        "warnings": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+        "errors": {"type": "array", "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+        "extractedTextArtifactId": {"type": ["string", "null"], "anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "ocr": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requested", "status", "engine", "engineVersion", "triggerReason", "pages", "sourceArtifactId", "auditState"],
+          "properties": {
+            "requested": {"type": "boolean"},
+            "status": {"type": "string", "enum": ["NOT_REQUESTED", "SUCCEEDED", "UNAVAILABLE", "FAILED"]},
+            "engine": {"type": ["string", "null"], "maxLength": 120},
+            "engineVersion": {"type": ["string", "null"], "maxLength": 120},
+            "triggerReason": {"type": "string", "enum": ["NONE", "IMAGE_ONLY_PDF", "LOW_TEXT_QUALITY", "SCANNED_PAGE", "PARSER_FAILURE"]},
+            "pages": {"type": "array", "maxItems": 10000, "items": {"type": "integer", "minimum": 1}},
+            "sourceArtifactId": {"$ref": "#/$defs/uuidV7"},
+            "auditState": {"type": "string", "enum": ["NOT_APPLICABLE", "PENDING", "COMPLETED", "BLOCKED"]}
+          }
+        },
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "status": {"const": "SUCCEEDED"},
+            "extractedTextArtifactId": {"$ref": "#/$defs/uuidV7"},
+            "ocr": {"properties": {"status": {"enum": ["NOT_REQUESTED", "SUCCEEDED"]}}}
+          }
+        },
+        {
+          "properties": {
+            "status": {"enum": ["FAILED", "OCR_REQUIRED", "OCR_UNAVAILABLE", "BLOCKED"]}
+          }
+        }
+      ],
+      "description": "Image-only or otherwise OCR-required content cannot be reported as successful with empty or fabricated text. OCR unavailable remains observable as OCR_UNAVAILABLE or BLOCKED."
+    },
+    "checkpointCommitResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changeSetId", "spaceId", "outcome", "revisionsPersisted", "artifactsPersisted", "parseReportsPersisted", "activePointerUpdated", "outboxPersisted", "checkpointAdvanced", "previousCheckpoint", "newCheckpoint", "failureCode"],
+      "properties": {
+        "changeSetId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "outcome": {"type": "string", "enum": ["COMMITTED", "REJECTED", "RETRYABLE_FAILURE", "PERMANENT_FAILURE"]},
+        "revisionsPersisted": {"type": "boolean"},
+        "artifactsPersisted": {"type": "boolean"},
+        "parseReportsPersisted": {"type": "boolean"},
+        "activePointerUpdated": {"type": "boolean"},
+        "outboxPersisted": {"type": "boolean"},
+        "checkpointAdvanced": {"type": "boolean"},
+        "previousCheckpoint": {"type": ["string", "null"], "maxLength": 512},
+        "newCheckpoint": {"type": ["string", "null"], "maxLength": 512},
+        "failureCode": {"type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]{1,63}$"}
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "outcome": {"const": "COMMITTED"},
+            "revisionsPersisted": {"const": true},
+            "artifactsPersisted": {"const": true},
+            "parseReportsPersisted": {"const": true},
+            "activePointerUpdated": {"const": true},
+            "outboxPersisted": {"const": true},
+            "checkpointAdvanced": {"const": true},
+            "newCheckpoint": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "properties": {
+            "outcome": {"enum": ["REJECTED", "RETRYABLE_FAILURE", "PERMANENT_FAILURE"]},
+            "checkpointAdvanced": {"const": false},
+            "newCheckpoint": {"type": "null"}
+          }
+        }
+      ],
+      "description": "checkpointAdvanced may be true only when all four persistence flags are true and outcome is COMMITTED; any parser, storage, database or publish failure leaves the previous checkpoint and active pointer unchanged."
+    }
+  }
+}

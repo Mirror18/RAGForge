@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/ingestion/outbox-worker.v1.contract.json",
+  "title": "RAGForge Outbox to RabbitMQ Worker Contract v1",
+  "version": "v1",
+  "implementationStatus": "contract",
+  "topology": {
+    "transactionBoundary": "API/domain mutation and outbox record commit atomically.",
+    "relay": "A relay publishes the persisted event to a durable exchange; relay redelivery is safe.",
+    "consumer": "The worker consumes an event, applies idempotent side effects, and ACKs only after durable state and derived artifacts are committed.",
+    "queueIsolation": "Each environment and deployment uses an explicit exchange, queue and DLQ; no shared mutable test topology is implied."
+  },
+  "delivery": {
+    "guarantee": "AT_LEAST_ONCE",
+    "exactlyOnce": false,
+    "exactlyOnceStatement": "RabbitMQ delivery and this contract do not claim exactly-once processing.",
+    "messageIdentity": ["spaceId", "eventId"],
+    "consumerIdempotencyKey": ["spaceId", "jobId", "attemptId", "stepName", "idempotencyKey"],
+    "duplicateRule": "A duplicate delivery returns the existing durable result and does not create another revision, artifact, active pointer update or checkpoint advance."
+  },
+  "retry": {
+    "maxAttempts": 20,
+    "backoff": "exponential with bounded jitter",
+    "retryableClasses": ["SOURCE_UNAVAILABLE", "VERSION_MISMATCH", "PARSER_TIMEOUT", "OCR_UNAVAILABLE", "OBJECT_STORE_UNAVAILABLE", "DATABASE_UNAVAILABLE", "OUTBOX_PUBLISH_UNAVAILABLE"],
+    "nonRetryableClasses": ["RULES_INVALID", "UNSUPPORTED_MEDIA_TYPE", "PATH_INVALID", "SPACE_MISMATCH", "SECURITY_POLICY_REJECTED"],
+    "stateEvent": "ingestion.job.status.changed.v1 with status RETRY_SCHEDULED"
+  },
+  "deadLetter": {
+    "when": "A retryable failure exhausts maxAttempts or a permanent failure is classified.",
+    "stateEvent": "ingestion.job.status.changed.v1 with status DLQ",
+    "body": "References, failure code, bounded redacted message and trace identifiers only.",
+    "forbidden": ["credentialRef", "secret", "password", "apiKey", "accessToken", "fullText", "rawDocument", "documentContent"]
+  },
+  "ackBoundary": {
+    "ackAfter": ["revision persistence", "artifact persistence", "parse report persistence", "active pointer decision", "idempotency record", "checkpoint decision", "outbox/state observation"],
+    "nackBefore": ["any durable side effect is incomplete", "checkpoint safety evidence is false"],
+    "checkpointRule": "No ACK path may advance checkpoint when any required persistence evidence is false."
+  },
+  "observability": {
+    "requiredFields": ["spaceId", "jobId", "attemptId", "correlationId", "causationId", "eventId", "deliveryAttempt", "status"],
+    "redaction": "Stable identifiers and error codes are allowed; secrets, credentials, binary content and full document text are not."
+  }
+}

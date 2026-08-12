@@ -1,0 +1,14 @@
+{
+  "changeSetId": "0190f5c2-7c1e-7abc-8def-1234567890ae",
+  "spaceId": "0190f5c2-7c1e-7abc-8def-1234567890ab",
+  "outcome": "RETRYABLE_FAILURE",
+  "revisionsPersisted": false,
+  "artifactsPersisted": false,
+  "parseReportsPersisted": false,
+  "activePointerUpdated": false,
+  "outboxPersisted": false,
+  "checkpointAdvanced": true,
+  "previousCheckpoint": "old-cursor",
+  "newCheckpoint": "new-cursor",
+  "failureCode": "PARSER_TIMEOUT"
+}
