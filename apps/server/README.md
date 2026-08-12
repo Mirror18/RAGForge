@@ -1,5 +1,20 @@
 # RAGForge Server
 
+## Phase 3 persistence boundary
+
+`V8__phase3_versioned_ingestion.sql` adds space-scoped source, revision,
+artifact, parse-report, pipeline, job, attempt, step and checkpoint tables.
+Versioned records are append-only and store only hashes, object URIs and
+bounded metadata; source bytes and full extracted text stay in object storage.
+Composite `(id, space_id)` foreign keys reject cross-space references.
+
+The migration is forward-only in normal deployments. Before applying V8 take
+the PostgreSQL backup required by [`BACKUP_RESTORE.md`](../../docs/05-operations/BACKUP_RESTORE.md).
+Rollback means restoring that backup and deploying the previous application,
+not editing an already-applied migration. `IngestionRepository` repeats
+`space_id` in read predicates and advances a checkpoint only after durable
+revision, artifact, parse-report, active-pointer and outbox evidence is true.
+
 计划基线：Java 21、Spring Boot 3.5.x、Spring AI 1.1.x、Maven、Flyway、PostgreSQL。
 
 建议包结构：
