@@ -2,6 +2,7 @@ package com.ragforge.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -16,8 +17,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import jakarta.servlet.http.Cookie;
 import java.util.Set;
@@ -33,17 +32,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ServerIntegrationTest {
-    @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16.4-alpine");
 
-    @Container
     static final GenericContainer<?> VALKEY = new GenericContainer<>("valkey/valkey:8.0.1-alpine")
             .withExposedPorts(6379);
+
+    static {
+        POSTGRES.start();
+        try {
+            VALKEY.start();
+        } catch (RuntimeException exception) {
+            POSTGRES.stop();
+            throw exception;
+        }
+    }
+
+    @AfterAll
+    static void stopContainers() {
+        try {
+            VALKEY.stop();
+        } finally {
+            POSTGRES.stop();
+        }
+    }
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -134,7 +149,7 @@ class ServerIntegrationTest {
                 "SELECT COUNT(*) FROM outbox_events WHERE space_id = ?", Integer.class, spaceId)).isEqualTo(1);
         org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
                 "SELECT COUNT(*) FROM idempotency_records WHERE principal_scope = ?", Integer.class,
-                login.userId)).isGreaterThanOrEqualTo(1);
+                login.userId.toString())).isGreaterThanOrEqualTo(1);
 
         mvc.perform(get("/api/v1/spaces").cookie(login.cookie))
                 .andExpect(status().isOk())
