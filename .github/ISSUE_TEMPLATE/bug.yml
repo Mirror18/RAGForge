@@ -1,0 +1,37 @@
+name: Bug Report
+description: Report reproducible incorrect behavior without sensitive data
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions and environment
+      description: Commit/release, OS, deployment profile, model/index/pipeline versions when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Use synthetic data. Do not paste secrets or customer documents.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and impact
+    validations:
+      required: true
+  - type: input
+    id: correlation
+    attributes:
+      label: Safe correlation/run/job ID
+      description: Do not include credentials or raw prompts.
+

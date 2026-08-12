@@ -1,0 +1,30 @@
+name: Feature / User Story
+description: Propose a traceable user or operational outcome
+title: "[Feature]: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: Who needs what result, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Include observable success and failure behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and constraints
+      description: Cover space isolation, egress, privacy, performance, operations, and licenses as relevant.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Planned verification
+      description: Tests, evaluation cases, metrics, and manual evidence.
+

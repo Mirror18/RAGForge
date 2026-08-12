@@ -1,0 +1,53 @@
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Java
+**/target/
+*.class
+
+# Node
+**/node_modules/
+**/dist/
+**/.vite/
+**/coverage/
+
+# Python
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+*.py[cod]
+
+# Runtime data
+data/
+volumes/
+logs/
+tmp/
+*.log
+
+# Generated API, reports, and test output
+generated/
+reports/
+playwright-report/
+test-results/
+.scannerwork/
+
+# Model files and customer content
+models/
+*.gguf
+*.safetensors
+customer-data/
+
