@@ -112,8 +112,11 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
     }
 
     private String resolveAuthorization(ProviderConnection connection, ProviderChatRequest request) {
+        if (connection.isExplicitLocalNoAuth()) {
+            return null;
+        }
         try {
-            return credentialResolver.resolveAuthorization(connection.spaceId(), connection.credentialRef());
+            return credentialResolver.resolveAuthorization(connection);
         } catch (RuntimeException exception) {
             throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
                     "Provider credential resolution failed", request.identity().requestId(), 0);

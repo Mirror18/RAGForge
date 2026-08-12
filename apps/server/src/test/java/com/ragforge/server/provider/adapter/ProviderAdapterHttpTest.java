@@ -91,6 +91,83 @@ class ProviderAdapterHttpTest {
     }
 
     @Test
+    void explicitNoneLocalOllamaSendsNoAuthorizationAndDoesNotResolveCredential() throws Exception {
+        behavior.set((exchange, body) -> respond(exchange, 200,
+                "{\"model\":\"qwen3.5:9b\",\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},"
+                        + "\"done\":true,\"prompt_eval_count\":3,\"eval_count\":2}"));
+        AtomicInteger resolutions = new AtomicInteger();
+        OllamaProviderAdapter adapter = new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,
+                (spaceId, credentialRef) -> {
+                    resolutions.incrementAndGet();
+                    throw new AssertionError("NONE/local Ollama must not resolve a credential");
+                });
+        RequestIdentity identity = identity("ollama-none");
+
+        ProviderChatResponse response = adapter.chat(connection(ProviderType.OLLAMA, endpoint, SPACE_ID,
+                        EgressClass.LOCAL, "opaque.credential-ref", "NONE"), EgressDecision.LOCAL_ONLY,
+                request(identity), new CancellationToken()).toCompletableFuture().get(3, TimeUnit.SECONDS);
+
+        assertThat(resolutions).hasValue(0);
+        assertThat(observedAuthorization.get()).isNull();
+        assertThat(response.model()).isEqualTo("qwen3.5:9b");
+        assertThat(response.usage()).isEqualTo(new ProviderUsage(3L, 2L, 5L, UsageSource.PROVIDER_REPORTED));
+    }
+
+    @Test
+    void nonNoneLocalOllamaWithoutConfiguredCredentialIsRejectedBeforeHttpCall() {
+        AtomicInteger resolutions = new AtomicInteger();
+        OllamaProviderAdapter adapter = new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,
+                (spaceId, credentialRef) -> {
+                    resolutions.incrementAndGet();
+                    throw new IllegalStateException("credential is not configured");
+                });
+
+        ProviderAdapterException error = failure(adapter.chat(connection(ProviderType.OLLAMA, endpoint, SPACE_ID,
+                        EgressClass.LOCAL, "opaque.credential-ref", "BEARER"), EgressDecision.LOCAL_ONLY,
+                request(identity("ollama-bearer-missing"))));
+
+        assertThat(error.errorClass()).isEqualTo(ProviderErrorClass.AUTHENTICATION);
+        assertThat(resolutions).hasValue(1);
+        assertThat(requestCount).hasValue(0);
+    }
+
+    @Test
+    void noneCloudOllamaDoesNotBypassCredentialResolution() {
+        AtomicInteger resolutions = new AtomicInteger();
+        OllamaProviderAdapter adapter = new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,
+                (spaceId, credentialRef) -> {
+                    resolutions.incrementAndGet();
+                    throw new IllegalStateException("credential is not configured");
+                });
+
+        ProviderAdapterException error = failure(adapter.chat(connection(ProviderType.OLLAMA, endpoint, SPACE_ID,
+                        EgressClass.CLOUD, "opaque.credential-ref", "NONE"), EgressDecision.CLOUD_ALLOWED,
+                request(identity("ollama-none-cloud"))));
+
+        assertThat(error.errorClass()).isEqualTo(ProviderErrorClass.AUTHENTICATION);
+        assertThat(resolutions).hasValue(1);
+        assertThat(requestCount).hasValue(0);
+    }
+
+    @Test
+    void noneLocalOpenAiCompatibleDoesNotBypassCredentialResolution() {
+        AtomicInteger resolutions = new AtomicInteger();
+        OpenAiCompatibleProviderAdapter adapter = new OpenAiCompatibleProviderAdapter(HttpClient.newHttpClient(), MAPPER,
+                (spaceId, credentialRef) -> {
+                    resolutions.incrementAndGet();
+                    throw new IllegalStateException("credential is not configured");
+                });
+
+        ProviderAdapterException error = failure(adapter.chat(connection(ProviderType.OPENAI_COMPATIBLE, endpoint,
+                        SPACE_ID, EgressClass.LOCAL, "opaque.credential-ref", "NONE"), EgressDecision.LOCAL_ONLY,
+                request(identity("openai-none-local"))));
+
+        assertThat(error.errorClass()).isEqualTo(ProviderErrorClass.AUTHENTICATION);
+        assertThat(resolutions).hasValue(1);
+        assertThat(requestCount).hasValue(0);
+    }
+
+    @Test
     void openAiCompatibleUsesV1ChatCompletionsAndParsesUsage() throws Exception {
         behavior.set((exchange, body) -> respond(exchange, 200,
                 "{\"id\":\"chatcmpl-test\",\"model\":\"gpt-test\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"openai answer\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":6,\"total_tokens\":10}}"));
@@ -292,6 +369,12 @@ class ProviderAdapterHttpTest {
     private ProviderConnection connection(ProviderType type, URI connectionEndpoint, UUID spaceId) {
         return new ProviderConnection(spaceId, UUID.randomUUID(), 1, type, EgressClass.LOCAL,
                 connectionEndpoint, "cred.test");
+    }
+
+    private ProviderConnection connection(ProviderType type, URI connectionEndpoint, UUID spaceId,
+                                          EgressClass egressClass, String credentialRef, String authScheme) {
+        return new ProviderConnection(spaceId, UUID.randomUUID(), 1, type, egressClass,
+                connectionEndpoint, credentialRef, authScheme);
     }
 
     private ProviderChatRequest request(RequestIdentity identity) {
