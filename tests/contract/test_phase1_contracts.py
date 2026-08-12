@@ -180,13 +180,21 @@ class Phase1OpenApiContractTest(unittest.TestCase):
         self.assertTrue(expected.issubset(actual))
 
     def test_mutations_require_csrf_and_idempotency(self) -> None:
+        anonymous_bootstrap = {
+            ("/api/v1/auth/register", "post"),
+            ("/api/v1/auth/login", "post"),
+            ("/api/v1/sessions", "post"),
+        }
         for path, path_item in self.spec["paths"].items():
             for method, operation in path_item.items():
                 if method not in {"post", "put", "patch", "delete"}:
                     continue
                 names = {self._resolve(ref)["name"] for ref in self._refs(operation.get("parameters", []))}
-                self.assertIn("X-CSRF-Token", names, f"{method.upper()} {path} lacks CSRF")
                 self.assertIn("Idempotency-Key", names, f"{method.upper()} {path} lacks idempotency")
+                if (path, method) in anonymous_bootstrap:
+                    self.assertNotIn("X-CSRF-Token", names, f"{method.upper()} {path} must be CSRF-exempt")
+                else:
+                    self.assertIn("X-CSRF-Token", names, f"{method.upper()} {path} lacks CSRF")
 
     def test_correlation_id_is_available_on_every_operation(self) -> None:
         for path, path_item in self.spec["paths"].items():

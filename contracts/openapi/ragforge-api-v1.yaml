@@ -37,7 +37,6 @@
         "security": [],
         "parameters": [
           {"$ref": "#/components/parameters/CorrelationId"},
-          {"$ref": "#/components/parameters/CsrfToken"},
           {"$ref": "#/components/parameters/IdempotencyKey"}
         ],
         "requestBody": {
@@ -71,7 +70,6 @@
         "security": [],
         "parameters": [
           {"$ref": "#/components/parameters/CorrelationId"},
-          {"$ref": "#/components/parameters/CsrfToken"},
           {"$ref": "#/components/parameters/IdempotencyKey"}
         ],
         "requestBody": {
@@ -107,7 +105,6 @@
         "security": [],
         "parameters": [
           {"$ref": "#/components/parameters/CorrelationId"},
-          {"$ref": "#/components/parameters/CsrfToken"},
           {"$ref": "#/components/parameters/IdempotencyKey"}
         ],
         "requestBody": {
