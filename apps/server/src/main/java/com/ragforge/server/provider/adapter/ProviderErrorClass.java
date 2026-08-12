@@ -1,0 +1,17 @@
+package com.ragforge.server.provider.adapter;
+
+public enum ProviderErrorClass {
+    AUTHENTICATION,
+    RATE_LIMIT,
+    QUOTA,
+    MODEL_NOT_FOUND,
+    CONTEXT_OVERFLOW,
+    CONTENT_POLICY,
+    TIMEOUT,
+    UNAVAILABLE,
+    UNSUPPORTED_CAPABILITY,
+    INVALID_RESPONSE,
+    CANCELLED,
+    SPACE_EGRESS_DENIED,
+    IDEMPOTENCY_CONFLICT
+}
