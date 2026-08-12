@@ -1,7 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-12
-- Current stage: Foundation / Phase 1 Evidence Ready; CI closure pending
+- Current stage: Foundation / Phase 1 Evidence Ready; external CI closure pending
 - Repository: local private Git repository
 - Branch: `main`
 - External remote: not configured
@@ -32,7 +32,7 @@
 - 尚未创建 GitHub remote 或 release。
 - Obsidian 仓库没有被写入项目进度。
 - Phase 0 实验发现的跨空间、provenance、OCR、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收。
-- 本机全量 Maven Testcontainers 因 Docker Desktop npipe `/version` 返回 HTTP 400 未完成；没有 GitHub remote，故尚无 Linux CI Run ID、SBOM 或 Grype 实际结果。Phase 1 正式关闭的唯一证据缺口是这次外部 CI 运行。
+- 本机全量 Maven Testcontainers 已在升级 1.21.4 后通过（8 tests，含 5 个真实容器集成测试）；没有 GitHub remote，故尚无 Linux CI Run ID、SBOM 或 Grype 实际结果。Phase 1 正式关闭的唯一证据缺口是这次外部 CI 运行。
 
 ## 3. 下一入口
 

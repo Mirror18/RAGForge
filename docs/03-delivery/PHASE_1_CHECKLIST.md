@@ -34,7 +34,7 @@
 
 ## 5. CI 与质量门禁
 
-- [ ] GitHub Actions 在空白业务骨架上的完整运行已通过；workflow 已定义格式、构建、单测、架构、contract、secret/dependency scan，但当前无 remote Run，且本机 Testcontainers 受 Docker npipe HTTP 400 阻塞；证据缺口：`P1-CI-001`。
+- [ ] GitHub Actions 在空白业务骨架上的完整运行已通过；workflow 已定义格式、构建、单测、架构、contract、secret/dependency scan，本地全量 Maven 8 tests 已通过，但当前无 remote Run/SBOM artifact；证据缺口：`P1-CI-001`。
 - [x] CI 依赖缓存、SBOM 生成和失败路径已定义且不引用真实凭据；证据：`.github/workflows/quality.yml`、`dependency_inventory.py`、`DEPENDENCY_LEDGER.md`。SBOM/Grype 实际结果待 Linux Run。
 - [x] 本地命令与 CI 命令一致，失败时退出码正确；证据：本地 Python/npm 门禁和失败过的 Testcontainers 命令均返回非零。
 - [x] 迁移、健康、备份和跨空间安全测试证据已记录；证据：`P1-DATA-001`、`P1-RECOVERY-001`、`P1-IAM-001`。
