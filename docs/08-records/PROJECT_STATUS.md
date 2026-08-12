@@ -1,10 +1,10 @@
 # 项目状态
 
 - Updated: 2026-08-13
-- Current stage: Foundation / Phase 1 Complete; Phase 2 Ready
+- Current stage: Phase 2 Provider、Prompt 与 Run 完成；Phase 3 Ready
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
-- External remote: `origin` configured; Phase 1 CI Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088) succeeded
+- External remote: `origin` configured; Phase 1 CI Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088) succeeded；Phase 2 CI workflow 已增加云协议、并发和出境门禁，等待下一次 push 后产生 GitHub Run
 
 ## 1. 已完成
 
@@ -23,20 +23,23 @@
 - Phase 0 checklist、风险、追溯矩阵和 retrospective 已闭环。
 - Phase 1 工程/领域骨架已实现：契约、Java server/worker、Vue/Python 骨架、core Compose、Flyway、Valkey Session、CSRF、空间 RBAC、audit/outbox、幂等和 CI 门禁；见 [`PHASE_1_IMPLEMENTATION_RESULTS.md`](phase-1/PHASE_1_IMPLEMENTATION_RESULTS.md)。
 - Phase 1 本地 Compose 启动、健康、备份冒烟、跨空间 API smoke、Python contract 和前端门禁已取得证据；见 [`PHASE_1_CHECKLIST.md`](../03-delivery/PHASE_1_CHECKLIST.md)。
+- Phase 2 Provider、Prompt、Space Binding、Run/Step/SSE、取消/重试和 usage ledger 已实现并通过全量 Maven 84/84；见 [`PHASE_2_CHECKLIST.md`](../03-delivery/PHASE_2_CHECKLIST.md)。
+- Phase 2 本地真实 Ollama `qwen3.5:9b` Run 全链路验收已通过；Run、Step、ModelInvocation、Usage Ledger 均成功，证据见 [`phase2-local-ollama-run.json`](../../tests/evidence/phase2-local-ollama-run.json)。
+- Phase 2 Mock 云协议 4/4、20 链路并发 1/1、出境隔离 5/5、契约 25/25 已通过；workflow 已将三组 deterministic gate 接入 CI。
 
 ## 2. 当前声明
 
-- Phase 1 只完成可运行骨架和安全边界，尚未开发 Provider、摄取、检索、引用回答等 RAG 业务能力。
+- Phase 2 只完成 Provider、Prompt 和 no-RAG Run 纵向切片；尚未开发版本化摄取、检索、引用回答等 RAG 业务能力。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
-- 已配置 GitHub remote `Mirror18/RAGForge`；Phase 1 CI Run 31616214088 成功，SBOM artifact 和 Grype 扫描均有证据；尚未创建 release。
+- 已配置 GitHub remote `Mirror18/RAGForge`；Phase 1 CI Run 31616214088 成功，SBOM artifact 和 Grype 扫描均有证据；Phase 2 workflow 变更已合入本地 main，尚未 push、尚未创建 release。
 - Obsidian 仓库没有被写入项目进度。
 - Phase 0 实验发现的跨空间、provenance、OCR、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收。
-- 本机全量 Maven Testcontainers 已在升级 1.21.4 后通过（8 tests，含 5 个真实容器集成测试）；Linux GitHub Actions Run 31616214088 的格式、契约、秘密、依赖、SBOM/Grype、Maven 和 npm 步骤全部成功。
+- 本机 Java 21 全量 Maven Testcontainers 已通过（84 tests，0 failures/errors/skips）；格式、架构、secret、Markdown link、契约 25/25、Phase 2 Python 验收均通过。Testcontainers/Valkey 日志中的关闭后重连 warning 不影响测试结果，但保留为后续测试生命周期清理项。
 
 ## 3. 下一入口
 
-Phase 1 已闭环，下一入口为 Phase 2 Provider、Prompt 与 Run 纵向切片。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)，Phase 1 复盘见 [`PHASE_1_RETROSPECTIVE.md`](retrospectives/PHASE_1_RETROSPECTIVE.md)。
+Phase 2 已闭环，下一入口为 Phase 3 版本化摄取流水线。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)，Phase 1 复盘见 [`PHASE_1_RETROSPECTIVE.md`](retrospectives/PHASE_1_RETROSPECTIVE.md)，Phase 2 复盘见 [`PHASE_2_RETROSPECTIVE.md`](retrospectives/PHASE_2_RETROSPECTIVE.md)。
 
 ## 4. 更新规则
 

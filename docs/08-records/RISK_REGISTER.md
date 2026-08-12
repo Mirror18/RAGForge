@@ -26,6 +26,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-018 | GitHub remote 未配置导致 CI 证据缺失 | 3 | 4 | 12 | 已配置 `Mirror18/RAGForge`；Run `31616214088` 成功并保存 SBOM artifact `9149315317`、Grype 结果 | Compliance / Platform | CLOSED |
 | R-019 | 完整 service token 生命周期尚未进入 Phase 1 | 3 | 4 | 12 | 当前浏览器只走 HttpOnly Session Cookie + CSRF；Phase 2 实现 hash/scope/expiry/revoke/last-used 后关闭 | Security | ACCEPTED |
 | R-020 | MinIO 等运行时镜像使用 tag，许可证和生产 digest 尚未锁定 | 2 | 5 | 10 | Phase 1 依赖登记；发布前 SBOM、许可证复核、immutable digest 和镜像扫描 | Compliance / Operations | MITIGATING |
+| R-021 | Run retry context 仅保存在进程内，重启后历史失败 Run 无法继续 retry | 3 | 4 | 12 | Phase 2 已验证同进程 timeout/retry；Phase 3/6 设计持久化 retry command/context 和恢复演练 | Platform | OPEN |
 
 ## 2. 维护规则
 
@@ -49,3 +50,11 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-017` 已由 `545d75d`/`ffdb0d5` 关闭；Testcontainers 真实容器集成测试已通过。
 - `R-018` 已由 GitHub Actions Run `31616214088` 关闭；SBOM artifact `9149315317` 未过期，Grype 以 High 为失败阈值且 job 成功。
 - 未发现新的 P0/P1 代码缺陷；`R-019` 的接受范围仅限 Phase 1 浏览器 Session 骨架，不授权新增 bearer/service-token 用途。
+
+## 5. Phase 2 复审（2026-08-13）
+
+- `R-004` 已关闭：Provider adapter、Space Binding、Run binding enforcement 和出境隔离 5/5 共同证明 local-only 默认、cloud 授权显式、跨空间/未授权请求在 provider 调用前拒绝，且 local 失败不静默 fallback 到 cloud；证据见 [`test_phase2_egress_isolation.py`](../../tests/security/test_phase2_egress_isolation.py) 和 [`SpaceBindingApiIntegrationTest.java`](../../apps/server/src/test/java/com/ragforge/server/provider/SpaceBindingApiIntegrationTest.java)。
+- `R-007` 在 Phase 2 的 Run usage 范围内关闭：取消不写 usage，超时重试产生新 Run/Invocation，成功重试只产生一条 usage ledger，且 provider-reported usage 去重测试通过；摄取消息重投、Outbox/DLQ 和索引成本仍留给 Phase 3，不提前扩展关闭范围。
+- 新增 `R-021`：Run retry context 当前保存在进程内，进程重启后历史失败 Run 无法继续 retry。P=3、I=4、Score=12，Platform，OPEN；Phase 3/6 评估持久化 retry command/context 和恢复演练。
+- `R-003` 仍为 OPEN：Phase 2 已覆盖 Provider/Run/Binding 的空间隔离，但 Qdrant payload、对象 URI、缓存 key 和未来内容查询尚未实现，不能关闭跨空间总风险。
+- `R-001` 仍为 MITIGATING：本地 Ollama 只做单链路功能验收，20 链路并发由 Mock 云测试覆盖，不代表本机模型可承载并发生成。

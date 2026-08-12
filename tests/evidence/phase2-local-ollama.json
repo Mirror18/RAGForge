@@ -16,7 +16,7 @@
     "parsed": true,
     "raw_output_stored": false,
     "http_status": 200,
-    "latency_ms": 6622.504,
+    "latency_ms": 1065.776,
     "usage_source": "PROVIDER_REPORTED",
     "usage_counts": {
       "prompt_tokens": 20,
