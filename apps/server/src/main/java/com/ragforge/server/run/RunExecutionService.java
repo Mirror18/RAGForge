@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.common.ApiException;
 import com.ragforge.server.identity.SessionPrincipal;
 import com.ragforge.server.provider.ProviderRepository;
+import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.adapter.ChatMessage;
 import com.ragforge.server.provider.adapter.EgressClass;
@@ -47,6 +48,7 @@ public class RunExecutionService {
     private final RunEventService events;
     private final SpaceRepository spaces;
     private final ProviderRepository providers;
+    private final SpaceBindingRepository bindings;
     private final PromptRepository prompts;
     private final ProviderAdapterRegistry providerAdapters;
     private final ObjectMapper objectMapper;
@@ -57,13 +59,15 @@ public class RunExecutionService {
             RunRepository.ErrorClass.RATE_LIMIT);
 
     public RunExecutionService(ConversationRepository conversations, RunRepository runs, RunEventService events,
-                               SpaceRepository spaces, ProviderRepository providers, PromptRepository prompts,
+                               SpaceRepository spaces, ProviderRepository providers, SpaceBindingRepository bindings,
+                               PromptRepository prompts,
                                ProviderAdapterRegistry providerAdapters, ObjectMapper objectMapper) {
         this.conversations = Objects.requireNonNull(conversations);
         this.runs = Objects.requireNonNull(runs);
         this.events = Objects.requireNonNull(events);
         this.spaces = Objects.requireNonNull(spaces);
         this.providers = Objects.requireNonNull(providers);
+        this.bindings = Objects.requireNonNull(bindings);
         this.prompts = Objects.requireNonNull(prompts);
         this.providerAdapters = Objects.requireNonNull(providerAdapters);
         this.objectMapper = Objects.requireNonNull(objectMapper);
@@ -82,6 +86,10 @@ public class RunExecutionService {
         requireRole(spaceId, principal, true);
         ConversationRepository.ConversationRecord conversation = conversations.find(spaceId, conversationId)
                 .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
+        SpaceBindingRepository.SpaceBindingRecord binding = bindings.findCurrent(spaceId)
+                .filter(item -> spaceId.equals(item.spaceId()))
+                .orElseThrow(() -> notFound("space_binding_not_found", "Space binding not found"));
+        validateBinding(spaceId, request, binding);
         ValidatedRoute route = validateRoute(spaceId, request);
         PromptRepository.PromptVersion prompt = prompts.findVersion(spaceId, request.promptVersionId())
                 .filter(item -> item.status() == PromptRepository.PromptStatus.PUBLISHED)
@@ -270,6 +278,29 @@ public class RunExecutionService {
                 outputTokens, totalTokens, BigDecimal.ZERO, "USD", "{\"source\":\"execution\"}", Instant.now(), correlationId));
     }
 
+    private void validateBinding(UUID spaceId, RunRequest request,
+                                 SpaceBindingRepository.SpaceBindingRecord binding) {
+        if (!request.routeVersionId().equals(binding.chatRouteId())) {
+            throw invalid("route_not_bound", "Chat route is not the current route bound to this space");
+        }
+        if (!request.promptVersionId().equals(binding.promptVersionId())) {
+            throw invalid("prompt_not_bound", "Prompt version is not the current prompt bound to this space");
+        }
+        if (request.allowCloudEgress()) {
+            if (!binding.cloudEgressEnabled()) {
+                throw invalid("cloud_egress_not_bound", "Cloud egress is not enabled by the current space binding");
+            }
+            SpaceBindingRepository.CloudAuthorization authorization = binding.authorization();
+            Instant now = Instant.now();
+            if (authorization == null || authorization.expiresAt() == null
+                    || !authorization.expiresAt().isAfter(now)
+                    || authorization.approvedAt() == null || authorization.approvedAt().isAfter(now)
+                    || !scopeCoversChat(authorization.scope())) {
+                throw invalid("cloud_egress_unauthorized", "Cloud egress authorization is missing, expired, or does not cover CHAT");
+            }
+        }
+    }
+
     private ValidatedRoute validateRoute(UUID spaceId, RunRequest request) {
         ProviderRepository.ModelRouteVersion route = providers.findRouteVersion(spaceId, request.routeVersionId())
                 .filter(item -> item.status() == ProviderRepository.ModelRouteStatus.PUBLISHED
@@ -289,8 +320,21 @@ public class RunExecutionService {
                 .noneMatch(candidate -> candidate.profileVersionId().equals(profile.id()))) {
             throw invalid("route_profile_mismatch", "Model profile is not a candidate of the requested route");
         }
-        if (request.allowCloudEgress() && route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED) {
+        if (request.allowCloudEgress()
+                && route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED) {
             throw invalid("cloud_egress_not_allowed", "Cloud egress was not explicitly allowed by the route");
+        }
+        if (!request.allowCloudEgress()
+                && route.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY) {
+            throw invalid("cloud_candidate_not_allowed", "A local-only run cannot use a cloud route candidate");
+        }
+        if (!request.allowCloudEgress()
+                && connection.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY) {
+            throw invalid("cloud_candidate_not_allowed", "A local-only run cannot use a cloud provider candidate");
+        }
+        if (request.allowCloudEgress()
+                && connection.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED) {
+            throw invalid("cloud_route_candidate_invalid", "A cloud run requires a cloud provider candidate");
         }
         EgressDecision decision = request.allowCloudEgress() ? EgressDecision.CLOUD_ALLOWED : EgressDecision.LOCAL_ONLY;
         EgressClass egressClass = connection.egressPolicy() == ProviderRepository.EgressPolicy.CLOUD_ALLOWED
@@ -300,6 +344,14 @@ public class RunExecutionService {
                 URI.create(connection.endpointUri()), connection.credentialRef() == null ? "fake-ref" : connection.credentialRef());
         EgressPolicy.validateConnection(spaceId, decision, adapterConnection);
         return new ValidatedRoute(route, profile, connection, adapterConnection, decision);
+    }
+
+    private static boolean scopeCoversChat(String scope) {
+        if (scope == null) {
+            return false;
+        }
+        String normalized = scope.trim().toUpperCase(java.util.Locale.ROOT);
+        return "CHAT".equals(normalized) || "ALL".equals(normalized);
     }
 
     private void requireRole(UUID spaceId, SessionPrincipal principal, boolean write) {

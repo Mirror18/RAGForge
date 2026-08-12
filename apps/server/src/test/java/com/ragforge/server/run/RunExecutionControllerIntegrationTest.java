@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.identity.SessionPrincipal;
 import com.ragforge.server.provider.ProviderRepository;
+import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.prompt.PromptRepository;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,6 +69,7 @@ class RunExecutionControllerIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper objectMapper;
     @Autowired ProviderRepository providers;
+    @Autowired SpaceBindingRepository bindings;
     @Autowired PromptRepository prompts;
     @Autowired RunRepository runs;
     @Autowired RunExecutionService executionService;
@@ -90,7 +92,7 @@ class RunExecutionControllerIntegrationTest {
 
     @BeforeEach
     void prepare() {
-        jdbc.execute("TRUNCATE usage_ledger, model_invocations, run_steps, runs, conversations, "
+        jdbc.execute("TRUNCATE space_binding_versions, usage_ledger, model_invocations, run_steps, runs, conversations, "
                 + "space_prompt_bindings, prompt_versions, space_model_bindings, model_route_candidates, "
                 + "model_route_versions, model_profile_versions, provider_connections, space_memberships, "
                 + "knowledge_spaces, sessions, users CASCADE");
@@ -181,6 +183,55 @@ class RunExecutionControllerIntegrationTest {
 
         withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs/{run}", otherSpace, UUID.randomUUID()).with(auth())))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void unboundSpaceRejectsRunBeforeProviderInvocation() throws Exception {
+        jdbc.update("DELETE FROM space_binding_versions WHERE space_id = ?", space);
+        UUID conversation = createConversation(space, "Unbound chat");
+
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody("unbound-" + UUID.randomUUID()))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SPACE_BINDING_NOT_FOUND"));
+
+        assertNoProviderSideEffects();
+    }
+
+    @Test
+    void routeAndPromptMismatchAreRejectedBeforeProviderInvocation() throws Exception {
+        UUID conversation = createConversation(space, "Binding mismatch chat");
+
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody(UUID.randomUUID(), setup.profile.id(), setup.provider.id(), setup.prompt.id(),
+                                "route-mismatch", false))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("ROUTE_NOT_BOUND"));
+        assertNoProviderSideEffects();
+
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody(setup.route.id(), setup.profile.id(), setup.provider.id(), UUID.randomUUID(),
+                                "prompt-mismatch", false))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("PROMPT_NOT_BOUND"));
+        assertNoProviderSideEffects();
+    }
+
+    @Test
+    void cloudRequestWithoutBindingAuthorizationIsRejectedBeforeProviderInvocation() throws Exception {
+        UUID conversation = createConversation(space, "Unauthorized cloud chat");
+
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody(setup.route.id(), setup.profile.id(), setup.provider.id(), setup.prompt.id(),
+                                "cloud-unauthorized", true))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("CLOUD_EGRESS_NOT_BOUND"));
+
+        assertNoProviderSideEffects();
     }
 
     @Test
@@ -308,13 +359,25 @@ class RunExecutionControllerIntegrationTest {
     }
 
     private String runBody(String message) throws Exception {
-        return objectMapper.writeValueAsString(new RunExecutionController.CreateRunRequest(setup.route.id(), setup.profile.id(),
-                setup.provider.id(), setup.prompt.id(), message, false, 5));
+        return runBody(setup.route.id(), setup.profile.id(), setup.provider.id(), setup.prompt.id(), message, false);
+    }
+
+    private String runBody(UUID routeId, UUID profileId, UUID providerId, UUID promptId,
+                           String message, boolean allowCloudEgress) throws Exception {
+        return objectMapper.writeValueAsString(new RunExecutionController.CreateRunRequest(routeId, profileId,
+                providerId, promptId, message, allowCloudEgress, 5));
     }
 
     private RunExecutionService.RunRequest runRequest(String message) {
         return new RunExecutionService.RunRequest(setup.route.id(), setup.profile.id(), setup.provider.id(),
                 setup.prompt.id(), message, false, 5);
+    }
+
+    private void assertNoProviderSideEffects() {
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM model_invocations WHERE space_id = ?",
+                Integer.class, space)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM usage_ledger WHERE space_id = ?",
+                Integer.class, space)).isZero();
     }
 
     private UUID responseId(MvcResult result) throws Exception {
@@ -344,16 +407,51 @@ class RunExecutionControllerIntegrationTest {
                 new ProviderRepository.NewModelProfileVersion(UUID.randomUUID(), requestedSpace, provider.id(), "fake", 1,
                         "fake-model", "[\"CHAT\"]", "{}", "{}", 4096, 256, null, null, "{}", null, "{}",
                         ProviderRepository.ModelProfileStatus.PUBLISHED, now, correlation));
+        ProviderRepository.ModelProfileVersion embeddingProfile = providers.createProfileVersion(
+                new ProviderRepository.NewModelProfileVersion(UUID.randomUUID(), requestedSpace, provider.id(), "fake-embedding", 1,
+                        "fake-embedding-model", "[\"EMBEDDING\"]", "{}", "{}", 4096, 256, 768, null, "{}", null, "{}",
+                        ProviderRepository.ModelProfileStatus.PUBLISHED, now, correlation));
+        ProviderRepository.ModelProfileVersion rerankProfile = providers.createProfileVersion(
+                new ProviderRepository.NewModelProfileVersion(UUID.randomUUID(), requestedSpace, provider.id(), "fake-rerank", 1,
+                        "fake-rerank-model", "[\"RERANK\"]", "{}", "{}", 4096, 256, null, null, "{}", null, "{}",
+                        ProviderRepository.ModelProfileStatus.PUBLISHED, now, correlation));
         ProviderRepository.ModelRouteVersion route = providers.createRouteVersion(
                 new ProviderRepository.NewModelRouteVersion(UUID.randomUUID(), requestedSpace, "chat", 1,
                         ProviderRepository.RoutePurpose.CHAT, ProviderRepository.EgressPolicy.LOCAL_ONLY, false,
                         ProviderRepository.SelectionPolicy.SINGLE, "{}", ProviderRepository.ModelRouteStatus.PUBLISHED, now, correlation));
         providers.addRouteCandidate(new ProviderRepository.NewRouteCandidate(UUID.randomUUID(), requestedSpace, route.id(),
                 1, profile.id(), now, correlation));
+        ProviderRepository.ModelRouteVersion embeddingRoute = providers.createRouteVersion(
+                new ProviderRepository.NewModelRouteVersion(UUID.randomUUID(), requestedSpace, "embedding", 1,
+                        ProviderRepository.RoutePurpose.EMBEDDING, ProviderRepository.EgressPolicy.LOCAL_ONLY, false,
+                        ProviderRepository.SelectionPolicy.SINGLE, "{}", ProviderRepository.ModelRouteStatus.PUBLISHED, now, correlation));
+        providers.addRouteCandidate(new ProviderRepository.NewRouteCandidate(UUID.randomUUID(), requestedSpace,
+                embeddingRoute.id(), 1, embeddingProfile.id(), now, correlation));
+        ProviderRepository.ModelRouteVersion rerankRoute = providers.createRouteVersion(
+                new ProviderRepository.NewModelRouteVersion(UUID.randomUUID(), requestedSpace, "rerank", 1,
+                        ProviderRepository.RoutePurpose.RERANK, ProviderRepository.EgressPolicy.LOCAL_ONLY, false,
+                        ProviderRepository.SelectionPolicy.SINGLE, "{}", ProviderRepository.ModelRouteStatus.PUBLISHED, now, correlation));
+        providers.addRouteCandidate(new ProviderRepository.NewRouteCandidate(UUID.randomUUID(), requestedSpace,
+                rerankRoute.id(), 1, rerankProfile.id(), now, correlation));
         PromptRepository.PromptVersion prompt = prompts.createVersion(new PromptRepository.NewPromptVersion(
                 UUID.randomUUID(), requestedSpace, "chat", 1, "You are a safe assistant.", "{}", "{}", "test",
                 user, PromptRepository.PromptStatus.PUBLISHED, now, correlation));
-        return new Setup(provider, profile, route, prompt);
+        ProviderRepository.SpaceModelBinding chatBinding = providers.bindRoute(new ProviderRepository.NewSpaceModelBinding(
+                UUID.randomUUID(), requestedSpace, "space-binding-chat", 1, ProviderRepository.RoutePurpose.CHAT,
+                route.id(), ProviderRepository.BindingStatus.ACTIVE, now, correlation));
+        ProviderRepository.SpaceModelBinding embeddingBinding = providers.bindRoute(new ProviderRepository.NewSpaceModelBinding(
+                UUID.randomUUID(), requestedSpace, "space-binding-embedding", 1, ProviderRepository.RoutePurpose.EMBEDDING,
+                embeddingRoute.id(), ProviderRepository.BindingStatus.ACTIVE, now, correlation));
+        ProviderRepository.SpaceModelBinding rerankBinding = providers.bindRoute(new ProviderRepository.NewSpaceModelBinding(
+                UUID.randomUUID(), requestedSpace, "space-binding-rerank", 1, ProviderRepository.RoutePurpose.RERANK,
+                rerankRoute.id(), ProviderRepository.BindingStatus.ACTIVE, now, correlation));
+        PromptRepository.SpacePromptBinding promptBinding = prompts.bind(new PromptRepository.NewSpacePromptBinding(
+                UUID.randomUUID(), requestedSpace, "space-binding-chat", 1, prompt.id(),
+                PromptRepository.BindingStatus.ACTIVE, now, correlation));
+        bindings.create(new SpaceBindingRepository.NewSpaceBinding(UUID.randomUUID(), requestedSpace, 1,
+                chatBinding.id(), embeddingBinding.id(), rerankBinding.id(), promptBinding.id(), false, null, now,
+                correlation));
+        return new Setup(provider, profile, route, prompt, embeddingRoute, rerankRoute);
     }
 
     private <T> T withPrincipal(java.util.concurrent.Callable<T> operation) throws Exception {
@@ -375,6 +473,8 @@ class RunExecutionControllerIntegrationTest {
     }
 
     private record Setup(ProviderRepository.ProviderConnection provider, ProviderRepository.ModelProfileVersion profile,
-                         ProviderRepository.ModelRouteVersion route, PromptRepository.PromptVersion prompt) {
+                         ProviderRepository.ModelRouteVersion route, PromptRepository.PromptVersion prompt,
+                         ProviderRepository.ModelRouteVersion embeddingRoute,
+                         ProviderRepository.ModelRouteVersion rerankRoute) {
     }
 }
