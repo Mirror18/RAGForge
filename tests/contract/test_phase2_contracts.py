@@ -280,6 +280,26 @@ class Phase2OpenApiContractTest(unittest.TestCase):
         with self.assertRaises(SchemaViolation):
             validate_instance(invalid_payload, schema, OPENAPI_PATH, self.spec)
 
+    def test_run_usage_ledger_projection_allows_cancelled_run_without_usage(self) -> None:
+        schema = self.spec["components"]["schemas"]["Run"]
+        run = {
+            "runId": self.ids["run"],
+            "spaceId": self.ids["space"],
+            "conversationId": self.ids["run"],
+            "version": 1,
+            "status": "CANCELLED",
+            "correlationId": self.ids["correlation"],
+            "modelRouteId": self.ids["route"],
+            "promptVersionId": self.ids["prompt"],
+            "usageLedgerId": None,
+            "cancelRequested": True,
+            "error": None,
+            "createdAt": "2026-08-13T00:00:00Z",
+            "startedAt": None,
+            "finishedAt": "2026-08-13T00:00:01Z",
+        }
+        validate_instance(run, schema, OPENAPI_PATH, self.spec)
+
     def test_phase2_event_schemas_parse_validate_and_require_trace_identity(self) -> None:
         samples = self._event_samples()
         self.assertEqual({path.name for path in EVENTS_DIR.glob("run.*.schema.json")}, set(samples))
