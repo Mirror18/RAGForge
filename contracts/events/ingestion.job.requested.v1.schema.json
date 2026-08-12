@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/ingestion.job.requested.v1.schema.json",
+  "title": "ingestion.job.requested.v1",
+  "description": "Request for a versioned ingestion job. The artifact reference is sufficient for a worker; document bytes and credentials stay outside the event.",
+  "allOf": [
+    {"$ref": "./event-envelope.v1.schema.json"},
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {"const": "ingestion.job.requested.v1"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["jobId", "sourceId", "documentRevisionId", "pipelineVersionId", "attemptId", "operation", "artifactRef"],
+          "properties": {
+            "jobId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "sourceId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "documentRevisionId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "pipelineVersionId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "attemptId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "operation": {"type": "string", "enum": ["FULL_SYNC", "INCREMENTAL_SYNC", "DOCUMENT_UPSERT", "DOCUMENT_DELETE"]},
+            "sourceVersion": {"type": "string", "minLength": 1, "maxLength": 512},
+            "priority": {"type": "integer", "minimum": 0, "maximum": 100},
+            "artifactRef": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["artifactId", "mediaType", "byteLength", "sha256"],
+              "properties": {
+                "artifactId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+                "mediaType": {"type": "string", "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"},
+                "byteLength": {"type": "integer", "minimum": 0, "maximum": 10737418240},
+                "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}
+              }
+            }
+          }
+        }
+      },
+      "required": ["eventType", "payload"]
+    }
+  ]
+}

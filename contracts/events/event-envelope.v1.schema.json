@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/event-envelope.v1.schema.json",
+  "title": "RAGForge Outbox Event Envelope v1",
+  "description": "The persisted transactional-outbox and published event envelope. Payloads contain references and summaries, never secrets or full document content.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "producer",
+    "correlationId",
+    "causationId",
+    "spaceId",
+    "aggregateId",
+    "payload"
+  ],
+  "properties": {
+    "eventId": {"$ref": "#/$defs/uuidV7"},
+    "eventType": {"type": "string", "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9-]+)+\\.v[1-9][0-9]*$"},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "producer": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"},
+    "correlationId": {"$ref": "#/$defs/uuidV7"},
+    "causationId": {"$ref": "#/$defs/uuidV7"},
+    "spaceId": {"$ref": "#/$defs/uuidV7"},
+    "aggregateId": {"$ref": "#/$defs/uuidV7"},
+    "payload": {
+      "type": "object",
+      "propertyNames": {
+        "not": {
+          "enum": ["password", "secret", "apiKey", "accessToken", "documentContent", "fullText", "rawDocument"]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "uuidV7": {
+      "type": "string",
+      "format": "uuidv7",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    }
+  }
+}
