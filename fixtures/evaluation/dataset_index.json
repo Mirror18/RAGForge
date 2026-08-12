@@ -1,0 +1,14 @@
+{
+  "corpus_document_count": 36,
+  "dataset_version": "phase0-benchmark-1.0.0",
+  "document_manifest": "documents/document_manifest.json",
+  "document_manifest_sha256": "2ddcc33dc74466acf084a107da4d60e4affebe5148c4159967b5ed243d23823f",
+  "generator_version": "phase0-assets-generator-1.0.0",
+  "immutable_id": "e309814ddef85f66af2a3e6b6110cc2cdc1f653a6b044f8a6f2ad6d3a3b9fbb8",
+  "question_count": 33,
+  "question_manifest": "evaluation/question_manifest.json",
+  "question_manifest_sha256": "db45ab719aed4396b0b6d71e116fb02b6111b9a642c8160bc6bfd026e5b55aee",
+  "scan_placeholder_policy": "doc-032 is not OCR evidence; expected behavior is explicit limitation/abstention.",
+  "schema_version": "phase0-dataset-index-1.0.0",
+  "seed": 20260812
+}
