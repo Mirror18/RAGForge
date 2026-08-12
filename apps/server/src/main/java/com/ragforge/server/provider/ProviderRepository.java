@@ -64,6 +64,33 @@ public class ProviderRepository {
         }
     }
 
+    /** Returns only connections owned by the requested space. */
+    public List<ProviderConnection> listConnections(UUID spaceId) {
+        return jdbc.query("""
+                        SELECT id, space_id, provider_key, display_name, provider_type, endpoint_uri,
+                               credential_ref, credential_hash, auth_scheme, non_secret_headers,
+                               status, egress_policy, created_at, updated_at, correlation_id, version
+                        FROM provider_connections
+                        WHERE space_id = ?
+                        ORDER BY created_at, id
+                        """, (rs, rowNum) -> mapConnection(rs), spaceId);
+    }
+
+    /** Exact space-scoped lookup used by API authorization paths. */
+    public Optional<ProviderConnection> findConnectionInSpace(UUID spaceId, UUID id) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                            SELECT id, space_id, provider_key, display_name, provider_type, endpoint_uri,
+                                   credential_ref, credential_hash, auth_scheme, non_secret_headers,
+                                   status, egress_policy, created_at, updated_at, correlation_id, version
+                            FROM provider_connections
+                            WHERE id = ? AND space_id = ?
+                            """, (rs, rowNum) -> mapConnection(rs), id, spaceId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     @Transactional
     public ModelProfileVersion createProfileVersion(NewModelProfileVersion input) {
         assertConnectionAvailable(input.spaceId(), input.providerConnectionId());
