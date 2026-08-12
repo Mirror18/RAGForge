@@ -1,11 +1,12 @@
 # Phase 1 实施与验收结果
 
-- 验收日期：2026-08-12
+- 验收日期：2026-08-13
 - 主分支基线：`c9b3d6c5880c58e36e6e8c3af2914502118c9cbf`
-- 当前阶段集成头：`ffdb0d5`（Testcontainers 1.21.4 兼容性修正后）
+- 功能集成头：`204f20d`（跨平台 Web lockfile 修正后）；本阶段证据由随后中文 closure commit 固化
+- GitHub Actions：Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088)，job `94179552944`，SBOM artifact `9149315317`
 - 当前主分支：`main`
 - 运行环境：Windows 11、Java 21.0.7、Maven 3.9.6、Node 22.22.2、npm 10.9.7、Python 3.12.13、Docker 29.6.1、Compose v5.3.0
-- 本阶段未配置 GitHub remote，未提交或推送真实凭据。
+- GitHub remote：`origin -> git@github.com:Mirror18/RAGForge.git`；未提交或推送真实凭据。
 
 ## 1. 阶段范围与合并记录
 
@@ -22,8 +23,10 @@
 | `82dfd74c189ba378d65f1767e3aa04cc50746e35` | 服务端身份、空间、Session 与迁移 |
 | `e60ff32598ba443627875d383b683d56ea1fed17` | 禁用默认生成开发密码 |
 | `6b96bd1bae8758e2b97ef9c129df5e34bc611cad` | 固定 Testcontainers 镜像版本 |
+| `545d75d6f012e10fe24b732c5c2bff0292fe6e39` | 修复 Testcontainers Docker 兼容性 |
+| `fdede041cd78a4eff034dbb186664a56119a503b` | 修复跨平台 Rollup 依赖锁定 |
 
-主分支保留了对应的 `--no-ff` 合并提交；阶段闭环提交必须在本记录和清单审查完成后创建。
+主分支保留了对应的 `--no-ff` 合并提交；阶段闭环提交在本记录和清单审查完成后创建。
 
 ## 2. ROADMAP 退出条件证据
 
@@ -32,7 +35,7 @@
 | 新环境按文档可重复启动 | 已满足（本地） | [`deploy/compose/README.md`](../../05-operations/DEPLOYMENT.md)；`python scripts/ci/validate_compose.py --project-name ragforge-p1-orch-check --env-file deploy/compose/env.example`；隔离项目 `ragforge-p1-api-check` 实际启动 PostgreSQL、Qdrant、RabbitMQ、Valkey、MinIO，并使用独立 network、volume 和端口 block |
 | 跨空间授权集成测试通过 | 已满足（本地黑盒 + Java 集成测试） | [`tests/acceptance/test_phase1_api_smoke.py`](../../../tests/acceptance/test_phase1_api_smoke.py) 3/3；[`ServerIntegrationTest.java`](../../../apps/server/src/test/java/com/ragforge/server/ServerIntegrationTest.java) 覆盖非成员读写/成员变更、CSRF、Session、幂等和迁移；真实 Compose API 黑盒通过 |
 | 数据库迁移、备份冒烟和健康检查可执行 | 已满足（真实 PostgreSQL/依赖） | Flyway `V1__initial_schema.sql`、`V2__idempotency_records.sql`；`python scripts/dev/core.py --project-name ragforge-p1-api-check health`；`python scripts/dev/core.py --project-name ragforge-p1-api-check backup-smoke --output tmp/backups/phase1-api-check.sql`；`/actuator/health` 返回 `UP`；备份文件生成并有 SHA-256 记录。完整恢复演练留至 Phase 6 |
-| CI 对空白业务骨架全部通过 | 待外部 CI 运行取证 | `.github/workflows/quality.yml` 已覆盖格式、Compose、架构、链接、秘密、Phase 0、contract、依赖、SBOM、Maven 和 npm；本地 Python/Compose/契约/前端门禁以及全量 `mvn test` 已通过。当前仓库没有 remote，故不能把未执行的 Linux GitHub Run 或 SBOM/Grype artifact 标为通过 |
+| CI 对空白业务骨架全部通过 | 已满足（Linux GitHub Actions） | Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088) 的 quality job 26 个步骤全部成功；包含 Syft SBOM、artifact `9149315317`、Grype High 阈值扫描、Maven 全量测试和 npm 跨平台 lockfile/build |
 
 ### 2.1 真实运行配置
 
@@ -76,6 +79,6 @@ npm audit --audit-level=high
 
 ## 4. 未完成项与阶段入口
 
-Phase 1 的业务骨架已可供 Phase 2 使用，但阶段正式关闭前必须取得一次全新的 Linux CI Run，确认 SBOM/Grype action 和 npm/Maven job 的完整路径。没有 remote 的原因属于外部协调/仓库权限问题，不通过勾选文档掩盖。
+Phase 1 的业务骨架已可供 Phase 2 使用；Linux CI、SBOM 和 Grype 已取得真实证据。下一入口为 Phase 2 Provider、Prompt 与 Run 纵向切片。
 
 Phase 2 入口：Provider Registry、Model Profile/Route/Space Binding、Prompt Version、Run/Step/SSE 和显式云端出境策略。当前实现不宣称已完成 service token 管理、RAG、引用验证、摄取或检索能力。

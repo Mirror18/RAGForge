@@ -1,10 +1,10 @@
 # 项目状态
 
-- Updated: 2026-08-12
-- Current stage: Foundation / Phase 1 Evidence Ready; external CI closure pending
-- Repository: local private Git repository
+- Updated: 2026-08-13
+- Current stage: Foundation / Phase 1 Complete; Phase 2 Ready
+- Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
-- External remote: not configured
+- External remote: `origin` configured; Phase 1 CI Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088) succeeded
 
 ## 1. 已完成
 
@@ -29,14 +29,14 @@
 - Phase 1 只完成可运行骨架和安全边界，尚未开发 Provider、摄取、检索、引用回答等 RAG 业务能力。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
-- 尚未创建 GitHub remote 或 release。
+- 已配置 GitHub remote `Mirror18/RAGForge`；Phase 1 CI Run 31616214088 成功，SBOM artifact 和 Grype 扫描均有证据；尚未创建 release。
 - Obsidian 仓库没有被写入项目进度。
 - Phase 0 实验发现的跨空间、provenance、OCR、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收。
-- 本机全量 Maven Testcontainers 已在升级 1.21.4 后通过（8 tests，含 5 个真实容器集成测试）；没有 GitHub remote，故尚无 Linux CI Run ID、SBOM 或 Grype 实际结果。Phase 1 正式关闭的唯一证据缺口是这次外部 CI 运行。
+- 本机全量 Maven Testcontainers 已在升级 1.21.4 后通过（8 tests，含 5 个真实容器集成测试）；Linux GitHub Actions Run 31616214088 的格式、契约、秘密、依赖、SBOM/Grype、Maven 和 npm 步骤全部成功。
 
 ## 3. 下一入口
 
-Phase 1 代码入口已具备；待外部 CI 取证后进入 Phase 2 Provider、Prompt 与 Run 纵向切片。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)，Phase 1 复盘见 [`PHASE_1_RETROSPECTIVE.md`](retrospectives/PHASE_1_RETROSPECTIVE.md)。
+Phase 1 已闭环，下一入口为 Phase 2 Provider、Prompt 与 Run 纵向切片。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)，Phase 1 复盘见 [`PHASE_1_RETROSPECTIVE.md`](retrospectives/PHASE_1_RETROSPECTIVE.md)。
 
 ## 4. 更新规则
 

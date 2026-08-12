@@ -2,7 +2,7 @@
 
 RAGForge 是一个面向企业内部、单租户多用户场景的通用 RAG 知识助手学习型工程。仓库的首要目标不是快速堆出一个聊天页面，而是完整实践商业项目从产品定义、架构决策、研发、测试、安全、交付到运维复盘的全过程。
 
-当前阶段为 **Foundation / Phase 1 Evidence Ready**：工程与领域骨架已可在隔离 Compose 中运行；Phase 1 的 Linux CI 取证仍待配置 remote 后完成，RAG 业务纵向能力尚未开始。
+当前阶段为 **Foundation / Phase 1 Complete; Phase 2 Ready**：工程与领域骨架已在隔离 Compose 和 Linux CI 中通过验收；RAG 业务纵向能力尚未开始。
 
 ## 1. 已确认的产品边界
 

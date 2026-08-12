@@ -15,14 +15,14 @@
 ## Problem
 
 - Testcontainers 1.21.3 与 Docker Engine 29.6.1 的 Windows npipe 兼容性曾导致 HTTP 400；升级至 1.21.4 并显式管理容器生命周期后，本地全量 Maven 集成测试已通过。
-- GitHub remote 未配置，因此 workflow、SBOM 和 Grype 路径尚未有真实 Run ID；本地缺少 syft/trivy/grype。
+- 首次 GitHub Run 暴露 Windows 生成的 npm lockfile 缺少 Linux Rollup optional dependency；补齐跨平台 lockfile 后第二次 Run `31616214088` 全部通过，并生成 SBOM artifact `9149315317`。
 - 本阶段最小 Session 骨架已使用 Valkey，但完整 service token 生命周期、限速/MFA、生产 TLS 和 secret store 仍未实现，不能提前宣称安全基线全部完成。
 - 运行时镜像仍使用可读 tag；生产 immutable digest、非 root、资源限额和完整观测 profile 归入后续部署阶段。
 
 ## Try
 
 - Phase 2 开始前先在 Linux runner 复跑 `mvn test`，将 Docker/Testcontainers 版本和镜像 tag/digest 输出为 CI artifact。
-- 在可用 remote 后首次 CI 运行固定 SBOM/Grype 基线，记录漏洞例外的 owner/期限，不把 action 存在当作扫描通过。
+- 保持 CI Run `31616214088` 作为 Phase 1 基线；后续依赖变更继续要求 SBOM/Grype job 通过并记录 artifact。
 - 把本阶段的 API smoke 保持为可重复合成测试；后续加入浏览器 E2E 时复用同一空间隔离场景和不可伪造 provenance 断言。
 - 在引入 provider、connector 或 content query 前，要求 `space_id`、出境 route、审计和失败路径的 contract test 先合入。
 
@@ -32,8 +32,8 @@
 - 前端 `npm ci`、类型检查、生产构建和 High 级 audit 通过。
 - Java compile、UUIDv7/SecurityConfig 定向测试、worker 测试和全量 Maven Testcontainers 测试通过；全量结果为 8 tests、0 failures/errors。
 - 真实 Compose 黑盒覆盖注册、登录别名、Session/current、CSRF、Valkey Session、空间 RBAC、跨空间 no-leak、幂等 409、UUIDv7 correlation；health 与 PostgreSQL backup smoke 通过。
-- 未发现新 P0/P1 代码缺陷；“无远程 CI Run”仍是 Phase 1 正式关闭前的唯一证据缺口，登记于 [`RISK_REGISTER.md`](../RISK_REGISTER.md)。
+- 未发现新 P0/P1 代码缺陷；Linux CI、SBOM/Grype、Maven Testcontainers 和 npm lockfile 均取得成功证据，Phase 1 可正式关闭。
 
 ## Phase 2 入口
 
-Phase 2 可以基于当前 server/contract/Compose 骨架开始 Provider Registry 和 Run/Step 设计，但正式宣布 Phase 1 closed 前需完成外部 CI 取证。任何新功能不得绕过现有 `space_id`、CSRF、Idempotency-Key、audit/outbox 和云端出境策略边界。
+Phase 2 可以基于当前 server/contract/Compose 骨架开始 Provider Registry 和 Run/Step 设计。任何新功能不得绕过现有 `space_id`、CSRF、Idempotency-Key、audit/outbox 和云端出境策略边界。

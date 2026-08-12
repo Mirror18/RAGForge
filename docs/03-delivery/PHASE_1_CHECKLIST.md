@@ -34,8 +34,8 @@
 
 ## 5. CI 与质量门禁
 
-- [ ] GitHub Actions 在空白业务骨架上的完整运行已通过；workflow 已定义格式、构建、单测、架构、contract、secret/dependency scan，本地全量 Maven 8 tests 已通过，但当前无 remote Run/SBOM artifact；证据缺口：`P1-CI-001`。
-- [x] CI 依赖缓存、SBOM 生成和失败路径已定义且不引用真实凭据；证据：`.github/workflows/quality.yml`、`dependency_inventory.py`、`DEPENDENCY_LEDGER.md`。SBOM/Grype 实际结果待 Linux Run。
+- [x] GitHub Actions 在空白业务骨架上的完整运行已通过；证据：Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088)，`quality` job 26 个业务/清理步骤全部成功。
+- [x] CI 依赖缓存、SBOM 生成和失败路径已定义且不引用真实凭据；证据：Run 31616214088 的 Syft SBOM、Grype High 阈值扫描、artifact `ragforge-sbom-cyclonedx`（artifact ID `9149315317`）、`.github/workflows/quality.yml`、`DEPENDENCY_LEDGER.md`。
 - [x] 本地命令与 CI 命令一致，失败时退出码正确；证据：本地 Python/npm 门禁和失败过的 Testcontainers 命令均返回非零。
 - [x] 迁移、健康、备份和跨空间安全测试证据已记录；证据：`P1-DATA-001`、`P1-RECOVERY-001`、`P1-IAM-001`。
 
@@ -44,4 +44,4 @@
 - [x] 新环境重复启动演练有记录，包含版本、镜像、端口和资源；证据：`PHASE_1_IMPLEMENTATION_RESULTS.md`、`P1-OPS-001`。
 - [x] `PROJECT_STATUS.md`、`RISK_REGISTER.md`、`TRACEABILITY_MATRIX.md` 已更新；证据：本次阶段记录提交。
 - [x] Phase 1 retrospective 记录事实、质量/安全数据、问题和 Phase 2 入口；证据：[`PHASE_1_RETROSPECTIVE.md`](../08-records/retrospectives/PHASE_1_RETROSPECTIVE.md)。
-- [ ] 阶段正式关闭：CI 外部运行证据尚缺；未发现新的 P0/P1 代码缺陷，但必须在 CI 取证后重新审查风险并创建 phase-closure commit。
+- [x] 阶段正式关闭：Run 31616214088 已成功，未发现新的 P0/P1 代码缺陷；本清单与阶段证据已由中文 closure commit 固化。
