@@ -126,18 +126,19 @@ public class RunRepository {
     }
 
     /**
-     * Records reported and estimated usage independently. Repeating the same provider
-     * identity/source updates the existing ledger row and never creates a second charge.
+     * Records provider-reported and locally estimated usage independently. Repeating the
+     * same invocation/source/dedupe key updates the existing ledger row and never creates
+     * a second charge; provider request identity remains audit metadata.
      */
     @Transactional
     public UsageLedgerRecord recordUsage(NewUsageLedgerEntry input) {
         jdbc.update("""
                         INSERT INTO usage_ledger
                             (id, space_id, model_invocation_id, provider_request_identity, usage_source,
-                             input_tokens, output_tokens, total_tokens, estimated_cost, currency, metadata,
+                             dedupe_key, input_tokens, output_tokens, total_tokens, estimated_cost, currency, metadata,
                              created_at, updated_at, correlation_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?)
-                        ON CONFLICT (space_id, provider_request_identity, usage_source) DO UPDATE
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?)
+                        ON CONFLICT (space_id, model_invocation_id, usage_source, dedupe_key) DO UPDATE
                         SET model_invocation_id = EXCLUDED.model_invocation_id,
                             input_tokens = EXCLUDED.input_tokens,
                             output_tokens = EXCLUDED.output_tokens,
@@ -148,22 +149,22 @@ public class RunRepository {
                             updated_at = EXCLUDED.updated_at,
                             correlation_id = EXCLUDED.correlation_id
                         """, input.id(), input.spaceId(), input.invocationId(), input.providerRequestIdentity(),
-                input.source().name(), input.inputTokens(), input.outputTokens(), input.totalTokens(),
-                input.estimatedCost(), input.currency(), jsonOrEmpty(input.metadataJson()), timestamp(input.now()),
-                timestamp(input.now()), input.correlationId());
-        return findUsage(input.spaceId(), input.providerRequestIdentity(), input.source()).orElseThrow();
+                input.source().name(), input.dedupeKey(), input.inputTokens(), input.outputTokens(),
+                input.totalTokens(), input.estimatedCost(), input.currency(), jsonOrEmpty(input.metadataJson()),
+                timestamp(input.now()), timestamp(input.now()), input.correlationId());
+        return findUsage(input.spaceId(), input.invocationId(), input.source(), input.dedupeKey()).orElseThrow();
     }
 
-    public Optional<UsageLedgerRecord> findUsage(UUID spaceId, String providerRequestIdentity,
-                                                 UsageSource source) {
+    public Optional<UsageLedgerRecord> findUsage(UUID spaceId, UUID invocationId, UsageSource source,
+                                                 String dedupeKey) {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""
                             SELECT id, space_id, model_invocation_id, provider_request_identity, usage_source,
-                                   input_tokens, output_tokens, total_tokens, estimated_cost, currency, metadata,
+                                   dedupe_key, input_tokens, output_tokens, total_tokens, estimated_cost, currency, metadata,
                                    created_at, updated_at, correlation_id
                             FROM usage_ledger
-                            WHERE space_id = ? AND provider_request_identity = ? AND usage_source = ?
-                            """, (rs, rowNum) -> mapUsage(rs), spaceId, providerRequestIdentity, source.name()));
+                            WHERE space_id = ? AND model_invocation_id = ? AND usage_source = ? AND dedupe_key = ?
+                            """, (rs, rowNum) -> mapUsage(rs), spaceId, invocationId, source.name(), dedupeKey));
         } catch (EmptyResultDataAccessException ignored) {
             return Optional.empty();
         }
@@ -204,7 +205,8 @@ public class RunRepository {
     private UsageLedgerRecord mapUsage(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new UsageLedgerRecord(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
                 rs.getObject("model_invocation_id", UUID.class), rs.getString("provider_request_identity"),
-                UsageSource.valueOf(rs.getString("usage_source")), (Long) rs.getObject("input_tokens"),
+                UsageSource.valueOf(rs.getString("usage_source")), rs.getString("dedupe_key"),
+                (Long) rs.getObject("input_tokens"),
                 (Long) rs.getObject("output_tokens"), (Long) rs.getObject("total_tokens"),
                 rs.getBigDecimal("estimated_cost"), rs.getString("currency"), rs.getString("metadata"),
                 instant(rs, "created_at"), instant(rs, "updated_at"), rs.getObject("correlation_id", UUID.class));
@@ -254,13 +256,14 @@ public class RunRepository {
 
     public enum StepType { REWRITE, RETRIEVE, RERANK, TOOL, GENERATE }
 
-    public enum InvocationStatus { SUCCEEDED, FAILED, CANCELLED, TIMED_OUT }
+    public enum InvocationStatus { QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED }
 
-    public enum UsageSource { REPORTED, ESTIMATED }
+    public enum UsageSource { PROVIDER_REPORTED, LOCAL_ESTIMATE }
 
     public enum ErrorClass {
         AUTHENTICATION, RATE_LIMIT, QUOTA, MODEL_NOT_FOUND, CONTEXT_OVERFLOW,
-        CONTENT_POLICY, TIMEOUT, UNAVAILABLE, UNSUPPORTED_CAPABILITY, INVALID_RESPONSE
+        CONTENT_POLICY, TIMEOUT, UNAVAILABLE, UNSUPPORTED_CAPABILITY, INVALID_RESPONSE,
+        CANCELLED, SPACE_EGRESS_DENIED, IDEMPOTENCY_CONFLICT
     }
 
     public record NewRun(UUID id, UUID spaceId, UUID actorUserId, UUID correlationId, RequestKind requestKind,
@@ -301,13 +304,13 @@ public class RunRepository {
     }
 
     public record NewUsageLedgerEntry(UUID id, UUID spaceId, UUID invocationId, String providerRequestIdentity,
-                                      UsageSource source, Long inputTokens, Long outputTokens, Long totalTokens,
+                                      UsageSource source, String dedupeKey, Long inputTokens, Long outputTokens, Long totalTokens,
                                       java.math.BigDecimal estimatedCost, String currency, String metadataJson,
                                       Instant now, UUID correlationId) {
     }
 
     public record UsageLedgerRecord(UUID id, UUID spaceId, UUID invocationId, String providerRequestIdentity,
-                                    UsageSource source, Long inputTokens, Long outputTokens, Long totalTokens,
+                                    UsageSource source, String dedupeKey, Long inputTokens, Long outputTokens, Long totalTokens,
                                     java.math.BigDecimal estimatedCost, String currency, String metadataJson,
                                     Instant createdAt, Instant updatedAt, UUID correlationId) {
     }

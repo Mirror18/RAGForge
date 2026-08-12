@@ -224,7 +224,8 @@ CREATE TABLE runs (
     CONSTRAINT runs_status_ck CHECK (status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED')),
     CONSTRAINT runs_error_ck CHECK (error_class IS NULL OR error_class IN (
         'AUTHENTICATION', 'RATE_LIMIT', 'QUOTA', 'MODEL_NOT_FOUND', 'CONTEXT_OVERFLOW',
-        'CONTENT_POLICY', 'TIMEOUT', 'UNAVAILABLE', 'UNSUPPORTED_CAPABILITY', 'INVALID_RESPONSE'
+        'CONTENT_POLICY', 'TIMEOUT', 'UNAVAILABLE', 'UNSUPPORTED_CAPABILITY', 'INVALID_RESPONSE',
+        'CANCELLED', 'SPACE_EGRESS_DENIED', 'IDEMPOTENCY_CONFLICT'
     )),
     CONSTRAINT runs_input_hash_ck CHECK (input_hash IS NULL OR input_hash ~ '^[0-9a-f]{64}$'),
     CONSTRAINT runs_output_hash_ck CHECK (output_hash IS NULL OR output_hash ~ '^[0-9a-f]{64}$'),
@@ -261,7 +262,8 @@ CREATE TABLE run_steps (
     CONSTRAINT run_steps_status_ck CHECK (status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED')),
     CONSTRAINT run_steps_error_ck CHECK (error_class IS NULL OR error_class IN (
         'AUTHENTICATION', 'RATE_LIMIT', 'QUOTA', 'MODEL_NOT_FOUND', 'CONTEXT_OVERFLOW',
-        'CONTENT_POLICY', 'TIMEOUT', 'UNAVAILABLE', 'UNSUPPORTED_CAPABILITY', 'INVALID_RESPONSE'
+        'CONTENT_POLICY', 'TIMEOUT', 'UNAVAILABLE', 'UNSUPPORTED_CAPABILITY', 'INVALID_RESPONSE',
+        'CANCELLED', 'SPACE_EGRESS_DENIED', 'IDEMPOTENCY_CONFLICT'
     )),
     CONSTRAINT run_steps_identity_uq UNIQUE (run_id, step_key, attempt),
     CONSTRAINT run_steps_id_space_uq UNIQUE (id, space_id)
@@ -300,10 +302,11 @@ CREATE TABLE model_invocations (
         REFERENCES model_route_versions (id, space_id) ON DELETE RESTRICT,
     CONSTRAINT model_invocations_prompt_fk FOREIGN KEY (prompt_version_id, space_id)
         REFERENCES prompt_versions (id, space_id) ON DELETE RESTRICT,
-    CONSTRAINT model_invocations_status_ck CHECK (status IN ('SUCCEEDED', 'FAILED', 'CANCELLED', 'TIMED_OUT')),
+    CONSTRAINT model_invocations_status_ck CHECK (status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED')),
     CONSTRAINT model_invocations_error_ck CHECK (error_class IS NULL OR error_class IN (
         'AUTHENTICATION', 'RATE_LIMIT', 'QUOTA', 'MODEL_NOT_FOUND', 'CONTEXT_OVERFLOW',
-        'CONTENT_POLICY', 'TIMEOUT', 'UNAVAILABLE', 'UNSUPPORTED_CAPABILITY', 'INVALID_RESPONSE'
+        'CONTENT_POLICY', 'TIMEOUT', 'UNAVAILABLE', 'UNSUPPORTED_CAPABILITY', 'INVALID_RESPONSE',
+        'CANCELLED', 'SPACE_EGRESS_DENIED', 'IDEMPOTENCY_CONFLICT'
     )),
     CONSTRAINT model_invocations_prompt_hash_ck CHECK (
         prompt_render_hash IS NULL OR prompt_render_hash ~ '^[0-9a-f]{64}$'
@@ -326,7 +329,8 @@ CREATE TABLE usage_ledger (
     space_id UUID NOT NULL REFERENCES knowledge_spaces (id) ON DELETE CASCADE,
     model_invocation_id UUID NOT NULL,
     provider_request_identity VARCHAR(255) NOT NULL,
-    usage_source VARCHAR(16) NOT NULL,
+    usage_source VARCHAR(32) NOT NULL,
+    dedupe_key VARCHAR(512) NOT NULL,
     input_tokens BIGINT,
     output_tokens BIGINT,
     total_tokens BIGINT,
@@ -341,15 +345,18 @@ CREATE TABLE usage_ledger (
     CONSTRAINT usage_ledger_invocation_identity_fk FOREIGN KEY
         (model_invocation_id, space_id, provider_request_identity)
         REFERENCES model_invocations (id, space_id, provider_request_identity) ON DELETE CASCADE,
-    CONSTRAINT usage_ledger_source_ck CHECK (usage_source IN ('REPORTED', 'ESTIMATED')),
+    CONSTRAINT usage_ledger_source_ck CHECK (usage_source IN ('PROVIDER_REPORTED', 'LOCAL_ESTIMATE')),
+    CONSTRAINT usage_ledger_dedupe_key_ck CHECK (
+        char_length(dedupe_key) BETWEEN 10 AND 512
+        AND dedupe_key ~ '^[A-Za-z0-9._:-]+$'
+    ),
     CONSTRAINT usage_ledger_tokens_ck CHECK (
         (input_tokens IS NULL OR input_tokens >= 0)
         AND (output_tokens IS NULL OR output_tokens >= 0)
         AND (total_tokens IS NULL OR total_tokens >= 0)
     ),
     CONSTRAINT usage_ledger_cost_ck CHECK (estimated_cost IS NULL OR estimated_cost >= 0),
-    CONSTRAINT usage_ledger_identity_uq UNIQUE (space_id, provider_request_identity, usage_source),
-    CONSTRAINT usage_ledger_invocation_source_uq UNIQUE (space_id, model_invocation_id, usage_source)
+    CONSTRAINT usage_ledger_identity_uq UNIQUE (space_id, model_invocation_id, usage_source, dedupe_key)
 );
 
 CREATE INDEX usage_ledger_space_created_idx ON usage_ledger (space_id, created_at DESC);

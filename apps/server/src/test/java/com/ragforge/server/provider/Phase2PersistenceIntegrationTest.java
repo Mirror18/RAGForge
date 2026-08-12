@@ -127,27 +127,43 @@ class Phase2PersistenceIntegrationTest {
                         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "{}",
                         null, RunRepository.InvocationStatus.SUCCEEDED, null, null, now, correlation));
 
+        String dedupeKeyA = "provider-request-1-final";
+        String dedupeKeyB = "provider-request-1-retry";
         runs.recordUsage(new RunRepository.NewUsageLedgerEntry(UUID.randomUUID(), spaceA, invocationA.id(),
-                "ollama-request-1", RunRepository.UsageSource.REPORTED, 10L, 20L, 30L,
+                "ollama-request-1", RunRepository.UsageSource.PROVIDER_REPORTED, dedupeKeyA, 10L, 20L, 30L,
                 new java.math.BigDecimal("0.00000000"), "USD", "{}", now, correlation));
-        runs.recordUsage(new RunRepository.NewUsageLedgerEntry(UUID.randomUUID(), spaceA, invocationA.id(),
-                "ollama-request-1", RunRepository.UsageSource.REPORTED, 11L, 21L, 32L,
+        RunRepository.UsageLedgerRecord updatedUsage = runs.recordUsage(
+                new RunRepository.NewUsageLedgerEntry(UUID.randomUUID(), spaceA, invocationA.id(),
+                "ollama-request-1", RunRepository.UsageSource.PROVIDER_REPORTED, dedupeKeyA, 11L, 21L, 32L,
                 new java.math.BigDecimal("0.00000001"), "USD", "{\"replayed\":true}", now.plusSeconds(1),
                 UUID.randomUUID()));
         runs.recordUsage(new RunRepository.NewUsageLedgerEntry(UUID.randomUUID(), spaceA, invocationA.id(),
-                "ollama-request-1", RunRepository.UsageSource.ESTIMATED, 11L, 21L, 32L,
+                "ollama-request-1", RunRepository.UsageSource.PROVIDER_REPORTED, dedupeKeyB, 13L, 23L, 36L,
+                new java.math.BigDecimal("0.00000002"), "USD", "{}", now.plusSeconds(2), correlation));
+        runs.recordUsage(new RunRepository.NewUsageLedgerEntry(UUID.randomUUID(), spaceA, invocationA.id(),
+                "ollama-request-1", RunRepository.UsageSource.LOCAL_ESTIMATE, "local-estimate-1", 11L, 21L, 32L,
                 new java.math.BigDecimal("0.00000002"), "USD", "{}", now, correlation));
 
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM usage_ledger
                 WHERE space_id = ? AND provider_request_identity = 'ollama-request-1'
-                """, Integer.class, spaceA)).isEqualTo(2);
-        assertThat(runs.findUsage(spaceA, "ollama-request-1", RunRepository.UsageSource.REPORTED))
-                .get().extracting(RunRepository.UsageLedgerRecord::totalTokens).isEqualTo(32L);
+                """, Integer.class, spaceA)).isEqualTo(3);
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM usage_ledger
+                WHERE space_id = ? AND model_invocation_id = ?
+                  AND usage_source = 'PROVIDER_REPORTED'
+                """, Integer.class, spaceA, invocationA.id())).isEqualTo(2);
+        assertThat(updatedUsage.id()).isEqualTo(runs.findUsage(
+                spaceA, invocationA.id(), RunRepository.UsageSource.PROVIDER_REPORTED, dedupeKeyA).orElseThrow().id());
+        assertThat(updatedUsage.totalTokens()).isEqualTo(32L);
+        assertThat(runs.findUsage(spaceA, invocationA.id(), RunRepository.UsageSource.PROVIDER_REPORTED, dedupeKeyB))
+                .get().extracting(RunRepository.UsageLedgerRecord::totalTokens).isEqualTo(36L);
 
         assertThat(providers.findProfileVersion(spaceB, profileA.id())).isEmpty();
         assertThat(prompts.findVersion(spaceB, promptA.id())).isEmpty();
         assertThat(runs.findRun(spaceB, runA.id())).isEmpty();
+        assertThat(runs.findUsage(spaceB, invocationA.id(), RunRepository.UsageSource.PROVIDER_REPORTED, dedupeKeyA))
+                .isEmpty();
 
         assertThatThrownBy(() -> jdbc.update("""
                 INSERT INTO space_model_bindings
