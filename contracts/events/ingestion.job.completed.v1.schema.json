@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/ingestion.job.completed.v1.schema.json",
+  "title": "ingestion.job.completed.v1",
+  "description": "Completion summary for a versioned ingestion job. It contains counts and failure metadata, not parsed text or document bytes.",
+  "allOf": [
+    {"$ref": "./event-envelope.v1.schema.json"},
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {"const": "ingestion.job.completed.v1"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["jobId", "sourceId", "documentRevisionId", "pipelineVersionId", "attemptId", "status", "result"],
+          "properties": {
+            "jobId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "sourceId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "documentRevisionId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "pipelineVersionId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "attemptId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "status": {"type": "string", "enum": ["SUCCEEDED", "FAILED", "PARTIAL"]},
+            "result": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["parsedArtifactId", "chunkCount", "embeddingCount"],
+              "properties": {
+                "parsedArtifactId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+                "indexVersionId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+                "chunkCount": {"type": "integer", "minimum": 0},
+                "embeddingCount": {"type": "integer", "minimum": 0}
+              }
+            },
+            "failure": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "required": ["code", "retryable"],
+              "properties": {
+                "code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"},
+                "retryable": {"type": "boolean"},
+                "message": {"type": "string", "maxLength": 500},
+                "nextRetryAt": {"type": "string", "format": "date-time"}
+              }
+            }
+          }
+        }
+      },
+      "required": ["eventType", "payload"]
+    }
+  ]
+}
