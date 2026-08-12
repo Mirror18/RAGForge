@@ -1,0 +1,166 @@
+name: ${COMPOSE_PROJECT_NAME:-ragforge-p1}
+
+# Provider connection contract consumed by application containers when they are
+# added. The default is host-managed Ollama; cloud routes remain opt-in.
+x-ragforge-provider:
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+
+# Phase 1 core infrastructure only. Application containers will be added when
+# their contracts and build artifacts exist; the stack must remain usable before
+# those services are implemented.
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16.4-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ragforge}
+      POSTGRES_USER: ${POSTGRES_USER:-ragforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "${POSTGRES_PORT:-25432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - core
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  qdrant:
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.11.5}
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+    ports:
+      - "${QDRANT_PORT:-26333}:6333"
+      - "${QDRANT_GRPC_PORT:-26334}:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - core
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost:6333/readyz >/dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:-rabbitmq:3.13-management-alpine}
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-ragforge}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-change-me}
+    ports:
+      - "${RABBITMQ_PORT:-25672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-25673}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - core
+    healthcheck:
+      test:
+        - CMD
+        - rabbitmq-diagnostics
+        - -q
+        - ping
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  valkey:
+    image: ${VALKEY_IMAGE:-valkey/valkey:8.0.1-alpine}
+    restart: unless-stopped
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:-change-me}
+    command:
+      - sh
+      - -c
+      - exec valkey-server --requirepass "$${VALKEY_PASSWORD}"
+    ports:
+      - "${VALKEY_PORT:-26379}:6379"
+    volumes:
+      - valkey-data:/data
+    networks:
+      - core
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - valkey-cli -a "$${VALKEY_PASSWORD}" --no-auth-warning ping | grep -q PONG
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2024-12-18T13-15-44Z}
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-ragforge}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-change-me-minio-secret}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${S3_PORT:-29000}:9000"
+      - "${S3_CONSOLE_PORT:-29001}:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - core
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost:9000/minio/health/ready >/dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Ollama is normally managed by the developer host. The optional profile is
+  # useful for a fully containerized smoke environment; application services
+  # should consume OLLAMA_BASE_URL instead of assuming a local socket.
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.5.4}
+    profiles:
+      - ollama
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-21434}:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - core
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost:11434/api/tags >/dev/null
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+networks:
+  core:
+    name: ${RAGFORGE_NETWORK_NAME:-ragforge-p1-core}
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_postgres-data
+  qdrant-data:
+    name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_qdrant-data
+  rabbitmq-data:
+    name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_rabbitmq-data
+  valkey-data:
+    name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_valkey-data
+  minio-data:
+    name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_minio-data
+  ollama-data:
+    name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_ollama-data

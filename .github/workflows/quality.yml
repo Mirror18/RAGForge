@@ -1,0 +1,146 @@
+name: quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Static and contract quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+
+      - name: Check formatting and syntax
+        run: python scripts/ci/format_check.py
+
+      - name: Validate Compose configuration
+        run: python scripts/ci/validate_compose.py
+
+      - name: Check modular architecture boundary
+        run: python scripts/ci/architecture_check.py
+
+      - name: Check Markdown links
+        run: python scripts/ci/check_markdown_links.py
+
+      - name: Scan tracked files for secrets
+        run: python scripts/ci/secret_scan.py
+
+      - name: Run deterministic Phase 0 tests
+        run: python -m unittest discover -s scripts/phase0 -p "test_*.py" -v
+
+      - name: Run contract test seam
+        run: python scripts/ci/contract_test.py
+
+      - name: Run contract unit tests
+        shell: bash
+        run: |
+          set +e
+          python -m unittest discover -s tests/contract -p "test_*.py" -v
+          status=$?
+          if [[ "$status" -eq 5 ]] && ! compgen -G "tests/contract/test_*.py" >/dev/null; then
+            echo "::notice title=Contract tests::tests/contract is empty in the current scaffold; exit 5 is treated as an explicit placeholder."
+            exit 0
+          fi
+          exit "$status"
+
+      - name: Check dependency manifest and lockfile inventory
+        run: python scripts/ci/dependency_inventory.py --require-lockfiles
+
+      - name: Generate SBOM with Syft action
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          artifact-name: ragforge-sbom-cyclonedx
+          upload-artifact: false
+
+      - name: Publish SBOM job artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-sbom-cyclonedx
+          path: sbom.cdx.json
+          if-no-files-found: error
+
+      - name: Scan repository dependencies with Grype action
+        uses: anchore/scan-action@v6
+        id: scan
+        with:
+          path: "."
+          fail-build: true
+          severity-cutoff: high
+
+      - name: Verify local SBOM/dependency command seam
+        run: python scripts/ci/sbom_dependency_scan.py --mode auto
+
+      - name: Set up Java when Maven exists
+        if: ${{ hashFiles('**/pom.xml') != '' }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Maven build when Maven exists
+        if: ${{ hashFiles('**/pom.xml') != '' }}
+        run: mvn --batch-mode --no-transfer-progress -DskipTests compile
+
+      - name: Maven unit and architecture tests when Maven exists
+        if: ${{ hashFiles('**/pom.xml') != '' }}
+        run: mvn --batch-mode --no-transfer-progress test
+
+      - name: Set up Node when apps/web exists
+        if: ${{ hashFiles('apps/web/package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache apps/web npm dependencies
+        if: ${{ hashFiles('apps/web/package.json') != '' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-web-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json', 'apps/web/package.json') }}
+          restore-keys: |
+            npm-web-${{ runner.os }}-
+
+      - name: Install apps/web dependencies from lockfile
+        if: ${{ hashFiles('apps/web/package.json') != '' }}
+        working-directory: apps/web
+        run: npm ci
+
+      - name: npm format/build when apps/web exists
+        if: ${{ hashFiles('apps/web/package.json') != '' }}
+        working-directory: apps/web
+        run: |
+          npm run --if-present format:check
+          npm run --if-present build
+
+      - name: npm unit tests when apps/web exists
+        if: ${{ hashFiles('apps/web/package.json') != '' }}
+        working-directory: apps/web
+        run: npm run --if-present test
