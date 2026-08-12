@@ -2,11 +2,14 @@ package com.ragforge.server.run;
 
 import com.ragforge.server.common.CorrelationIdFilter;
 import com.ragforge.server.identity.SessionPrincipal;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,9 +27,18 @@ import java.util.UUID;
 @RequestMapping("/api/v1/spaces/{spaceId}")
 public class RunExecutionController {
     private final RunExecutionService service;
+    private final RunEventService eventService;
+    private final JdbcTemplate jdbc;
 
     public RunExecutionController(RunExecutionService service) {
+        this(service, null, null);
+    }
+
+    @Autowired
+    public RunExecutionController(RunExecutionService service, RunEventService eventService, JdbcTemplate jdbc) {
         this.service = service;
+        this.eventService = eventService;
+        this.jdbc = jdbc;
     }
 
     @PostMapping("/conversations")
@@ -49,13 +61,19 @@ public class RunExecutionController {
                 request.promptVersionId(), request.message(), request.allowCloudEgress(),
                 request.timeoutSeconds() == null ? 30 : request.timeoutSeconds());
         return RunResponse.from(service.createRun(spaceId, conversationId, principal(authentication),
-                runRequest, correlationId));
+                runRequest, correlationId), jdbc);
     }
 
     @GetMapping("/runs/{runId}")
-    public RunResponse getRun(@PathVariable UUID spaceId, @PathVariable UUID runId,
-                              Authentication authentication) {
-        return RunResponse.from(service.getRun(spaceId, runId, principal(authentication)));
+    public RunSnapshotResponse getRun(@PathVariable UUID spaceId, @PathVariable UUID runId,
+                                      Authentication authentication) {
+        var principal = principal(authentication);
+        var run = service.getRun(spaceId, runId, principal);
+        var steps = service.getSteps(spaceId, runId, principal);
+        long lastSequence = eventService == null
+                ? steps.stream().mapToLong(RunRepository.StepRecord::sequenceNo).max().orElse(0L)
+                : eventService.replay(spaceId, runId, null).latestSequence();
+        return RunSnapshotResponse.from(run, steps, lastSequence, jdbc);
     }
 
     @PostMapping("/runs/{runId}/retry")
@@ -63,14 +81,14 @@ public class RunExecutionController {
     public RunResponse retry(@PathVariable UUID spaceId, @PathVariable UUID runId,
                              Authentication authentication, HttpServletRequest servletRequest) {
         UUID correlationId = UUID.fromString(CorrelationIdFilter.current(servletRequest));
-        return RunResponse.from(service.retry(spaceId, runId, principal(authentication), correlationId));
+        return RunResponse.from(service.retry(spaceId, runId, principal(authentication), correlationId), jdbc);
     }
 
     @GetMapping("/runs/{runId}/steps")
-    public List<StepResponse> getSteps(@PathVariable UUID spaceId, @PathVariable UUID runId,
-                                       Authentication authentication) {
-        return service.getSteps(spaceId, runId, principal(authentication)).stream()
-                .map(StepResponse::from).toList();
+    public StepPageResponse getSteps(@PathVariable UUID spaceId, @PathVariable UUID runId,
+                                     Authentication authentication) {
+        return new StepPageResponse(service.getSteps(spaceId, runId, principal(authentication)).stream()
+                .map(StepResponse::from).toList(), null);
     }
 
     private static SessionPrincipal principal(Authentication authentication) {
@@ -96,27 +114,108 @@ public class RunExecutionController {
         }
     }
 
-    public record RunResponse(UUID id, UUID spaceId, UUID conversationId, UUID correlationId,
-                              String requestKind, String status, UUID routeVersionId, UUID promptVersionId,
-                              String inputHash, String outputHash, String errorClass, String errorCode,
-                              java.time.Instant startedAt, java.time.Instant completedAt,
-                              java.time.Instant createdAt, java.time.Instant updatedAt) {
-        static RunResponse from(RunRepository.RunRecord value) {
-            return new RunResponse(value.id(), value.spaceId(), value.conversationId(), value.correlationId(),
-                    value.requestKind().name(), value.status().name(), value.routeVersionId(), value.promptVersionId(),
-                    value.inputHash(), value.outputHash(), value.errorClass() == null ? null : value.errorClass().name(),
-                    value.errorCode(), value.startedAt(), value.completedAt(), value.createdAt(), value.updatedAt());
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record RunResponse(UUID runId, UUID spaceId, UUID conversationId, long version, String status,
+                              UUID correlationId, UUID modelRouteId, UUID promptVersionId, UUID usageLedgerId,
+                              boolean cancelRequested, RunErrorResponse error,
+                              java.time.Instant createdAt, java.time.Instant startedAt,
+                              java.time.Instant finishedAt) {
+        static RunResponse from(RunRepository.RunRecord value, JdbcTemplate jdbc) {
+            return new RunResponse(value.id(), value.spaceId(), value.conversationId(),
+                    Math.max(1L, value.version()), value.status().name(), value.correlationId(),
+                    value.routeVersionId(), value.promptVersionId(), findUsageLedgerId(value, jdbc),
+                    value.status() == RunRepository.RunStatus.CANCELLED
+                            || value.errorClass() == RunRepository.ErrorClass.CANCELLED,
+                    RunErrorResponse.from(value), value.createdAt(), value.startedAt(), value.completedAt());
         }
     }
 
-    public record StepResponse(UUID id, UUID runId, String stepKey, String stepType, int attempt,
-                               int sequenceNo, String status, String errorClass, String errorCode,
-                               java.time.Instant createdAt, java.time.Instant updatedAt) {
-        static StepResponse from(RunRepository.StepRecord value) {
-            return new StepResponse(value.id(), value.runId(), value.stepKey(), value.stepType().name(),
-                    value.attempt(), value.sequenceNo(), value.status().name(),
-                    value.errorClass() == null ? null : value.errorClass().name(), value.errorCode(),
-                    value.createdAt(), value.updatedAt());
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record RunSnapshotResponse(UUID runId, UUID spaceId, UUID conversationId, long version, String status,
+                                      UUID correlationId, UUID modelRouteId, UUID promptVersionId, UUID usageLedgerId,
+                                      boolean cancelRequested, RunErrorResponse error,
+                                      java.time.Instant createdAt, java.time.Instant startedAt,
+                                      java.time.Instant finishedAt, long lastSequence, List<StepResponse> steps) {
+        static RunSnapshotResponse from(RunRepository.RunRecord value, List<RunRepository.StepRecord> steps,
+                                        long lastSequence, JdbcTemplate jdbc) {
+            RunResponse run = RunResponse.from(value, jdbc);
+            return new RunSnapshotResponse(run.runId(), run.spaceId(), run.conversationId(), run.version(),
+                    run.status(), run.correlationId(), run.modelRouteId(), run.promptVersionId(),
+                    run.usageLedgerId(), run.cancelRequested(), run.error(), run.createdAt(), run.startedAt(),
+                    run.finishedAt(), Math.max(0L, lastSequence), steps.stream().map(StepResponse::from).toList());
         }
+    }
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record StepPageResponse(List<StepResponse> items, String nextCursor) {
+    }
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record StepResponse(UUID stepId, UUID spaceId, UUID runId, long version, int sequence, String type,
+                               String status, UUID correlationId, int attempt, java.time.Instant createdAt,
+                               java.time.Instant finishedAt, RunErrorResponse error) {
+        static StepResponse from(RunRepository.StepRecord value) {
+            boolean finished = value.status() == RunRepository.RunStatus.SUCCEEDED
+                    || value.status() == RunRepository.RunStatus.FAILED
+                    || value.status() == RunRepository.RunStatus.CANCELLED;
+            return new StepResponse(value.id(), value.spaceId(), value.runId(), 1L,
+                    Math.max(1, value.sequenceNo()), value.stepType().name(), value.status().name(),
+                    value.correlationId(), value.attempt(), value.createdAt(),
+                    finished ? value.updatedAt() : null, RunErrorResponse.from(value));
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record RunErrorResponse(String errorClass, boolean retryable, String message,
+                                   UUID correlationId, Integer retryAfterSeconds) {
+        static RunErrorResponse from(RunRepository.RunRecord value) {
+            if (value.errorClass() == null) {
+                return null;
+            }
+            return new RunErrorResponse(value.errorClass().name(), retryable(value.errorClass()),
+                    safeMessage(value.errorCode()), value.correlationId(), null);
+        }
+
+        static RunErrorResponse from(RunRepository.StepRecord value) {
+            if (value.errorClass() == null) {
+                return null;
+            }
+            return new RunErrorResponse(value.errorClass().name(), retryable(value.errorClass()),
+                    safeMessage(value.errorCode()), value.correlationId(), null);
+        }
+
+        private static boolean retryable(RunRepository.ErrorClass errorClass) {
+            return errorClass == RunRepository.ErrorClass.TIMEOUT
+                    || errorClass == RunRepository.ErrorClass.UNAVAILABLE
+                    || errorClass == RunRepository.ErrorClass.RATE_LIMIT;
+        }
+
+        private static String safeMessage(String errorCode) {
+            return errorCode == null || errorCode.isBlank()
+                    ? "Run execution failed" : "Run execution failed: " + errorCode;
+        }
+    }
+
+    /**
+     * A run may have provider-reported and local-estimate ledger rows. Until the public
+     * usage projection exists, this field names the actual preferred persisted row: provider
+     * reported usage wins, then the oldest local estimate. No synthetic ID is emitted.
+     */
+    private static UUID findUsageLedgerId(RunRepository.RunRecord value, JdbcTemplate jdbc) {
+        if (jdbc == null) {
+            return null;
+        }
+        List<UUID> ids = jdbc.query("""
+                        SELECT u.id
+                        FROM usage_ledger u
+                        JOIN model_invocations i
+                          ON i.id = u.model_invocation_id AND i.space_id = u.space_id
+                        WHERE u.space_id = ? AND i.space_id = ? AND i.run_id = ?
+                        ORDER BY CASE WHEN u.usage_source = 'PROVIDER_REPORTED' THEN 0 ELSE 1 END,
+                                 u.created_at, u.id
+                        LIMIT 1
+                        """, (rs, rowNum) -> rs.getObject("id", UUID.class),
+                value.spaceId(), value.spaceId(), value.id());
+        return ids.isEmpty() ? null : ids.getFirst();
     }
 }
