@@ -4,6 +4,7 @@
 
 ```text
 python scripts/ci/check_markdown_links.py
+python -m unittest discover -s scripts/ci -p "test_*.py" -v
 python scripts/ci/format_check.py
 python scripts/ci/secret_scan.py
 python scripts/ci/validate_compose.py --project-name ragforge-p1-orch-check --env-file deploy/compose/env.example
