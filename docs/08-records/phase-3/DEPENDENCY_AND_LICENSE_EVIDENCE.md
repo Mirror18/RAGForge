@@ -5,8 +5,9 @@
 | 组件 | 固定版本 | 使用边界 | SPDX/许可证 | 证据与发布前复核 |
 |---|---:|---|---|---|
 | Apache PDFBox | `2.0.30` | Worker 原生 PDF 文本提取 | Apache-2.0 | Maven POM 与官方发布元数据；发布前由 CI SBOM/SCA 复核传递依赖 |
-| Apache POI OOXML | `5.2.2` | Worker DOCX/PPTX/XLSX 结构化文本提取 | Apache-2.0 | Maven POM 与官方发布元数据；未 vendored |
-| MinIO Java SDK | `8.2.1` | Worker S3-compatible object-store adapter；不包含 MinIO 服务端 | Apache-2.0 | Maven POM 与官方发布元数据；MinIO 容器只用于合成 Testcontainers 验收 |
+| Apache POI OOXML | `5.4.0` | Worker DOCX/PPTX/XLSX 结构化文本提取 | Apache-2.0 | Maven POM 与官方发布元数据；未 vendored |
+| MinIO Java SDK | `8.6.0` | Worker S3-compatible object-store adapter；不包含 MinIO 服务端 | Apache-2.0 | Maven POM 与官方发布元数据；MinIO 容器只用于合成 Testcontainers 验收 |
+| OkHttp JVM | `5.1.0` | MinIO Java SDK 的 JVM HTTP transport | Apache-2.0 | MinIO 8.6.0 的 Maven JVM 项目传递依赖；未 vendored |
 | MinIO test image | `RELEASE.2024-12-18T13-15-44Z` | 仅测试环境的 S3-compatible endpoint | 以镜像发布元数据为准 | 不进入生产镜像；CI SBOM/SCA 必须重新扫描 |
 
 ## 复用与合规结论
