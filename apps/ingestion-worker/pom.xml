@@ -15,6 +15,8 @@
     <name>RAGForge ingestion worker</name>
 
     <properties>
+        <apache.poi.version>5.2.2</apache.poi.version>
+        <apache.pdfbox.version>2.0.30</apache.pdfbox.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
@@ -43,6 +45,16 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${apache.pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${apache.poi.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
