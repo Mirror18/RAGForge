@@ -25,21 +25,30 @@ public class AuditOutboxService {
     @Transactional
     public UUID record(String eventType, UUID actorUserId, UUID spaceId, UUID aggregateId,
                        UUID correlationId, Map<String, ?> payload) {
+        return record(eventType, actorUserId, spaceId, aggregateId, correlationId, null, payload);
+    }
+
+    /**
+     * Records an audit event and its transport envelope in the same transaction.
+     * Causation is optional for a root domain event; the relay uses event id as
+     * the root causation id when the column is null.
+     */
+    @Transactional
+    public UUID record(String eventType, UUID actorUserId, UUID spaceId, UUID aggregateId,
+                       UUID correlationId, UUID causationId, Map<String, ?> payload) {
         Instant occurredAt = Instant.now();
         UUID auditId = UuidV7.random();
         UUID eventId = UuidV7.random();
         String serialized = serialize(payload);
-        jdbc.update("""
-                        INSERT INTO audit_events
-                            (id, event_type, actor_user_id, space_id, aggregate_id, correlation_id, payload, occurred_at)
-                        VALUES (?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
-                        """, auditId, eventType, actorUserId, spaceId, aggregateId, correlationId,
+        jdbc.update("INSERT INTO audit_events "
+                        + "(id, event_type, actor_user_id, space_id, aggregate_id, correlation_id, payload, occurred_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)",
+                auditId, eventType, actorUserId, spaceId, aggregateId, correlationId,
                 serialized, Timestamp.from(occurredAt));
-        jdbc.update("""
-                        INSERT INTO outbox_events
-                            (id, event_type, aggregate_id, space_id, correlation_id, payload, occurred_at)
-                        VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
-                        """, eventId, eventType, aggregateId, spaceId, correlationId, serialized,
+        jdbc.update("INSERT INTO outbox_events "
+                        + "(id, event_type, aggregate_id, space_id, correlation_id, causation_id, payload, occurred_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)",
+                eventId, eventType, aggregateId, spaceId, correlationId, causationId, serialized,
                 Timestamp.from(occurredAt));
         return eventId;
     }
