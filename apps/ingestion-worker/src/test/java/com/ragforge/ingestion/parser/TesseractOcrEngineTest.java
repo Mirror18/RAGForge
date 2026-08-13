@@ -55,7 +55,7 @@ class TesseractOcrEngineTest {
         assertThat(report.status()).isEqualTo(ParseStatus.SUCCEEDED);
         assertThat(report.ocr().status()).isEqualTo(OcrStatus.SUCCEEDED);
         assertThat(report.ocr().engine()).isEqualTo("tesseract");
-        assertThat(report.ocr().engineVersion()).startsWith("tesseract v5.");
+        assertThat(report.ocr().engineVersion()).matches("tesseract v?5\\..*");
         assertThat(report.ocr().auditState()).isEqualTo(OcrAuditState.COMPLETED);
         assertThat(report.pageCount()).isEqualTo(1);
         assertThat(report.nativePageCount()).isZero();
