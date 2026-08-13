@@ -55,7 +55,7 @@
 
 ## 二、ROADMAP 阶段退出条件
 
-- [x] P3-EXIT-01 初次全量和增量同步在 Windows dev 与 Linux acceptance 行为一致。
+- [ ] P3-EXIT-01 初次全量和增量同步在 Windows dev 与 Linux acceptance 行为一致。
   - 量化门槛：同一 manifest 的 logical document ID、content hash、revision identity 和五类 change classification 100% 一致；仅允许显示路径分隔符差异。
   - 证据：Windows 本地报告、GitHub Actions Linux report、fixture manifest hash 和对比脚本。
   - 验收命令：`python -m unittest discover -s tests/acceptance -p "test_phase3_cross_platform_*.py" -v`；GitHub Actions Run URL。
