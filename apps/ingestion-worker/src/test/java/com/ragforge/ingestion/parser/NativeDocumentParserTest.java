@@ -65,9 +65,13 @@ class NativeDocumentParserTest {
 
     @Test
     void imageOnlyPdfCannotSucceedWithoutOcrAndCanSucceedWithAuditedOcr() throws Exception {
-        byte[] imageOnlyPdf = blankPdf();
+        byte[] imageOnlyPdf = blankPdf(1);
+        byte[] secondImageOnlyPdf = blankPdf(2);
         ParsedDocument unavailable = parse("application/pdf", imageOnlyPdf);
+        ParsedDocument secondUnavailable = parse("application/pdf", secondImageOnlyPdf);
         assertThat(unavailable.report().status()).isEqualTo(ParseStatus.OCR_UNAVAILABLE);
+        assertThat(secondUnavailable.report().status()).isEqualTo(ParseStatus.OCR_UNAVAILABLE);
+        assertThat(secondUnavailable.report().pageCount()).isEqualTo(2);
         assertThat(unavailable.report().extractedTextArtifactId()).isNull();
         assertThat(unavailable.report().ocr().triggerReason()).isEqualTo(OcrTriggerReason.IMAGE_ONLY_PDF);
         assertThat(unavailable.report().ocr().auditState()).isEqualTo(OcrAuditState.BLOCKED);
@@ -86,7 +90,7 @@ class NativeDocumentParserTest {
     @Test
     void ocrTimeoutRemainsObservableAsUnavailable() throws Exception {
         OcrEngine timeout = request -> { throw new OcrException("OCR_TIMEOUT"); };
-        ParsedDocument result = parser.parse(request("application/pdf", blankPdf()), timeout);
+        ParsedDocument result = parser.parse(request("application/pdf", blankPdf(1)), timeout);
         assertThat(result.report().status()).isEqualTo(ParseStatus.OCR_UNAVAILABLE);
         assertThat(result.report().errors()).contains("OCR_FAILED");
     }
@@ -115,8 +119,14 @@ class NativeDocumentParserTest {
     }
 
     private static byte[] blankPdf() throws Exception {
+        return blankPdf(1);
+    }
+
+    private static byte[] blankPdf(int pages) throws Exception {
         try (PDDocument document = new PDDocument()) {
-            document.addPage(new PDPage());
+            for (int index = 0; index < pages; index++) {
+                document.addPage(new PDPage());
+            }
             return documentBytes(document);
         }
     }

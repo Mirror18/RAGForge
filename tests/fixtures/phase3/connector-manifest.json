@@ -1,0 +1,18 @@
+{
+  "fixtureVersion": "phase3-connector-v1",
+  "baseline": [
+    {"path": "docs/one.md", "content": "one"},
+    {"path": "docs/two.md", "content": "moved"},
+    {"path": "unchanged.md", "content": "same"},
+    {"path": "modify.txt", "content": "before"},
+    {"path": "delete.txt", "content": "delete"}
+  ],
+  "baselineSourceVersion": "8523b07f6400b52cca58532415b227c16c1c336c7bb2e0a0ecdb29fbc61a6d5a",
+  "baselineStableObjectIds": [
+    "476bcf6f-ecc3-323c-8630-550e9c186b93",
+    "36533311-122a-3f49-ba83-2416f10a526d",
+    "f5e3e574-6895-3f69-b48a-7a5d4e9a388d",
+    "5c822905-7dfb-33e3-9abf-61fb79c93f7d",
+    "3c1cf6ff-5c9d-38c7-826e-050e863126f7"
+  ]
+}

@@ -149,6 +149,67 @@ class Phase3IngestionPersistenceIntegrationTest {
         assertThat(ingestion.findAttempt(spaceA, attempt.id())).isPresent();
     }
 
+    @Test
+    void failedOrUnavailableParseCannotChangeActivePointer() {
+        UUID space = createSpace("phase3-failed-parse");
+        UUID sourceId = UUID.randomUUID();
+        UUID sourceVersionId = UUID.randomUUID();
+        UUID documentId = UUID.randomUUID();
+        UUID pipelineId = UUID.randomUUID();
+        UUID correlation = UUID.randomUUID();
+        Instant now = Instant.parse("2026-08-13T00:00:00Z");
+        ingestion.createSourceVersion(new IngestionRepository.NewSourceVersion(sourceVersionId, space, sourceId, 1,
+                IngestionRepository.ConnectorType.LOCAL_DIRECTORY, "Failed fixture", IngestionRepository.SourceState.ACTIVE,
+                "file:failed-fixture", "[]", "[]", false, correlation, now));
+        ingestion.createCheckpoint(new IngestionRepository.NewSourceCheckpoint(UUID.randomUUID(), space, sourceId,
+                sourceVersionId, 1, IngestionRepository.CursorType.FILESYSTEM_SCAN, "cursor-1", null, now));
+        ingestion.createPipelineVersion(new IngestionRepository.NewPipelineVersion(pipelineId, space, 1,
+                "failed-fixture", "native-fixture-parser", "1.0.0",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", correlation, now));
+        ingestion.createSourceDocument(new IngestionRepository.NewSourceDocument(documentId, space, sourceId,
+                "stable-failed", "image-only.pdf", "image-only.pdf", 1, IngestionRepository.DocumentState.ACTIVE,
+                null, correlation, now));
+        UUID successfulRevisionId = UUID.randomUUID();
+        UUID successfulArtifactId = UUID.randomUUID();
+        UUID successfulReportId = UUID.randomUUID();
+        ingestion.persistRevisionBundle(new IngestionRepository.RevisionBundleInput(
+                space, documentId, successfulRevisionId, 1, "source-v0", "image-only.pdf",
+                "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", successfulArtifactId, 1,
+                IngestionRepository.ArtifactKind.SOURCE_BYTES, "application/pdf", 128,
+                "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                "spaces/" + space + "/sources/" + sourceId + "/revisions/" + successfulRevisionId
+                        + "/artifacts/" + successfulArtifactId,
+                "{}", successfulReportId, 1, IngestionRepository.ParseStatus.SUCCEEDED, 1, 32, 8, 1, 0,
+                "native-fixture-parser", "1.0.0", 2, "[]", "[]", successfulArtifactId,
+                IngestionRepository.OcrStatus.NOT_REQUESTED, null, null,
+                IngestionRepository.OcrTriggerReason.NONE, IngestionRepository.OcrAuditState.NOT_APPLICABLE,
+                null, now, now));
+        ingestion.publishActivePointer(new IngestionRepository.NewActivePointer(
+                UUID.randomUUID(), space, documentId, successfulRevisionId, 1, now));
+
+        UUID revisionId = UUID.randomUUID();
+        UUID artifactId = UUID.randomUUID();
+        UUID reportId = UUID.randomUUID();
+        ingestion.persistRevisionBundle(new IngestionRepository.RevisionBundleInput(
+                space, documentId, revisionId, 2, "source-v1", "image-only.pdf",
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", artifactId, 1,
+                IngestionRepository.ArtifactKind.SOURCE_BYTES, "application/pdf", 128,
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "spaces/" + space + "/sources/" + sourceId + "/revisions/" + revisionId + "/artifacts/" + artifactId,
+                "{}", reportId, 1, IngestionRepository.ParseStatus.OCR_UNAVAILABLE, 1, 0, 0, 0, 0,
+                "native-fixture-parser", "1.0.0", 2, "[]", "[\"OCR_UNAVAILABLE\"]", null,
+                IngestionRepository.OcrStatus.UNAVAILABLE, null, null,
+                IngestionRepository.OcrTriggerReason.IMAGE_ONLY_PDF, IngestionRepository.OcrAuditState.BLOCKED,
+                null, now, now));
+
+        assertThatThrownBy(() -> ingestion.publishActivePointer(new IngestionRepository.NewActivePointer(
+                UUID.randomUUID(), space, documentId, revisionId, 1, now)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("parsed revision");
+        assertThat(ingestion.findSourceDocument(space, documentId)).get()
+                .extracting(IngestionRepository.SourceDocument::activeRevisionId).isEqualTo(successfulRevisionId);
+    }
+
     private UUID createSpace(String name) {
         UUID id = UUID.randomUUID();
         Instant now = Instant.parse("2026-08-13T00:00:00Z");
