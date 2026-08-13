@@ -39,7 +39,7 @@ class Phase3ParserQualityTest(unittest.TestCase):
                 "--no-transfer-progress",
                 "-pl",
                 "apps/ingestion-worker",
-                "-Dtest=NativeDocumentParserTest",
+                "-Dtest=NativeDocumentParserTest,TesseractOcrEngineTest",
                 "test",
             ],
             cwd=ROOT,
