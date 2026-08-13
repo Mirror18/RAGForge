@@ -8,7 +8,22 @@ spring:
     port: ${RAGFORGE_RABBITMQ_PORT:5672}
     username: ${RAGFORGE_RABBITMQ_USER:ragforge}
     password: ${RAGFORGE_RABBITMQ_PASSWORD:change-me}
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/ragforge}
+    username: ${JDBC_DATABASE_USERNAME:ragforge}
+    password: ${JDBC_DATABASE_PASSWORD:ragforge}
 
 ragforge:
   ingestion:
     enabled: ${RAGFORGE_INGESTION_ENABLED:false}
+  messaging:
+    exchange: ${RAGFORGE_RABBITMQ_EXCHANGE:ragforge.ingestion}
+    requested-queue: ${RAGFORGE_RABBITMQ_REQUESTED_QUEUE:ragforge.ingestion.jobs}
+    retry-queue: ${RAGFORGE_RABBITMQ_RETRY_QUEUE:ragforge.ingestion.jobs.retry}
+    dead-letter-queue: ${RAGFORGE_RABBITMQ_DLQ:ragforge.ingestion.jobs.dlq}
+    status-queue: ${RAGFORGE_RABBITMQ_STATUS_QUEUE:ragforge.ingestion.status}
+    requested-routing-key: ${RAGFORGE_RABBITMQ_REQUESTED_KEY:ingestion.job.requested.v1}
+    retry-routing-key: ${RAGFORGE_RABBITMQ_RETRY_KEY:ingestion.job.retry.v1}
+    dead-letter-routing-key: ${RAGFORGE_RABBITMQ_DLQ_KEY:ingestion.job.dlq.v1}
+    status-routing-key: ${RAGFORGE_RABBITMQ_STATUS_KEY:ingestion.job.status.changed.v1}
+    max-attempts: ${RAGFORGE_INGESTION_MAX_ATTEMPTS:20}

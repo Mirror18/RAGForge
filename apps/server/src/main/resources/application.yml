@@ -13,6 +13,11 @@ spring:
   data:
     redis:
       url: ${VALKEY_URL:redis://localhost:6379}
+  rabbitmq:
+    publisher-confirm-type: ${RAGFORGE_RABBITMQ_CONFIRM_TYPE:correlated}
+    publisher-returns: ${RAGFORGE_RABBITMQ_PUBLISHER_RETURNS:true}
+    template:
+      mandatory: true
   jackson:
     default-property-inclusion: non_null
 
@@ -28,9 +33,22 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    rabbit:
+      # Rabbit is an optional transport until the relay is explicitly enabled;
+      # operators can override this property in deployment configuration.
+      enabled: ${RAGFORGE_RABBIT_HEALTH_ENABLED:false}
 
 app:
   session:
     cookie-name: ${SESSION_COOKIE_NAME:RAGFORGE_SESSION}
     cookie-secure: ${SESSION_COOKIE_SECURE:false}
     ttl: ${SESSION_TTL:PT8H}
+
+ragforge:
+  outbox:
+    relay:
+      enabled: ${RAGFORGE_OUTBOX_RELAY_ENABLED:false}
+      exchange: ${RAGFORGE_RABBITMQ_EXCHANGE:ragforge.ingestion}
+      batch-size: ${RAGFORGE_OUTBOX_BATCH_SIZE:50}
+      fixed-delay-ms: ${RAGFORGE_OUTBOX_RELAY_DELAY_MS:1000}
