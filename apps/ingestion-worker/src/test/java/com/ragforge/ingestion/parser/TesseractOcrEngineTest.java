@@ -71,7 +71,7 @@ class TesseractOcrEngineTest {
     }
 
     private static byte[] imageOnlyPdf(String text) throws Exception {
-        BufferedImage image = new BufferedImage(1800, 500, BufferedImage.TYPE_INT_RGB);
+        BufferedImage image = new BufferedImage(2400, 700, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics();
         try {
             graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
@@ -79,18 +79,18 @@ class TesseractOcrEngineTest {
             graphics.setColor(Color.WHITE);
             graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
             graphics.setColor(Color.BLACK);
-            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 118));
-            graphics.drawString(text, 80, 300);
+            graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 160));
+            graphics.drawString(text, 120, 420);
         } finally {
             graphics.dispose();
         }
 
         try (PDDocument document = new PDDocument()) {
-            PDPage page = new PDPage(new PDRectangle(612, 300));
+            PDPage page = new PDPage(new PDRectangle(612, 260));
             document.addPage(page);
             PDImageXObject imageObject = LosslessFactory.createFromImage(document, image);
             try (PDPageContentStream stream = new PDPageContentStream(document, page)) {
-                stream.drawImage(imageObject, 36, 36, 540, 228);
+                stream.drawImage(imageObject, 36, 40, 540, 180);
             }
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             document.save(output);
