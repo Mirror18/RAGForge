@@ -64,6 +64,6 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-003` 仍为 OPEN：Phase 3 已把 `space_id` 贯穿 source/revision/artifact/object key，并通过跨空间拒绝测试；Qdrant、chunk 和内容查询尚未实现，不能关闭全局跨空间风险。
 - `R-006` 仍为 OPEN：Phase 3 已验证 MIME/大小/路径/符号链接/内容寻址和 OCR 失败边界，但生产 quarantine、AV、sandbox、压缩炸弹专门 corpus 尚未完成。
 - `R-007` 进入 MITIGATING：Outbox、RabbitMQ retry/DLQ、PostgreSQL 幂等唯一约束和 20 次并发副作用测试已通过；真实完整 ingestion side-effect handler 与索引成本仍留给后续阶段。
-- `R-010` 继续 MITIGATING：PDFBox 2.0.30、POI 5.4.0、MinIO SDK 8.6.0、OkHttp JVM 5.1.0 已记录于 [`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md)；Run [31678638797](https://github.com/Mirror18/RAGForge/actions/runs/31678638797) 的 Syft/Grype 通过，正式发布仍必须复核传递依赖许可证。
+- `R-010` 继续 MITIGATING：PDFBox 2.0.30、POI 5.4.0、MinIO SDK 8.6.0、OkHttp JVM 5.1.0 已记录于 [`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md)；Run [31679337426](https://github.com/Mirror18/RAGForge/actions/runs/31679337426) 的 Syft/Grype 通过，正式发布仍必须复核传递依赖许可证。
 - `R-020` 继续 MITIGATING：MinIO 测试镜像使用固定 release tag 但尚未锁定生产 digest；发布前必须完成 digest、SBOM、许可证和镜像扫描。
 - 新增 `R-022`：本机没有真实 OCR runtime，P=4、I=4、Score=16，Owner=Ingestion/Operations，状态=OPEN。已完成 OCR unavailable、timeout、两份 image-only PDF 和注入式 OCR seam；关闭条件是批准的 OCR runtime 在隔离环境中完成 2/2 真实样本并产出完整 Parse Report。
