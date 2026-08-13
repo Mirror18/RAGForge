@@ -35,12 +35,12 @@ class TesseractOcrEngineTest {
 
     @Test
     void parsesFirstSyntheticImageOnlyPdfWithRealTesseract() throws Exception {
-        assertRealOcr("RAGForge OCR sample one", ARTIFACT_ONE);
+        assertRealOcr("ONE RAGForge OCR", ARTIFACT_ONE);
     }
 
     @Test
     void parsesSecondSyntheticImageOnlyPdfWithRealTesseract() throws Exception {
-        assertRealOcr("RAGForge OCR sample two", ARTIFACT_TWO);
+        assertRealOcr("TWO RAGForge OCR", ARTIFACT_TWO);
     }
 
     private void assertRealOcr(String expectedText, UUID artifactId) throws Exception {
