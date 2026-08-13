@@ -1,0 +1,30 @@
+{
+  "evidenceVersion": "phase3-acceptance-v1",
+  "asOf": "2026-08-13",
+  "status": "blocked_on_external_ocr_runtime",
+  "baseMerge": "ad91c515fa83ec62627903a8a39a65a8f21f3b0d",
+  "contracts": {
+    "P3-CONTRACT-01": {"status": "passed", "tests": ["Phase3ContractTest:7/7", "SourceConnectorTest:4/4"]},
+    "P3-CONTRACT-02": {"status": "passed", "tests": ["Phase3IngestionPersistenceIntegrationTest:3/3", "Flyway V8"]},
+    "P3-CONTRACT-03": {"status": "passed", "tests": ["RabbitTopologyIntegrationTest:1/1", "IngestionJobConsumerTest:5/5"]},
+    "P3-CONTRACT-04": {"status": "passed", "tests": ["CheckpointFailureBoundaryTest:3/3", "Phase3IngestionPersistenceIntegrationTest:3/3"]},
+    "P3-CONTRACT-05": {"status": "passed", "tests": ["SourceConnectorTest:4/4", "CrossPlatformConnectorManifestTest:1/1"]},
+    "P3-CONTRACT-06": {"status": "passed", "tests": ["NativeDocumentParserTest:4/4", "parser corpus native formats:6/6", "image-only PDFs:2/2 blocked correctly"]},
+    "P3-CONTRACT-07": {"status": "passed", "tests": ["ObjectStoreTest:3/3", "secret_scan:passed"]}
+  },
+  "exits": {
+    "P3-EXIT-01": {"status": "pending_ci_confirmation", "local": "passed", "ci": "required"},
+    "P3-EXIT-02": {"status": "passed", "tests": ["parser", "object upload", "OCR timeout", "DB active pointer", "message publish failure"]},
+    "P3-EXIT-03": {"status": "passed", "tests": ["IdempotencyConcurrencyIntegrationTest:20 deliveries/1 side effect", "LocalObjectStore:20 claims/1 object"]},
+    "P3-EXIT-04": {"status": "blocked", "native_formats": "6/6", "image_only_pdf": "2/2 blocked correctly", "real_ocr": "not_run", "blocker": "No executable Tesseract or equivalent OCR runtime is available in the local environment; injected OCR seam is tested but is not real runtime evidence."}
+  },
+  "qualityGates": {
+    "maven": "server+worker full reactor 26/26 passed",
+    "contract": "Phase3 Python contract 7/7 passed",
+    "secretScan": "passed",
+    "dependencyInventory": "passed",
+    "format": "passed",
+    "markdownLinks": "passed",
+    "sbom": "local script remains an explicit placeholder; GitHub Syft/Grype is required before release"
+  }
+}

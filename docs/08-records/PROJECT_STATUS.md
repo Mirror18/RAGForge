@@ -1,10 +1,10 @@
 # 项目状态
 
 - Updated: 2026-08-13
-- Current stage: Phase 2 Provider、Prompt 与 Run 完成；Phase 3 Ready
+- Current stage: Phase 3 版本化摄取流水线已实现，阶段闭环阻塞于真实 OCR runtime
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
-- External remote: `origin` configured; Phase 1 CI Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088) succeeded；Phase 2 CI workflow 已增加云协议、并发和出境门禁，等待下一次 push 后产生 GitHub Run
+- External remote: `origin` configured; Phase 1 CI Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088) succeeded；本次 Phase 3 push 后需记录新的 Linux acceptance、SBOM 和 Grype Run
 
 ## 1. 已完成
 
@@ -26,20 +26,22 @@
 - Phase 2 Provider、Prompt、Space Binding、Run/Step/SSE、取消/重试和 usage ledger 已实现并通过全量 Maven 84/84；见 [`PHASE_2_CHECKLIST.md`](../03-delivery/PHASE_2_CHECKLIST.md)。
 - Phase 2 本地真实 Ollama `qwen3.5:9b` Run 全链路验收已通过；Run、Step、ModelInvocation、Usage Ledger 均成功，证据见 [`phase2-local-ollama-run.json`](../../tests/evidence/phase2-local-ollama-run.json)。
 - Phase 2 Mock 云协议 4/4、20 链路并发 1/1、出境隔离 5/5、契约 25/25 已通过；workflow 已将三组 deterministic gate 接入 CI。
+- Phase 3 SourceConnector、版本化 schema/V8 migration、Outbox/RabbitMQ/worker 幂等、文件/本地目录/Git connector、原生解析/OCR 边界和 Local/MinIO 对象存储已合入 main；阶段合并提交为 `ad91c515fa83ec62627903a8a39a65a8f21f3b0d`。
+- Phase 3 P3-CONTRACT-01 至 P3-CONTRACT-07、P3-EXIT-02、P3-EXIT-03 已有可重跑证据；全仓库 Maven 26/26、Phase 3 contract 7/7、cross-platform/parser/fault/performance、secret/dependency/format/link gates 均通过，证据见 [`phase3-acceptance-summary.json`](../../tests/evidence/phase3-acceptance-summary.json)。
 
 ## 2. 当前声明
 
-- Phase 2 只完成 Provider、Prompt 和 no-RAG Run 纵向切片；尚未开发版本化摄取、检索、引用回答等 RAG 业务能力。
+- Phase 3 尚未完成阶段闭环：P3-EXIT-01 需要 push 后 GitHub Linux Run 证据；P3-EXIT-04 的真实 OCR 2/2 需要外部 OCR runtime。检索、分块、引用回答仍未进入本阶段。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
-- 已配置 GitHub remote `Mirror18/RAGForge`；Phase 1 CI Run 31616214088 成功，SBOM artifact 和 Grype 扫描均有证据；Phase 2 workflow 变更已合入本地 main，尚未 push、尚未创建 release。
+- 已配置 GitHub remote `Mirror18/RAGForge`；本地 main 尚未 push 本阶段闭环提交，尚未创建 release。GitHub Actions Syft/Grype 仍是正式发布前的有效 SBOM/SCA 门禁。
 - Obsidian 仓库没有被写入项目进度。
 - Phase 0 实验发现的跨空间、provenance、OCR、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收。
-- 本机 Java 21 全量 Maven Testcontainers 已通过（84 tests，0 failures/errors/skips）；格式、架构、secret、Markdown link、契约 25/25、Phase 2 Python 验收均通过。Testcontainers/Valkey 日志中的关闭后重连 warning 不影响测试结果，但保留为后续测试生命周期清理项。
+- 本机 Java 21 全量 Maven Testcontainers 已通过（Server + Worker 26 tests，0 failures/errors/skips）；格式、架构、secret、Markdown link、依赖清单、Phase 3 contract 7/7、Phase 3 Python acceptance 均通过。测试日志中的 Testcontainers/Valkey 关闭后重连 warning 不影响测试结果，但保留为后续生命周期清理项。
 
 ## 3. 下一入口
 
-Phase 2 已闭环，下一入口为 Phase 3 版本化摄取流水线。Phase 0 关闭证据见 [`PHASE_0_RETROSPECTIVE.md`](retrospectives/PHASE_0_RETROSPECTIVE.md)，Phase 1 复盘见 [`PHASE_1_RETROSPECTIVE.md`](retrospectives/PHASE_1_RETROSPECTIVE.md)，Phase 2 复盘见 [`PHASE_2_RETROSPECTIVE.md`](retrospectives/PHASE_2_RETROSPECTIVE.md)。
+Phase 3 当前入口为补充真实 OCR runtime 并完成 GitHub Linux acceptance；在 P3-EXIT-04 完成前不得进入 Phase 4。阶段复盘见 [`PHASE_3_RETROSPECTIVE.md`](retrospectives/PHASE_3_RETROSPECTIVE.md)；既有 Phase 0–2 复盘继续保留。
 
 ## 4. 更新规则
 
