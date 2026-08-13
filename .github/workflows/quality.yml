@@ -103,6 +103,14 @@ jobs:
           fail-build: true
           severity-cutoff: high
 
+      - name: Upload Grype SARIF evidence
+        if: always() && steps.scan.outputs.sarif != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-grype-sarif
+          path: ${{ steps.scan.outputs.sarif }}
+          if-no-files-found: error
+
       - name: Verify local SBOM/dependency command seam
         run: python scripts/ci/sbom_dependency_scan.py --mode auto
 
