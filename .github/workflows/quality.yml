@@ -122,6 +122,13 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Install Tesseract OCR runtime when Maven exists
+        if: ${{ hashFiles('**/pom.xml') != '' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng
+          tesseract --version
+
       - name: Maven build when Maven exists
         if: ${{ hashFiles('**/pom.xml') != '' }}
         run: mvn --batch-mode --no-transfer-progress -DskipTests compile
