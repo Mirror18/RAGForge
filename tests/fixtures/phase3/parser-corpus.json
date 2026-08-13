@@ -1,0 +1,18 @@
+{
+  "fixtureVersion": "phase3-parser-corpus-v1",
+  "fixtures": [
+    {"id": "markdown-structure", "mediaType": "text/markdown", "expectedStatus": "SUCCEEDED"},
+    {"id": "plain-text-unicode", "mediaType": "text/plain", "expectedStatus": "SUCCEEDED"},
+    {"id": "native-pdf", "mediaType": "application/pdf", "expectedStatus": "SUCCEEDED"},
+    {"id": "docx-paragraph", "mediaType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "expectedStatus": "SUCCEEDED"},
+    {"id": "pptx-slide", "mediaType": "application/vnd.openxmlformats-officedocument.presentationml.presentation", "expectedStatus": "SUCCEEDED"},
+    {"id": "xlsx-cell", "mediaType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "expectedStatus": "SUCCEEDED"},
+    {"id": "image-only-pdf-single-page", "mediaType": "application/pdf", "expectedStatus": "OCR_UNAVAILABLE"},
+    {"id": "image-only-pdf-two-pages", "mediaType": "application/pdf", "expectedStatus": "OCR_UNAVAILABLE"}
+  ],
+  "ocrPolicy": {
+    "unavailableStatusIsBlocking": true,
+    "fakeTextIsForbidden": true,
+    "successfulOcrRequiresEngineAndPages": true
+  }
+}

@@ -179,15 +179,22 @@ public class IngestionRepository {
     /** Persists the mutually-referencing immutable revision/artifact/report set in one transaction. */
     @Transactional
     public RevisionBundle persistRevisionBundle(RevisionBundleInput input) {
+        if (input.parseStatus() == ParseStatus.SUCCEEDED && input.extractedTextArtifactId() == null) {
+            throw new IllegalArgumentException("successful parse requires an extracted text artifact reference");
+        }
+        if (input.parseStatus() != ParseStatus.SUCCEEDED && input.extractedTextArtifactId() != null) {
+            throw new IllegalArgumentException("failed parse cannot publish an extracted text artifact reference");
+        }
         jdbc.update("""
                 INSERT INTO document_revisions
                     (id, space_id, source_document_id, revision_no, source_version,
                      canonical_source_path, content_hash, source_artifact_id, parse_report_id,
                      revision_state, immutable, git_commit_sha, discovered_at, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PARSED', TRUE, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?, ?, ?)
                 """, input.revisionId(), input.spaceId(), input.sourceDocumentId(), input.revisionNo(),
                 input.sourceVersion(), input.canonicalSourcePath(), input.contentHash(), input.artifactId(),
-                input.parseReportId(), input.gitCommitSha(), timestamp(input.discoveredAt()), timestamp(input.createdAt()));
+                input.parseReportId(), input.parseStatus() == ParseStatus.SUCCEEDED ? "PARSED" : "FAILED",
+                input.gitCommitSha(), timestamp(input.discoveredAt()), timestamp(input.createdAt()));
         jdbc.update("""
                 INSERT INTO artifacts
                     (id, space_id, source_document_id, document_revision_id, version_no, artifact_kind,

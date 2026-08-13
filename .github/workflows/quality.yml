@@ -122,6 +122,23 @@ jobs:
         if: ${{ hashFiles('**/pom.xml') != '' }}
         run: mvn --batch-mode --no-transfer-progress test
 
+      - name: Run Phase 3 cross-platform and parser acceptance gates
+        if: ${{ hashFiles('**/pom.xml') != '' }}
+        run: |
+          python -m unittest discover -s tests/acceptance -p "test_phase3_*.py" -v
+          python -m unittest discover -s tests/security -p "test_phase3_fault_*.py" -v
+          python -m unittest discover -s tests/performance -p "test_phase3_*.py" -v
+
+      - name: Upload Phase 3 JVM evidence
+        if: always() && hashFiles('**/target/surefire-reports/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-phase3-jvm-evidence
+          path: |
+            apps/server/target/surefire-reports/**
+            apps/ingestion-worker/target/surefire-reports/**
+          if-no-files-found: error
+
       - name: Set up Node when apps/web exists
         if: ${{ hashFiles('apps/web/package.json') != '' }}
         uses: actions/setup-node@v4

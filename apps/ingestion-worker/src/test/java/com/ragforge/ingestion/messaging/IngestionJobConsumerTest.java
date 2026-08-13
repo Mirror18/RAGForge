@@ -84,6 +84,19 @@ class IngestionJobConsumerTest {
         verify(channel).basicAck(4, false);
     }
 
+    @Test
+    void retryPublishFailureRequeuesWithoutAdvancingProcessing() throws Exception {
+        when(idempotencyStore.process(any(), any(), anyString(), anyString(), any()))
+                .thenThrow(new IngestionProcessingException(FailureClass.PARSER_TIMEOUT, "parser timed out"));
+        org.mockito.Mockito.doThrow(new IllegalStateException("synthetic broker failure"))
+                .when(rabbitTemplate).convertAndSend(anyString(), anyString(), anyString(), any(MessagePostProcessor.class));
+
+        consumer.onMessage(message(5, 1, false), channel);
+
+        verify(channel).basicNack(5, false, true);
+        org.mockito.Mockito.verify(channel, org.mockito.Mockito.never()).basicAck(5, false);
+    }
+
     private Message message(long deliveryTag, int attempt, boolean forbidden) {
         UUID spaceId = UUID.randomUUID();
         UUID eventId = UUID.randomUUID();
