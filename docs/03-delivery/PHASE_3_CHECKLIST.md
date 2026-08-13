@@ -1,6 +1,6 @@
 # Phase 3 版本化摄取流水线 Checklist
 
-状态：`phase3-blocked-ocr-runtime`（2026-08-13）。P3-CONTRACT-01 至 P3-CONTRACT-07、P3-EXIT-01 至 P3-EXIT-03 已有实现与测试证据并合入 `main`；P3-EXIT-04 因真实 OCR runtime 不可用保持未勾选。不得把本阶段标记为完全闭环。
+状态：`phase3-blocked-ocr-runtime`（2026-08-13）。P3-CONTRACT-01 至 P3-CONTRACT-07、P3-EXIT-01 至 P3-EXIT-03 已有实现与测试证据并合入 `main`；P3-EXIT-01 已由 GitHub Actions Run [31677079831](https://github.com/Mirror18/RAGForge/actions/runs/31677079831) 的 Ubuntu acceptance 通过确认；P3-EXIT-04 因真实 OCR runtime 不可用保持未勾选。不得把本阶段标记为完全闭环。
 
 ## 一、契约与领域门禁
 
@@ -55,12 +55,12 @@
 
 ## 二、ROADMAP 阶段退出条件
 
-- [ ] P3-EXIT-01 初次全量和增量同步在 Windows dev 与 Linux acceptance 行为一致。
+- [x] P3-EXIT-01 初次全量和增量同步在 Windows dev 与 Linux acceptance 行为一致。
   - 量化门槛：同一 manifest 的 logical document ID、content hash、revision identity 和五类 change classification 100% 一致；仅允许显示路径分隔符差异。
   - 证据：Windows 本地报告、GitHub Actions Linux report、fixture manifest hash 和对比脚本。
   - 验收命令：`python -m unittest discover -s tests/acceptance -p "test_phase3_cross_platform_*.py" -v`；GitHub Actions Run URL。
   - 环境前置：Windows 11 本地；Ubuntu GitHub runner；固定 synthetic fixture manifest。
-  - 结果：固定 manifest 与 `CrossPlatformConnectorManifestTest` 已合入；Windows 本地 1/1 通过，Linux 同等门禁接入 `.github/workflows/quality.yml`，待 CI Run 最终确认。
+  - 结果：固定 manifest 与 `CrossPlatformConnectorManifestTest` 已合入；Windows 本地 1/1 通过；GitHub Actions Run [31677079831](https://github.com/Mirror18/RAGForge/actions/runs/31677079831) 在 `ubuntu-latest` 完成同等 Phase 3 acceptance，quality job 全步骤通过。JVM 证据 artifact `9172041913`。
 
 - [x] P3-EXIT-02 中途失败不会推进错误 checkpoint 或污染 active data。
   - 量化门槛：parser、object upload、OCR timeout、DB rollback、消息发布失败各至少 1 个 fault case；所有 case checkpoint 不推进、active pointer 不变、失败可定位。
