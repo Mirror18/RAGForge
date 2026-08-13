@@ -4,7 +4,7 @@
 - Current stage: Phase 3 版本化摄取流水线已实现，阶段闭环阻塞于真实 OCR runtime
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
-- External remote: `origin` configured；Phase 3 main 已推送至 `3f1e0ac342e06b25478d9c025fc61b5147c2be5b`；GitHub Actions quality Run [31678077203](https://github.com/Mirror18/RAGForge/actions/runs/31678077203) 成功，Phase 3 JVM evidence artifact `9172406251`、Syft SBOM artifact `9172324275`、Grype SARIF artifact `9172342555` 已生成。
+- External remote: `origin` configured；Phase 3 main 已推送至 `7cf918450b23f239e313b9b65f951245b289a9b1`；GitHub Actions quality Run [31678638797](https://github.com/Mirror18/RAGForge/actions/runs/31678638797) 成功，Phase 3 JVM evidence artifact `9172635356`、Syft SBOM artifact `9172547694`、Grype SARIF artifact `9172571736` 已生成。
 
 ## 1. 已完成
 
@@ -34,7 +34,7 @@
 - Phase 3 尚未完成阶段闭环：P3-EXIT-01 已由 GitHub Linux Run 证据满足；P3-EXIT-04 的真实 OCR 2/2 需要外部 OCR runtime。检索、分块、引用回答仍未进入本阶段。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
-- 已配置 GitHub remote `Mirror18/RAGForge`；本阶段安全修复与记录已推送至 `3f1e0ac`，尚未创建 release。GitHub Actions Syft/Grype 已在 Run `31678077203` 通过，仍是正式发布前的有效 SBOM/SCA 门禁。
+- 已配置 GitHub remote `Mirror18/RAGForge`；本阶段安全修复与记录已推送至 `7cf9184`，尚未创建 release。GitHub Actions Syft/Grype 已在 Run `31678638797` 通过，仍是正式发布前的有效 SBOM/SCA 门禁。
 - Obsidian 仓库没有被写入项目进度。
 - Phase 0 实验发现的跨空间、provenance、OCR、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收。
 - 本机 Java 21 全量 Maven Testcontainers 已通过（Server + Worker 26 tests，0 failures/errors/skips）；格式、架构、secret、Markdown link、依赖清单、Phase 3 contract 7/7、Phase 3 Python acceptance 均通过。测试日志中的 Testcontainers/Valkey 关闭后重连 warning 不影响测试结果，但保留为后续生命周期清理项。

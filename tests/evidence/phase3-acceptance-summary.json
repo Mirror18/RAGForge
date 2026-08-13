@@ -4,12 +4,12 @@
   "status": "blocked_on_external_ocr_runtime",
   "baseMerge": "ad91c515fa83ec62627903a8a39a65a8f21f3b0d",
   "latestMain": "3f1e0ac342e06b25478d9c025fc61b5147c2be5b",
-  "ciRun": "31678077203",
-  "ciUrl": "https://github.com/Mirror18/RAGForge/actions/runs/31678077203",
+  "ciRun": "31678638797",
+  "ciUrl": "https://github.com/Mirror18/RAGForge/actions/runs/31678638797",
   "ciArtifacts": {
-    "sbom": "9172324275",
-    "grypeSarif": "9172342555",
-    "phase3JvmEvidence": "9172406251"
+    "sbom": "9172547694",
+    "grypeSarif": "9172571736",
+    "phase3JvmEvidence": "9172635356"
   },
   "contracts": {
     "P3-CONTRACT-01": {"status": "passed", "tests": ["Phase3ContractTest:7/7", "SourceConnectorTest:4/4"]},
@@ -21,7 +21,7 @@
     "P3-CONTRACT-07": {"status": "passed", "tests": ["ObjectStoreTest:3/3", "secret_scan:passed"]}
   },
   "exits": {
-    "P3-EXIT-01": {"status": "passed", "local": "passed", "ci": "quality run 31678077203 passed on ubuntu-latest"},
+    "P3-EXIT-01": {"status": "passed", "local": "passed", "ci": "quality run 31678638797 passed on ubuntu-latest"},
     "P3-EXIT-02": {"status": "passed", "tests": ["parser", "object upload", "OCR timeout", "DB active pointer", "message publish failure"]},
     "P3-EXIT-03": {"status": "passed", "tests": ["IdempotencyConcurrencyIntegrationTest:20 deliveries/1 side effect", "LocalObjectStore:20 claims/1 object"]},
     "P3-EXIT-04": {"status": "blocked", "native_formats": "6/6", "image_only_pdf": "2/2 blocked correctly", "real_ocr": "not_run", "blocker": "No executable Tesseract or equivalent OCR runtime is available in the local environment; injected OCR seam is tested but is not real runtime evidence."}
@@ -33,6 +33,6 @@
     "dependencyInventory": "passed",
     "format": "passed",
     "markdownLinks": "passed",
-    "sbom": "GitHub Syft/Grype passed on quality run 31678077203; artifacts 9172324275/9172342555; local script remains an explicit placeholder"
+    "sbom": "GitHub Syft/Grype passed on quality run 31678638797; artifacts 9172547694/9172571736; local script remains an explicit placeholder"
   }
 }
