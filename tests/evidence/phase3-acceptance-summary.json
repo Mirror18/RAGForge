@@ -1,15 +1,15 @@
 {
   "evidenceVersion": "phase3-acceptance-v1",
   "asOf": "2026-08-13",
-  "status": "blocked_on_external_ocr_runtime",
+  "status": "passed",
   "baseMerge": "ad91c515fa83ec62627903a8a39a65a8f21f3b0d",
-  "latestMain": "3f1e0ac342e06b25478d9c025fc61b5147c2be5b",
-  "ciRun": "31679337426",
-  "ciUrl": "https://github.com/Mirror18/RAGForge/actions/runs/31679337426",
+  "latestMain": "2ca3a7591b07b9f702dab5cf83acb52836581e0d",
+  "ciRun": "31706823033",
+  "ciUrl": "https://github.com/Mirror18/RAGForge/actions/runs/31706823033",
   "ciArtifacts": {
-    "sbom": "9172818407",
-    "grypeSarif": "9172839405",
-    "phase3JvmEvidence": "9172912980"
+    "sbom": "9183518984",
+    "grypeSarif": "9183542524",
+    "phase3JvmEvidence": "9183633612"
   },
   "contracts": {
     "P3-CONTRACT-01": {"status": "passed", "tests": ["Phase3ContractTest:7/7", "SourceConnectorTest:4/4"]},
@@ -17,22 +17,22 @@
     "P3-CONTRACT-03": {"status": "passed", "tests": ["RabbitTopologyIntegrationTest:1/1", "IngestionJobConsumerTest:5/5"]},
     "P3-CONTRACT-04": {"status": "passed", "tests": ["CheckpointFailureBoundaryTest:3/3", "Phase3IngestionPersistenceIntegrationTest:3/3"]},
     "P3-CONTRACT-05": {"status": "passed", "tests": ["SourceConnectorTest:4/4", "CrossPlatformConnectorManifestTest:1/1"]},
-    "P3-CONTRACT-06": {"status": "passed", "tests": ["NativeDocumentParserTest:4/4", "parser corpus native formats:6/6", "image-only PDFs:2/2 blocked correctly"]},
+    "P3-CONTRACT-06": {"status": "passed", "tests": ["NativeDocumentParserTest:4/4", "TesseractOcrEngineTest:2/2", "parser corpus native formats:6/6", "image-only PDFs:2/2 real OCR"]},
     "P3-CONTRACT-07": {"status": "passed", "tests": ["ObjectStoreTest:3/3", "secret_scan:passed"]}
   },
   "exits": {
-    "P3-EXIT-01": {"status": "passed", "local": "passed", "ci": "quality run 31679337426 passed on ubuntu-latest"},
+    "P3-EXIT-01": {"status": "passed", "local": "passed", "ci": "quality run 31706823033 passed on ubuntu-latest"},
     "P3-EXIT-02": {"status": "passed", "tests": ["parser", "object upload", "OCR timeout", "DB active pointer", "message publish failure"]},
     "P3-EXIT-03": {"status": "passed", "tests": ["IdempotencyConcurrencyIntegrationTest:20 deliveries/1 side effect", "LocalObjectStore:20 claims/1 object"]},
-    "P3-EXIT-04": {"status": "blocked", "native_formats": "6/6", "image_only_pdf": "2/2 blocked correctly", "real_ocr": "not_run", "blocker": "No executable Tesseract or equivalent OCR runtime is available in the local environment; injected OCR seam is tested but is not real runtime evidence."}
+    "P3-EXIT-04": {"status": "passed", "native_formats": "6/6", "image_only_pdf": "2/2", "real_ocr": "2/2", "evidence": "phase3-ocr-runtime-summary.json", "ci": "quality run 31706823033 installed Ubuntu tesseract-ocr 5.3.4-1build5 and passed real OCR tests"}
   },
   "qualityGates": {
-    "maven": "server+worker full reactor 26/26 passed",
-    "contract": "Phase3 Python contract 7/7 passed",
+    "maven": "root reactor passed; server 90 tests with 1 documented environment skip, worker 28/28 passed",
+    "contract": "Python contract suite 32/32 passed; Phase3 contract gate 7/7 passed",
     "secretScan": "passed",
     "dependencyInventory": "passed",
     "format": "passed",
     "markdownLinks": "passed",
-    "sbom": "GitHub Syft/Grype passed on quality run 31679337426; artifacts 9172818407/9172839405; local script remains an explicit placeholder"
+    "sbom": "GitHub Syft/Grype passed on quality run 31706823033; artifacts 9183518984/9183542524; local script remains an explicit placeholder"
   }
 }

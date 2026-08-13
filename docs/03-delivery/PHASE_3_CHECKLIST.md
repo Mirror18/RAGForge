@@ -1,6 +1,6 @@
 # Phase 3 版本化摄取流水线 Checklist
 
-状态：`phase3-blocked-ocr-runtime`（2026-08-13）。P3-CONTRACT-01 至 P3-CONTRACT-07、P3-EXIT-01 至 P3-EXIT-03 已有实现与测试证据并合入 `main`；P3-EXIT-01 已由 GitHub Actions Run [31679337426](https://github.com/Mirror18/RAGForge/actions/runs/31679337426) 的 Ubuntu acceptance 通过确认；P3-EXIT-04 因真实 OCR runtime 不可用保持未勾选。不得把本阶段标记为完全闭环。
+状态：`phase3-accepted`（2026-08-13）。P3-CONTRACT-01 至 P3-CONTRACT-07、P3-EXIT-01 至 P3-EXIT-04 均已有实现、测试和 CI 证据并合入 `main`；真实 Tesseract OCR 运行时由隔离子进程执行，Ubuntu CI Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 已通过。
 
 ## 一、契约与领域门禁
 
@@ -44,7 +44,7 @@
   - 证据：合成 parser corpus、Parse Report JSON、OCR acceptance report、依赖/SBOM/Notice 记录。
   - 验收命令：`python -m unittest discover -s tests/acceptance -p "test_phase3_parser_*.py" -v`；Java parser integration tests。
   - 环境前置：固定合成 corpus；真实 OCR runtime 或明确记录的外部环境阻塞。
-  - 结果：六类原生格式、两份 image-only PDF、注入式 OCR 成功和 timeout/unavailable 状态均有 Java 测试；真实 OCR runtime 仍是 P3-EXIT-04 阻塞。
+  - 结果：六类原生格式、两份 image-only PDF、真实 Tesseract OCR 2/2、注入式 OCR 成功和 timeout/unavailable 状态均有 Java 测试；Parse Report 均包含来源 artifact、页码、触发原因、引擎版本和审计状态。
 
 - [x] P3-CONTRACT-07 上传、对象存储和日志安全固定大小/MIME/扩展名、路径穿越、符号链接逃逸、压缩炸弹/资源上限、space_id object URI、日志/event/DLQ 脱敏规则。
   - 验收条件：跨空间 source/document/revision/artifact/job 访问不泄漏；object key 不可伪造跨空间；任何证据不含真实个人内容、Secret 或完整文档正文。
@@ -60,7 +60,7 @@
   - 证据：Windows 本地报告、GitHub Actions Linux report、fixture manifest hash 和对比脚本。
   - 验收命令：`python -m unittest discover -s tests/acceptance -p "test_phase3_cross_platform_*.py" -v`；GitHub Actions Run URL。
   - 环境前置：Windows 11 本地；Ubuntu GitHub runner；固定 synthetic fixture manifest。
-  - 结果：固定 manifest 与 `CrossPlatformConnectorManifestTest` 已合入；Windows 本地 1/1 通过；GitHub Actions Run [31679337426](https://github.com/Mirror18/RAGForge/actions/runs/31679337426) 在 `ubuntu-latest` 完成同等 Phase 3 acceptance，quality job 全步骤通过。JVM 证据 artifact `9172912980`。
+  - 结果：固定 manifest 与 `CrossPlatformConnectorManifestTest` 已合入；Windows 本地 1/1 通过；GitHub Actions Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 在 `ubuntu-latest` 完成同等 Phase 3 acceptance，quality job 全步骤通过。
 
 - [x] P3-EXIT-02 中途失败不会推进错误 checkpoint 或污染 active data。
   - 量化门槛：parser、object upload、OCR timeout、DB rollback、消息发布失败各至少 1 个 fault case；所有 case checkpoint 不推进、active pointer 不变、失败可定位。
@@ -76,12 +76,12 @@
   - 环境前置：RabbitMQ Testcontainer；独立 queue/exchange；合成内容。
   - 结果：真实 PostgreSQL 下同一 identity 20 次并发交付只有 1 次副作用、1 条幂等记录；LocalObjectStore 20 次并发 claim 只有 1 个对象。
 
-- [ ] P3-EXIT-04 解析质量样本和 OCR 样本达到预设门槛。
+- [x] P3-EXIT-04 解析质量样本和 OCR 样本达到预设门槛。
   - 量化门槛：6 类原生格式各至少 1 个 valid fixture，结构/文本断言 100% 通过；Markdown 必须保留 YAML、heading、wikilink、code、table、callout；image-only PDF 至少 2 个样本。真实 OCR 可用时 OCR 样本至少 2/2 成功且 Parse Report 完整、无伪文本；不可用时必须保留未完成状态并记录阻塞，不得勾选本项。
   - 证据：fixture manifest、parser quality summary、OCR report、版本化配置和依赖许可证记录。
   - 验收命令：`python -m unittest discover -s tests/acceptance -p "test_phase3_parser_*.py" -v`。
   - 环境前置：固定 synthetic corpus；OCR runtime 是本项的真实前置。
-  - 当前阻塞：本机未安装/未提供可执行 Tesseract 或其他真实 OCR runtime；已完成原生质量断言 6/6、image-only PDF 2/2 的不可用边界和注入式 OCR 单例成功，但不能据此勾选真实 OCR 2/2 门槛。阻塞证据见 [`phase3-acceptance-summary.json`](../../tests/evidence/phase3-acceptance-summary.json) 与 [`PHASE_3_RETROSPECTIVE.md`](../08-records/retrospectives/PHASE_3_RETROSPECTIVE.md)。
+  - 结果：原生格式 6/6、image-only PDF 2/2；Windows Tesseract `5.4.0.20240606` 与 Ubuntu CI Tesseract `5.3.4-1build5` 均完成真实 OCR 2/2。两份扫描 PDF 均无文本层，均返回 `SUCCEEDED`，Parse Report 的 `sourceArtifactId`、页码、`engineVersion`、`triggerReason`、`auditState=COMPLETED` 和 extracted text artifact 完整；证据见 [`phase3-ocr-runtime-summary.json`](../../tests/evidence/phase3-ocr-runtime-summary.json)。
 
 ## 三、实现状态约束
 

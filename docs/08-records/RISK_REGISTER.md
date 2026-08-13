@@ -27,6 +27,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-019 | 完整 service token 生命周期尚未进入 Phase 1 | 3 | 4 | 12 | 当前浏览器只走 HttpOnly Session Cookie + CSRF；Phase 2 实现 hash/scope/expiry/revoke/last-used 后关闭 | Security | ACCEPTED |
 | R-020 | MinIO 等运行时镜像使用 tag，许可证和生产 digest 尚未锁定 | 2 | 5 | 10 | Phase 1 依赖登记；发布前 SBOM、许可证复核、immutable digest 和镜像扫描 | Compliance / Operations | MITIGATING |
 | R-021 | Run retry context 仅保存在进程内，重启后历史失败 Run 无法继续 retry | 3 | 4 | 12 | Phase 2 已验证同进程 timeout/retry；Phase 3/6 设计持久化 retry command/context 和恢复演练 | Platform | OPEN |
+| R-022 | 真实 OCR runtime 不可用导致扫描 PDF 质量门禁无法闭环 | 4 | 4 | 16 | Tesseract 受限子进程、PDFBox 渲染、输入/页数/输出/超时上限；Windows 与 Ubuntu CI 真实 2/2 样本 | Ingestion / Operations | CLOSED |
 
 ## 2. 维护规则
 
@@ -64,6 +65,6 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-003` 仍为 OPEN：Phase 3 已把 `space_id` 贯穿 source/revision/artifact/object key，并通过跨空间拒绝测试；Qdrant、chunk 和内容查询尚未实现，不能关闭全局跨空间风险。
 - `R-006` 仍为 OPEN：Phase 3 已验证 MIME/大小/路径/符号链接/内容寻址和 OCR 失败边界，但生产 quarantine、AV、sandbox、压缩炸弹专门 corpus 尚未完成。
 - `R-007` 进入 MITIGATING：Outbox、RabbitMQ retry/DLQ、PostgreSQL 幂等唯一约束和 20 次并发副作用测试已通过；真实完整 ingestion side-effect handler 与索引成本仍留给后续阶段。
-- `R-010` 继续 MITIGATING：PDFBox 2.0.30、POI 5.4.0、MinIO SDK 8.6.0、OkHttp JVM 5.1.0 已记录于 [`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md)；Run [31679337426](https://github.com/Mirror18/RAGForge/actions/runs/31679337426) 的 Syft/Grype 通过，正式发布仍必须复核传递依赖许可证。
+- `R-010` 继续 MITIGATING：PDFBox 2.0.30、POI 5.4.0、MinIO SDK 8.6.0、OkHttp JVM 5.1.0、Tesseract/Leptonica 运行时已记录于 [`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md)；Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 的 Syft/Grype 通过，正式发布仍必须复核传递依赖、训练数据和目标发行包许可证。
 - `R-020` 继续 MITIGATING：MinIO 测试镜像使用固定 release tag 但尚未锁定生产 digest；发布前必须完成 digest、SBOM、许可证和镜像扫描。
-- 新增 `R-022`：本机没有真实 OCR runtime，P=4、I=4、Score=16，Owner=Ingestion/Operations，状态=OPEN。已完成 OCR unavailable、timeout、两份 image-only PDF 和注入式 OCR seam；关闭条件是批准的 OCR runtime 在隔离环境中完成 2/2 真实样本并产出完整 Parse Report。
+- `R-022` 已关闭：`TesseractOcrEngineTest` 真实执行两份无文本层合成 PDF，Windows `5.4.0.20240606` 与 Ubuntu CI `5.3.4-1build5` 均 2/2 成功；Parse Report 具备 artifact、页码、版本、触发原因与 `COMPLETED` 审计状态，证据见 [`phase3-ocr-runtime-summary.json`](../../tests/evidence/phase3-ocr-runtime-summary.json)。

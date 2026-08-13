@@ -1,0 +1,43 @@
+{
+  "evidenceVersion": "phase3-ocr-runtime-v1",
+  "asOf": "2026-08-13",
+  "status": "passed",
+  "implementationCommit": "2ca3a7591b07b9f702dab5cf83acb52836581e0d",
+  "ciRun": "31706823033",
+  "ciUrl": "https://github.com/Mirror18/RAGForge/actions/runs/31706823033",
+  "runtime": {
+    "engine": "tesseract",
+    "localObservedVersion": "tesseract v5.4.0.20240606",
+    "localLeptonicaVersion": "1.84.1",
+    "ciPackage": "tesseract-ocr 5.3.4-1build5",
+    "language": "eng",
+    "renderer": "Apache PDFBox 2.0.30",
+    "dpi": 200,
+    "timeoutSeconds": 30,
+    "maxPages": 20,
+    "maxInputBytes": 26214400,
+    "maxOutputCharacters": 200000
+  },
+  "samples": [
+    {
+      "id": "ocr-image-pdf-1",
+      "pages": 1,
+      "nativeTextLayer": false,
+      "status": "SUCCEEDED",
+      "ocrPages": [1],
+      "auditState": "COMPLETED",
+      "extractedTextArtifact": true
+    },
+    {
+      "id": "ocr-image-pdf-2",
+      "pages": 1,
+      "nativeTextLayer": false,
+      "status": "SUCCEEDED",
+      "ocrPages": [1],
+      "auditState": "COMPLETED",
+      "extractedTextArtifact": true
+    }
+  ],
+  "sensitiveContentIncluded": false,
+  "notes": "Synthetic text is generated in the test; no personal documents, OCR body, credentials, or customer prompts are stored."
+}
