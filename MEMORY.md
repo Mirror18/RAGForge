@@ -7,7 +7,7 @@
 ## 1. 事实（Facts）
 
 - RAGForge 是面向企业内部、单租户多用户场景的通用 RAG 知识助手**学习型工程**；首要目标是完整实践商业项目从产品定义、架构、研发、测试、安全、交付到运维复盘的全过程，而非快速堆出一个聊天页面。
-- 当前阶段：**Phase 3 Complete; Phase 4 Ready**（截至 2026-08-15）。Phase 4 入口为 Chunk Studio、索引与检索；带引用的 RAG 问答（Phase 5）尚未实现。
+- 当前阶段：**Phase 4 In Progress**（2026-08-15 启动）。Phase 4 入口为 Chunk Studio、索引与检索；带引用的 RAG 问答（Phase 5）尚未实现。
 - 技术基线：Java 21 + Spring Boot 3.5.x + Spring AI 1.1.x（模块化单体）；独立 Java 摄取 Worker（共享领域契约，不共享运行生命周期）；Python AI Runtime 仅承载 OCR/rerank；Vue 3 + TypeScript 单一角色感知 SPA；PostgreSQL + Qdrant + RabbitMQ（Transactional Outbox）+ Valkey（Redis 兼容）+ S3-compatible 对象存储；OpenTelemetry + Prometheus + Grafana + Loki + Tempo。
 - 本地模型：Ollama + `qwen3.5:9b`；预留通用 OpenAI-compatible API。
 - 首批数据源：文件上传、本地目录、Git、受控网页抓取（Web connector 可在 Phase 3 末或 Phase 5 前完成）。
@@ -38,10 +38,16 @@
 
 - 已完成：Phase 0 基准（33 条问题）；Phase 1 工程/领域骨架（契约、RBAC、审计/outbox、幂等、CI）；Phase 2 Provider/Prompt/Run（本地真实 Ollama 验收通过）；Phase 3 版本化摄取（文件/本地目录/Git connector、版本化 schema、Outbox/RabbitMQ/worker 幂等、原生解析 + 真实 Tesseract OCR、Local/MinIO 对象存储）。
 - Phase 4 待办核心：父子分块、引用锚点、override/NEEDS_REVIEW；embedding profile 与缓存、Qdrant index version；dense + BM25 + RRF + rerank + parent expansion；Candidate index 验证、active pointer、24 小时旧索引保留；Chunk Studio 与 Retrieval Playground。
+- Phase 4 执行计划与 Checklist 已建立：`docs/08-records/phase-4/PHASE_4_EXECUTION_PLAN.md`、`docs/03-delivery/PHASE_4_CHECKLIST.md`（P4-A..H 任务所有权）。P4-B 契约已冻结：`chunking-domain.v1`、`index-version.v1`、`retrieval-profile.v1`（contract tests 39/39）。
 - Phase 4 退出条件：30 问基准 Recall@10 / MRR@10 达阶段阈值；100 万 child chunk 数据量下检索目标有可复现证据；空间过滤、索引切换与回滚测试通过；人工 override 的源更新冲突不会静默覆盖。
 - 必须沿续的边界：`space_id`、revision/artifact immutable、provenance、at-least-once 幂等。
 
 ## 5. 会话记录
+
+### 2026-08-15 会话（Phase 4 启动）
+- 澄清任务列表：`.github/modernize/java-upgrade/` 的 Java 21→25 + Spring Boot 4.0 升级计划是现代化工具自动生成的临时产物（gitignored、分支已删除、progress 全未执行），不是项目计划；已按用户确认排除，技术基线维持 Java 21 + Spring Boot 3.5.x（ADR-0002），未安装任何 JDK、未改任何代码。
+- 按用户确认开始 Phase 4：在 main 提交执行计划与 Checklist（`23b4e6d`）；在 worktree `D:\project\learning\RAGForge-worktrees\p4-chunk-index-a1`（分支 `codex/p4-chunk-index-a1`，base `23b4e6d`）提交 P4-B 契约（`2e68d6b`），contract/format/link 门禁通过。
+- 环境注意：`python` 命令是 uv shim（缓存 ACL 报错），需 `$env:UV_CACHE_DIR=$env:TEMP\uv-cache-p4; $env:UV_PYTHON_INSTALL_DIR=$env:TEMP\uv-python-p4; uv run --no-project --python 3.12 python ...` 才能运行 Python 脚本；Docker Desktop 未运行，P4-C 数据库集成测试前需启动。
 
 ### 2026-08-15 会话（初始化）
 - 探索全仓库确认：docs/config/scripts/contracts/apps/.env.example 中均无 "memory/记忆" 概念；无既有记忆文件；无 init 记忆脚本；仓库中唯一的 agent 相关文件是根目录 [AGENTS.md](AGENTS.md)。
@@ -58,5 +64,6 @@
 ## 更新日志
 
 - 2026-08-15：初始化本记忆文件（首次 init）。
+- 2026-08-15：澄清并排除现代化工具生成的 Java 升级计划（基线维持 Java 21 + Boot 3.5.x）；启动 Phase 4（计划/清单 + P4-B 契约已提交，门禁通过）。
 - 2026-08-15：完成 AGENTS.md 商业项目合规性评估（操作规范达标，治理接线有缺口）。
 - 2026-08-15：按评估结论修订 AGENTS.md（人工审批点、硬合并门禁、安全评审、发布/版本、事件与依赖响应、文件自身治理），diff 已验证。
