@@ -11,6 +11,16 @@ python scripts/dev/core.py backup-smoke --dry-run
 python scripts/dev/core.py down
 ```
 
+Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server 与 Web。`.bat` 是默认入口，内部调用 `start-local.ps1`；脚本要求 Java 21，并将启动日志写入已忽略的 `tmp/local-run/`：
+
+```bat
+.\scripts\dev\start-local.bat
+# 仅启动 core 和 Server
+.\scripts\dev\start-local.bat -SkipWeb
+```
+
+默认 Server/Web 端口为 `18082` 和 `5174`，可通过 `-ServerPort`、`-WebPort` 调整；`-ProjectName` 保持 Compose 网络、卷和基础设施端口隔离。
+
 `--project-name` 是本地隔离边界。入口会强制派生 `<project-name>-core` network、
 `<project-name>_...` volumes，以及稳定的 host-port block：默认 `ragforge-p1` 保留
 基准端口；其他 project 使用 `SHA-256(project_name) mod 997 * 20` 作为偏移，所有端口
