@@ -1,0 +1,99 @@
+{
+  "chunkingStrategy": {
+    "strategyVersion": "p4-default-v1",
+    "parentTargetTokens": 1200,
+    "childTargetTokens": 400,
+    "overlapTokens": 40,
+    "boundaryAware": true,
+    "headingStrategy": "HEADING_BOUNDARY",
+    "tableStrategy": "TABLE_PRESERVED",
+    "codeStrategy": "CODE_BLOCK_PRESERVED",
+    "listStrategy": "LIST_BOUNDARY"
+  },
+  "parentChunk": {
+    "spaceId": "0192b5c0-0000-7000-8000-000000000001",
+    "parentChunkId": "0192b5c0-0001-7000-8000-000000000002",
+    "documentRevisionId": "0192b5c0-0002-7000-8000-000000000003",
+    "version": 1,
+    "chunkIndex": 0,
+    "headingPath": [
+      "Chapter 2",
+      "2.1 Setup"
+    ],
+    "tokenRange": {
+      "startToken": 0,
+      "endToken": 1200,
+      "startChar": 0,
+      "endChar": 8200
+    },
+    "contentRef": "s3://ragforge/0192b5c0-0002-7000-8000-000000000003/parent-0.txt",
+    "immutable": true,
+    "createdAt": "2026-08-15T08:00:00Z"
+  },
+  "childChunk": {
+    "spaceId": "0192b5c0-0000-7000-8000-000000000001",
+    "childChunkId": "0192b5c0-0003-7000-8000-000000000004",
+    "parentChunkId": "0192b5c0-0001-7000-8000-000000000002",
+    "documentRevisionId": "0192b5c0-0002-7000-8000-000000000003",
+    "version": 1,
+    "chunkIndex": 2,
+    "headingPath": [
+      "Chapter 2",
+      "2.1 Setup"
+    ],
+    "tokenRange": {
+      "startToken": 800,
+      "endToken": 1200,
+      "startChar": 5400,
+      "endChar": 8200
+    },
+    "citationAnchor": {
+      "headingPath": [
+        "Chapter 2",
+        "2.1 Setup"
+      ],
+      "pageNumber": 7,
+      "lineRange": {
+        "startLine": 12,
+        "endLine": 30
+      }
+    },
+    "contentRef": "s3://ragforge/0192b5c0-0002-7000-8000-000000000003/child-2.txt",
+    "textHash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "immutable": true,
+    "createdAt": "2026-08-15T08:00:05Z"
+  },
+  "chunkOverride": {
+    "spaceId": "0192b5c0-0000-7000-8000-000000000001",
+    "overrideId": "0192b5c0-0004-7000-8000-000000000005",
+    "childChunkId": "0192b5c0-0003-7000-8000-000000000004",
+    "documentRevisionId": "0192b5c0-0002-7000-8000-000000000003",
+    "version": 1,
+    "state": "NEEDS_REVIEW",
+    "source": "MANUAL",
+    "reason": "源文本在 2.1 节更新，旧人工修订需复核后决定是否保留。",
+    "replacedTextHash": "3f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a09",
+    "createdBy": "0192b5c0-0005-7000-8000-000000000006",
+    "createdAt": "2026-08-15T08:10:00Z",
+    "updatedAt": "2026-08-15T09:00:00Z"
+  },
+  "chunkingResult": {
+    "spaceId": "0192b5c0-0000-7000-8000-000000000001",
+    "documentRevisionId": "0192b5c0-0002-7000-8000-000000000003",
+    "chunkingStrategy": {
+      "strategyVersion": "p4-default-v1",
+      "parentTargetTokens": 1200,
+      "childTargetTokens": 400,
+      "overlapTokens": 40,
+      "boundaryAware": true,
+      "headingStrategy": "HEADING_BOUNDARY",
+      "tableStrategy": "TABLE_PRESERVED",
+      "codeStrategy": "CODE_BLOCK_PRESERVED",
+      "listStrategy": "LIST_BOUNDARY"
+    },
+    "parentChunkCount": 3,
+    "childChunkCount": 9,
+    "deterministic": true,
+    "createdAt": "2026-08-15T08:00:10Z"
+  }
+}

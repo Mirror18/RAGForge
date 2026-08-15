@@ -1,0 +1,32 @@
+{
+  "childChunkId": "0192b5c0-0003-7000-8000-000000000004",
+  "parentChunkId": "0192b5c0-0001-7000-8000-000000000002",
+  "documentRevisionId": "0192b5c0-0002-7000-8000-000000000003",
+  "version": 1,
+  "chunkIndex": 2,
+  "headingPath": [
+    "Chapter 2",
+    "2.1 Setup"
+  ],
+  "tokenRange": {
+    "startToken": 800,
+    "endToken": 1200,
+    "startChar": 5400,
+    "endChar": 8200
+  },
+  "citationAnchor": {
+    "headingPath": [
+      "Chapter 2",
+      "2.1 Setup"
+    ],
+    "pageNumber": 7,
+    "lineRange": {
+      "startLine": 12,
+      "endLine": 30
+    }
+  },
+  "contentRef": "s3://ragforge/0192b5c0-0002-7000-8000-000000000003/child-2.txt",
+  "textHash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "immutable": true,
+  "createdAt": "2026-08-15T08:00:05Z"
+}
