@@ -14,6 +14,7 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 - Do not copy third-party source before its license is accepted and the reuse register is updated.
 - Prefer official dependencies over vendored source. When vendoring is necessary, pin the upstream commit SHA and preserve notices.
 - Architecture changes require an ADR. Product-scope changes require updates to the PRD, roadmap, risks, and traceability matrix.
+- High-risk actions require explicit human approval before execution: accepting an ADR as binding, accepting a third-party license, enabling cloud egress for a space, applying a production database migration, and creating a release.
 
 ## Multi-agent execution rules
 
@@ -41,7 +42,7 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 - Prefer parallel work by bounded ownership such as `contracts`, one application module, one test suite, or one documentation area.
 - API/event contracts are defined before provider and consumer implementations. When both sides run in parallel, they use the same committed contract baseline and contract tests.
 - Database migrations are append-only and have a single sequence owner per batch. Agents must not independently invent colliding migration versions.
-- Root build files, dependency locks/BOMs, Compose files, shared libraries, ADRs, `PROJECT_STATUS.md`, `RISK_REGISTER.md`, and `TRACEABILITY_MATRIX.md` are integration-sensitive. Assign one owner or leave final edits to the orchestrator.
+- Root build files, dependency locks/BOMs, Compose files, shared libraries, ADRs, `AGENTS.md`, `PROJECT_STATUS.md`, `RISK_REGISTER.md`, and `TRACEABILITY_MATRIX.md` are integration-sensitive. Assign one owner or leave final edits to the orchestrator.
 - If an agent discovers a required change outside its ownership, it reports the exact proposed change to the orchestrator instead of editing it silently.
 
 ### Worker completion contract
@@ -73,12 +74,26 @@ A worker must not claim completion with uncommitted changes, failing required te
 ### Integration and phase closure
 
 - The orchestrator reviews every worker commit and its verification evidence before integration.
+- A commit may be merged only when all relevant CI jobs are green, the orchestrator review has no unresolved comments, and the Definition of Done in `docs/03-delivery/DEFINITION_OF_DONE.md` is satisfied.
+- Security-sensitive changes (authentication, authorization, data egress, prompt injection, SSRF, secrets handling) require a security review pass before merge; see `docs/06-security-compliance/SECURITY_BASELINE.md` and `docs/06-security-compliance/THREAT_MODEL.md`.
 - Integrate one branch at a time in dependency order. Prefer a non-fast-forward merge so worker commits remain traceable; the merge commit message must also be Chinese, for example `merge(p1): 合并 OpenAPI 契约任务`.
 - Do not resolve conflicts with blanket `ours`/`theirs`. Reconcile against the accepted contract and rerun all affected tests.
 - After each integration batch, run repository-level tests and check architecture, contracts, migrations, security boundaries, licenses, and documentation links as applicable.
 - After a phase meets every roadmap exit criterion, update `PROJECT_STATUS.md`, `RISK_REGISTER.md`, `TRACEABILITY_MATRIX.md`, and the phase retrospective, then create a Chinese phase-closure commit such as `docs(phase-1): 完成工程与领域骨架阶段验收`.
 - Remove a worker worktree and delete its local branch only after the branch is integrated, the worktree is clean, and the integration is verified. Never remove a worktree containing uncommitted work.
 - Stop the execution loop only when the current requested phase is genuinely complete or a material decision/credential/external dependency requires user input. Running out of easy tasks is not completion.
+
+## Release and versioning
+
+- Releases follow Semantic Versioning and must record an entry in `CHANGELOG.md`. Never cut a release without an explicit human decision on the version number, changelog content, and rollback point.
+- Each release must reference the exact commit SHA, the deployment artifact/SBOM, and the rollback procedure; see `docs/05-operations/DEPLOYMENT.md` and the Main/Release pipeline in `docs/03-delivery/DEVELOPMENT_WORKFLOW.md`.
+- Before a release, verify that the phase exit-criteria evidence is committed under `docs/08-records/`.
+
+## Security incidents and dependency response
+
+- Report suspected vulnerabilities through `SECURITY.md`. Do not disclose a confirmed vulnerability in a public commit before coordinated disclosure.
+- Triage critical/high vulnerabilities promptly (target: initial triage within 24 hours of confirmation), record the decision in `RISK_REGISTER.md`, and land a fix or documented mitigation before the next release.
+- Dependency updates run on a maintained cadence (for example Dependabot or Renovate). The BOM owner reviews each update for license, vulnerability, and maintenance health before merging; see `docs/07-research/UPSTREAM_REUSE_REGISTER.md`.
 
 ## Directory ownership
 
@@ -100,3 +115,8 @@ Before merging a change, run the relevant formatting, unit, architecture, contra
 - State facts, assumptions, decisions, and open questions separately.
 - Give every reusable artifact a version or immutable identifier.
 - Update `updateTime`-style Obsidian metadata only after project records are intentionally copied into the vault; this repository itself does not use Obsidian frontmatter.
+
+## Governance of this file
+
+- `AGENTS.md` is integration-sensitive: assign a single owner for changes and require human-confirmed review of rule changes before committing. Never fold edits to this file into unrelated task commits.
+- Keep every rule actionable and verifiable; when a rule references a repository document, use a relative Markdown link.
