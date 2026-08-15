@@ -1,0 +1,30 @@
+{
+  "retrievalProfileVersion": {
+    "spaceId": "0192b5c0-0000-7000-8000-000000000001",
+    "profileId": "0192b5c0-0020-7000-8000-000000000020",
+    "version": 3,
+    "denseTopK": 30,
+    "bm25TopK": 30,
+    "rrf": {
+      "k": 60,
+      "denseWeight": 1,
+      "bm25Weight": 1
+    },
+    "rerankTopK": 20,
+    "maxContextChildren": 8,
+    "expansion": {
+      "mode": "PARENT_AND_NEIGHBOR",
+      "maxParentsPerChild": 1,
+      "maxNeighborsPerParent": 2,
+      "maxContextTokens": 4000
+    },
+    "immutable": true,
+    "createdAt": "2026-08-15T11:00:00Z"
+  },
+  "activeProfilePointer": {
+    "spaceId": "0192b5c0-0000-7000-8000-000000000001",
+    "activeProfileId": "0192b5c0-0020-7000-8000-000000000020",
+    "activeVersion": 3,
+    "updatedAt": "2026-08-15T11:00:00Z"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "spaceId": "0192b5c0-0000-7000-8000-000000000001",
+  "indexVersionId": "0192b5c0-0010-7000-8000-000000000010",
+  "version": 1,
+  "state": "ACTIVE",
+  "candidateCollection": "ragforge_v1_space_0192b5c0-0000-7000-8000-000000000001",
+  "embeddingProfileVersion": "local-embedding-v3",
+  "chunkingStrategyVersion": "p4-default-v1",
+  "documentRevisionCount": 12,
+  "childChunkCount": 240,
+  "validation": null,
+  "activatedAt": "2026-08-15T10:05:00Z",
+  "retiredAt": null,
+  "retentionDeadline": "2026-08-16T10:05:00Z",
+  "createdAt": "2026-08-15T08:30:00Z"
+}

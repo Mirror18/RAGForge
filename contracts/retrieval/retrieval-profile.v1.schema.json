@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/retrieval/retrieval-profile.v1.schema.json",
+  "title": "RAGForge Retrieval Profile v1",
+  "description": "Immutable, versioned retrieval configuration (dense/BM25 top-k, RRF, rerank, parent/neighbor expansion, filters). Defaults are not hard-coded truth; only evaluated configurations may become active.",
+  "x-ragforge-contract-status": "planned",
+  "x-ragforge-implementation-status": "contract",
+  "$defs": {
+    "uuidV7": {
+      "type": "string",
+      "format": "uuidv7",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "rrf": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["k", "denseWeight", "bm25Weight"],
+      "properties": {
+        "k": {"type": "integer", "minimum": 1, "maximum": 1000},
+        "denseWeight": {"type": "number", "minimum": 0, "maximum": 1},
+        "bm25Weight": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "description": "Reciprocal Rank Fusion parameters applied to dense and BM25 candidate lists."
+    },
+    "expansionRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "maxParentsPerChild", "maxNeighborsPerParent", "maxContextTokens"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["NONE", "PARENT", "NEIGHBOR", "PARENT_AND_NEIGHBOR"]},
+        "maxParentsPerChild": {"type": "integer", "minimum": 0, "maximum": 8},
+        "maxNeighborsPerParent": {"type": "integer", "minimum": 0, "maximum": 16},
+        "maxContextTokens": {"type": "integer", "minimum": 0}
+      },
+      "description": "Parent/neighbor expansion within the context budget after rerank."
+    },
+    "retrievalProfileVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "profileId", "version", "denseTopK", "bm25TopK", "rrf", "rerankTopK", "maxContextChildren", "expansion", "immutable", "createdAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "profileId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "denseTopK": {"type": "integer", "minimum": 1, "maximum": 100},
+        "bm25TopK": {"type": "integer", "minimum": 1, "maximum": 100},
+        "rrf": {"$ref": "#/$defs/rrf"},
+        "rerankTopK": {"type": "integer", "minimum": 1, "maximum": 100},
+        "maxContextChildren": {"type": "integer", "minimum": 1, "maximum": 20},
+        "expansion": {"$ref": "#/$defs/expansionRules"},
+        "immutable": {"type": "boolean", "const": true},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "A profile change creates a new version. Runs reference the exact profile version and index version."
+    },
+    "activeProfilePointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "activeProfileId", "activeVersion", "updatedAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "activeProfileId": {"$ref": "#/$defs/uuidV7"},
+        "activeVersion": {"type": "integer", "minimum": 1},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "Single active retrieval profile per space; A/B comparisons use candidate profiles without changing the active pointer."
+    }
+  }
+}

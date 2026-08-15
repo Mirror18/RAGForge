@@ -31,3 +31,13 @@ checkpoint 只有在 revision、artifact、parse report、active pointer 决策�
 见 [`outbox-worker.v1.contract.json`](outbox-worker.v1.contract.json) 和 [`../events/ingestion.job.status.changed.v1.schema.json`](../events/ingestion.job.status.changed.v1.schema.json)。投递保证是 at-least-once，consumer 必须按 `spaceId + jobId + attemptId + stepName + idempotencyKey` 幂等；本合同明确不声称 exactly-once。retry 使用有限次数的指数退避，耗尽或永久失败进入 DLQ，DLQ 只带受限引用、错误码和 trace identity。
 
 实现状态应在实现侧单独记录为 `planned`、`in-progress` 或 `implemented`；合同测试只证明文件可解析、对象/字段/拒绝语义和 fixtures 可验证，不把“字段存在”冒充运行时验收。
+
+## Phase 4：Chunking、Index Version 与 Retrieval Profile
+
+机器可读合同：
+
+- [`chunking-domain.v1.schema.json`](chunking-domain.v1.schema.json)：`ParentChunk`（1000–1500 tokens）、`ChildChunk`（300–500 tokens，仅 child embedding）、`CitationAnchor`、`ChunkOverride`（`NONE -> ACTIVE -> NEEDS_REVIEW -> ACTIVE | DISCARDED`）和 `ChunkingStrategy`。分块必须确定性、边界感知（标题/表格/代码/列表），chunk payload 只携带 `contentRef` 与 `textHash`，不得携带正文。
+- [`index-version.v1.schema.json`](index-version.v1.schema.json)：`IndexVersion` 生命周期 `BUILDING -> VALIDATING -> READY -> ACTIVE -> RETIRED`（含 `FAILED`）与 `IndexValidation` 校验项；发布只切换 PostgreSQL `activeIndexPointer`，旧索引至少保留 24 小时。
+- [`../retrieval/retrieval-profile.v1.schema.json`](../retrieval/retrieval-profile.v1.schema.json)：不可变 `RetrievalProfileVersion`（dense/BM25 top-k、RRF、rerank、parent/neighbor expansion、过滤器）；A/B 对比使用候选 profile，不改变 active pointer。
+
+所有内容对象强制 `spaceId`、稳定 ID、版本与 provenance；缺少 `spaceId` 的查询或变更直接失败。Phase 4 契约测试见 `tests/contract/test_phase4_contracts.py`；Chunk Studio / Retrieval Playground 的 REST 投影随 P4-G 实现一并固化。

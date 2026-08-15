@@ -15,6 +15,19 @@ not editing an already-applied migration. `IngestionRepository` repeats
 `space_id` in read predicates and advances a checkpoint only after durable
 revision, artifact, parse-report, active-pointer and outbox evidence is true.
 
+## Phase 4 persistence boundary
+
+`V9__phase4_chunk_index_profile.sql` adds space-scoped parent/child chunks,
+chunk overrides, index versions, retrieval profiles and the single-row active
+pointers. Chunks are immutable (update trigger rejects tampering); overrides
+are append-only versions whose transitions follow
+`ChunkOverrideTransitions` (`NONE -> ACTIVE -> NEEDS_REVIEW -> ACTIVE |
+DISCARDED`); an index version becomes `ACTIVE` only after validation passed
+and publishing switches the PostgreSQL active pointer atomically, keeping the
+previous index retained for 24 hours. Vector data lives in Qdrant; PostgreSQL
+holds the pointer and validation facts. Before applying V9 take the same
+PostgreSQL backup required for V8.
+
 计划基线：Java 21、Spring Boot 3.5.x、Spring AI 1.1.x、Maven、Flyway、PostgreSQL。
 
 建议包结构：
