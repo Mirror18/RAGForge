@@ -1,6 +1,6 @@
 # 项目状态
 
-- Updated: 2026-08-13
+- Updated: 2026-08-15
 - Current stage: Phase 3 版本化摄取流水线已完成阶段验收，下一入口为 Phase 4
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
@@ -31,7 +31,8 @@
 
 ## 2. 当前声明
 
-- Phase 3 已完成阶段闭环：原生格式 6/6、image-only PDF 2/2、真实 Tesseract OCR 2/2；检索、分块、引用回答仍未进入本阶段，下一阶段从 Phase 4 开始。
+- Phase 3 已完成阶段闭环：原生格式 6/6、image-only PDF 2/2、真实 Tesseract OCR 2/2；检索、分块、引用回答仍未进入本阶段。
+- Phase 4 已启动（2026-08-15）：执行计划与 Checklist 已建立并提交，见 [`PHASE_4_EXECUTION_PLAN.md`](phase-4/PHASE_4_EXECUTION_PLAN.md) 与 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)；技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段无 Java/Boot 升级计划。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
 - 已配置 GitHub remote `Mirror18/RAGForge`；本阶段实现和记录已推送，尚未创建 release。GitHub Actions Syft/Grype 已在 Run `31706823033` 通过，仍是正式发布前的有效 SBOM/SCA 门禁。
@@ -41,7 +42,7 @@
 
 ## 3. 下一入口
 
-Phase 4 当前入口为 chunking/index candidate 管线；必须继续保持 `space_id`、revision/artifact immutable、provenance 和 at-least-once 幂等边界。Phase 3 阶段复盘见 [`PHASE_3_RETROSPECTIVE.md`](retrospectives/PHASE_3_RETROSPECTIVE.md)；既有 Phase 0–2 复盘继续保留。
+Phase 4 当前入口为 chunking/index candidate 管线；必须继续保持 `space_id`、revision/artifact immutable、provenance 和 at-least-once 幂等边界。Phase 4 执行计划与 Checklist 见 [`PHASE_4_EXECUTION_PLAN.md`](phase-4/PHASE_4_EXECUTION_PLAN.md) 与 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)；Phase 3 阶段复盘见 [`PHASE_3_RETROSPECTIVE.md`](retrospectives/PHASE_3_RETROSPECTIVE.md)；既有 Phase 0–2 复盘继续保留。
 
 ## 4. 更新规则
 
