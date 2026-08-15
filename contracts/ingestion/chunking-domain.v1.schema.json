@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/ingestion/chunking-domain.v1.schema.json",
+  "title": "RAGForge Chunking Domain v1",
+  "description": "Versioned, space-isolated parent/child chunks, citation anchors and chunk overrides. Full document text is never represented by these payloads; chunks reference content behind artifact/object refs.",
+  "x-ragforge-contract-status": "planned",
+  "x-ragforge-implementation-status": "contract",
+  "$defs": {
+    "uuidV7": {
+      "type": "string",
+      "format": "uuidv7",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "headingPath": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 32,
+      "items": {"type": "string", "minLength": 1, "maxLength": 512},
+      "description": "Heading hierarchy path, e.g. [\"Chapter 2\", \"2.1 Setup\"]. Empty array for documents without headings."
+    },
+    "tokenRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startToken", "endToken", "startChar", "endChar"],
+      "properties": {
+        "startToken": {"type": "integer", "minimum": 0},
+        "endToken": {"type": "integer", "minimum": 0},
+        "startChar": {"type": "integer", "minimum": 0},
+        "endChar": {"type": "integer", "minimum": 0}
+      },
+      "description": "Half-open token and character ranges within the normalized document text."
+    },
+    "citationAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["headingPath"],
+      "properties": {
+        "headingPath": {"$ref": "#/$defs/headingPath"},
+        "pageNumber": {"type": "integer", "minimum": 1},
+        "sheet": {"type": "string", "minLength": 1, "maxLength": 255},
+        "slideNumber": {"type": "integer", "minimum": 1},
+        "lineRange": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["startLine", "endLine"],
+          "properties": {
+            "startLine": {"type": "integer", "minimum": 1},
+            "endLine": {"type": "integer", "minimum": 1}
+          }
+        },
+        "tableCell": {"type": "string", "minLength": 1, "maxLength": 512}
+      },
+      "description": "Precise location anchor used by citations and Chunk Studio; headingPath is always present."
+    },
+    "chunkingStrategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategyVersion", "parentTargetTokens", "childTargetTokens", "overlapTokens", "boundaryAware"],
+      "properties": {
+        "strategyVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "parentTargetTokens": {"type": "integer", "minimum": 1000, "maximum": 1500},
+        "childTargetTokens": {"type": "integer", "minimum": 300, "maximum": 500},
+        "overlapTokens": {"type": "integer", "minimum": 0, "maximum": 100},
+        "boundaryAware": {"type": "boolean", "const": true},
+        "headingStrategy": {"type": "string", "enum": ["HEADING_BOUNDARY"]},
+        "tableStrategy": {"type": "string", "enum": ["TABLE_PRESERVED", "CELL_ROWS"]},
+        "codeStrategy": {"type": "string", "enum": ["CODE_BLOCK_PRESERVED", "LINE_BOUNDARY"]},
+        "listStrategy": {"type": "string", "enum": ["LIST_BOUNDARY"]}
+      },
+      "description": "Immutable chunking configuration. Defaults must be validated by the phase evaluation set, not treated as hard-coded truth."
+    },
+    "parentChunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "parentChunkId", "documentRevisionId", "version", "chunkIndex", "headingPath", "tokenRange", "contentRef", "immutable", "createdAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "parentChunkId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "chunkIndex": {"type": "integer", "minimum": 0},
+        "headingPath": {"$ref": "#/$defs/headingPath"},
+        "tokenRange": {"$ref": "#/$defs/tokenRange"},
+        "contentRef": {"type": "string", "minLength": 1, "maxLength": 512},
+        "immutable": {"type": "boolean", "const": true},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "Semantic parent chunk (1000-1500 tokens) that keeps section semantics. Immutable; regenerated under a new document revision."
+    },
+    "childChunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "childChunkId", "parentChunkId", "documentRevisionId", "version", "chunkIndex", "headingPath", "tokenRange", "citationAnchor", "contentRef", "textHash", "immutable", "createdAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "childChunkId": {"$ref": "#/$defs/uuidV7"},
+        "parentChunkId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "chunkIndex": {"type": "integer", "minimum": 0},
+        "headingPath": {"$ref": "#/$defs/headingPath"},
+        "tokenRange": {"$ref": "#/$defs/tokenRange"},
+        "citationAnchor": {"$ref": "#/$defs/citationAnchor"},
+        "contentRef": {"type": "string", "minLength": 1, "maxLength": 512},
+        "textHash": {"$ref": "#/$defs/sha256"},
+        "immutable": {"type": "boolean", "const": true},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "Child chunk (300-500 tokens) that is embedded and directly recalled. Only child chunks are embedded."
+    },
+    "chunkOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "overrideId", "childChunkId", "documentRevisionId", "version", "state", "source", "reason", "createdBy", "createdAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "overrideId": {"$ref": "#/$defs/uuidV7"},
+        "childChunkId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "state": {"type": "string", "enum": ["NONE", "ACTIVE", "NEEDS_REVIEW", "DISCARDED"]},
+        "source": {"type": "string", "const": "MANUAL"},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 512},
+        "replacedTextHash": {"$ref": "#/$defs/sha256"},
+        "createdBy": {"$ref": "#/$defs/uuidV7"},
+        "createdAt": {"$ref": "#/$defs/timestamp"},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "Auditable manual chunk edit. State machine: NONE -> ACTIVE -> NEEDS_REVIEW -> ACTIVE | DISCARDED. A source revision update never silently re-applies an old override to new text."
+    },
+    "chunkingResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "documentRevisionId", "chunkingStrategy", "parentChunkCount", "childChunkCount", "deterministic", "createdAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "chunkingStrategy": {"$ref": "#/$defs/chunkingStrategy"},
+        "parentChunkCount": {"type": "integer", "minimum": 0},
+        "childChunkCount": {"type": "integer", "minimum": 0},
+        "deterministic": {"type": "boolean", "const": true},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "Chunking run result. The same revision and strategy must always produce identical chunks."
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/ingestion/index-version.v1.schema.json",
+  "title": "RAGForge Index Version v1",
+  "description": "Immutable index version lifecycle with candidate isolation, validation and atomic active pointer publish. Old indexes are retained at least 24 hours after activation.",
+  "x-ragforge-contract-status": "planned",
+  "x-ragforge-implementation-status": "contract",
+  "$defs": {
+    "uuidV7": {
+      "type": "string",
+      "format": "uuidv7",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "indexValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documentCount", "childChunkCount", "vectorDimension", "orphanChildCount", "sampleRetrievalPassed", "spaceFilterPassed", "checkedAt"],
+      "properties": {
+        "documentCount": {"type": "integer", "minimum": 0},
+        "childChunkCount": {"type": "integer", "minimum": 0},
+        "vectorDimension": {"type": "integer", "minimum": 1},
+        "orphanChildCount": {"type": "integer", "minimum": 0},
+        "sampleRetrievalPassed": {"type": "boolean"},
+        "spaceFilterPassed": {"type": "boolean"},
+        "checkedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "VALIDATING checks: document/chunk counts, vector dimension, orphan relations, sample retrieval and space filter."
+    },
+    "indexVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "indexVersionId", "version", "state", "candidateCollection", "embeddingProfileVersion", "chunkingStrategyVersion", "documentRevisionCount", "childChunkCount", "createdAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "indexVersionId": {"$ref": "#/$defs/uuidV7"},
+        "version": {"type": "integer", "minimum": 1},
+        "state": {"type": "string", "enum": ["BUILDING", "VALIDATING", "READY", "ACTIVE", "RETIRED", "FAILED"]},
+        "candidateCollection": {"type": "string", "minLength": 1, "maxLength": 512},
+        "embeddingProfileVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "chunkingStrategyVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "documentRevisionCount": {"type": "integer", "minimum": 0},
+        "childChunkCount": {"type": "integer", "minimum": 0},
+        "validation": {"anyOf": [{"$ref": "#/$defs/indexValidation"}, {"type": "null"}]},
+        "activatedAt": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "retiredAt": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "retentionDeadline": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "State machine: BUILDING -> VALIDATING -> READY -> ACTIVE -> RETIRED; FAILED from any build/validate step. ACTIVE requires passed validation. Publishing switches the PostgreSQL active pointer atomically; old index is kept at least 24 hours."
+    },
+    "activeIndexPointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spaceId", "activeIndexVersionId", "previousIndexVersionId", "updatedAt"],
+      "properties": {
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "activeIndexVersionId": {"$ref": "#/$defs/uuidV7"},
+        "previousIndexVersionId": {"anyOf": [{"$ref": "#/$defs/uuidV7"}, {"type": "null"}]},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "description": "Single row per space in PostgreSQL. Publish is an atomic pointer switch, never an in-place index rewrite."
+    }
+  }
+}
