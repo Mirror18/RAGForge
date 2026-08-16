@@ -47,6 +47,7 @@
 ### 2026-08-15 会话（Phase 4 启动）
 - 澄清任务列表：`.github/modernize/java-upgrade/` 的 Java 21→25 + Spring Boot 4.0 升级计划是现代化工具自动生成的临时产物（gitignored、分支已删除、progress 全未执行），不是项目计划；已按用户确认排除，技术基线维持 Java 21 + Spring Boot 3.5.x（ADR-0002），未安装任何 JDK、未改任何代码。
 - 按用户确认开始 Phase 4：在 main 提交执行计划与 Checklist（`23b4e6d`）；P4-B 契约（`2e68d6b`）与 P4-C 持久化（`23dbc88`，V9 migration + Chunk/Index/RetrievalProfile repositories + 状态机）在 `codex/p4-chunk-index-a1` worktree 完成并验证后，以 `8138e85` merge(p4) 合入 main。根 reactor BUILD SUCCESS（server 101/101、worker 28/28），contract 39/39、format/link/secret 门禁通过；已清理 worktree 与分支（含 Phase 3 遗留 `codex/p3-ocr-runtime-main`）。
+- P4-D 进展：在 `codex/p4-chunk-engine-a1` worktree 实现 `ChunkingStrategy`（p4-default-v1：parent 1200/child 400/overlap 40）、`TokenEstimator`（确定性 CJK/ASCII 估算）、`ChunkCandidate`、`ChunkingEngine`（标题/表格/代码/列表边界感知，句子/行/列表项边界拆分，引用锚点 headingPath + 1-based lineRange，SHA-256 hash，确定性输出）与 `ChunkingEngineTest`；单元验证被中断待重跑，尚未提交合入。
 - 环境注意：`python` 命令是 uv shim（缓存 ACL 报错），需 `$env:UV_CACHE_DIR=$env:TEMP\uv-cache-p4; $env:UV_PYTHON_INSTALL_DIR=$env:TEMP\uv-python-p4; uv run --no-project --python 3.12 python ...` 才能运行 Python 脚本；Docker Desktop 未运行，P4-C 数据库集成测试前需启动。
 
 ### 2026-08-15 会话（初始化）
@@ -65,5 +66,6 @@
 
 - 2026-08-15：初始化本记忆文件（首次 init）。
 - 2026-08-15：澄清并排除现代化工具生成的 Java 升级计划（基线维持 Java 21 + Boot 3.5.x）；启动 Phase 4（计划/清单 + P4-B 契约已提交，门禁通过）。
+- 2026-08-15：P4-B/P4-C 批次合入 main（`8138e85`，reactor 全绿）；P4-D 分块引擎在 worktree 实现，单元验证待续。
 - 2026-08-15：完成 AGENTS.md 商业项目合规性评估（操作规范达标，治理接线有缺口）。
 - 2026-08-15：按评估结论修订 AGENTS.md（人工审批点、硬合并门禁、安全评审、发布/版本、事件与依赖响应、文件自身治理），diff 已验证。

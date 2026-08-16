@@ -49,6 +49,16 @@ P4-A checklist/contract
 
 每批只合并一个分支，使用 `git merge --no-ff` 和中文 Conventional Commit。每次合并后至少运行受影响的 contract、unit、Maven integration、security 和 migration checks；P4-E 之后必须运行 Qdrant Testcontainer；P4-F 之后必须运行检索评估对比；P4-G 之后必须运行前端门禁。只有主干验证通过且 worker worktree clean 才能删除 worktree/branch。
 
+## 执行状态（2026-08-15）
+
+| Task | 状态 | 提交/证据 |
+|---|---|---|
+| P4-A | 完成 | `23b4e6d`：执行计划、Checklist、PROJECT_STATUS 更新 |
+| P4-B | 完成并合入 | `2e68d6b`（契约）+ `c87b0ec`（fixtures），随 `8138e85` merge(p4) 合入；contract 39/39 |
+| P4-C | 完成并合入 | `23dbc88`（V9 + 三个 repository + 状态机），随 `8138e85` 合入；根 reactor BUILD SUCCESS（server 101/101、worker 28/28） |
+| P4-D | 实现中 | worktree `codex/p4-chunk-engine-a1`（base `a47e5a7`）：`ChunkingStrategy`/`TokenEstimator`/`ChunkCandidate`/`ChunkingEngine`/`ChunkingEngineTest` 已实现，单元验证待续（未提交） |
+| P4-E..P4-H | 未开始 | - |
+
 ## 阶段量化门槛（来自 [RAG_EVALUATION](../../04-quality/RAG_EVALUATION.md) §4.1 与 ROADMAP Phase 4 退出条件）
 
 - P4-EXIT-01：30 问检索基准 `Recall@10 >= 0.90`、`MRR@10 >= 0.75`（版本化记录 dataset/index/profile 配置）。

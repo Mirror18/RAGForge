@@ -2,27 +2,31 @@
 
 状态：`phase4-in-progress`（2026-08-15）。执行计划与所有权见 [PHASE_4_EXECUTION_PLAN.md](../08-records/phase-4/PHASE_4_EXECUTION_PLAN.md)。技术基线维持 Java 21 + Spring Boot 3.5.x（[ADR-0002](../02-architecture/adr/0002-java-ai-version-baseline.md)）。
 
+进度（2026-08-15）：P4-B 领域契约与 P4-C 持久化批次已合入 `main`（merge `8138e85`）；根 reactor `mvn test` BUILD SUCCESS（server 101/101、worker 28/28），contract 39/39、format/link/secret 门禁通过。P4-D 分块引擎已在 worktree `codex/p4-chunk-engine-a1` 实现（`ChunkingStrategy`/`TokenEstimator`/`ChunkingEngine`/`ChunkingEngineTest`），单元验证待续。
+
 ## 一、契约与领域门禁
 
 - [ ] P4-CONTRACT-01 父子分块契约固定 parent 1000–1500 tokens、child 300–500 tokens、适度 overlap，child 保存 parent ID、文档位置、标题路径、页码/工作表/幻灯片和字符/token 范围；表格、代码、列表和标题边界使用专用策略，不能只按字符硬切。
+  - 进度：schema/契约测试已冻结（contract 39/39，`chunking-domain.v1.schema.json` + fixtures）；`ChunkingEngine`/`ChunkingEngineTest` 已在 P4-D worktree 实现，确定性/边界锚点验证通过后勾选。
   - 验收条件：chunk 域 schema 可被 contract test 解析；分块确定性、边界锚点可验证；所有内容实体强制 `space_id`、稳定 ID、版本和 provenance。
   - 证据：`contracts/ingestion/chunking-domain.v1.schema.json`（或同级目录）、chunking contract test、`ChunkingEngineTest`。
   - 验收命令：`python scripts/ci/contract_test.py`；`python -m unittest discover -s tests/contract -p "test_phase4_*.py" -v`；对应 Maven unit tests。
   - 环境前置：合成 Markdown/PDF/DOCX/表格/代码 fixture；不需要 embedding 模型。
 
-- [ ] P4-CONTRACT-02 ChunkOverride 状态机固定 `NONE -> ACTIVE -> NEEDS_REVIEW -> ACTIVE` 或 `-> DISCARDED`；源 revision 更新后旧 override 转 `NEEDS_REVIEW`，不得自动应用到新文本。
+- [x] P4-CONTRACT-02 ChunkOverride 状态机固定 `NONE -> ACTIVE -> NEEDS_REVIEW -> ACTIVE` 或 `-> DISCARDED`；源 revision 更新后旧 override 转 `NEEDS_REVIEW`，不得自动应用到新文本。
   - 验收条件：override 记录可审计（创建者、理由、版本、空间）；冲突时既不静默覆盖也不静默丢弃。
-  - 证据：override 状态机测试、Chunk Studio 投影契约。
+  - 证据：`chunking-domain.v1` 状态机契约、V9 `chunk_overrides` CHECK、`ChunkOverrideTransitions` 纯逻辑 + `ChunkRepository` 版本追加；集成测试覆盖 ACTIVE->NEEDS_REVIEW->ACTIVE/DISCARDED、跨 revision 强制 NEEDS_REVIEW、DISCARDED 不可回退（`Phase4ChunkIndexPersistenceIntegrationTest`，随 `8138e85` 合入）。
 
-- [ ] P4-CONTRACT-03 IndexVersion 生命周期固定 `BUILDING -> VALIDATING -> READY -> ACTIVE -> RETIRED` 与 `FAILED`；新索引写入隔离 candidate 并验证，发布只切换 PostgreSQL active pointer；旧索引至少保留 24 小时。
+- [x] P4-CONTRACT-03 IndexVersion 生命周期固定 `BUILDING -> VALIDATING -> READY -> ACTIVE -> RETIRED` 与 `FAILED`；新索引写入隔离 candidate 并验证，发布只切换 PostgreSQL active pointer；旧索引至少保留 24 小时。
   - 验收条件：VALIDATING 检查文档数、chunk 数、向量维度、孤儿关系、抽样检索和空间过滤；失败不污染 ACTIVE。
-  - 证据：index-version 契约、Qdrant Testcontainer 集成测试、active pointer 单行约束测试。
+  - 证据：`index-version.v1` 契约、V9 `index_versions` CHECK（ACTIVE 必须校验通过、activated/retention 约束）、`IndexStateTransitions` + `IndexRepository`（candidate→VALIDATING→READY→ACTIVE 原子指针切换、FAILED、单行 `active_index_pointers`、24h 保留断言）；Qdrant 侧校验随 P4-E。
 
-- [ ] P4-CONTRACT-04 RetrievalProfileVersion 不可变，固定 dense/BM25 的 top-k、RRF、rerank、parent expansion 与过滤器参数；默认值不是硬编码真理。
+- [x] P4-CONTRACT-04 RetrievalProfileVersion 不可变，固定 dense/BM25 的 top-k、RRF、rerank、parent expansion 与过滤器参数；默认值不是硬编码真理。
   - 验收条件：profile 变更产生新版本；运行引用确切 profile/index 版本；A/B 对比可复现。
-  - 证据：retrieval-profile 契约、profile 版本化测试、评估对比报告。
+  - 证据：`retrieval-profile.v1` 契约、V9 `retrieval_profiles` 不可变触发器 + 参数 CHECK、`RetrievalProfileRepository` 版本追加与单行 `active_profile_pointers`、Java 侧边界校验；评估对比随 P4-F/P4-H。
 
 - [ ] P4-CONTRACT-05 空间过滤强制：检索、索引切换、chunk 查询和 override 缺少 `space_id` 时直接失败，不提供“全局默认”；跨空间访问不泄漏。
+  - 进度：V9 全表 `space_id` 强制 + 组合 FK 拒绝跨空间引用已有集成测试；检索层缺少 `space_id` 直接失败属 P4-F，完成后再勾选。
   - 验收条件：跨空间检索返回空或拒绝；索引 collection/key 不可伪造跨空间。
   - 证据：security tests、空间过滤集成测试。
 

@@ -32,7 +32,7 @@
 ## 2. 当前声明
 
 - Phase 3 已完成阶段闭环：原生格式 6/6、image-only PDF 2/2、真实 Tesseract OCR 2/2；检索、分块、引用回答仍未进入本阶段。
-- Phase 4 已启动（2026-08-15）：执行计划与 Checklist 已建立并提交，见 [`PHASE_4_EXECUTION_PLAN.md`](phase-4/PHASE_4_EXECUTION_PLAN.md) 与 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)；技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段无 Java/Boot 升级计划。
+- Phase 4 进行中（2026-08-15）：执行计划与 Checklist 已建立；P4-B 领域契约（chunking-domain/index-version/retrieval-profile）与 P4-C 持久化（V9 migration + Chunk/Index/RetrievalProfile repositories + 状态机）已合入 main（merge `8138e85`）；P4-D 分块引擎已在 worktree `codex/p4-chunk-engine-a1` 实现（`ChunkingEngine`/`TokenEstimator`/`ChunkingStrategy` + 测试），单元验证待续。根 reactor `mvn test` BUILD SUCCESS（server 101/101、worker 28/28），contract 39/39、format/link/secret 门禁通过。技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段无 Java/Boot 升级计划。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
 - 已配置 GitHub remote `Mirror18/RAGForge`；本阶段实现和记录已推送，尚未创建 release。GitHub Actions Syft/Grype 已在 Run `31706823033` 通过，仍是正式发布前的有效 SBOM/SCA 门禁。
