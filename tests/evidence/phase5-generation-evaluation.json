@@ -1,0 +1,104 @@
+{
+  "evidence_version": "phase5-generation-evaluation-v1",
+  "synthetic_only": true,
+  "code_commit": "8fb9e63305e6389509eb56da85a6d25c3409231f",
+  "dataset_version": "phase5-generation-v1",
+  "dataset_sha256": "c87ae1bf6ae57448180ca53abf2c1ef8a71472f1390bcc806151c83863e57a65",
+  "config": {
+    "prompt_version": "rag-answer-v1",
+    "judge_version": "deterministic-claim-support-v1",
+    "candidate_model": "synthetic-provider-v1",
+    "temperature": 0
+  },
+  "candidate": {
+    "citation_precision": 1.0,
+    "faithfulness": 1.0,
+    "abstention_accuracy": 1.0,
+    "counts": {
+      "cases": 12,
+      "claims": 12,
+      "citations": 12,
+      "valid_citations": 12,
+      "correct_abstentions": 6,
+      "abstention_cases": 6
+    },
+    "slices": {
+      "answerable": {
+        "cases": 6,
+        "claims": 12,
+        "citations": 12,
+        "valid_citations": 12
+      },
+      "unanswerable": {
+        "cases": 3,
+        "claims": 0,
+        "citations": 0,
+        "valid_citations": 0
+      },
+      "conflicting": {
+        "cases": 3,
+        "claims": 0,
+        "citations": 0,
+        "valid_citations": 0
+      }
+    }
+  },
+  "baseline": {
+    "citation_precision": 0.7272727272727273,
+    "faithfulness": 0.5833333333333334,
+    "abstention_accuracy": 0.0,
+    "counts": {
+      "cases": 12,
+      "claims": 12,
+      "citations": 11,
+      "valid_citations": 8,
+      "correct_abstentions": 0,
+      "abstention_cases": 6
+    },
+    "slices": {
+      "answerable": {
+        "cases": 6,
+        "claims": 12,
+        "citations": 11,
+        "valid_citations": 8
+      },
+      "unanswerable": {
+        "cases": 3,
+        "claims": 0,
+        "citations": 0,
+        "valid_citations": 0
+      },
+      "conflicting": {
+        "cases": 3,
+        "claims": 0,
+        "citations": 0,
+        "valid_citations": 0
+      }
+    }
+  },
+  "performance": {
+    "latency_ms": {
+      "p50": 65.05,
+      "p95": 88.8
+    },
+    "ttft_ms": {
+      "p50": 25.049999999999997
+    },
+    "tokens": {
+      "input": 1828,
+      "output": 419
+    },
+    "estimated_cost": 0.008,
+    "provider_calls": 12,
+    "timeout_count": 0,
+    "retry_count": 0,
+    "degraded_count": 0,
+    "cancel_count": 0
+  },
+  "thresholds": {
+    "citation_precision": 0.9,
+    "faithfulness": 0.9,
+    "abstention_accuracy": 0.9
+  },
+  "passed": true
+}
