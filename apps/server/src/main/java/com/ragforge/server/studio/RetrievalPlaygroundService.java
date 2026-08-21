@@ -5,18 +5,11 @@ import com.ragforge.server.audit.AuditOutboxService;
 import com.ragforge.server.common.ApiException;
 import com.ragforge.server.common.UuidV7;
 import com.ragforge.server.identity.SessionPrincipal;
-import com.ragforge.server.index.CandidateIndexService;
-import com.ragforge.server.index.CandidateIndexStore;
 import com.ragforge.server.index.IndexRepository;
 import com.ragforge.server.provider.SpaceAuthorization;
-import com.ragforge.server.retrieval.Bm25CandidateStore;
-import com.ragforge.server.retrieval.ChunkCatalog;
 import com.ragforge.server.retrieval.EvidenceBundle;
-import com.ragforge.server.retrieval.Reranker;
-import com.ragforge.server.retrieval.RetrievalCandidate;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
 import com.ragforge.server.retrieval.RetrievalService;
-import com.ragforge.server.retrieval.RrfMerger;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -93,25 +86,15 @@ public class RetrievalPlaygroundService {
     private final SpaceAuthorization authorization;
     private final RetrievalProfileRepository profiles;
     private final IndexRepository indexes;
-    private final CandidateIndexStore denseStore;
-    private final Bm25CandidateStore bm25Store;
-    private final ChunkCatalog catalog;
-    private final Reranker reranker;
     private final RetrievalService retrieval;
     private final AuditOutboxService audit;
 
     public RetrievalPlaygroundService(SpaceAuthorization authorization, RetrievalProfileRepository profiles,
-                                      IndexRepository indexes, CandidateIndexStore denseStore,
-                                      Bm25CandidateStore bm25Store, ChunkCatalog catalog,
-                                      Reranker reranker, RetrievalService retrieval,
+                                      IndexRepository indexes, RetrievalService retrieval,
                                       AuditOutboxService audit) {
         this.authorization = authorization;
         this.profiles = profiles;
         this.indexes = indexes;
-        this.denseStore = denseStore;
-        this.bm25Store = bm25Store;
-        this.catalog = catalog;
-        this.reranker = reranker;
         this.retrieval = retrieval;
         this.audit = audit;
     }
@@ -137,10 +120,9 @@ public class RetrievalPlaygroundService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "query_invalid", "Invalid query", "The query is invalid");
         }
 
-        SideResult sideA = runSide(spaceId, index.id(), profileA, request.query(), normalizedQuery,
-                request.queryVector());
+        SideResult sideA = runSide(spaceId, index.id(), profileA, request.query(), request.queryVector());
         SideResult sideB = profileB == null ? null
-                : runSide(spaceId, index.id(), profileB, request.query(), normalizedQuery, request.queryVector());
+                : runSide(spaceId, index.id(), profileB, request.query(), request.queryVector());
         UUID experimentId = UuidV7.random();
         audit.record("retrieval.playground.experiment", principal.userId(), spaceId, experimentId, correlationId,
                 Map.ofEntries(Map.entry("experimentId", experimentId), Map.entry("indexVersionId", index.id()),
@@ -160,50 +142,27 @@ public class RetrievalPlaygroundService {
 
     private SideResult runSide(UUID spaceId, UUID indexVersionId,
                                RetrievalProfileRepository.RetrievalProfileVersion profile,
-                               String originalQuery, String normalizedQuery, List<Double> queryVector) {
+                               String originalQuery, List<Double> queryVector) {
         long started = System.nanoTime();
-        String collection = CandidateIndexService.collectionFor(spaceId, indexVersionId);
-        long denseStarted = System.nanoTime();
-        List<RetrievalCandidate> dense = denseStore.search(collection, spaceId, indexVersionId, queryVector,
-                        profile.denseTopK()).stream()
-                .map(hit -> new RetrievalCandidate(hit.spaceId(), hit.indexVersionId(), hit.id(),
-                        hit.documentRevisionId(), hit.parentChunkId(), hit.contentRef(), hit.textHash(), hit.score(),
-                        RetrievalCandidate.Source.DENSE, ""))
-                .toList();
-        StageMetrics denseMetrics = metrics(dense.size(), denseStarted);
-
-        long bm25Started = System.nanoTime();
-        List<RetrievalCandidate> bm25 = bm25Store.search(spaceId, indexVersionId, normalizedQuery, profile.bm25TopK());
-        StageMetrics bm25Metrics = metrics(bm25.size(), bm25Started);
-
-        long rrfStarted = System.nanoTime();
-        List<RrfMerger.MergedCandidate> merged = RrfMerger.merge(spaceId, indexVersionId, dense, bm25,
-                profile.rrfK(), profile.rrfDenseWeight(), profile.rrfBm25Weight());
-        StageMetrics rrfMetrics = metrics(merged.size(), rrfStarted);
-
-        long rerankStarted = System.nanoTime();
-        List<Reranker.Result> reranked = reranker.rerank(normalizedQuery, merged, profile.rerankTopK());
-        StageMetrics rerankMetrics = metrics(reranked.size(), rerankStarted);
-
-        EvidenceBundle bundle;
+        RetrievalService.Trace serviceTrace;
         try {
-            bundle = retrieval.retrieve(new RetrievalService.Request(spaceId, indexVersionId, profile,
+            serviceTrace = retrieval.trace(new RetrievalService.Request(spaceId, indexVersionId, profile,
                     originalQuery, queryVector));
         } catch (IllegalArgumentException exception) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "retrieval_trace_unavailable",
                     "Retrieval trace unavailable", "The configured retrieval pipeline rejected the experiment");
         }
         long elapsed = System.nanoTime() - started;
-        RetrievalTrace trace = new RetrievalTrace(
-                new StageTrace(toDenseHits(dense), denseMetrics),
-                new StageTrace(toCandidateHits(bm25), bm25Metrics),
-                new StageTrace(toMergedHits(merged), rrfMetrics),
-                new StageTrace(toRerankHits(reranked), rerankMetrics),
-                toContext(bundle, profile), toEvidence(bundle));
+        RetrievalTrace responseTrace = new RetrievalTrace(
+                new StageTrace(toHits(serviceTrace.dense().candidates()), toMetrics(serviceTrace.dense())),
+                new StageTrace(toHits(serviceTrace.bm25().candidates()), toMetrics(serviceTrace.bm25())),
+                new StageTrace(toHits(serviceTrace.rrf().candidates()), toMetrics(serviceTrace.rrf())),
+                new StageTrace(toHits(serviceTrace.rerank().candidates()), toMetrics(serviceTrace.rerank())),
+                toContext(serviceTrace.context()), toEvidence(serviceTrace.evidence()));
         ProfileSide response = new ProfileSide(indexVersionId,
-                new ProfileRef(profile.profileId(), profile.versionNo(), true), trace,
-                new SideMetrics(milliseconds(elapsed), bundle.evidence().size()));
-        return new SideResult(response, bundle);
+                new ProfileRef(profile.profileId(), profile.versionNo(), true), responseTrace,
+                new SideMetrics(milliseconds(elapsed), serviceTrace.evidence().evidence().size()));
+        return new SideResult(response, serviceTrace.evidence());
     }
 
     private RetrievalProfileRepository.RetrievalProfileVersion findProfile(UUID spaceId, ProfileRef ref) {
@@ -224,41 +183,22 @@ public class RetrievalPlaygroundService {
         }
     }
 
-    private static StageMetrics metrics(int count, long started) {
-        return new StageMetrics(count, milliseconds(System.nanoTime() - started));
+    private static StageMetrics toMetrics(RetrievalService.StageTrace trace) {
+        return new StageMetrics(trace.candidates().size(), trace.latencyMs());
     }
 
     private static double milliseconds(long nanos) {
         return Duration.ofNanos(Math.max(0, nanos)).toNanos() / 1_000_000.0;
     }
 
-    private static List<TraceHit> toDenseHits(List<RetrievalCandidate> values) {
-        return toCandidateHits(values);
-    }
-
-    private static List<TraceHit> toCandidateHits(List<RetrievalCandidate> values) {
+    private static List<TraceHit> toHits(List<RetrievalService.TraceCandidate> values) {
         return values.stream().map(value -> new TraceHit(value.childChunkId(), value.documentRevisionId(),
-                values.indexOf(value) + 1, value.sourceScore(), value.contentRef(), value.textHash())).toList();
+                value.rank(), value.score(), value.contentRef(), value.textHash())).toList();
     }
 
-    private static List<TraceHit> toMergedHits(List<RrfMerger.MergedCandidate> values) {
-        return values.stream().map(value -> new TraceHit(value.childChunkId(), value.documentRevisionId(),
-                values.indexOf(value) + 1, value.rrfScore(), value.contentRef(), value.textHash())).toList();
-    }
-
-    private static List<TraceHit> toRerankHits(List<Reranker.Result> values) {
-        return values.stream().map(value -> new TraceHit(value.candidate().childChunkId(),
-                value.candidate().documentRevisionId(), values.indexOf(value) + 1, value.score(),
-                value.candidate().contentRef(), value.candidate().textHash())).toList();
-    }
-
-    private static ContextTrace toContext(EvidenceBundle bundle,
-                                          RetrievalProfileRepository.RetrievalProfileVersion profile) {
-        int totalTokens = bundle.evidence().stream().mapToInt(value ->
-                Math.max(1, value.anchor().tokenEnd() - value.anchor().tokenStart())).sum();
-        return new ContextTrace(bundle.evidence().stream().map(EvidenceBundle.Evidence::childChunkId).toList(),
-                totalTokens, profile.maxContextTokens(), totalTokens >= profile.maxContextTokens()
-                        && profile.maxContextTokens() > 0);
+    private static ContextTrace toContext(RetrievalService.ContextTrace context) {
+        return new ContextTrace(context.childChunkIds(), context.totalTokens(), context.maxContextTokens(),
+                context.truncated());
     }
 
     private static EvidenceTrace toEvidence(EvidenceBundle bundle) {

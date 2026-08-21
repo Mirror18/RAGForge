@@ -4,18 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.audit.AuditOutboxService;
 import com.ragforge.server.common.ApiException;
 import com.ragforge.server.identity.SessionPrincipal;
-import com.ragforge.server.index.CandidateIndexStore;
 import com.ragforge.server.index.IndexRepository;
 import com.ragforge.server.provider.SpaceAuthorization;
-import com.ragforge.server.retrieval.Bm25CandidateStore;
-import com.ragforge.server.retrieval.ChunkCatalog;
 import com.ragforge.server.retrieval.EvidenceBundle;
 import com.ragforge.server.retrieval.ExpansionMode;
-import com.ragforge.server.retrieval.Reranker;
-import com.ragforge.server.retrieval.RetrievalCandidate;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
 import com.ragforge.server.retrieval.RetrievalService;
-import com.ragforge.server.retrieval.RrfMerger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -30,9 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -53,10 +45,6 @@ class RetrievalPlaygroundServiceTest {
     @Mock SpaceAuthorization authorization;
     @Mock RetrievalProfileRepository profiles;
     @Mock IndexRepository indexes;
-    @Mock CandidateIndexStore dense;
-    @Mock Bm25CandidateStore bm25;
-    @Mock ChunkCatalog catalog;
-    @Mock Reranker reranker;
     @Mock RetrievalService retrieval;
     @Mock AuditOutboxService audit;
 
@@ -82,22 +70,25 @@ class RetrievalPlaygroundServiceTest {
         when(indexes.findVersion(SPACE, INDEX)).thenReturn(java.util.Optional.of(index()));
         when(profiles.findVersion(SPACE, PROFILE_A, 1)).thenReturn(java.util.Optional.of(profileA));
         when(profiles.findVersion(SPACE, PROFILE_B, 3)).thenReturn(java.util.Optional.of(profileB));
-        CandidateIndexStore.CandidateHit hit = new CandidateIndexStore.CandidateHit(CHILD, 0.91, SPACE, INDEX,
-                REVISION, PARENT, "chunk://child/1", HASH);
-        RetrievalCandidate lexical = new RetrievalCandidate(SPACE, INDEX, CHILD, REVISION, PARENT,
-                "chunk://child/1", HASH, 1.4, RetrievalCandidate.Source.BM25, "internal text");
-        RrfMerger.MergedCandidate merged = new RrfMerger.MergedCandidate(SPACE, INDEX, CHILD, REVISION, PARENT,
-                "chunk://child/1", HASH, 0.91, 1.4, 1, 1, 0.1, "internal text");
-        when(dense.search(anyString(), eq(SPACE), eq(INDEX), eq(List.of(0.1, 0.2)), eq(5)))
-                .thenReturn(List.of(hit));
-        when(bm25.search(SPACE, INDEX, "hello world", 5)).thenReturn(List.of(lexical));
-        when(reranker.rerank(anyString(), anyList(), eq(5)))
-                .thenReturn(List.of(new Reranker.Result(merged, 0.8, "test")));
         EvidenceBundle bundle = new EvidenceBundle(SPACE, INDEX, PROFILE_A, 1, " hello  world ", "hello world",
                 List.of(new EvidenceBundle.Evidence(UUID.randomUUID(), SPACE, INDEX, REVISION, PARENT, CHILD,
                         "chunk://child/1", HASH, new EvidenceBundle.Anchor(List.of("Guide"), 0, 10, 0, 20,
                                 2, null, null, 10, 20, null), 0.91, 1.4, 0.1, 0.8, "direct-hit")), false, null);
-        when(retrieval.retrieve(any())).thenReturn(bundle);
+        RetrievalService.TraceCandidate dense = new RetrievalService.TraceCandidate(CHILD, REVISION,
+                "chunk://child/1", HASH, 1, 0.91, "dense");
+        RetrievalService.TraceCandidate bm25 = new RetrievalService.TraceCandidate(CHILD, REVISION,
+                "chunk://child/1", HASH, 1, 1.4, "bm25");
+        RetrievalService.TraceCandidate rrf = new RetrievalService.TraceCandidate(CHILD, REVISION,
+                "chunk://child/1", HASH, 1, 0.1, "rrf");
+        RetrievalService.TraceCandidate rerank = new RetrievalService.TraceCandidate(CHILD, REVISION,
+                "chunk://child/1", HASH, 1, 0.8, "test");
+        RetrievalService.Trace serviceTrace = new RetrievalService.Trace(
+                new RetrievalService.StageTrace(List.of(dense), 0.1),
+                new RetrievalService.StageTrace(List.of(bm25), 0.2),
+                new RetrievalService.StageTrace(List.of(rrf), 0.3),
+                new RetrievalService.StageTrace(List.of(rerank), 0.4),
+                new RetrievalService.ContextTrace(List.of(CHILD), 10, 1000, false), bundle);
+        when(retrieval.trace(any())).thenReturn(serviceTrace);
 
         RetrievalPlaygroundService.Experiment result = service().run(SPACE,
                 new RetrievalPlaygroundService.ExperimentRequest(" hello  world ", INDEX,
@@ -115,7 +106,7 @@ class RetrievalPlaygroundServiceTest {
         assertThat(result.activeProfileUnchanged()).isTrue();
         String json = new ObjectMapper().findAndRegisterModules().writeValueAsString(result);
         assertThat(json).doesNotContain("queryVector", "fullText", "rawText", "vector", "credential", "secret")
-                .contains("evidenceId").doesNotContain("internal text");
+                .doesNotContain("searchableText", "internal text").contains("evidenceId");
         verify(indexes, never()).activate(any(), any(), any());
         verify(profiles, never()).activateProfile(any(), any(), anyInt(), any());
         ArgumentCaptor<Map<String, ?>> payload = ArgumentCaptor.forClass(Map.class);
@@ -123,11 +114,15 @@ class RetrievalPlaygroundServiceTest {
                 payload.capture());
         assertThat(payload.getValue()).doesNotContainKey("query").doesNotContainKey("queryVector")
                 .doesNotContainKey("fullText");
+        verify(retrieval, never()).retrieve(any());
+        ArgumentCaptor<RetrievalService.Request> retrievalRequests = ArgumentCaptor.forClass(RetrievalService.Request.class);
+        verify(retrieval, org.mockito.Mockito.times(2)).trace(retrievalRequests.capture());
+        assertThat(retrievalRequests.getAllValues()).extracting(request -> request.profile().profileId())
+                .containsExactly(PROFILE_A, PROFILE_B);
     }
 
     private RetrievalPlaygroundService service() {
-        return new RetrievalPlaygroundService(authorization, profiles, indexes, dense, bm25, catalog, reranker,
-                retrieval, audit);
+        return new RetrievalPlaygroundService(authorization, profiles, indexes, retrieval, audit);
     }
 
     private static RetrievalPlaygroundService.ExperimentRequest request(List<Double> queryVector) {
