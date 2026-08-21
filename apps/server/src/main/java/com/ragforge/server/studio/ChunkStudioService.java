@@ -134,17 +134,19 @@ public class ChunkStudioService {
         ChunkRepository.ChunkOverride created;
         try {
             created = chunks.createOverride(new ChunkRepository.NewChunkOverride(overrideId, spaceId, childChunkId,
-                    request.documentRevisionId(), request.reason(), request.textHash().toLowerCase(java.util.Locale.ROOT),
-                    principal.userId(), Instant.now()));
+                    request.documentRevisionId(), request.contentRef(), request.reason(),
+                    request.textHash().toLowerCase(java.util.Locale.ROOT), principal.userId(), Instant.now()));
         } catch (IllegalArgumentException exception) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "override_invalid", "Invalid override",
                     "The override could not be created");
         }
+        String contentRef = created.replacementContentRef() == null
+                ? request.contentRef() : created.replacementContentRef();
         audit.record("chunk.override.created", principal.userId(), spaceId, created.id(), correlationId,
                 Map.of("childChunkId", childChunkId, "documentRevisionId", request.documentRevisionId(),
                         "overrideId", created.id(), "version", created.versionNo(), "state", created.state().name(),
-                        "contentRef", request.contentRef(), "reasonCode", "CLIENT_SUPPLIED"));
-        return toResponse(spaceId, created, request.contentRef());
+                        "contentRef", contentRef, "reasonCode", "CLIENT_SUPPLIED"));
+        return toResponse(spaceId, created, contentRef);
     }
 
     @Transactional
@@ -185,8 +187,11 @@ public class ChunkStudioService {
                 throw new ApiException(HttpStatus.CONFLICT, "override_version_conflict", "Override version conflict",
                         "The override could not be transitioned");
             }
-            String contentRef = studio.findOverrideContentRef(spaceId, overrideId)
-                    .orElseGet(() -> "override:" + overrideId);
+            String contentRef = updated.replacementContentRef();
+            if (contentRef == null) {
+                contentRef = studio.findOverrideContentRef(spaceId, overrideId)
+                        .orElseGet(() -> "override:" + overrideId);
+            }
             audit.record("chunk.override.transitioned", principal.userId(), spaceId, updated.id(), correlationId,
                     Map.of("childChunkId", childChunkId, "overrideId", updated.id(),
                             "fromState", current.state().name(), "toState", updated.state().name(),

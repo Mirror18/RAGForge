@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -66,7 +67,8 @@ class ChunkStudioServiceTest {
         when(studio.findChild(SPACE, CHILD)).thenReturn(Optional.of(child(REVISION)));
         when(studio.documentRevisionExists(SPACE, NEW_REVISION)).thenReturn(true);
         ChunkRepository.ChunkOverride created = new ChunkRepository.ChunkOverride(UUID.randomUUID(), SPACE, CHILD,
-                NEW_REVISION, 1, OverrideState.NEEDS_REVIEW, "fix", HASH, USER, NOW, NOW);
+                NEW_REVISION, 1, OverrideState.NEEDS_REVIEW, "fix", HASH, USER, NOW, NOW,
+                "opaque://replacement/1");
         when(chunks.createOverride(any())).thenReturn(created);
 
         ChunkStudioService.OverrideResponse response = service().createOverride(SPACE, CHILD,
@@ -86,7 +88,7 @@ class ChunkStudioServiceTest {
         when(studio.findChild(SPACE, CHILD)).thenReturn(Optional.of(child(REVISION)));
         UUID overrideId = UUID.randomUUID();
         ChunkRepository.ChunkOverride current = new ChunkRepository.ChunkOverride(overrideId, SPACE, CHILD, REVISION,
-                2, OverrideState.ACTIVE, "fix", HASH, USER, NOW, NOW);
+                2, OverrideState.ACTIVE, "fix", HASH, USER, NOW, NOW, "opaque://replacement/1");
         when(chunks.findById(SPACE, overrideId)).thenReturn(Optional.of(current));
         when(chunks.findLatestOverride(SPACE, CHILD)).thenReturn(Optional.of(current));
 
@@ -102,12 +104,46 @@ class ChunkStudioServiceTest {
     }
 
     @Test
+    void transitionUsesPersistedReferenceBeforeHistoricalAuditFallback() {
+        when(studio.findChild(SPACE, CHILD)).thenReturn(Optional.of(child(REVISION)));
+        UUID overrideId = UUID.randomUUID();
+        ChunkRepository.ChunkOverride current = new ChunkRepository.ChunkOverride(overrideId, SPACE, CHILD, REVISION,
+                1, OverrideState.ACTIVE, "fix", HASH, USER, NOW, NOW, "opaque://replacement/1");
+        ChunkRepository.ChunkOverride updated = new ChunkRepository.ChunkOverride(UUID.randomUUID(), SPACE, CHILD,
+                REVISION, 2, OverrideState.NEEDS_REVIEW, "fix", HASH, USER, NOW, NOW.plusSeconds(60),
+                "opaque://replacement/1");
+        when(chunks.findById(SPACE, overrideId)).thenReturn(Optional.of(current));
+        when(chunks.findLatestOverride(SPACE, CHILD)).thenReturn(Optional.of(current));
+        when(chunks.updateOverrideState(eq(SPACE), eq(overrideId), eq(OverrideState.NEEDS_REVIEW), any()))
+                .thenReturn(updated);
+
+        ChunkStudioService.OverrideResponse response = service().transition(SPACE, CHILD, overrideId,
+                new ChunkStudioService.TransitionRequest(OverrideState.NEEDS_REVIEW, 1, "review"), principal,
+                UUID.randomUUID());
+
+        assertThat(response.contentRef()).isEqualTo("opaque://replacement/1");
+        verify(studio, never()).findOverrideContentRef(any(), any());
+    }
+
+    @Test
     void sensitiveOpaqueReferenceAndViewerWriteAreRejected() {
         doThrow(new ApiException(org.springframework.http.HttpStatus.FORBIDDEN, "space_editor_required", "Forbidden", "write"))
                 .when(authorization).requireWrite(SPACE, principal);
 
         assertThatThrownBy(() -> service().createOverride(SPACE, CHILD,
                 new ChunkStudioService.CreateOverrideRequest(REVISION, "fullText://secret", HASH, "fix"),
+                principal, UUID.randomUUID())).isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void blankAndSensitiveOpaqueReferencesAreRejected() {
+        when(studio.findChild(SPACE, CHILD)).thenReturn(Optional.of(child(REVISION)));
+
+        assertThatThrownBy(() -> service().createOverride(SPACE, CHILD,
+                new ChunkStudioService.CreateOverrideRequest(REVISION, " ", HASH, "fix"),
+                principal, UUID.randomUUID())).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> service().createOverride(SPACE, CHILD,
+                new ChunkStudioService.CreateOverrideRequest(REVISION, "opaque://fullText/1", HASH, "fix"),
                 principal, UUID.randomUUID())).isInstanceOf(ApiException.class);
     }
 
