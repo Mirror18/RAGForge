@@ -38,6 +38,44 @@ public class PromptRepository {
         return findVersion(input.spaceId(), input.id()).orElseThrow();
     }
 
+    /**
+     * Stores the redacted prompt identity consumed by a RAG run.  The RAG
+     * projection deliberately has no template/content argument; callers must
+     * provide a content hash and an opaque address instead.
+     */
+    @Transactional
+    public RagPromptVersion createRagVersion(NewRagPromptVersion input) {
+        jdbc.update("""
+                        INSERT INTO rag_prompt_versions
+                            (id, space_id, prompt_key, version_no, purpose, prompt_opaque_ref, prompt_hash,
+                             variables_schema, output_contract, created_by_user_id, created_at, correlation_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, ?)
+                        """, input.id(), input.spaceId(), input.promptKey(), input.versionNo(), input.purpose(),
+                input.promptOpaqueRef(), input.promptHash(), jsonOrEmpty(input.variablesSchemaJson()),
+                jsonOrEmpty(input.outputContractJson()), input.createdByUserId(), timestamp(input.now()),
+                input.correlationId());
+        return findRagVersion(input.spaceId(), input.id()).orElseThrow();
+    }
+
+    public Optional<RagPromptVersion> findRagVersion(UUID spaceId, UUID id) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                            SELECT id, space_id, prompt_key, version_no, purpose, prompt_opaque_ref, prompt_hash,
+                                   variables_schema, output_contract, created_by_user_id, created_at, correlation_id
+                            FROM rag_prompt_versions
+                            WHERE id = ? AND space_id = ?
+                            """, (rs, rowNum) -> new RagPromptVersion(
+                    rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                    rs.getString("prompt_key"), rs.getInt("version_no"), rs.getString("purpose"),
+                    rs.getString("prompt_opaque_ref"), rs.getString("prompt_hash"),
+                    rs.getString("variables_schema"), rs.getString("output_contract"),
+                    rs.getObject("created_by_user_id", UUID.class), instant(rs, "created_at"),
+                    rs.getObject("correlation_id", UUID.class)), id, spaceId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     public Optional<PromptVersion> findVersion(UUID spaceId, UUID id) {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""
@@ -134,6 +172,18 @@ public class PromptRepository {
                                 String templateHash, String variablesSchemaJson, String outputContractJson,
                                 String changeNote, UUID createdByUserId, PromptStatus status, Instant createdAt,
                                 Instant updatedAt, UUID correlationId) {
+    }
+
+    public record NewRagPromptVersion(UUID id, UUID spaceId, String promptKey, int versionNo, String purpose,
+                                      String promptOpaqueRef, String promptHash, String variablesSchemaJson,
+                                      String outputContractJson, UUID createdByUserId, Instant now,
+                                      UUID correlationId) {
+    }
+
+    public record RagPromptVersion(UUID id, UUID spaceId, String promptKey, int versionNo, String purpose,
+                                   String promptOpaqueRef, String promptHash, String variablesSchemaJson,
+                                   String outputContractJson, UUID createdByUserId, Instant createdAt,
+                                   UUID correlationId) {
     }
 
     public record NewSpacePromptBinding(UUID id, UUID spaceId, String bindingKey, int versionNo,
