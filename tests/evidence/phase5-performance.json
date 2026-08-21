@@ -1,0 +1,35 @@
+{
+  "evidence_version": "phase5-performance-v1",
+  "synthetic_only": true,
+  "measurement_method": "versioned deterministic fixture; retrieval is represented by TTFT proxy and generation by E2E-minus-TTFT proxy",
+  "code_commit": "be8602a37ef0e5e0ef13abccd6703e3c6be39b29",
+  "dataset_version": "phase5-generation-v1",
+  "metrics_ms": {
+    "retrieval_proxy": {
+      "p50": 29.4,
+      "p95": 32.6
+    },
+    "generation_proxy": {
+      "p50": 50.300000000000004,
+      "p95": 56.199999999999996
+    },
+    "ttft": {
+      "p50": 29.4
+    },
+    "e2e": {
+      "p50": 79.7,
+      "p95": 88.8
+    }
+  },
+  "tokens": {
+    "input": 1828,
+    "output": 419
+  },
+  "provider_calls": 12,
+  "estimated_cost": 0.008,
+  "timeout_count": 0,
+  "retry_count": 0,
+  "degraded_count": 0,
+  "cancel_count": 0,
+  "passed": true
+}

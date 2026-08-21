@@ -1,0 +1,46 @@
+{
+  "evidence_version": "phase5-security-v1",
+  "synthetic_only": false,
+  "code_commit": "be8602a37ef0e5e0ef13abccd6703e3c6be39b29",
+  "tests": [
+    {
+      "name": "phase5-contracts",
+      "command": "python -m unittest discover -s tests/contract -p test_phase5*.py",
+      "exit_code": 0,
+      "tests_run": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    {
+      "name": "agent-tool-security",
+      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl apps/server -am -Dtest=AgentToolSecurityTest -Dsurefire.failIfNoSpecifiedTests=false test",
+      "exit_code": 0,
+      "tests_run": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    {
+      "name": "answer-security-and-egress",
+      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl apps/server -am -Dtest=RAGAnswerServiceTest,AnswerApiControllerTest,Phase5ProviderIntegrationTest -Dsurefire.failIfNoSpecifiedTests=false test",
+      "exit_code": 0,
+      "tests_run": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": true
+    }
+  ],
+  "invariants": {
+    "unauthorized_cloud_calls": 0,
+    "cross_space_leaks": 0,
+    "evidence_outside_bundle": 0,
+    "ssrf_private_loopback_link_local_metadata_bypass": 0,
+    "shell_sql_external_write_capability": 0,
+    "raw_prompt_or_provider_body_in_audit_projection": 0
+  },
+  "passed": true
+}
