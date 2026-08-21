@@ -199,6 +199,142 @@ public class RunRepository {
         }
     }
 
+    /** Stores the immutable RAG run projection without changing the no-RAG run row. */
+    @Transactional
+    public RagRunProvenance createRagRunProvenance(NewRagRunProvenance input) {
+        jdbc.update(ragProvenanceInsert("rag_run_provenance"),
+                input.id(), input.spaceId(), input.runId(), input.ragPromptVersionId(), input.promptHash(),
+                input.indexVersionId(), input.retrievalProfileId(), input.retrievalProfileVersion(),
+                input.modelRouteVersionId(), input.modelProfileVersionId(), input.evidenceBundleVersion(),
+                input.evidenceBundleHash(), input.evidenceBundleRef(), jsonOrEmpty(input.toolSchemaVersionsJson()),
+                input.datasetHash(), input.configHash(), input.traceId(), input.correlationId(), timestamp(input.createdAt()));
+        return findRagRunProvenance(input.spaceId(), input.runId()).orElseThrow();
+    }
+
+    /** Stores one immutable RAG step projection with an explicit space-scoped step FK. */
+    @Transactional
+    public RagStepProvenance createRagStepProvenance(NewRagStepProvenance input) {
+        jdbc.update(ragProvenanceInsert("rag_step_provenance"),
+                input.id(), input.spaceId(), input.runId(), input.stepId(), input.ragPromptVersionId(), input.promptHash(),
+                input.indexVersionId(), input.retrievalProfileId(), input.retrievalProfileVersion(),
+                input.modelRouteVersionId(), input.modelProfileVersionId(), input.evidenceBundleVersion(),
+                input.evidenceBundleHash(), input.evidenceBundleRef(), jsonOrEmpty(input.toolSchemaVersionsJson()),
+                input.datasetHash(), input.configHash(), input.traceId(), input.correlationId(), timestamp(input.createdAt()));
+        return findRagStepProvenance(input.spaceId(), input.stepId()).orElseThrow();
+    }
+
+    /** Stores one immutable RAG model-invocation projection with no request/response body. */
+    @Transactional
+    public RagModelInvocationProvenance createRagModelInvocationProvenance(NewRagModelInvocationProvenance input) {
+        jdbc.update(ragProvenanceInsert("rag_model_invocation_provenance"),
+                input.id(), input.spaceId(), input.runId(), input.stepId(), input.modelInvocationId(),
+                input.ragPromptVersionId(), input.promptHash(), input.indexVersionId(), input.retrievalProfileId(),
+                input.retrievalProfileVersion(), input.modelRouteVersionId(), input.modelProfileVersionId(),
+                input.evidenceBundleVersion(), input.evidenceBundleHash(), input.evidenceBundleRef(),
+                jsonOrEmpty(input.toolSchemaVersionsJson()), input.datasetHash(), input.configHash(), input.traceId(),
+                input.correlationId(), timestamp(input.createdAt()));
+        return findRagModelInvocationProvenance(input.spaceId(), input.modelInvocationId()).orElseThrow();
+    }
+
+    public Optional<RagRunProvenance> findRagRunProvenance(UUID spaceId, UUID runId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject(ragSelect("rag_run_provenance", "run_id = ?"),
+                    (rs, rowNum) -> mapRagRunProvenance(rs), spaceId, runId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public Optional<RagStepProvenance> findRagStepProvenance(UUID spaceId, UUID stepId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject(ragSelect("rag_step_provenance", "step_id = ?"),
+                    (rs, rowNum) -> mapRagStepProvenance(rs), spaceId, stepId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public Optional<RagModelInvocationProvenance> findRagModelInvocationProvenance(UUID spaceId,
+                                                                                    UUID modelInvocationId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject(
+                    ragSelect("rag_model_invocation_provenance", "model_invocation_id = ?"),
+                    (rs, rowNum) -> mapRagModelInvocationProvenance(rs), spaceId, modelInvocationId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Returns the redacted replay projection only when the requested run and
+     * every child query are in the same space.  A foreign-space lookup is
+     * indistinguishable from a missing projection.
+     */
+    public Optional<RagReplayProjection> findRagReplayProjection(UUID spaceId, UUID runId) {
+        Optional<RagRunProvenance> run = findRagRunProvenance(spaceId, runId);
+        if (run.isEmpty()) {
+            return Optional.empty();
+        }
+        List<RagStepProvenance> steps = jdbc.query(
+                ragSelect("rag_step_provenance", "run_id = ? ORDER BY created_at, id"),
+                (rs, rowNum) -> mapRagStepProvenance(rs), spaceId, runId);
+        List<RagModelInvocationProvenance> invocations = jdbc.query(
+                ragSelect("rag_model_invocation_provenance", "run_id = ? ORDER BY created_at, id"),
+                (rs, rowNum) -> mapRagModelInvocationProvenance(rs), spaceId, runId);
+        return Optional.of(new RagReplayProjection(run.get(), steps, invocations));
+    }
+
+    private String ragProvenanceInsert(String table) {
+        String columns = "id, space_id, run_id, "
+                + ("rag_step_provenance".equals(table) ? "step_id, " : "")
+                + ("rag_model_invocation_provenance".equals(table) ? "step_id, model_invocation_id, " : "")
+                + "rag_prompt_version_id, prompt_hash, index_version_id, retrieval_profile_id, retrieval_profile_version, "
+                + "model_route_version_id, model_profile_version_id, evidence_bundle_version, evidence_bundle_hash, "
+                + "evidence_bundle_ref, tool_schema_versions, dataset_hash, config_hash, trace_id, correlation_id, created_at";
+        return "INSERT INTO " + table + " (" + columns + ") VALUES ("
+                + "?, ?, ?, "
+                + ("rag_run_provenance".equals(table) ? "" : ("rag_step_provenance".equals(table) ? "?, " : "?, ?, "))
+                + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, ?, ?)";
+    }
+
+    private String ragSelect(String table, String predicate) {
+        return "SELECT id, space_id, run_id, "
+                + ("rag_step_provenance".equals(table) ? "step_id, " : "")
+                + ("rag_model_invocation_provenance".equals(table) ? "step_id, model_invocation_id, " : "")
+                + "rag_prompt_version_id, prompt_hash, index_version_id, retrieval_profile_id, retrieval_profile_version, "
+                + "model_route_version_id, model_profile_version_id, evidence_bundle_version, evidence_bundle_hash, "
+                + "evidence_bundle_ref, tool_schema_versions, dataset_hash, config_hash, trace_id, correlation_id, created_at "
+                + "FROM " + table + " WHERE space_id = ? AND " + predicate;
+    }
+
+    private RagRunProvenance mapRagRunProvenance(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new RagRunProvenance(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("run_id", UUID.class), commonRagValues(rs));
+    }
+
+    private RagStepProvenance mapRagStepProvenance(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new RagStepProvenance(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("run_id", UUID.class), rs.getObject("step_id", UUID.class), commonRagValues(rs));
+    }
+
+    private RagModelInvocationProvenance mapRagModelInvocationProvenance(java.sql.ResultSet rs)
+            throws java.sql.SQLException {
+        return new RagModelInvocationProvenance(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("run_id", UUID.class), rs.getObject("step_id", UUID.class),
+                rs.getObject("model_invocation_id", UUID.class), commonRagValues(rs));
+    }
+
+    private RagValues commonRagValues(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new RagValues(rs.getObject("rag_prompt_version_id", UUID.class), rs.getString("prompt_hash"),
+                rs.getObject("index_version_id", UUID.class), rs.getObject("retrieval_profile_id", UUID.class),
+                rs.getInt("retrieval_profile_version"), rs.getObject("model_route_version_id", UUID.class),
+                rs.getObject("model_profile_version_id", UUID.class), rs.getInt("evidence_bundle_version"),
+                rs.getString("evidence_bundle_hash"), rs.getString("evidence_bundle_ref"),
+                rs.getString("tool_schema_versions"), rs.getString("dataset_hash"), rs.getString("config_hash"),
+                rs.getObject("trace_id", UUID.class), rs.getObject("correlation_id", UUID.class),
+                instant(rs, "created_at"));
+    }
+
     private RunRecord mapRun(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new RunRecord(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
                 rs.getObject("conversation_id", UUID.class), rs.getObject("actor_user_id", UUID.class),
@@ -358,5 +494,102 @@ public class RunRepository {
                                     UsageSource source, String dedupeKey, Long inputTokens, Long outputTokens, Long totalTokens,
                                     java.math.BigDecimal estimatedCost, String currency, String metadataJson,
                                     Instant createdAt, Instant updatedAt, UUID correlationId) {
+    }
+
+    public record NewRagRunProvenance(UUID id, UUID spaceId, UUID runId, UUID ragPromptVersionId,
+                                      String promptHash, UUID indexVersionId, UUID retrievalProfileId,
+                                      int retrievalProfileVersion, UUID modelRouteVersionId,
+                                      UUID modelProfileVersionId, int evidenceBundleVersion,
+                                      String evidenceBundleHash, String evidenceBundleRef,
+                                      String toolSchemaVersionsJson, String datasetHash, String configHash,
+                                      UUID traceId, UUID correlationId, Instant createdAt) {
+    }
+
+    public record NewRagStepProvenance(UUID id, UUID spaceId, UUID runId, UUID stepId, UUID ragPromptVersionId,
+                                       String promptHash, UUID indexVersionId, UUID retrievalProfileId,
+                                       int retrievalProfileVersion, UUID modelRouteVersionId,
+                                       UUID modelProfileVersionId, int evidenceBundleVersion,
+                                       String evidenceBundleHash, String evidenceBundleRef,
+                                       String toolSchemaVersionsJson, String datasetHash, String configHash,
+                                       UUID traceId, UUID correlationId, Instant createdAt) {
+    }
+
+    public record NewRagModelInvocationProvenance(UUID id, UUID spaceId, UUID runId, UUID stepId,
+                                                  UUID modelInvocationId, UUID ragPromptVersionId,
+                                                  String promptHash, UUID indexVersionId,
+                                                  UUID retrievalProfileId, int retrievalProfileVersion,
+                                                  UUID modelRouteVersionId, UUID modelProfileVersionId,
+                                                  int evidenceBundleVersion, String evidenceBundleHash,
+                                                  String evidenceBundleRef, String toolSchemaVersionsJson,
+                                                  String datasetHash, String configHash, UUID traceId,
+                                                  UUID correlationId, Instant createdAt) {
+    }
+
+    public record RagRunProvenance(UUID id, UUID spaceId, UUID runId, UUID ragPromptVersionId,
+                                   String promptHash, UUID indexVersionId, UUID retrievalProfileId,
+                                   int retrievalProfileVersion, UUID modelRouteVersionId,
+                                   UUID modelProfileVersionId, int evidenceBundleVersion,
+                                   String evidenceBundleHash, String evidenceBundleRef,
+                                   String toolSchemaVersionsJson, String datasetHash, String configHash,
+                                   UUID traceId, UUID correlationId, Instant createdAt) {
+        private RagRunProvenance(UUID id, UUID spaceId, UUID runId, RagValues values) {
+            this(id, spaceId, runId, values.ragPromptVersionId(), values.promptHash(), values.indexVersionId(),
+                    values.retrievalProfileId(), values.retrievalProfileVersion(), values.modelRouteVersionId(),
+                    values.modelProfileVersionId(), values.evidenceBundleVersion(), values.evidenceBundleHash(),
+                    values.evidenceBundleRef(), values.toolSchemaVersionsJson(), values.datasetHash(),
+                    values.configHash(), values.traceId(), values.correlationId(), values.createdAt());
+        }
+    }
+
+    public record RagStepProvenance(UUID id, UUID spaceId, UUID runId, UUID stepId, UUID ragPromptVersionId,
+                                    String promptHash, UUID indexVersionId, UUID retrievalProfileId,
+                                    int retrievalProfileVersion, UUID modelRouteVersionId,
+                                    UUID modelProfileVersionId, int evidenceBundleVersion,
+                                    String evidenceBundleHash, String evidenceBundleRef,
+                                    String toolSchemaVersionsJson, String datasetHash, String configHash,
+                                    UUID traceId, UUID correlationId, Instant createdAt) {
+        private RagStepProvenance(UUID id, UUID spaceId, UUID runId, UUID stepId, RagValues values) {
+            this(id, spaceId, runId, stepId, values.ragPromptVersionId(), values.promptHash(), values.indexVersionId(),
+                    values.retrievalProfileId(), values.retrievalProfileVersion(), values.modelRouteVersionId(),
+                    values.modelProfileVersionId(), values.evidenceBundleVersion(), values.evidenceBundleHash(),
+                    values.evidenceBundleRef(), values.toolSchemaVersionsJson(), values.datasetHash(),
+                    values.configHash(), values.traceId(), values.correlationId(), values.createdAt());
+        }
+    }
+
+    public record RagModelInvocationProvenance(UUID id, UUID spaceId, UUID runId, UUID stepId,
+                                               UUID modelInvocationId, UUID ragPromptVersionId,
+                                               String promptHash, UUID indexVersionId, UUID retrievalProfileId,
+                                               int retrievalProfileVersion, UUID modelRouteVersionId,
+                                               UUID modelProfileVersionId, int evidenceBundleVersion,
+                                               String evidenceBundleHash, String evidenceBundleRef,
+                                               String toolSchemaVersionsJson, String datasetHash,
+                                               String configHash, UUID traceId, UUID correlationId,
+                                               Instant createdAt) {
+        private RagModelInvocationProvenance(UUID id, UUID spaceId, UUID runId, UUID stepId,
+                                             UUID modelInvocationId, RagValues values) {
+            this(id, spaceId, runId, stepId, modelInvocationId, values.ragPromptVersionId(), values.promptHash(),
+                    values.indexVersionId(), values.retrievalProfileId(), values.retrievalProfileVersion(),
+                    values.modelRouteVersionId(), values.modelProfileVersionId(), values.evidenceBundleVersion(),
+                    values.evidenceBundleHash(), values.evidenceBundleRef(), values.toolSchemaVersionsJson(),
+                    values.datasetHash(), values.configHash(), values.traceId(), values.correlationId(),
+                    values.createdAt());
+        }
+    }
+
+    public record RagReplayProjection(RagRunProvenance run, List<RagStepProvenance> steps,
+                                      List<RagModelInvocationProvenance> modelInvocations) {
+        public RagReplayProjection {
+            steps = List.copyOf(steps);
+            modelInvocations = List.copyOf(modelInvocations);
+        }
+    }
+
+    private record RagValues(UUID ragPromptVersionId, String promptHash, UUID indexVersionId,
+                             UUID retrievalProfileId, int retrievalProfileVersion, UUID modelRouteVersionId,
+                             UUID modelProfileVersionId, int evidenceBundleVersion,
+                             String evidenceBundleHash, String evidenceBundleRef, String toolSchemaVersionsJson,
+                             String datasetHash, String configHash, UUID traceId, UUID correlationId,
+                             Instant createdAt) {
     }
 }
