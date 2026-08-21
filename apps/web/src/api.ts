@@ -125,6 +125,21 @@ export interface ChunkOverrideResponse {
   };
 }
 
+export interface CreateChunkOverrideRequest {
+  documentRevisionId: string;
+  contentRef: string;
+  textHash: string;
+  reason: string;
+}
+
+export type ChunkOverrideTargetState = "ACTIVE" | "NEEDS_REVIEW" | "DISCARDED";
+
+export interface TransitionChunkOverrideRequest {
+  targetState: ChunkOverrideTargetState;
+  expectedVersion: number;
+  reason: string;
+}
+
 export interface RetrievalHit {
   childChunkId: string;
   documentRevisionId: string;
