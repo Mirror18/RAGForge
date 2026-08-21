@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/answer/abstention.v1.schema.json",
+  "title": "RAGForge Abstention v1",
+  "description": "Structured refusal/abstention projection. The message is safe user-facing explanation, never a secret, prompt, or raw provider response.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "abstention_id", "space_id", "correlation_id", "run_id", "reason_code", "evidence_ids", "message"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "v1"},
+    "abstention_id": {"$ref": "#/$defs/uuidV7"},
+    "space_id": {"$ref": "#/$defs/uuidV7"},
+    "correlation_id": {"$ref": "#/$defs/uuidV7"},
+    "run_id": {"$ref": "#/$defs/uuidV7"},
+    "reason_code": {"type": "string", "enum": ["NO_EVIDENCE", "LOW_CONFIDENCE", "EVIDENCE_CONFLICT", "POLICY_BLOCKED", "SPACE_ACCESS_DENIED", "TOOL_UNAUTHORIZED", "TOOL_FAILURE", "PROVIDER_UNAVAILABLE", "CANCELLED"]},
+    "evidence_ids": {"type": "array", "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/uuidV7"}},
+    "message": {"type": "string", "minLength": 1, "maxLength": 2000}
+  },
+  "x-ragforge-sensitive-fields-denied": ["prompt", "system_prompt", "provider_response", "secret", "credential_ref", "access_token", "full_text", "raw_text"],
+  "$defs": {"uuidV7": {"type": "string", "format": "uuidv7", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"}}
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": "v1",
+  "claim_id": "0190f5c2-7c1e-7ad2-8def-1234567890ab",
+  "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab",
+  "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab",
+  "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab",
+  "claim_text": "不应重复引用同一 evidence_id。",
+  "citation_tokens": ["0190f5c2-7c1e-7ad3-8def-1234567890ab", "0190f5c2-7c1e-7ad3-8def-1234567890ab"]
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": "v1",
+  "answer_id": "0190f5c2-7c1e-7ad1-8def-1234567890ab",
+  "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab",
+  "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab",
+  "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab",
+  "idempotency_key": "answer-run-001-v1",
+  "status": "COMPLETED",
+  "answer_text": "RAGForge 使用结构化 evidence_id 作为引用标识。",
+  "claims": [{"schema_version": "v1", "claim_id": "0190f5c2-7c1e-7ad2-8def-1234567890ab", "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab", "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab", "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab", "claim_text": "RAGForge 使用结构化 evidence_id 作为引用标识。", "citation_tokens": ["0190f5c2-7c1e-7ad3-8def-1234567890ab"]}],
+  "citations": [{"schema_version": "v1", "evidence_id": "0190f5c2-7c1e-7ad3-8def-1234567890ab", "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab", "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab", "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab", "evidence_bundle_id": "0190f5c2-7c1e-7ad5-8def-1234567890ab", "index_version_id": "0190f5c2-7c1e-7ad6-8def-1234567890ab", "document_revision_id": "0190f5c2-7c1e-7ad8-8def-1234567890ab", "parent_chunk_id": "0190f5c2-7c1e-7ad9-8def-1234567890ab", "child_chunk_id": "0190f5c2-7c1e-7ada-8def-1234567890ab", "content_ref": "artifact:doc-001/chunk-001", "text_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "anchor": {"heading_path": ["契约", "引用"], "token_start": 0, "token_end": 18, "char_start": 0, "char_end": 72}, "citation_allowed": true}],
+  "abstention": null,
+  "tool_call_ids": ["0190f5c2-7c1e-7adb-8def-1234567890ab"],
+  "provenance": {"evidence_bundle_id": "0190f5c2-7c1e-7ad5-8def-1234567890ab", "index_version_id": "0190f5c2-7c1e-7ad6-8def-1234567890ab", "retrieval_profile_id": "0190f5c2-7c1e-7ad7-8def-1234567890ab", "retrieval_profile_version": 1, "allow_list_version": "bundle-2026-08-21-v1"},
+  "created_at": "2026-08-21T00:00:00Z"
+}

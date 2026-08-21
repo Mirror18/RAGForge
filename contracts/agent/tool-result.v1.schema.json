@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/agent/tool-result.v1.schema.json",
+  "title": "RAGForge Read-only ToolResult v1",
+  "description": "Bounded, auditable read-only tool result. Outputs expose evidence/document references and hashes, never credentials, headers, or raw document/web body.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tool_result_id", "tool_call_id", "space_id", "correlation_id", "run_id", "idempotency_key", "sequence", "tool_name", "status", "output", "error_code", "completed_at"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "v1"},
+    "tool_result_id": {"$ref": "#/$defs/uuidV7"},
+    "tool_call_id": {"$ref": "#/$defs/uuidV7"},
+    "space_id": {"$ref": "#/$defs/uuidV7"},
+    "correlation_id": {"$ref": "#/$defs/uuidV7"},
+    "run_id": {"$ref": "#/$defs/uuidV7"},
+    "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 255, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "tool_name": {"type": "string", "enum": ["knowledge.search", "document.read", "web.fetch"]},
+    "status": {"type": "string", "enum": ["SUCCEEDED", "FAILED", "REJECTED", "TIMEOUT", "CANCELLED"]},
+    "output": {"oneOf": [{"$ref": "#/$defs/searchOutput"}, {"$ref": "#/$defs/documentOutput"}, {"$ref": "#/$defs/webOutput"}, {"type": "null"}]},
+    "error_code": {"type": ["string", "null"], "enum": ["UNAUTHORIZED_TOOL", "SPACE_ACCESS_DENIED", "RESOURCE_NOT_FOUND", "SSRF_BLOCKED", "ALLOW_LIST_DENIED", "OUTPUT_LIMIT", "TIMEOUT", "CANCELLED", "PROVIDER_UNAVAILABLE", null]},
+    "completed_at": {"type": "string", "format": "date-time"}
+  },
+  "x-ragforge-audit-projection": ["tool_call_id", "space_id", "correlation_id", "run_id", "tool_name", "status", "error_code", "output_hash", "started_at", "completed_at"],
+  "x-ragforge-sensitive-fields-denied": ["password", "secret", "api_key", "access_token", "credential_ref", "authorization", "cookie", "request_headers", "response_headers", "raw_prompt", "full_text", "raw_text", "document_content", "response_body"],
+  "$defs": {
+    "uuidV7": {"type": "string", "format": "uuidv7", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"},
+    "evidenceIds": {"type": "array", "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/uuidV7"}},
+    "searchOutput": {"type": "object", "additionalProperties": false, "required": ["evidence_ids", "allow_list_version", "truncated"], "properties": {"evidence_ids": {"$ref": "#/$defs/evidenceIds"}, "allow_list_version": {"type": "string", "minLength": 1, "maxLength": 64}, "truncated": {"type": "boolean"}}},
+    "documentOutput": {"type": "object", "additionalProperties": false, "required": ["document_revision_id", "child_chunk_id", "content_ref", "text_hash", "anchor"], "properties": {"document_revision_id": {"$ref": "#/$defs/uuidV7"}, "child_chunk_id": {"$ref": "#/$defs/uuidV7"}, "content_ref": {"type": "string", "minLength": 1, "maxLength": 512}, "text_hash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}, "anchor": {"type": "object", "additionalProperties": false, "required": ["token_start", "token_end", "char_start", "char_end"], "properties": {"token_start": {"type": "integer", "minimum": 0}, "token_end": {"type": "integer", "minimum": 0}, "char_start": {"type": "integer", "minimum": 0}, "char_end": {"type": "integer", "minimum": 0}}}}},
+    "webOutput": {"type": "object", "additionalProperties": false, "required": ["url", "content_ref", "content_hash", "content_type", "byte_count", "truncated"], "properties": {"url": {"type": "string", "format": "uri", "pattern": "^https://", "maxLength": 2048}, "content_ref": {"type": "string", "minLength": 1, "maxLength": 512}, "content_hash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}, "content_type": {"type": "string", "minLength": 1, "maxLength": 128}, "byte_count": {"type": "integer", "minimum": 0, "maximum": 10485760}, "truncated": {"type": "boolean"}}}
+  }
+}

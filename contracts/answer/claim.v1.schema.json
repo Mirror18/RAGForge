@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/answer/claim.v1.schema.json",
+  "title": "RAGForge Claim v1",
+  "description": "A user-visible answer claim. Every claim is backed by one or more raw EvidenceBundle evidence_id values; no generated citation text is accepted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "claim_id", "space_id", "correlation_id", "run_id", "claim_text", "citation_tokens"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "v1"},
+    "claim_id": {"$ref": "#/$defs/uuidV7"},
+    "space_id": {"$ref": "#/$defs/uuidV7"},
+    "correlation_id": {"$ref": "#/$defs/uuidV7"},
+    "run_id": {"$ref": "#/$defs/uuidV7"},
+    "claim_text": {"type": "string", "minLength": 1, "maxLength": 20000},
+    "citation_tokens": {"type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/evidenceId"}, "description": "Only the exact EvidenceBundle.evidence_id is valid. Do not use [1], filenames, URLs, or prefixed/free-form tokens."}
+  },
+  "x-ragforge-token-rule": "citation_tokens accepts evidence_id only; the server resolves each token against the current EvidenceBundle before persistence or emission.",
+  "$defs": {
+    "uuidV7": {"type": "string", "format": "uuidv7", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"},
+    "evidenceId": {"$ref": "#/$defs/uuidV7"}
+  }
+}

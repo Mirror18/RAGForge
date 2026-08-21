@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/answer/citation.v1.schema.json",
+  "title": "RAGForge Citation v1",
+  "description": "Server-created citation projection. evidence_id must be an allow-listed member of the current EvidenceBundle; this object never carries a quote, URL, filename, or document body.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evidence_id", "space_id", "correlation_id", "run_id", "evidence_bundle_id", "index_version_id", "document_revision_id", "parent_chunk_id", "child_chunk_id", "content_ref", "text_hash", "anchor", "citation_allowed"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "v1"},
+    "evidence_id": {"$ref": "#/$defs/uuidV7"},
+    "space_id": {"$ref": "#/$defs/uuidV7"},
+    "correlation_id": {"$ref": "#/$defs/uuidV7"},
+    "run_id": {"$ref": "#/$defs/uuidV7"},
+    "evidence_bundle_id": {"$ref": "#/$defs/uuidV7"},
+    "index_version_id": {"$ref": "#/$defs/uuidV7"},
+    "document_revision_id": {"$ref": "#/$defs/uuidV7"},
+    "parent_chunk_id": {"$ref": "#/$defs/uuidV7"},
+    "child_chunk_id": {"$ref": "#/$defs/uuidV7"},
+    "content_ref": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"},
+    "text_hash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "anchor": {"$ref": "#/$defs/anchor"},
+    "citation_allowed": {"type": "boolean", "const": true}
+  },
+  "x-ragforge-validation": {
+    "evidence_id": "must exist in the current EvidenceBundle and be unique within the answer",
+    "space_id": "must equal the authenticated request space and the EvidenceBundle space_id",
+    "provenance": "document_revision_id, parent_chunk_id, child_chunk_id, content_ref and anchor are server-derived",
+    "forbidden": ["quote", "citation_text", "filename", "url", "full_text", "raw_text", "document_content"]
+  },
+  "$defs": {
+    "uuidV7": {"type": "string", "format": "uuidv7", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"},
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["token_start", "token_end", "char_start", "char_end"],
+      "properties": {
+        "heading_path": {"type": "array", "maxItems": 20, "items": {"type": "string", "minLength": 1, "maxLength": 256}},
+        "token_start": {"type": "integer", "minimum": 0},
+        "token_end": {"type": "integer", "minimum": 0},
+        "char_start": {"type": "integer", "minimum": 0},
+        "char_end": {"type": "integer", "minimum": 0},
+        "page_number": {"type": ["integer", "null"], "minimum": 1},
+        "sheet": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+        "slide_number": {"type": ["integer", "null"], "minimum": 1},
+        "line_start": {"type": ["integer", "null"], "minimum": 1},
+        "line_end": {"type": ["integer", "null"], "minimum": 1},
+        "table_cell": {"type": ["string", "null"], "minLength": 1, "maxLength": 64}
+      },
+      "x-ragforge-range-invariant": ["token_start <= token_end", "char_start <= char_end"]
+    }
+  }
+}

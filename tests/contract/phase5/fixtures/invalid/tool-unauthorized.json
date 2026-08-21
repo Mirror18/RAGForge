@@ -1,0 +1,13 @@
+{
+  "schema_version": "v1",
+  "tool_call_id": "0190f5c2-7c1e-7adb-8def-1234567890ab",
+  "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab",
+  "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab",
+  "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab",
+  "step_id": "0190f5c2-7c1e-7add-8def-1234567890ab",
+  "idempotency_key": "tool-call-shell-001",
+  "sequence": 1,
+  "tool_name": "shell.exec",
+  "arguments": {"query": "dir", "index_version_id": "0190f5c2-7c1e-7ad6-8def-1234567890ab", "retrieval_profile_id": "0190f5c2-7c1e-7ad7-8def-1234567890ab", "retrieval_profile_version": 1, "limit": 5},
+  "requested_at": "2026-08-21T00:00:00Z"
+}
