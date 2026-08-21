@@ -2,9 +2,12 @@ package com.ragforge.server.answer.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ragforge.server.answer.Abstention;
+import com.ragforge.server.answer.AbstentionReason;
 import com.ragforge.server.answer.Answer;
 import com.ragforge.server.answer.AnswerProvenance;
 import com.ragforge.server.answer.AnswerRequest;
+import com.ragforge.server.answer.AnswerStatus;
 import com.ragforge.server.answer.Citation;
 import com.ragforge.server.answer.Claim;
 import com.ragforge.server.answer.RAGAnswerService;
@@ -28,6 +31,8 @@ import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -181,9 +186,41 @@ class AnswerApiControllerTest {
             assertThat(envelope.get("payload").has("space_id")).isFalse();
             if ("answer.citation".equals(types.getAllValues().get(index))) {
                 assertThat(envelope.at("/payload/citation/anchor/token_start").isInt()).isTrue();
+                assertThat(fields(envelope.at("/payload"))).containsExactlyInAnyOrder("answer_id", "claim_id", "citation");
+                assertThat(fields(envelope.at("/payload/citation"))).containsExactlyInAnyOrder(
+                        "schema_version", "evidence_id", "space_id", "correlation_id", "run_id",
+                        "evidence_bundle_id", "index_version_id", "document_revision_id", "parent_chunk_id",
+                        "child_chunk_id", "content_ref", "text_hash", "anchor", "citation_allowed");
+                assertThat(envelope.at("/payload/citation").has("claim_id")).isFalse();
+                assertThat(envelope.at("/payload/citation").has("idempotency_key")).isFalse();
+                assertThat(envelope.at("/payload/citation").has("evidence_bundle_version")).isFalse();
                 assertThat(envelope.at("/payload/citation").has("evidence_bundle_hash")).isFalse();
+                assertThat(envelope.at("/payload/citation").has("retrieval_profile_id")).isFalse();
+                assertThat(envelope.at("/payload/citation").has("retrieval_profile_version")).isFalse();
             }
         }
+    }
+
+    @Test
+    void abstentionPayloadMatchesTheStrictAbstentionContract() {
+        RunEventService eventService = mock(RunEventService.class);
+        Answer answer = Answer.refusal(spaceId, correlationId, runId, idempotencyKey, AnswerStatus.ABSTAINED,
+                new Abstention(spaceId, correlationId, runId, idempotencyKey, AbstentionReason.NO_EVIDENCE,
+                        List.of(evidenceId), "No verified evidence was available."), unavailableProvenance());
+        new AnswerEventPublisher(eventService, objectMapper).publish(answer);
+        ArgumentCaptor<String> payload = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> type = ArgumentCaptor.forClass(String.class);
+        verify(eventService, org.mockito.Mockito.times(2)).append(eq(spaceId), eq(runId), eq(correlationId),
+                type.capture(), eq(1), payload.capture());
+        int abstentionIndex = type.getAllValues().indexOf("answer.abstention");
+        RunEvent event = new RunEvent(UuidV7.random(), 1, runId, spaceId, correlationId, Instant.now(),
+                "answer.abstention", 1, payload.getAllValues().get(abstentionIndex));
+        JsonNode envelope = new AnswerSseEventAdapter(objectMapper).toEnvelope(event);
+        assertThat(fields(envelope.at("/payload"))).containsExactlyInAnyOrder("answer_id", "abstention");
+        assertThat(fields(envelope.at("/payload/abstention"))).containsExactlyInAnyOrder(
+                "schema_version", "abstention_id", "space_id", "correlation_id", "run_id",
+                "reason_code", "evidence_ids", "message");
+        assertThat(envelope.at("/payload/abstention").has("idempotency_key")).isFalse();
     }
 
     private Authentication authentication() {
@@ -211,5 +248,17 @@ class AnswerApiControllerTest {
                 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", UuidV7.random());
         return Answer.completed(spaceId, correlationId, runId, idempotencyKey, "Verified answer",
                 List.of(claim), List.of(citation), provenance);
+    }
+
+    private AnswerProvenance unavailableProvenance() {
+        return AnswerProvenance.unavailable(spaceId, correlationId, runId, idempotencyKey, UuidV7.random(),
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    }
+
+    private static Set<String> fields(JsonNode node) {
+        Set<String> fields = new HashSet<>();
+        node.fieldNames().forEachRemaining(fields::add);
+        return fields;
     }
 }

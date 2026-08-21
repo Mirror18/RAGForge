@@ -43,7 +43,6 @@ public final class AnswerEventPublisher {
             abstention.put("space_id", refusal.spaceId().toString());
             abstention.put("correlation_id", refusal.correlationId().toString());
             abstention.put("run_id", refusal.runId().toString());
-            abstention.put("idempotency_key", refusal.idempotencyKey());
             abstention.put("reason_code", refusal.reasonCode().name());
             abstention.set("evidence_ids", objectMapper.valueToTree(refusal.evidenceIds()));
             abstention.put("message", refusal.message());
@@ -82,7 +81,6 @@ public final class AnswerEventPublisher {
         node.put("run_id", citation.runId().toString());
         node.put("evidence_bundle_id", citation.evidenceBundleId().toString());
         node.put("index_version_id", citation.indexVersionId().toString());
-        node.put("retrieval_profile_id", citation.retrievalProfileId().toString());
         node.put("document_revision_id", citation.documentRevisionId().toString());
         node.put("parent_chunk_id", citation.parentChunkId().toString());
         node.put("child_chunk_id", citation.childChunkId().toString());
