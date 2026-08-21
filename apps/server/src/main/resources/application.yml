@@ -46,6 +46,9 @@ app:
     ttl: ${SESSION_TTL:PT8H}
 
 ragforge:
+  qdrant:
+    url: ${QDRANT_URL:http://localhost:6333}
+    api-key: ${QDRANT_API_KEY:}
   outbox:
     relay:
       enabled: ${RAGFORGE_OUTBOX_RELAY_ENABLED:false}
