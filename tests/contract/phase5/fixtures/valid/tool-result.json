@@ -1,0 +1,15 @@
+{
+  "schema_version": "v1",
+  "tool_result_id": "0190f5c2-7c1e-7adc-8def-1234567890ab",
+  "tool_call_id": "0190f5c2-7c1e-7adb-8def-1234567890ab",
+  "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab",
+  "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab",
+  "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab",
+  "idempotency_key": "tool-result-search-001",
+  "sequence": 2,
+  "tool_name": "knowledge.search",
+  "status": "SUCCEEDED",
+  "output": {"evidence_ids": ["0190f5c2-7c1e-7ad3-8def-1234567890ab"], "allow_list_version": "bundle-2026-08-21-v1", "truncated": false},
+  "error_code": null,
+  "completed_at": "2026-08-21T00:00:01Z"
+}

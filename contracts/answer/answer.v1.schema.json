@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/answer/answer.v1.schema.json",
+  "title": "RAGForge Answer v1",
+  "description": "Space-scoped, provenance-preserving answer projection. Claims reference structured evidence IDs and citations retain immutable revision/chunk anchors.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "answer_id", "space_id", "correlation_id", "run_id", "idempotency_key", "status", "answer_text", "claims", "citations", "abstention", "tool_call_ids", "provenance", "created_at"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "v1"},
+    "answer_id": {"$ref": "#/$defs/uuidV7"},
+    "space_id": {"$ref": "#/$defs/uuidV7"},
+    "correlation_id": {"$ref": "#/$defs/uuidV7"},
+    "run_id": {"$ref": "#/$defs/uuidV7"},
+    "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 255, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "status": {"type": "string", "enum": ["COMPLETED", "ABSTAINED", "FAILED", "CANCELLED"]},
+    "answer_text": {"type": ["string", "null"], "maxLength": 100000},
+    "claims": {"type": "array", "maxItems": 100, "items": {"$ref": "./claim.v1.schema.json"}},
+    "citations": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"$ref": "./citation.v1.schema.json"}},
+    "abstention": {"oneOf": [{"$ref": "./abstention.v1.schema.json"}, {"type": "null"}]},
+    "tool_call_ids": {"type": "array", "maxItems": 50, "uniqueItems": true, "items": {"$ref": "#/$defs/uuidV7"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "COMPLETED"}}}, "then": {"properties": {"answer_text": {"type": "string"}, "claims": {"minItems": 1}, "abstention": {"type": "null"}}}},
+    {"if": {"properties": {"status": {"const": "ABSTAINED"}}}, "then": {"properties": {"answer_text": {"type": "null"}, "claims": {"maxItems": 0}, "abstention": {"type": "object"}}}}
+  ],
+  "x-ragforge-invariants": ["space_id is the tenant security boundary and must match every citation and abstention projection", "COMPLETED requires answer_text and claims; ABSTAINED requires abstention and no claims", "every claim.citation_tokens must resolve to a unique citation.evidence_id from this answer's EvidenceBundle", "answer_text never contains citation semantics that replace structured citation tokens"],
+  "$defs": {
+    "uuidV7": {"type": "string", "format": "uuidv7", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_bundle_id", "index_version_id", "retrieval_profile_id", "retrieval_profile_version", "allow_list_version"],
+      "properties": {
+        "evidence_bundle_id": {"$ref": "#/$defs/uuidV7"},
+        "index_version_id": {"$ref": "#/$defs/uuidV7"},
+        "retrieval_profile_id": {"$ref": "#/$defs/uuidV7"},
+        "retrieval_profile_version": {"type": "integer", "minimum": 1},
+        "allow_list_version": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._:-]+$"}
+      }
+    }
+  }
+}

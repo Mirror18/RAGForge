@@ -1,0 +1,10 @@
+{
+  "schema_version": "v1",
+  "abstention_id": "0190f5c2-7c1e-7ade-8def-1234567890ab",
+  "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab",
+  "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab",
+  "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab",
+  "reason_code": "NO_EVIDENCE",
+  "evidence_ids": [],
+  "message": "当前空间没有足够证据支持该问题。"
+}

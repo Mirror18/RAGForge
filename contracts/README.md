@@ -6,6 +6,9 @@
 - `events/`：RabbitMQ event envelope 与 versioned payload schemas；Phase 3 统一 ingestion status 事件覆盖 retry/DLQ 观察语义。
 - `ingestion/`：SourceConnector SPI、版本化 ingestion domain、checkpoint safety、parser/OCR report、Outbox/worker 语义，以及 Phase 4 的 chunking domain 与 index version 生命周期。
 - `retrieval/`：Phase 4 不可变 RetrievalProfileVersion（dense/BM25/RRF/rerank/expansion 参数）。
+- `answer/`：Phase 5 v1 Answer、Claim、Citation、Abstention public schemas；citation token 只允许当前 Evidence Bundle 的 `evidence_id`。
+- `agent/`：Phase 5 v1 只读 `ToolCall`/`ToolResult` schemas，固定工具 allow-list、空间边界、幂等和敏感审计字段禁止规则。
+- `events/answer.sse.v1.schema.json`：Phase 5 answer SSE v1 event union；仅新增 answer SSE schema，不改变既有 run/ingestion event 语义。
 
 Java/Python 实现必须以这里的 JSON/Markdown 合同为准。
 

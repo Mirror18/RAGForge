@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/agent/tool-call.v1.schema.json",
+  "title": "RAGForge Read-only ToolCall v1",
+  "description": "Authorized, space-scoped read-only agent tool request. The tool allow-list is closed and arguments contain references/filters, not credentials or arbitrary commands.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tool_call_id", "space_id", "correlation_id", "run_id", "step_id", "idempotency_key", "sequence", "tool_name", "arguments", "requested_at"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "v1"},
+    "tool_call_id": {"$ref": "#/$defs/uuidV7"},
+    "space_id": {"$ref": "#/$defs/uuidV7"},
+    "correlation_id": {"$ref": "#/$defs/uuidV7"},
+    "run_id": {"$ref": "#/$defs/uuidV7"},
+    "step_id": {"$ref": "#/$defs/uuidV7"},
+    "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 255, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "tool_name": {"type": "string", "enum": ["knowledge.search", "document.read", "web.fetch"]},
+    "arguments": {"oneOf": [{"$ref": "#/$defs/knowledgeSearchArguments"}, {"$ref": "#/$defs/documentReadArguments"}, {"$ref": "#/$defs/webFetchArguments"}]},
+    "requested_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {"if": {"properties": {"tool_name": {"const": "knowledge.search"}}}, "then": {"properties": {"arguments": {"$ref": "#/$defs/knowledgeSearchArguments"}}}},
+    {"if": {"properties": {"tool_name": {"const": "document.read"}}}, "then": {"properties": {"arguments": {"$ref": "#/$defs/documentReadArguments"}}}},
+    {"if": {"properties": {"tool_name": {"const": "web.fetch"}}}, "then": {"properties": {"arguments": {"$ref": "#/$defs/webFetchArguments"}}}}
+  ],
+  "x-ragforge-tool-policy": {"allowed": ["knowledge.search", "document.read", "web.fetch"], "denied": ["shell", "sql", "arbitrary_network", "file_write", "external_write"], "authorization": "server re-authorizes the space and resource for every call; client/model claims are not authorization"},
+  "x-ragforge-sensitive-fields-denied": ["password", "secret", "api_key", "access_token", "credential_ref", "authorization", "cookie", "raw_prompt", "full_text"],
+  "$defs": {
+    "uuidV7": {"type": "string", "format": "uuidv7", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"},
+    "knowledgeSearchArguments": {
+      "type": "object", "additionalProperties": false,
+      "required": ["query", "index_version_id", "retrieval_profile_id", "retrieval_profile_version", "limit"],
+      "properties": {"query": {"type": "string", "minLength": 1, "maxLength": 10000}, "index_version_id": {"$ref": "#/$defs/uuidV7"}, "retrieval_profile_id": {"$ref": "#/$defs/uuidV7"}, "retrieval_profile_version": {"type": "integer", "minimum": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 20}}
+    },
+    "documentReadArguments": {
+      "type": "object", "additionalProperties": false,
+      "required": ["document_revision_id", "child_chunk_id"],
+      "properties": {"document_revision_id": {"$ref": "#/$defs/uuidV7"}, "child_chunk_id": {"$ref": "#/$defs/uuidV7"}}
+    },
+    "webFetchArguments": {
+      "type": "object", "additionalProperties": false,
+      "required": ["url", "allow_list_version", "max_bytes", "timeout_ms", "redirect_policy"],
+      "properties": {"url": {"type": "string", "format": "uri", "maxLength": 2048, "pattern": "^https://"}, "allow_list_version": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._:-]+$"}, "max_bytes": {"type": "integer", "minimum": 1, "maximum": 10485760}, "timeout_ms": {"type": "integer", "minimum": 100, "maximum": 30000}, "redirect_policy": {"type": "string", "const": "DENY"}}
+    }
+  }
+}

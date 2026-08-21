@@ -1,0 +1,12 @@
+{
+  "schema_version": "v1",
+  "event_id": "0190f5c2-7c1e-7ae0-8def-1234567890ab",
+  "event_type": "answer.delta",
+  "sequence": 0,
+  "idempotency_key": "sse-invalid-sequence",
+  "space_id": "0190f5c2-7c1e-7ac0-8def-1234567890ab",
+  "correlation_id": "0190f5c2-7c1e-7abe-8def-1234567890ab",
+  "run_id": "0190f5c2-7c1e-7ac1-8def-1234567890ab",
+  "occurred_at": "2026-08-21T00:00:00Z",
+  "payload": {"answer_id": "0190f5c2-7c1e-7ad1-8def-1234567890ab", "delta": "invalid"}
+}
