@@ -1,0 +1,48 @@
+{
+  "schema_version": "phase4-isolation-and-override.v1",
+  "status": "passed",
+  "verified_at": "2026-08-21T13:04:38+08:00",
+  "code_commit_under_test": "e27ae75f085e3a4fe3d39fa0b00b5ceecb931bd2",
+  "command": "mvn --batch-mode --no-transfer-progress test",
+  "targeted_command": "mvn -pl apps/server -am -Dtest=Phase4ChunkIndexPersistenceIntegrationTest,RetrievalServiceQdrantIntegrationTest,ChunkStudioServiceTest,RetrievalPlaygroundServiceTest,StudioControllerMockMvcTest -Dsurefire.failIfNoSpecifiedTests=false test",
+  "test_results": {
+    "phase4_persistence_tests": 6,
+    "phase4_persistence_failures": 0,
+    "phase4_persistence_errors": 0,
+    "qdrant_scope_tests": 1,
+    "qdrant_scope_failures": 0,
+    "studio_and_playground_tests": 10,
+    "studio_and_playground_failures": 0
+  },
+  "space_filter": {
+    "chunk_reads": "space_id plus revision filters return no rows across spaces",
+    "dense_search": "Qdrant payload filter returns only the requested space",
+    "override_reads": "repository and audit fallback are both space scoped",
+    "index_pointers": "one active pointer row per space; cross-space FK writes are rejected"
+  },
+  "index_switch_and_rollback": {
+    "lifecycle": "BUILDING -> VALIDATING -> READY -> ACTIVE -> RETIRED",
+    "validation_required": true,
+    "candidate_failure_does_not_activate": true,
+    "pointer_switch": "second activation records previous index and preserves one pointer row",
+    "retention": "previous active index retention deadline is at least 24 hours"
+  },
+  "override_conflict": {
+    "source_revision_update": "newer revision forces NEEDS_REVIEW",
+    "direct_active_to_discarded": "rejected",
+    "review_to_active": "accepted as a new audited version",
+    "review_to_discarded": "accepted as a new audited version",
+    "discarded_to_active": "rejected",
+    "silent_overwrite": false,
+    "replacement_content_ref": "persisted and retained through state transitions without exposing raw text"
+  },
+  "test_methods": [
+    "Phase4ChunkIndexPersistenceIntegrationTest.chunksAreSpaceScopedImmutableAndRevisionBound",
+    "Phase4ChunkIndexPersistenceIntegrationTest.chunkOverridesFollowTheStateMachineAndNeverSilentlyReapply",
+    "Phase4ChunkIndexPersistenceIntegrationTest.indexLifecycleValidatesThenPublishesAtomicallyWithRetention",
+    "Phase4ChunkIndexPersistenceIntegrationTest.indexCannotBecomeActiveWithoutPassedValidation",
+    "RetrievalServiceQdrantIntegrationTest.retrievalPipelineUsesQdrantScopeFilterBeforeFusion",
+    "StudioControllerMockMvcTest (2 tests)",
+    "RetrievalPlaygroundServiceTest (2 tests)"
+  ]
+}

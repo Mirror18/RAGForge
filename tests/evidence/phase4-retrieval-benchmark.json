@@ -1,0 +1,730 @@
+{
+  "schema_version": "phase4-retrieval-benchmark.v1",
+  "status": "passed",
+  "dataset_version": "phase4-retrieval-1.0.0",
+  "source_dataset_version": "phase0-benchmark-1.0.0",
+  "question_slice": "q-001..q-030",
+  "code_commit": "e27ae75f085e3a4fe3d39fa0b00b5ceecb931bd2",
+  "index_version": "phase4-fixture-index-v1",
+  "retrieval_profile_version": "p4-default-v1",
+  "configuration": {
+    "candidate_scope": "space_id + index_version",
+    "dense_reference": "sha256-hashed-128d-fixture-vector",
+    "bm25": "Java InMemoryBm25CandidateStore equations",
+    "rrf_and_rerank": "Java RrfMerger and LexicalReranker equations"
+  },
+  "quality": {
+    "status": "passed",
+    "cases": [
+      {
+        "case_id": "q-001",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-001"
+        ],
+        "top10_document_ids": [
+          "doc-008",
+          "doc-035",
+          "doc-001",
+          "doc-024",
+          "doc-034",
+          "doc-004",
+          "doc-026",
+          "doc-036",
+          "doc-017",
+          "doc-009"
+        ],
+        "first_relevant_rank": 3,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-002",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-002"
+        ],
+        "top10_document_ids": [
+          "doc-002",
+          "doc-008",
+          "doc-035",
+          "doc-024",
+          "doc-033",
+          "doc-011",
+          "doc-009",
+          "doc-005",
+          "doc-028",
+          "doc-003"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-003",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-003"
+        ],
+        "top10_document_ids": [
+          "doc-035",
+          "doc-008",
+          "doc-003",
+          "doc-022",
+          "doc-004",
+          "doc-009",
+          "doc-029",
+          "doc-030",
+          "doc-005",
+          "doc-021"
+        ],
+        "first_relevant_rank": 3,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-004",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-004"
+        ],
+        "top10_document_ids": [
+          "doc-004",
+          "doc-008",
+          "doc-035",
+          "doc-036",
+          "doc-017",
+          "doc-027",
+          "doc-013",
+          "doc-028",
+          "doc-003",
+          "doc-026"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-005",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-005"
+        ],
+        "top10_document_ids": [
+          "doc-005",
+          "doc-009",
+          "doc-008",
+          "doc-035",
+          "doc-025",
+          "doc-017",
+          "doc-018",
+          "doc-024",
+          "doc-036",
+          "doc-002"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-006",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-006"
+        ],
+        "top10_document_ids": [
+          "doc-006",
+          "doc-009",
+          "doc-008",
+          "doc-035",
+          "doc-031",
+          "doc-034",
+          "doc-028",
+          "doc-007",
+          "doc-023",
+          "doc-025"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-007",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-007"
+        ],
+        "top10_document_ids": [
+          "doc-035",
+          "doc-008",
+          "doc-007",
+          "doc-027",
+          "doc-002",
+          "doc-028",
+          "doc-009",
+          "doc-024",
+          "doc-025",
+          "doc-010"
+        ],
+        "first_relevant_rank": 3,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-008",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-008"
+        ],
+        "top10_document_ids": [
+          "doc-008",
+          "doc-035",
+          "doc-001",
+          "doc-019",
+          "doc-011",
+          "doc-006",
+          "doc-009",
+          "doc-020",
+          "doc-023",
+          "doc-013"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-009",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-009",
+          "doc-005",
+          "doc-006"
+        ],
+        "top10_document_ids": [
+          "doc-008",
+          "doc-035",
+          "doc-009",
+          "doc-006",
+          "doc-019",
+          "doc-034",
+          "doc-005",
+          "doc-001",
+          "doc-032",
+          "doc-031"
+        ],
+        "first_relevant_rank": 3,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-010",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-010"
+        ],
+        "top10_document_ids": [
+          "doc-010",
+          "doc-008",
+          "doc-035",
+          "doc-022",
+          "doc-021",
+          "doc-028",
+          "doc-003",
+          "doc-006",
+          "doc-009",
+          "doc-012"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": true,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-011",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-011"
+        ],
+        "top10_document_ids": [
+          "doc-011",
+          "doc-035",
+          "doc-008",
+          "doc-029",
+          "doc-030",
+          "doc-028",
+          "doc-007",
+          "doc-023",
+          "doc-010",
+          "doc-024"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-012",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-012"
+        ],
+        "top10_document_ids": [
+          "doc-008",
+          "doc-035",
+          "doc-011",
+          "doc-020",
+          "doc-007",
+          "doc-023",
+          "doc-021"
+        ],
+        "first_relevant_rank": null,
+        "recall_at_10": 0.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-013",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-013"
+        ],
+        "top10_document_ids": [
+          "doc-013",
+          "doc-015",
+          "doc-025",
+          "doc-023",
+          "doc-019",
+          "doc-021",
+          "doc-001",
+          "doc-008",
+          "doc-035",
+          "doc-028"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-014",
+        "space_id": "space-beta",
+        "allowed_gold_document_ids": [
+          "doc-014"
+        ],
+        "top10_document_ids": [
+          "doc-014",
+          "doc-016"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-015",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-015"
+        ],
+        "top10_document_ids": [
+          "doc-015",
+          "doc-011",
+          "doc-008",
+          "doc-035",
+          "doc-001",
+          "doc-003",
+          "doc-013",
+          "doc-023",
+          "doc-018",
+          "doc-025"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-016",
+        "space_id": "space-beta",
+        "allowed_gold_document_ids": [
+          "doc-016"
+        ],
+        "top10_document_ids": [
+          "doc-016",
+          "doc-014"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-017",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-017",
+          "doc-018"
+        ],
+        "top10_document_ids": [
+          "doc-008",
+          "doc-035",
+          "doc-017",
+          "doc-018",
+          "doc-011",
+          "doc-009",
+          "doc-028"
+        ],
+        "first_relevant_rank": 3,
+        "recall_at_10": 1.0,
+        "expected_abstention": true,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-018",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-021"
+        ],
+        "top10_document_ids": [
+          "doc-021",
+          "doc-008",
+          "doc-035",
+          "doc-013",
+          "doc-002",
+          "doc-010",
+          "doc-019",
+          "doc-009",
+          "doc-001",
+          "doc-007"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": true,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-019",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-022"
+        ],
+        "top10_document_ids": [
+          "doc-035",
+          "doc-008",
+          "doc-022",
+          "doc-003",
+          "doc-013",
+          "doc-025",
+          "doc-036",
+          "doc-031",
+          "doc-020",
+          "doc-032"
+        ],
+        "first_relevant_rank": 3,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-020",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-023"
+        ],
+        "top10_document_ids": [
+          "doc-023",
+          "doc-012",
+          "doc-020",
+          "doc-009"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-021",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-024"
+        ],
+        "top10_document_ids": [
+          "doc-024",
+          "doc-035",
+          "doc-008",
+          "doc-032",
+          "doc-018",
+          "doc-031"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-022",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-025"
+        ],
+        "top10_document_ids": [
+          "doc-025",
+          "doc-035",
+          "doc-007",
+          "doc-008",
+          "doc-028",
+          "doc-001",
+          "doc-011",
+          "doc-010",
+          "doc-009",
+          "doc-002"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-023",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-026"
+        ],
+        "top10_document_ids": [
+          "doc-026",
+          "doc-035",
+          "doc-008",
+          "doc-009",
+          "doc-011",
+          "doc-024",
+          "doc-005",
+          "doc-002",
+          "doc-028",
+          "doc-025"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-024",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-027"
+        ],
+        "top10_document_ids": [
+          "doc-027",
+          "doc-008",
+          "doc-035",
+          "doc-007",
+          "doc-005",
+          "doc-028",
+          "doc-024",
+          "doc-002",
+          "doc-009"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-025",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-028"
+        ],
+        "top10_document_ids": [
+          "doc-028",
+          "doc-019",
+          "doc-002",
+          "doc-027",
+          "doc-009",
+          "doc-006",
+          "doc-035",
+          "doc-007",
+          "doc-004",
+          "doc-011"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-026",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-029",
+          "doc-030"
+        ],
+        "top10_document_ids": [
+          "doc-029",
+          "doc-030",
+          "doc-035",
+          "doc-008",
+          "doc-011",
+          "doc-005",
+          "doc-002",
+          "doc-017",
+          "doc-013",
+          "doc-026"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-027",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-031"
+        ],
+        "top10_document_ids": [
+          "doc-031",
+          "doc-032",
+          "doc-008",
+          "doc-035",
+          "doc-020",
+          "doc-034",
+          "doc-036",
+          "doc-025",
+          "doc-007",
+          "doc-022"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-028",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [],
+        "top10_document_ids": [
+          "doc-008",
+          "doc-035",
+          "doc-032",
+          "doc-011",
+          "doc-031",
+          "doc-010",
+          "doc-028",
+          "doc-027",
+          "doc-013"
+        ],
+        "first_relevant_rank": null,
+        "recall_at_10": 0.0,
+        "expected_abstention": true,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-029",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-033"
+        ],
+        "top10_document_ids": [
+          "doc-033",
+          "doc-036",
+          "doc-002",
+          "doc-008",
+          "doc-035",
+          "doc-034",
+          "doc-007",
+          "doc-020",
+          "doc-019",
+          "doc-001"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      },
+      {
+        "case_id": "q-030",
+        "space_id": "space-alpha",
+        "allowed_gold_document_ids": [
+          "doc-034"
+        ],
+        "top10_document_ids": [
+          "doc-034",
+          "doc-035",
+          "doc-008",
+          "doc-032",
+          "doc-031",
+          "doc-009",
+          "doc-036",
+          "doc-003",
+          "doc-025",
+          "doc-033"
+        ],
+        "first_relevant_rank": 1,
+        "recall_at_10": 1.0,
+        "expected_abstention": false,
+        "forbidden_source_leak": false
+      }
+    ],
+    "case_count": 30,
+    "metric_denominator": 29,
+    "metric_denominator_note": "Cases without an allowed evidence reference are abstention/security probes and are reported separately, not converted into a false recall denominator.",
+    "recall_at_10": 0.965517,
+    "mrr_at_10": 0.827586,
+    "forbidden_source_leaks": 0,
+    "profile": {
+      "dense_top_k": 30,
+      "bm25_top_k": 30,
+      "rrf_k": 60,
+      "rrf_dense_weight": 0.5,
+      "rrf_bm25_weight": 0.5,
+      "rerank_top_k": 20
+    }
+  },
+  "scale_reference": {
+    "status": "passed",
+    "child_count": 1000000,
+    "query_count": 200,
+    "recall_at_10": 1.0,
+    "p50_ms": 0.0007,
+    "p95_ms": 0.0011,
+    "p99_ms": 0.0014,
+    "build_ms": 1366.773,
+    "query_batch_ms": 0.328,
+    "index_kind": "deterministic_in_memory_space_filtered_reference",
+    "seed": 20260821,
+    "space_count": 4,
+    "note": "This is a reproducible local reference path, not a claim of Qdrant 1M production capacity. Qdrant dense scope is separately covered by RetrievalServiceQdrantIntegrationTest; a Qdrant-sized load remains a follow-up capacity run."
+  },
+  "scale_qdrant_evidence": {
+    "schema_version": "phase4-qdrant-1m.v1",
+    "status": "passed",
+    "image": "qdrant/qdrant:v1.11.5",
+    "collection": "ragforge_phase4_1m",
+    "child_count": 1000000,
+    "dimension": 8,
+    "query_count": 100,
+    "seed": 20260821,
+    "space_count": 4,
+    "filter": "space_id + index_version",
+    "index_version": "phase4-1m-v1",
+    "query_endpoint": "/collections/{collection}/points/search",
+    "container": "ragforge-p4-qdrant-1m",
+    "upload_seconds": 54.755,
+    "recall_at_10": 1.0,
+    "p50_ms": 787.19,
+    "p95_ms": 1101.3382,
+    "p99_ms": 1206.9538,
+    "query_batch_seconds": 82.838,
+    "host_note": "Local Docker Desktop; exact CPU/RAM at run time is recorded by the operator environment and is not a production SLO claim."
+  }
+}

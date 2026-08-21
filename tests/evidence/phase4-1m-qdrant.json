@@ -1,0 +1,22 @@
+{
+  "schema_version": "phase4-qdrant-1m.v1",
+  "status": "passed",
+  "image": "qdrant/qdrant:v1.11.5",
+  "collection": "ragforge_phase4_1m",
+  "child_count": 1000000,
+  "dimension": 8,
+  "query_count": 100,
+  "seed": 20260821,
+  "space_count": 4,
+  "filter": "space_id + index_version",
+  "index_version": "phase4-1m-v1",
+  "query_endpoint": "/collections/{collection}/points/search",
+  "container": "ragforge-p4-qdrant-1m",
+  "upload_seconds": 54.755,
+  "recall_at_10": 1.0,
+  "p50_ms": 787.19,
+  "p95_ms": 1101.3382,
+  "p99_ms": 1206.9538,
+  "query_batch_seconds": 82.838,
+  "host_note": "Local Docker Desktop; exact CPU/RAM at run time is recorded by the operator environment and is not a production SLO claim."
+}

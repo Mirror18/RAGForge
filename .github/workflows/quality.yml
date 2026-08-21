@@ -144,6 +144,18 @@ jobs:
           python -m unittest discover -s tests/security -p "test_phase3_fault_*.py" -v
           python -m unittest discover -s tests/performance -p "test_phase3_*.py" -v
 
+      - name: Run deterministic Phase 4 retrieval quality and reference-scale gates
+        run: |
+          python -m unittest discover -s scripts/phase4 -p "test_*.py" -v
+          python scripts/phase4/retrieval_benchmark.py
+
+      - name: Upload Phase 4 retrieval evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-phase4-retrieval-evidence
+          path: tests/evidence/phase4-retrieval-benchmark.json
+          if-no-files-found: error
+
       - name: Upload Phase 3 JVM evidence
         if: always() && hashFiles('**/target/surefire-reports/**') != ''
         uses: actions/upload-artifact@v4
