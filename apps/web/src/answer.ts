@@ -61,9 +61,20 @@ export interface AnswerCitationPayload {
   citation: AnswerCitation;
 }
 
+export type AnswerAbstentionReason =
+  | "NO_EVIDENCE"
+  | "LOW_CONFIDENCE"
+  | "EVIDENCE_CONFLICT"
+  | "POLICY_BLOCKED"
+  | "SPACE_ACCESS_DENIED"
+  | "TOOL_UNAUTHORIZED"
+  | "TOOL_FAILURE"
+  | "PROVIDER_UNAVAILABLE"
+  | "CANCELLED";
+
 export interface AnswerAbstentionPayload {
   answerId: string;
-  reasonCode: "NO_EVIDENCE" | "LOW_CONFIDENCE" | "POLICY_BLOCKED";
+  reasonCode: AnswerAbstentionReason;
   evidenceIds: string[];
 }
 
@@ -246,10 +257,11 @@ function normalizePayload(eventType: AnswerEventType, raw: unknown, envelope: Pi
   if (eventType === "answer.abstention") {
     const abstention = isRecord(payload.abstention) ? payload.abstention : payload;
     const reasonCode = stringValue(abstention, "reason_code", "reasonCode");
-    if (reasonCode !== "NO_EVIDENCE" && reasonCode !== "LOW_CONFIDENCE" && reasonCode !== "POLICY_BLOCKED") return null;
+    const allowedReasons = ["NO_EVIDENCE", "LOW_CONFIDENCE", "EVIDENCE_CONFLICT", "POLICY_BLOCKED", "SPACE_ACCESS_DENIED", "TOOL_UNAUTHORIZED", "TOOL_FAILURE", "PROVIDER_UNAVAILABLE", "CANCELLED"] as const;
+    if (!reasonCode || !allowedReasons.includes(reasonCode as (typeof allowedReasons)[number])) return null;
     const evidenceIdsRaw = abstention.evidence_ids ?? abstention.evidenceIds;
     const evidenceIds = Array.isArray(evidenceIdsRaw) ? evidenceIdsRaw.filter((item): item is string => typeof item === "string") : [];
-    return { answerId, reasonCode, evidenceIds };
+    return { answerId, reasonCode: reasonCode as AnswerAbstentionReason, evidenceIds };
   }
   if (eventType === "answer.tool") {
     const toolName = stringValue(payload, "tool_name", "toolName");

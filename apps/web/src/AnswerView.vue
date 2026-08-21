@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ApiError } from "./api";
-import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswerConversation, createAnswerRun, previewCitation, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult } from "./answer";
+import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswerConversation, createAnswerRun, previewCitation, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult } from "./answer";
 import { type RunProjection } from "./answer";
 
 const props = defineProps<{ selectedSpaceId: string }>();
@@ -24,7 +24,7 @@ interface EventLogEntry {
 }
 
 interface AbstentionState {
-  reasonCode: string;
+  reasonCode: AnswerAbstentionReason;
   context: RunContext;
 }
 
@@ -111,8 +111,12 @@ function safeErrorLabel(code: AnswerErrorCode): string {
   return ({ PROVIDER_UNAVAILABLE: "本地服务暂不可用", TIMEOUT: "模型调用超时", SPACE_EGRESS_DENIED: "空间出境策略拒绝", EVIDENCE_INVALID: "证据校验失败", TOOL_FAILURE: "只读工具失败", CANCELLED: "运行已取消", INTERNAL_ERROR: "服务内部错误" })[code];
 }
 
-function safeAbstentionLabel(reasonCode: string): string {
-  return ({ NO_EVIDENCE: "当前空间没有足够证据", LOW_CONFIDENCE: "证据置信度不足", POLICY_BLOCKED: "当前问题被空间策略拒绝" })[reasonCode] ?? "当前问题无法安全回答";
+function safeAbstentionLabel(reasonCode: AnswerAbstentionReason | ""): string {
+  return ({ NO_EVIDENCE: "当前空间没有足够证据", LOW_CONFIDENCE: "证据置信度不足", EVIDENCE_CONFLICT: "当前证据相互冲突", POLICY_BLOCKED: "当前问题被空间策略拒绝", SPACE_ACCESS_DENIED: "当前空间访问策略不允许回答", TOOL_UNAUTHORIZED: "所需只读工具未获授权", TOOL_FAILURE: "只读工具未能提供可靠结果", PROVIDER_UNAVAILABLE: "回答服务暂不可用", CANCELLED: "回答已取消" } satisfies Record<AnswerAbstentionReason, string>)[reasonCode as AnswerAbstentionReason] ?? "当前问题无法安全回答";
+}
+
+function safeAbstentionDetail(reasonCode: AnswerAbstentionReason | ""): string {
+  return ({ NO_EVIDENCE: "没有足够的当前空间证据支持安全回答。", LOW_CONFIDENCE: "检索到的证据置信度不足，客户端不会补写或猜测答案。", EVIDENCE_CONFLICT: "检索到的证据存在冲突，客户端不会替用户选择未经验证的版本。", POLICY_BLOCKED: "当前问题触发了服务端空间策略拒答。", SPACE_ACCESS_DENIED: "当前会话无法访问回答所需的空间内容。", TOOL_UNAUTHORIZED: "回答所需的只读工具未通过服务端授权。", TOOL_FAILURE: "只读工具执行失败，客户端不会把不完整结果当作答案依据。", PROVIDER_UNAVAILABLE: "回答服务当前不可用，客户端不会静默切换到云端路由。", CANCELLED: "回答在完成前被取消，后续增量不会继续展示。" } satisfies Record<AnswerAbstentionReason, string>)[reasonCode as AnswerAbstentionReason] ?? "客户端未收到可安全解释的拒答原因。";
 }
 
 function anchorLabel(anchor: AnswerCitation["anchor"]): string {
@@ -354,7 +358,7 @@ onBeforeUnmount(() => abortController?.abort());
 
     <div v-if="runContext" class="answer-context card" aria-live="polite"><span class="card-label">本次运行上下文</span><code>{{ contextLabel }}</code><span class="muted">last sequence {{ lastSequence }} · last event {{ lastEventId ?? "—" }}</span></div>
     <article v-if="answerText || status === 'completed'" class="card answer-result" aria-live="polite"><div class="card-title"><h3>回答</h3><span class="state-pill" :class="status">{{ statusLabel }}</span></div><p class="answer-text">{{ answerText || "服务端未返回可安全展示的回答正文。" }}</p></article>
-    <article v-if="status === 'abstained' || abstention" class="abstention answer-state"><strong>安全拒答</strong><span>{{ safeAbstentionLabel(abstention?.reasonCode ?? "") }}</span><small>未找到满足当前空间证据与策略要求的回答依据。</small></article>
+    <article v-if="status === 'abstained' || abstention" class="abstention answer-state"><strong>安全拒答</strong><span>{{ safeAbstentionLabel(abstention?.reasonCode ?? "") }}</span><small>{{ safeAbstentionDetail(abstention?.reasonCode ?? "") }}</small></article>
     <article v-if="status === 'timeout'" class="answer-state warning-state"><strong>请求超时</strong><span>回答连接超过客户端等待窗口，未自动切换到云端或其他空间。</span></article>
     <article v-if="status === 'degraded' || status === 'reconnecting'" class="answer-state warning-state"><strong>服务降级</strong><span>{{ notice || "事件连接正在恢复；已有事件将按 sequence 与 event_id 去重。" }}</span></article>
     <article v-if="status === 'cancelled'" class="answer-state"><strong>回答已取消</strong><span>服务端已确认取消；取消后的 answer delta 会被丢弃。</span></article>
