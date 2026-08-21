@@ -8,12 +8,20 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import com.ragforge.server.index.CandidateIndexStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class RetrievalServiceTest {
     private static final UUID SPACE = UUID.fromString("018f0f70-8e10-7b14-8f1a-111111111111");
@@ -102,6 +110,42 @@ class RetrievalServiceTest {
 
         assertThat(bundle.abstained()).isTrue();
         assertThat(bundle.abstentionReason()).isEqualTo("NO_VERIFIED_EVIDENCE");
+    }
+
+    @Test
+    void traceExecutesEachRetrievalStageOnceAndExposesRedactedMetadata() throws Exception {
+        CandidateIndexStore dense = mock(CandidateIndexStore.class);
+        Bm25CandidateStore bm25 = mock(Bm25CandidateStore.class);
+        ChunkCatalog catalog = mock(ChunkCatalog.class);
+        Reranker reranker = mock(Reranker.class);
+        CandidateIndexStore.CandidateHit hit = new CandidateIndexStore.CandidateHit(
+                CHILD_1, 0.95, SPACE, INDEX, REVISION, PARENT, ref(CHILD_1), HASH);
+        RetrievalCandidate lexical = new RetrievalCandidate(SPACE, INDEX, CHILD_1, REVISION, PARENT,
+                ref(CHILD_1), HASH, 1.4, RetrievalCandidate.Source.BM25, "internal searchable text");
+        when(dense.search(any(String.class), eq(SPACE), eq(INDEX), eq(List.of(0.1, 0.2)), eq(5)))
+                .thenReturn(List.of(hit));
+        when(bm25.search(SPACE, INDEX, "retrieval space", 5)).thenReturn(List.of(lexical));
+        List<RrfMerger.MergedCandidate> merged = RrfMerger.merge(SPACE, INDEX,
+                List.of(new RetrievalCandidate(SPACE, INDEX, CHILD_1, REVISION, PARENT, ref(CHILD_1), HASH,
+                        0.95, RetrievalCandidate.Source.DENSE, "")), List.of(lexical), 60, 0.5, 0.5);
+        when(reranker.rerank(eq("retrieval space"), anyList(), eq(5)))
+                .thenReturn(List.of(new Reranker.Result(merged.get(0), 0.8, "test")));
+        when(catalog.findChild(SPACE, CHILD_1)).thenReturn(Optional.of(child(CHILD_1, 1)));
+
+        RetrievalService.Trace trace = new RetrievalService(dense, bm25, catalog, reranker).trace(
+                new RetrievalService.Request(SPACE, INDEX,
+                        profile(ExpansionMode.NONE, 0, 0, 100), "retrieval space", List.of(0.1, 0.2)));
+
+        verify(dense, times(1)).search(any(String.class), eq(SPACE), eq(INDEX), eq(List.of(0.1, 0.2)), eq(5));
+        verify(bm25, times(1)).search(SPACE, INDEX, "retrieval space", 5);
+        verify(reranker, times(1)).rerank(eq("retrieval space"), anyList(), eq(5));
+        verify(catalog, times(1)).findChild(SPACE, CHILD_1);
+        assertThat(trace.dense().candidates()).hasSize(1);
+        assertThat(trace.bm25().candidates()).hasSize(1);
+        assertThat(trace.rrf().candidates()).hasSize(1);
+        assertThat(trace.rerank().candidates()).hasSize(1);
+        String json = new ObjectMapper().writeValueAsString(trace);
+        assertThat(json).doesNotContain("searchableText", "internal searchable text", "queryVector");
     }
 
     private static RetrievalProfileRepository.RetrievalProfileVersion profile(ExpansionMode mode,

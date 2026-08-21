@@ -34,6 +34,54 @@ public final class RetrievalService {
         }
     }
 
+    /** Redacted stage candidate metadata for internal observability and adapters. */
+    public record TraceCandidate(UUID childChunkId, UUID documentRevisionId, String contentRef,
+            String textHash, int rank, double score, String reason) {
+        public TraceCandidate {
+            Objects.requireNonNull(childChunkId, "childChunkId");
+            Objects.requireNonNull(documentRevisionId, "documentRevisionId");
+            if (contentRef == null || contentRef.isBlank() || textHash == null
+                    || !textHash.matches("[0-9a-fA-F]{64}")) {
+                throw new IllegalArgumentException("trace provenance is invalid");
+            }
+            if (rank <= 0 || !Double.isFinite(score) || reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException("trace candidate metadata is invalid");
+            }
+        }
+    }
+
+    public record StageTrace(List<TraceCandidate> candidates, double latencyMs) {
+        public StageTrace {
+            candidates = candidates == null ? List.of() : List.copyOf(candidates);
+            if (!Double.isFinite(latencyMs) || latencyMs < 0) {
+                throw new IllegalArgumentException("trace stage latency is invalid");
+            }
+        }
+    }
+
+    public record ContextTrace(List<UUID> childChunkIds, int totalTokens, int maxContextTokens,
+            boolean truncated) {
+        public ContextTrace {
+            childChunkIds = childChunkIds == null ? List.of() : List.copyOf(childChunkIds);
+            if (totalTokens < 0 || maxContextTokens < 0) {
+                throw new IllegalArgumentException("trace context metrics are invalid");
+            }
+        }
+    }
+
+    /** One execution of every retrieval stage; it contains no query vector or searchable text. */
+    public record Trace(StageTrace dense, StageTrace bm25, StageTrace rrf, StageTrace rerank,
+            ContextTrace context, EvidenceBundle evidence) {
+        public Trace {
+            Objects.requireNonNull(dense, "dense");
+            Objects.requireNonNull(bm25, "bm25");
+            Objects.requireNonNull(rrf, "rrf");
+            Objects.requireNonNull(rerank, "rerank");
+            Objects.requireNonNull(context, "context");
+            Objects.requireNonNull(evidence, "evidence");
+        }
+    }
+
     private final CandidateIndexStore denseStore;
     private final Bm25CandidateStore bm25Store;
     private final ChunkCatalog catalog;
@@ -48,23 +96,36 @@ public final class RetrievalService {
     }
 
     public EvidenceBundle retrieve(Request request) {
+        return trace(request).evidence();
+    }
+
+    public Trace trace(Request request) {
         Objects.requireNonNull(request, "request");
         String normalized = normalizeQuery(request.originalQuery());
         String collection = CandidateIndexService.collectionFor(request.spaceId(), request.indexVersionId());
+        long denseStarted = System.nanoTime();
         List<RetrievalCandidate> dense = denseStore.search(collection, request.spaceId(), request.indexVersionId(),
                         request.queryVector(), request.profile().denseTopK()).stream()
                 .map(RetrievalService::denseCandidate)
                 .toList();
+        StageTrace denseTrace = new StageTrace(toDenseTrace(dense), elapsedMs(denseStarted));
+        long bm25Started = System.nanoTime();
         List<RetrievalCandidate> bm25 = bm25Store.search(request.spaceId(), request.indexVersionId(), normalized,
                 request.profile().bm25TopK());
+        StageTrace bm25Trace = new StageTrace(toBm25Trace(bm25), elapsedMs(bm25Started));
+        long rrfStarted = System.nanoTime();
         List<RrfMerger.MergedCandidate> merged = RrfMerger.merge(request.spaceId(), request.indexVersionId(), dense, bm25,
                 request.profile().rrfK(), request.profile().rrfDenseWeight(), request.profile().rrfBm25Weight());
+        StageTrace rrfTrace = new StageTrace(toRrfTrace(merged), elapsedMs(rrfStarted));
+        long rerankStarted = System.nanoTime();
         List<Reranker.Result> reranked = reranker.rerank(normalized, merged, request.profile().rerankTopK());
+        StageTrace rerankTrace = new StageTrace(toRerankTrace(reranked), elapsedMs(rerankStarted));
         List<EvidenceBundle.Evidence> evidence = selectContext(request, reranked);
         boolean abstained = evidence.isEmpty();
-        return new EvidenceBundle(request.spaceId(), request.indexVersionId(), request.profile().profileId(),
+        EvidenceBundle bundle = new EvidenceBundle(request.spaceId(), request.indexVersionId(), request.profile().profileId(),
                 request.profile().versionNo(), request.originalQuery(), normalized, evidence, abstained,
                 abstained ? "NO_VERIFIED_EVIDENCE" : null);
+        return new Trace(denseTrace, bm25Trace, rrfTrace, rerankTrace, toContextTrace(request, evidence), bundle);
     }
 
     public static String normalizeQuery(String query) {
@@ -175,6 +236,57 @@ public final class RetrievalService {
     private static RetrievalCandidate denseCandidate(CandidateIndexStore.CandidateHit hit) {
         return new RetrievalCandidate(hit.spaceId(), hit.indexVersionId(), hit.id(), hit.documentRevisionId(),
                 hit.parentChunkId(), hit.contentRef(), hit.textHash(), hit.score(), RetrievalCandidate.Source.DENSE, "");
+    }
+
+    private static List<TraceCandidate> toDenseTrace(List<RetrievalCandidate> candidates) {
+        return toCandidateTrace(candidates, "dense");
+    }
+
+    private static List<TraceCandidate> toBm25Trace(List<RetrievalCandidate> candidates) {
+        return toCandidateTrace(candidates, "bm25");
+    }
+
+    private static List<TraceCandidate> toCandidateTrace(List<RetrievalCandidate> candidates, String reason) {
+        List<TraceCandidate> result = new ArrayList<>();
+        for (int position = 0; position < candidates.size(); position++) {
+            RetrievalCandidate candidate = candidates.get(position);
+            result.add(new TraceCandidate(candidate.childChunkId(), candidate.documentRevisionId(),
+                    candidate.contentRef(), candidate.textHash(), position + 1, candidate.sourceScore(), reason));
+        }
+        return result;
+    }
+
+    private static List<TraceCandidate> toRrfTrace(List<RrfMerger.MergedCandidate> candidates) {
+        List<TraceCandidate> result = new ArrayList<>();
+        for (int position = 0; position < candidates.size(); position++) {
+            RrfMerger.MergedCandidate candidate = candidates.get(position);
+            result.add(new TraceCandidate(candidate.childChunkId(), candidate.documentRevisionId(),
+                    candidate.contentRef(), candidate.textHash(), position + 1, candidate.rrfScore(), "rrf"));
+        }
+        return result;
+    }
+
+    private static List<TraceCandidate> toRerankTrace(List<Reranker.Result> results) {
+        List<TraceCandidate> result = new ArrayList<>();
+        for (int position = 0; position < results.size(); position++) {
+            Reranker.Result value = results.get(position);
+            RrfMerger.MergedCandidate candidate = value.candidate();
+            result.add(new TraceCandidate(candidate.childChunkId(), candidate.documentRevisionId(),
+                    candidate.contentRef(), candidate.textHash(), position + 1, value.score(), value.reason()));
+        }
+        return result;
+    }
+
+    private static ContextTrace toContextTrace(Request request, List<EvidenceBundle.Evidence> evidence) {
+        int totalTokens = evidence.stream().mapToInt(value ->
+                Math.max(1, value.anchor().tokenEnd() - value.anchor().tokenStart())).sum();
+        int maxContextTokens = request.profile().maxContextTokens();
+        return new ContextTrace(evidence.stream().map(EvidenceBundle.Evidence::childChunkId).toList(),
+                totalTokens, maxContextTokens, totalTokens >= maxContextTokens && maxContextTokens > 0);
+    }
+
+    private static double elapsedMs(long started) {
+        return (System.nanoTime() - started) / 1_000_000.0;
     }
 
     private static boolean matchesCandidate(RrfMerger.MergedCandidate candidate, ChunkCatalog.ChildMetadata child) {
