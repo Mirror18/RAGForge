@@ -4,20 +4,29 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.answer.Abstention;
 import com.ragforge.server.answer.Answer;
+import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerStatus;
 import com.ragforge.server.answer.Citation;
 import com.ragforge.server.run.RunEventService;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /** Publishes only server-projected answer fields to the run event stream. */
 public final class AnswerEventPublisher {
     private final RunEventService events;
     private final ObjectMapper objectMapper;
+    private final AnswerPersistencePort persistence;
 
     public AnswerEventPublisher(RunEventService events, ObjectMapper objectMapper) {
+        this(events, objectMapper, null);
+    }
+
+    public AnswerEventPublisher(RunEventService events, ObjectMapper objectMapper,
+                                AnswerPersistencePort persistence) {
         this.events = Objects.requireNonNull(events, "events");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
+        this.persistence = persistence;
     }
 
     public void publish(Answer answer) {
@@ -60,6 +69,20 @@ public final class AnswerEventPublisher {
         ObjectNode done = base(answer);
         done.put("answer_id", answer.answerId().toString());
         done.put("status", answer.status() == AnswerStatus.COMPLETED ? "COMPLETED" : answer.status().name());
+        append(answer, "answer.done", done);
+    }
+
+    /** Publishes the answer-terminal pair after the run store has accepted cancellation. */
+    public void publishCancellation(Answer answer, UUID correlationId) {
+        ObjectNode error = base(answer);
+        error.put("answer_id", answer.answerId().toString());
+        error.put("code", "CANCELLED");
+        error.put("message", "Answer request was cancelled.");
+        error.put("retryable", false);
+        append(answer, "answer.error", error);
+        ObjectNode done = base(answer);
+        done.put("answer_id", answer.answerId().toString());
+        done.put("status", "CANCELLED");
         append(answer, "answer.done", done);
     }
 
@@ -111,10 +134,32 @@ public final class AnswerEventPublisher {
 
     private void append(Answer answer, String type, ObjectNode payload) {
         try {
-            events.append(answer.spaceId(), answer.runId(), answer.correlationId(), type, 1,
-                    objectMapper.writeValueAsString(payload));
+            String payloadJson = objectMapper.writeValueAsString(payload);
+            com.ragforge.server.run.RunEvent event = events.append(answer.spaceId(), answer.runId(),
+                    answer.correlationId(), type, 1, payloadJson);
+            if (persistence != null) {
+                persistence.appendEvent(new AnswerPersistencePort.AnswerEvent(event.eventId(), answer.answerId(),
+                        answer.spaceId(), answer.runId(), event.sequence(), eventType(type), sha256(payloadJson),
+                        "{}", event.occurredAt()));
+            }
         } catch (Exception exception) {
             throw new IllegalStateException("Answer event could not be serialized", exception);
+        }
+    }
+
+    private static AnswerPersistencePort.EventType eventType(String type) {
+        return AnswerPersistencePort.EventType.valueOf(type.replace('.', '_').toUpperCase(java.util.Locale.ROOT));
+    }
+
+    private static String sha256(String value) {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder(64);
+            for (byte item : digest) result.append(String.format("%02x", item));
+            return result.toString();
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is required by the runtime", exception);
         }
     }
 }

@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ANSWER = ROOT / "contracts" / "answer"
 AGENT = ROOT / "contracts" / "agent"
 EVENTS = ROOT / "contracts" / "events"
+OPENAPI = ROOT / "contracts" / "openapi" / "ragforge-api-v1.yaml"
 FIXTURES = ROOT / "tests" / "contract" / "phase5" / "fixtures"
 UUID_V7 = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
 SENSITIVE = {"password", "secret", "api_key", "access_token", "credential_ref", "authorization", "cookie", "request_headers", "response_headers", "raw_prompt", "system_prompt", "full_text", "raw_text", "document_content", "response_body", "quote", "citation_text", "filename"}
@@ -184,6 +185,7 @@ class Phase5ContractTest(unittest.TestCase):
             "tool_result": (AGENT / "tool-result.v1.schema.json", load_json(AGENT / "tool-result.v1.schema.json")),
             "sse": (EVENTS / "answer.sse.v1.schema.json", load_json(EVENTS / "answer.sse.v1.schema.json")),
         }
+        cls.openapi = load_json(OPENAPI)
 
     def assert_valid(self, kind: str, instance: Any) -> None:
         path, schema = self.schemas[kind]
@@ -305,6 +307,36 @@ class Phase5ContractTest(unittest.TestCase):
         self.assertNotEqual(len({event["event_id"] for event in duplicate_event_id}), len(duplicate_event_id))
         non_monotonic = [events[0], events[2], events[1]]
         self.assertNotEqual([event["sequence"] for event in non_monotonic], sorted(event["sequence"] for event in non_monotonic))
+
+    def test_phase5_openapi_paths_are_space_scoped_and_strictly_declared(self) -> None:
+        paths = self.openapi["paths"]
+        expected = {
+            "/api/v1/spaces/{spaceId}/answers",
+            "/api/v1/spaces/{spaceId}/answers/{runId}",
+            "/api/v1/spaces/{spaceId}/answers/{runId}/events",
+            "/api/v1/spaces/{spaceId}/answers/{runId}/cancel",
+            "/api/v1/spaces/{spaceId}/runs/{runId}/citations/{evidenceId}/preview",
+        }
+        self.assertTrue(expected.issubset(paths))
+        for path in expected:
+            self.assertEqual(paths[path]["x-ragforge-implementation-status"], "phase5-implemented")
+            self.assertIn("{spaceId}", path)
+        operations = [operation for path in expected for method, operation in paths[path].items() if method in {"get", "post"}]
+        self.assertEqual(len(operations), len({operation["operationId"] for operation in operations}))
+        self.assertIn("IdempotencyKey", json.dumps(paths["/api/v1/spaces/{spaceId}/answers"]))
+        self.assertIn("LastEventId", json.dumps(paths["/api/v1/spaces/{spaceId}/answers/{runId}/events"]))
+
+    def test_phase5_openapi_answer_components_deny_raw_content_and_external_urls(self) -> None:
+        schemas = self.openapi["components"]["schemas"]
+        self.assertEqual(schemas["AnswerSseEvent"]["properties"]["event_type"]["enum"], [
+            "answer.delta", "answer.citation", "answer.abstention", "answer.tool",
+            "answer.usage", "answer.error", "answer.done"
+        ])
+        citation = schemas["AnswerCitation"]
+        self.assertTrue(citation["additionalProperties"] is False)
+        forbidden = {"quote", "url", "filename", "fullText", "rawText", "documentContent"}
+        self.assertFalse(forbidden & set(citation["properties"]))
+        self.assertFalse(forbidden & set(schemas["AnswerCitationPreview"]["properties"]))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ApiError } from "./api";
-import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswerConversation, createAnswerRun, previewCitation, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult } from "./answer";
+import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, previewCitation, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult } from "./answer";
 import { type RunProjection } from "./answer";
 
 const props = defineProps<{ selectedSpaceId: string }>();
@@ -50,6 +50,9 @@ const routeVersionId = ref("");
 const profileVersionId = ref("");
 const providerConnectionId = ref("");
 const promptVersionId = ref("");
+const model = ref("");
+const datasetHash = ref("");
+const configHash = ref("");
 const timeoutSeconds = ref(30);
 const status = ref<UiStatus>("empty");
 const answerText = ref("");
@@ -213,7 +216,8 @@ function resetAnswer(): void {
 function validateStart(): string | null {
   if (!props.selectedSpaceId) return "请先在页面顶部选择当前空间。";
   if (!question.value.trim()) return "请输入问题。";
-  if (!routeVersionId.value.trim() || !profileVersionId.value.trim() || !providerConnectionId.value.trim() || !promptVersionId.value.trim()) return "需要填写 route、profile、provider connection 和 prompt 的版本 ID。";
+  if (!routeVersionId.value.trim() || !profileVersionId.value.trim() || !providerConnectionId.value.trim() || !promptVersionId.value.trim() || !model.value.trim()) return "需要填写 route、profile、provider connection、prompt 和 model。";
+  if (!/^[0-9a-f]{64}$/i.test(datasetHash.value) || !/^[0-9a-f]{64}$/i.test(configHash.value)) return "需要填写 64 位 dataset/config hash，避免使用未版本化的运行配置。";
   if (!Number.isInteger(timeoutSeconds.value) || timeoutSeconds.value < 1 || timeoutSeconds.value > 120) return "timeoutSeconds 必须是 1–120 的整数。";
   return null;
 }
@@ -246,11 +250,13 @@ async function startAnswer(): Promise<void> {
     }
     if (!activeConversationId) throw new Error("conversation unavailable");
     if (props.selectedSpaceId !== spaceIdAtStart) throw new Error("space changed during answer start");
-    const run = await createAnswerRun(spaceIdAtStart, activeConversationId, { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value }, runIdempotencyKey);
+    const request = { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), model: model.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, datasetHash: datasetHash.value.trim(), configHash: configHash.value.trim(), maxContextTokens: 4000 };
+    const run = await createAnswerRun(spaceIdAtStart, activeConversationId, request, runIdempotencyKey);
     const runId = runIdentifier(run);
     if (!runId || run.spaceId !== spaceIdAtStart || props.selectedSpaceId !== spaceIdAtStart || !run.correlationId) throw new Error("run context unavailable");
     runContext.value = { spaceId: spaceIdAtStart, runId, correlationId: run.correlationId };
     cancelIdempotencyKey = createKey(`answer-cancel-${runId}`);
+    await createAnswer(spaceIdAtStart, { ...request, runId }, createKey(`answer-create-${runId}`));
     await streamRun(runContext.value, timeoutSeconds.value);
   } catch (error) {
     if (abortController?.signal.aborted && isTerminal()) return;
@@ -351,7 +357,7 @@ onBeforeUnmount(() => abortController?.abort());
     <div class="section-heading"><div><p class="eyebrow">03 · Verifiable answer</p><h2 id="answer-heading">带引用问答</h2><p>回答增量、结构化 Citation 和运行状态来自当前空间的 SSE；模型提供的文件名、URL 和正文不会被当作引用。</p></div><div class="read-only-note" :class="{ warning: status === 'degraded' || status === 'timeout' }">{{ statusLabel }}</div></div>
     <form class="card answer-form" @submit.prevent="startAnswer">
       <div class="field wide"><label for="answer-question">问题</label><textarea id="answer-question" v-model="question" rows="4" maxlength="32000" placeholder="输入问题；不会写入 URL 或浏览器存储"></textarea></div>
-      <details class="answer-config"><summary>运行版本配置</summary><p class="field-hint">当前服务器运行契约需要显式绑定不可变 route/profile/provider/prompt 版本；请求路径始终使用页面顶部的当前空间。云端出境在本入口固定关闭。</p><div class="form-grid"><div class="field"><label for="answer-conversation">已有 conversationId（可选）</label><input id="answer-conversation" v-model="conversationId" autocomplete="off" placeholder="留空则创建新会话" /></div><div class="field"><label for="answer-route">routeVersionId</label><input id="answer-route" v-model="routeVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-profile">profileVersionId</label><input id="answer-profile" v-model="profileVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-provider">providerConnectionId</label><input id="answer-provider" v-model="providerConnectionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-prompt">promptVersionId</label><input id="answer-prompt" v-model="promptVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-timeout">timeoutSeconds</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div></div></details>
+      <details class="answer-config"><summary>运行版本配置</summary><p class="field-hint">当前服务器运行契约需要显式绑定不可变 route/profile/provider/prompt/model 版本与 dataset/config hash；请求路径始终使用页面顶部的当前空间。云端出境在本入口固定关闭。</p><div class="form-grid"><div class="field"><label for="answer-conversation">已有 conversationId（可选）</label><input id="answer-conversation" v-model="conversationId" autocomplete="off" placeholder="留空则创建新会话" /></div><div class="field"><label for="answer-route">routeVersionId</label><input id="answer-route" v-model="routeVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-profile">profileVersionId</label><input id="answer-profile" v-model="profileVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-provider">providerConnectionId</label><input id="answer-provider" v-model="providerConnectionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-prompt">promptVersionId</label><input id="answer-prompt" v-model="promptVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-model">model</label><input id="answer-model" v-model="model" autocomplete="off" required placeholder="已发布模型名" /></div><div class="field"><label for="answer-dataset-hash">datasetHash</label><input id="answer-dataset-hash" v-model="datasetHash" autocomplete="off" required placeholder="64 位 SHA-256" /></div><div class="field"><label for="answer-config-hash">configHash</label><input id="answer-config-hash" v-model="configHash" autocomplete="off" required placeholder="64 位 SHA-256" /></div><div class="field"><label for="answer-timeout">timeoutSeconds</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div></div></details>
       <div class="form-actions"><button type="submit" :disabled="isActive || !selectedSpaceId">{{ isActive ? "回答进行中…" : "开始回答" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }} · 仅本地出境策略</span></div>
     </form>
     <p v-if="formError" class="alert error" role="alert">{{ formError }}</p><p v-if="cancelError" class="alert error" role="alert">{{ cancelError }}</p><p v-if="notice" class="alert" :class="status === 'failed' || status === 'timeout' ? 'error' : 'success'" role="status">{{ notice }}</p>

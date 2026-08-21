@@ -152,8 +152,12 @@ export interface StartAnswerRequest {
   profileVersionId: string;
   providerConnectionId: string;
   promptVersionId: string;
+  model: string;
   message: string;
   timeoutSeconds: number;
+  datasetHash: string;
+  configHash: string;
+  maxContextTokens: number;
 }
 
 export interface CitationPreviewResult {
@@ -328,8 +332,28 @@ export async function createAnswerRun(spaceId: string, conversationId: string, r
   return apiFetch<RunProjection>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/conversations/${encodeURIComponent(conversationId)}/runs`, { method: "POST", body: { ...request, allowCloudEgress: false }, idempotencyKey });
 }
 
+export async function createAnswer(spaceId: string, request: StartAnswerRequest & { runId: string }, idempotencyKey: string): Promise<unknown> {
+  return apiFetch<unknown>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/answers`, {
+    method: "POST",
+    body: {
+      runId: request.runId,
+      query: request.message,
+      promptVersionId: request.promptVersionId,
+      modelRouteVersionId: request.routeVersionId,
+      modelProfileVersionId: request.profileVersionId,
+      model: request.model,
+      maxContextTokens: request.maxContextTokens,
+      timeoutSeconds: request.timeoutSeconds,
+      datasetHash: request.datasetHash,
+      configHash: request.configHash,
+      allowCloudEgress: false,
+    },
+    idempotencyKey,
+  });
+}
+
 export async function cancelAnswerRun(spaceId: string, runId: string, idempotencyKey: string): Promise<RunProjection> {
-  return apiFetch<RunProjection>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/runs/${encodeURIComponent(runId)}/cancel`, { method: "POST", body: { reason: "user_cancelled" }, idempotencyKey });
+  return apiFetch<RunProjection>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/answers/${encodeURIComponent(runId)}/cancel`, { method: "POST", body: { reason: "user_cancelled" }, idempotencyKey });
 }
 
 export async function previewCitation(spaceId: string, runId: string, evidenceId: string): Promise<CitationPreviewResult> {
@@ -378,7 +402,7 @@ function parseSseBlock(block: string): { id?: string; type?: string; data?: stri
 export async function consumeAnswerStream(options: AnswerStreamOptions): Promise<void> {
   const headers = new Headers({ Accept: "text/event-stream", "Cache-Control": "no-cache", "X-Correlation-Id": options.correlationId });
   if (options.lastEventId) headers.set("Last-Event-ID", options.lastEventId);
-  const response = await fetch(`/api/v1/spaces/${encodeURIComponent(options.spaceId)}/runs/${encodeURIComponent(options.runId)}/events`, { method: "GET", headers, credentials: "include", signal: options.signal });
+  const response = await fetch(`/api/v1/spaces/${encodeURIComponent(options.spaceId)}/answers/${encodeURIComponent(options.runId)}/events`, { method: "GET", headers, credentials: "include", signal: options.signal });
   if (!response.ok) throw new AnswerStreamError(response.status);
   if (!response.body) throw new AnswerStreamError(null);
   const reader = response.body.getReader();

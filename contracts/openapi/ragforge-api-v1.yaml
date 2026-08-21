@@ -39,6 +39,9 @@
       "name": "runs"
     },
     {
+      "name": "answers"
+    },
+    {
       "name": "sources"
     },
     {
@@ -519,6 +522,60 @@
         "responses": {"202": {"description": "Retry accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Run"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "429": {"$ref": "#/components/responses/TooManyRequests"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
     },
+    "/api/v1/spaces/{spaceId}/answers": {
+      "x-ragforge-implementation-status": "phase5-implemented",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "post": {
+        "tags": ["answers"],
+        "operationId": "createAnswer",
+        "summary": "Create a verified answer projection",
+        "description": "Runs retrieval and generation only through the explicitly configured space route. The response contains structured claims/citations or a refusal; provider URLs, filenames, quotes and bodies are never citation fields.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerRequest"}}}},
+        "responses": {
+          "202": {"description": "Answer accepted or structurally refused", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerResponse"}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/answers/{runId}": {
+      "x-ragforge-implementation-status": "phase5-implemented",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RunId"}],
+      "get": {
+        "tags": ["answers"], "operationId": "getAnswer", "summary": "Get a retained answer projection", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Answer projection", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerResponse"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/answers/{runId}/events": {
+      "x-ragforge-implementation-status": "phase5-implemented",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RunId"}],
+      "get": {
+        "tags": ["answers"], "operationId": "streamAnswerEvents", "summary": "Stream answer events with replay", "description": "The strict answer SSE v1 stream validates event identity, sequence, citations and sensitive fields. Last-Event-ID resumes only events after the acknowledged cursor; cancellation emits no later answer.delta.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/LastEventId"}],
+        "responses": {"200": {"description": "Server-sent answer events", "headers": {"Cache-Control": {"schema": {"type": "string", "const": "no-cache"}}, "X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"text/event-stream": {"schema": {"$ref": "#/components/schemas/AnswerSseEvent"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/answers/{runId}/cancel": {
+      "x-ragforge-implementation-status": "phase5-implemented",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RunId"}],
+      "post": {
+        "tags": ["answers"], "operationId": "cancelAnswer", "summary": "Cancel an answer idempotently", "description": "Cancellation is space-authorized and idempotent. Once CANCELLED is published, no subsequent answer.delta is valid.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerCancelRequest"}}}},
+        "responses": {"202": {"description": "Cancellation accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerCancelResponse"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/runs/{runId}/citations/{evidenceId}/preview": {
+      "x-ragforge-implementation-status": "phase5-implemented",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RunId"}, {"$ref": "#/components/parameters/EvidenceId"}],
+      "get": {
+        "tags": ["answers"], "operationId": "previewAnswerCitation", "summary": "Re-authorize and preview citation provenance", "description": "Reads the exact retained citation revision in the requested space. The projection contains only structured provenance and never returns a URL, quote, filename or document body.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Citation provenance", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerCitationPreview"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
     "/api/v1/spaces/{spaceId}/sources": {
       "x-ragforge-implementation-status": "phase3-contract",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
@@ -811,6 +868,12 @@
       },
       "RunId": {
         "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "EvidenceId": {
+        "name": "evidenceId",
         "in": "path",
         "required": true,
         "schema": {"$ref": "#/components/schemas/UuidV7"}
@@ -1430,6 +1493,41 @@
           "reasonCode": {"type": ["string", "null"], "enum": ["NO_EVIDENCE", "LOW_CONFIDENCE", "POLICY_BLOCKED", null]}
         }
       },
+      "AnswerRequest": {
+        "type": "object", "additionalProperties": false,
+        "required": ["runId", "query", "promptVersionId", "modelRouteVersionId", "modelProfileVersionId", "model", "maxContextTokens", "datasetHash", "configHash"],
+        "properties": {
+          "runId": {"$ref": "#/components/schemas/UuidV7"}, "query": {"type": "string", "minLength": 1, "maxLength": 32000},
+          "promptVersionId": {"$ref": "#/components/schemas/UuidV7"}, "modelRouteVersionId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileVersionId": {"$ref": "#/components/schemas/UuidV7"}, "model": {"type": "string", "minLength": 1, "maxLength": 200},
+          "maxContextTokens": {"type": "integer", "minimum": 1, "maximum": 200000}, "timeoutSeconds": {"type": "integer", "minimum": 1, "maximum": 120}, "toolSchemaVersionsJson": {"type": "string", "maxLength": 8000}, "datasetHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "configHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "allowCloudEgress": {"type": "boolean", "default": false}
+        },
+        "description": "The path space is authoritative; the body cannot override it. Cloud egress is opt-in and must pass the space binding policy."
+      },
+      "AnswerResponse": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schemaVersion", "answerId", "spaceId", "correlationId", "runId", "idempotencyKey", "status", "claims", "citations", "toolCallIds", "provenance", "createdAt"],
+        "properties": {
+          "schemaVersion": {"type": "string", "const": "v1"}, "answerId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "idempotencyKey": {"type": "string", "minLength": 16, "maxLength": 255}, "status": {"type": "string", "enum": ["COMPLETED", "ABSTAINED", "FAILED", "CANCELLED"]},
+          "answerText": {"type": ["string", "null"], "maxLength": 200000}, "claims": {"type": "array", "maxItems": 100, "items": {"$ref": "#/components/schemas/AnswerClaim"}}, "citations": {"type": "array", "maxItems": 100, "items": {"$ref": "#/components/schemas/AnswerCitation"}}, "abstention": {"oneOf": [{"$ref": "#/components/schemas/AnswerAbstention"}, {"type": "null"}]}, "toolCallIds": {"type": "array", "maxItems": 100, "items": {"$ref": "#/components/schemas/UuidV7"}}, "provenance": {"$ref": "#/components/schemas/AnswerProvenance"}, "createdAt": {"type": "string", "format": "date-time"}
+        }
+      },
+      "AnswerClaim": {
+        "type": "object", "additionalProperties": false, "required": ["schemaVersion", "claimId", "spaceId", "correlationId", "runId", "idempotencyKey", "claimText", "citationTokens", "answerCharStart", "answerCharEnd"],
+        "properties": {"schemaVersion": {"type": "string", "const": "v1"}, "claimId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "idempotencyKey": {"type": "string", "minLength": 16, "maxLength": 255}, "claimText": {"type": "string", "minLength": 1, "maxLength": 20000}, "citationTokens": {"type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/components/schemas/UuidV7"}}, "answerCharStart": {"type": "integer", "minimum": 0}, "answerCharEnd": {"type": "integer", "minimum": 0}}
+      },
+      "AnswerCitation": {
+        "type": "object", "additionalProperties": false, "required": ["schemaVersion", "evidenceId", "claimId", "spaceId", "correlationId", "runId", "evidenceBundleId", "indexVersionId", "documentRevisionId", "parentChunkId", "childChunkId", "contentRef", "textHash", "anchor", "answerCharStart", "answerCharEnd", "citationAllowed"],
+        "properties": {"schemaVersion": {"type": "string", "const": "v1"}, "evidenceId": {"$ref": "#/components/schemas/UuidV7"}, "claimId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceBundleId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceBundleVersion": {"type": "integer", "minimum": 1}, "evidenceBundleHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "indexVersionId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileVersion": {"type": "integer", "minimum": 1}, "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"}, "parentChunkId": {"$ref": "#/components/schemas/UuidV7"}, "childChunkId": {"$ref": "#/components/schemas/UuidV7"}, "contentRef": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"}, "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}, "anchor": {"type": "object", "additionalProperties": false}, "answerCharStart": {"type": "integer", "minimum": 0}, "answerCharEnd": {"type": "integer", "minimum": 0}, "citationAllowed": {"type": "boolean", "const": true}
+        },
+        "description": "Server-created provenance only; no URL, filename, quote, or document body."
+      },
+      "AnswerAbstention": {"type": "object", "additionalProperties": false, "required": ["schemaVersion", "abstentionId", "spaceId", "correlationId", "runId", "idempotencyKey", "reasonCode", "evidenceIds", "message"], "properties": {"schemaVersion": {"type": "string", "const": "v1"}, "abstentionId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "idempotencyKey": {"type": "string", "minLength": 16, "maxLength": 255}, "reasonCode": {"type": "string", "enum": ["NO_EVIDENCE", "LOW_CONFIDENCE", "EVIDENCE_CONFLICT", "POLICY_BLOCKED", "SPACE_ACCESS_DENIED", "TOOL_UNAUTHORIZED", "TOOL_FAILURE", "PROVIDER_UNAVAILABLE", "CANCELLED"]}, "evidenceIds": {"type": "array", "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/components/schemas/UuidV7"}}, "message": {"type": "string", "minLength": 1, "maxLength": 2000}}},
+      "AnswerProvenance": {"type": "object", "additionalProperties": false, "required": ["schemaVersion", "spaceId", "correlationId", "runId", "idempotencyKey", "evidenceBundleId", "evidenceBundleVersion", "evidenceBundleHash", "evidenceBundleRef", "indexVersionId", "retrievalProfileId", "retrievalProfileVersion", "ragPromptVersionId", "promptHash", "modelRouteVersionId", "modelProfileVersionId", "modelVersion", "toolSchemaVersionsJson", "datasetHash", "configHash", "traceId"], "properties": {"schemaVersion": {"type": "string", "const": "v1"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "idempotencyKey": {"type": "string", "minLength": 16, "maxLength": 255}, "evidenceBundleId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceBundleVersion": {"type": "integer", "minimum": 1}, "evidenceBundleHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "evidenceBundleRef": {"type": "string", "minLength": 1, "maxLength": 512}, "indexVersionId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileVersion": {"type": "integer", "minimum": 1}, "ragPromptVersionId": {"$ref": "#/components/schemas/UuidV7"}, "promptHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "modelRouteVersionId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileVersionId": {"$ref": "#/components/schemas/UuidV7"}, "modelVersion": {"type": "string", "minLength": 1, "maxLength": 255}, "toolSchemaVersionsJson": {"type": "string", "maxLength": 16000}, "datasetHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "configHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "traceId": {"$ref": "#/components/schemas/UuidV7"}}
+      },
+      "AnswerCancelRequest": {"type": "object", "additionalProperties": false, "properties": {"reason": {"type": "string", "maxLength": 500}}},
+      "AnswerCancelResponse": {"type": "object", "additionalProperties": false, "required": ["runId", "spaceId", "status", "firstCancellation", "correlationId"], "properties": {"runId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "status": {"type": "string", "const": "CANCELLED"}, "firstCancellation": {"type": "boolean"}, "eventId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "reason": {"type": ["string", "null"], "maxLength": 500}}},
+      "AnswerCitationPreview": {"type": "object", "additionalProperties": false, "required": ["evidenceId", "spaceId", "correlationId", "runId", "evidenceBundleId", "evidenceBundleVersion", "evidenceBundleHash", "indexVersionId", "retrievalProfileId", "retrievalProfileVersion", "documentRevisionId", "parentChunkId", "childChunkId", "contentRef", "textHash", "anchor", "citationAllowed"], "properties": {"evidenceId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceBundleId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceBundleVersion": {"type": "integer", "minimum": 1}, "evidenceBundleHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "indexVersionId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileVersion": {"type": "integer", "minimum": 1}, "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"}, "parentChunkId": {"$ref": "#/components/schemas/UuidV7"}, "childChunkId": {"$ref": "#/components/schemas/UuidV7"}, "contentRef": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"}, "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}, "anchor": {"type": "object", "additionalProperties": false}, "citationAllowed": {"type": "boolean", "const": true}}},
+      "AnswerSseEvent": {"type": "object", "additionalProperties": false, "required": ["schema_version", "event_id", "event_type", "sequence", "idempotency_key", "space_id", "correlation_id", "run_id", "occurred_at", "payload"], "properties": {"schema_version": {"type": "string", "const": "v1"}, "event_id": {"$ref": "#/components/schemas/UuidV7"}, "event_type": {"type": "string", "enum": ["answer.delta", "answer.citation", "answer.abstention", "answer.tool", "answer.usage", "answer.error", "answer.done"]}, "sequence": {"type": "integer", "minimum": 1}, "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 255}, "space_id": {"$ref": "#/components/schemas/UuidV7"}, "correlation_id": {"$ref": "#/components/schemas/UuidV7"}, "run_id": {"$ref": "#/components/schemas/UuidV7"}, "occurred_at": {"type": "string", "format": "date-time"}, "payload": {"type": "object", "additionalProperties": false}}},
       "RetrievalPlaygroundSide": {
         "type": "object",
         "additionalProperties": false,

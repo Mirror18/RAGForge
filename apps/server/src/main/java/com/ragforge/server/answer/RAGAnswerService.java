@@ -5,7 +5,6 @@ import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.adapter.EgressDecision;
 import com.ragforge.server.retrieval.CitationValidator;
 import com.ragforge.server.retrieval.EvidenceBundle;
-import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -26,7 +25,6 @@ import java.util.concurrent.TimeoutException;
  * Server-side P5-C/D seam: authorize, embed, retrieve, render a versioned prompt,
  * generate once, then validate and project citations from the current Evidence Bundle.
  */
-@Service
 public final class RAGAnswerService {
     private final SpaceAuthorizer authorizer;
     private final QueryEmbeddingProvider embeddingProvider;
@@ -249,10 +247,7 @@ public final class RAGAnswerService {
         }
         Answer answer = Answer.completed(request.spaceId(), request.correlationId(), request.runId(),
                 request.idempotencyKey(), generated.answerText(), claims, citations, provenance);
-        AnswerPersistencePort.PersistedAnswer persisted = answerPersistence.saveIfAbsent(
-                new AnswerPersistencePort.PersistedAnswer(answer.answerId(), request.spaceId(), request.runId(),
-                        request.idempotencyKey(), answer.status(), sha256(generated.answerText()),
-                        sha256(citationCanonical(citations)), provenance));
+        AnswerPersistencePort.PersistedAnswer persisted = answerPersistence.saveIfAbsent(answer);
         if (!persisted.answerId().equals(answer.answerId())) {
             return refusal(request, AnswerStatus.FAILED, AbstentionReason.POLICY_BLOCKED,
                     "The idempotency key is already bound to another answer result.", List.of(),

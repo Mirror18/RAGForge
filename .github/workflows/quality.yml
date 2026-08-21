@@ -137,6 +137,26 @@ jobs:
         if: ${{ hashFiles('**/pom.xml') != '' }}
         run: mvn --batch-mode --no-transfer-progress test
 
+      - name: Run Phase 5 generation evaluation
+        run: python scripts/phase5/generation_evaluation.py
+
+      - name: Generate Phase 5 performance evidence
+        run: python scripts/phase5/performance_evidence.py
+
+      - name: Run Phase 5 security and egress gates when Maven exists
+        if: ${{ hashFiles('**/pom.xml') != '' }}
+        run: python scripts/phase5/security_evaluation.py
+
+      - name: Upload Phase 5 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-phase5-evidence
+          path: |
+            tests/evidence/phase5-generation-evaluation.json
+            tests/evidence/phase5-performance.json
+            tests/evidence/phase5-security.json
+          if-no-files-found: error
+
       - name: Run Phase 3 cross-platform and parser acceptance gates
         if: ${{ hashFiles('**/pom.xml') != '' }}
         run: |

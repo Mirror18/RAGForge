@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.answer.Answer;
 import com.ragforge.server.answer.AnswerRequest;
+import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerStatus;
 import com.ragforge.server.answer.RAGAnswerService;
 import com.ragforge.server.common.ApiException;
@@ -26,6 +27,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,6 +62,12 @@ public class AnswerApiController {
         this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore());
     }
 
+    @Autowired
+    AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
+                        ObjectMapper objectMapper, AnswerPersistencePort persistence) {
+        this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore(persistence));
+    }
+
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerApiProjectionStore projections) {
         this.answers = answers;
@@ -67,7 +75,7 @@ public class AnswerApiController {
         this.authorization = authorization;
         this.objectMapper = objectMapper;
         this.projections = projections;
-        this.publisher = new AnswerEventPublisher(events, objectMapper);
+        this.publisher = new AnswerEventPublisher(events, objectMapper, projections.persistence());
         this.sseAdapter = new AnswerSseEventAdapter(objectMapper);
     }
 
@@ -140,6 +148,9 @@ public class AnswerApiController {
         }
         UUID correlationId = correlationId(servletRequest);
         RunEventStore.CancellationResult result = events.cancel(spaceId, runId, correlationId);
+        if (result.firstCancellation()) {
+            projections.find(spaceId, runId).ifPresent(answer -> publisher.publishCancellation(answer, correlationId));
+        }
         return new CancelResponse(runId, spaceId, "CANCELLED", result.firstCancellation(),
                 result.event() == null ? null : result.event().eventId(), correlationId,
                 request == null ? null : request.reason());
