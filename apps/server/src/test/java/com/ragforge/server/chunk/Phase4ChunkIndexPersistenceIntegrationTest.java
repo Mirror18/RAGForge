@@ -22,6 +22,7 @@ import com.ragforge.server.index.IndexState;
 import com.ragforge.server.index.IndexValidation;
 import com.ragforge.server.retrieval.ExpansionMode;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
+import com.ragforge.server.studio.StudioRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -60,6 +61,9 @@ class Phase4ChunkIndexPersistenceIntegrationTest {
     ChunkRepository chunks;
 
     @Autowired
+    StudioRepository studio;
+
+    @Autowired
     IndexRepository indexes;
 
     @Autowired
@@ -89,8 +93,8 @@ class Phase4ChunkIndexPersistenceIntegrationTest {
         assertThat(tables).containsExactlyInAnyOrder(
                 "parent_chunks", "child_chunks", "chunk_overrides", "index_versions",
                 "active_index_pointers", "retrieval_profiles", "active_profile_pointers");
-        assertThat(jdbc.queryForObject("SELECT version FROM flyway_schema_history WHERE version = '9'", String.class))
-                .isEqualTo("9");
+        assertThat(jdbc.queryForObject("SELECT version FROM flyway_schema_history WHERE version = '10'", String.class))
+                .isEqualTo("10");
     }
 
     @Test
@@ -124,6 +128,7 @@ class Phase4ChunkIndexPersistenceIntegrationTest {
     @Test
     void chunkOverridesFollowTheStateMachineAndNeverSilentlyReapply() {
         UUID space = createSpace("phase4-override");
+        UUID otherSpace = createSpace("phase4-override-other-space");
         UUID revision = createRevision(space, "override-rev");
         UUID parentId = UUID.randomUUID();
         chunks.insertParents(List.of(new ChunkRepository.NewParentChunk(
@@ -137,18 +142,38 @@ class Phase4ChunkIndexPersistenceIntegrationTest {
 
         ChunkRepository.ChunkOverride active = chunks.createOverride(
                 new ChunkRepository.NewChunkOverride(UUID.randomUUID(), space, childId, revision,
-                        "人工修订标题", SHA_2, UUID.randomUUID(), NOW));
+                        "opaque://replacement/override-1", "人工修订标题", SHA_2, UUID.randomUUID(), NOW));
         assertThat(active.state()).isEqualTo(OverrideState.ACTIVE);
+        assertThat(active.replacementContentRef()).isEqualTo("opaque://replacement/override-1");
+        assertThat(chunks.findLatestOverride(space, childId).orElseThrow().replacementContentRef())
+                .isEqualTo("opaque://replacement/override-1");
+        assertThat(studio.findOverrideContentRef(space, active.id()))
+                .contains("opaque://replacement/override-1");
+        jdbc.update("DELETE FROM audit_events WHERE space_id = ?", space);
+        assertThat(studio.findOverrideContentRef(space, active.id()))
+                .contains("opaque://replacement/override-1");
+
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE chunk_overrides SET replacement_content_ref = ? WHERE space_id = ? AND id = ?",
+                "opaque://fullText/1", space, active.id())).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE chunk_overrides SET replacement_content_ref = ? WHERE space_id = ? AND id = ?",
+                "opaque://bad ref/1", space, active.id())).isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> chunks.createOverride(new ChunkRepository.NewChunkOverride(
+                UUID.randomUUID(), space, childId, revision, "", "人工修订标题", SHA_2,
+                UUID.randomUUID(), NOW))).isInstanceOf(IllegalArgumentException.class);
 
         ChunkRepository.ChunkOverride review = chunks.updateOverrideState(
                 space, active.id(), OverrideState.NEEDS_REVIEW, NOW.plusSeconds(60));
         assertThat(review.state()).isEqualTo(OverrideState.NEEDS_REVIEW);
         assertThat(review.versionNo()).isEqualTo(2);
+        assertThat(review.replacementContentRef()).isEqualTo(active.replacementContentRef());
 
         ChunkRepository.ChunkOverride resolved = chunks.updateOverrideState(
                 space, review.id(), OverrideState.ACTIVE, NOW.plusSeconds(120));
         assertThat(resolved.state()).isEqualTo(OverrideState.ACTIVE);
         assertThat(resolved.versionNo()).isEqualTo(3);
+        assertThat(resolved.replacementContentRef()).isEqualTo(active.replacementContentRef());
 
         // ACTIVE -> DISCARDED directly is forbidden; the machine requires NEEDS_REVIEW first.
         assertThatThrownBy(() -> chunks.updateOverrideState(
@@ -169,9 +194,29 @@ class Phase4ChunkIndexPersistenceIntegrationTest {
         UUID newerRevision = createRevision(space, "override-rev-2");
         ChunkRepository.ChunkOverride forced = chunks.createOverride(
                 new ChunkRepository.NewChunkOverride(UUID.randomUUID(), space, childId, newerRevision,
-                        "源文本更新，需复核", SHA_2, UUID.randomUUID(), NOW));
+                        "opaque://replacement/override-2", "源文本更新，需复核", SHA_2, UUID.randomUUID(), NOW));
         assertThat(forced.state()).isEqualTo(OverrideState.NEEDS_REVIEW);
+        assertThat(forced.replacementContentRef()).isEqualTo("opaque://replacement/override-2");
         assertThat(forced.versionNo()).isGreaterThan(discarded.versionNo());
+        assertThat(chunks.listChildren(space, revision).getFirst().textHash()).isEqualTo(SHA_1);
+
+        assertThat(chunks.findById(otherSpace, active.id())).isEmpty();
+        assertThatThrownBy(() -> chunks.updateOverrideState(otherSpace, active.id(),
+                OverrideState.NEEDS_REVIEW, NOW.plusSeconds(300)))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        jdbc.update("UPDATE chunk_overrides SET replacement_content_ref = NULL WHERE space_id = ? AND id = ?",
+                space, active.id());
+        jdbc.update("""
+                INSERT INTO audit_events
+                    (id, event_type, actor_user_id, space_id, aggregate_id, correlation_id, payload, occurred_at)
+                VALUES (?, 'chunk.override.created', NULL, ?, ?, ?, CAST(? AS jsonb), ?)
+                """, UUID.randomUUID(), space, active.id(), UUID.randomUUID(),
+                "{\"contentRef\":\"opaque://legacy/replacement-1\"}",
+                java.sql.Timestamp.from(NOW.plusSeconds(500)));
+        assertThat(studio.findOverrideContentRef(space, active.id()))
+                .contains("opaque://legacy/replacement-1");
+        assertThat(studio.findOverrideContentRef(otherSpace, active.id())).isEmpty();
     }
 
     @Test

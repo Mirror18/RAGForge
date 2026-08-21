@@ -93,16 +93,28 @@ public class StudioRepository {
         }
     }
 
-    /** Content references are opaque and are retained in the studio audit payload until a schema field exists. */
+    /** Reads the persisted reference and only uses audit for pre-V10 null rows. */
     public Optional<String> findOverrideContentRef(UUID spaceId, UUID overrideId) {
         requireScope(spaceId, overrideId);
+        try {
+            String persisted = jdbc.queryForObject("""
+                    SELECT replacement_content_ref
+                    FROM chunk_overrides
+                    WHERE space_id = ? AND id = ?
+                    """, String.class, spaceId, overrideId);
+            if (persisted != null) {
+                return Optional.of(persisted);
+            }
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
         try {
             return Optional.ofNullable(jdbc.queryForObject("""
                     SELECT payload->>'contentRef'
                     FROM audit_events
                     WHERE space_id = ? AND aggregate_id = ?
                       AND event_type IN ('chunk.override.created', 'chunk.override.transitioned')
-                      AND payload ? 'contentRef'
+                      AND payload->>'contentRef' IS NOT NULL
                     ORDER BY occurred_at DESC, id DESC
                     LIMIT 1
                     """, String.class, spaceId, overrideId));

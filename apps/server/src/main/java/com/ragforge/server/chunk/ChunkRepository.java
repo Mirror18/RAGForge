@@ -42,7 +42,14 @@ public class ChunkRepository {
     /** Auditable manual chunk edit; versions are append-only. */
     public record ChunkOverride(UUID id, UUID spaceId, UUID childChunkId, UUID documentRevisionId, int versionNo,
             OverrideState state, String reason, String replacedTextHash, UUID createdBy,
-            Instant createdAt, Instant updatedAt) {
+            Instant createdAt, Instant updatedAt, String replacementContentRef) {
+        /** Source-compatible constructor for historical tests and rows without V10 data. */
+        public ChunkOverride(UUID id, UUID spaceId, UUID childChunkId, UUID documentRevisionId, int versionNo,
+                OverrideState state, String reason, String replacedTextHash, UUID createdBy,
+                Instant createdAt, Instant updatedAt) {
+            this(id, spaceId, childChunkId, documentRevisionId, versionNo, state, reason, replacedTextHash,
+                    createdBy, createdAt, updatedAt, null);
+        }
     }
 
     public record NewParentChunk(UUID id, UUID spaceId, UUID documentRevisionId, int chunkIndex, int versionNo,
@@ -57,7 +64,12 @@ public class ChunkRepository {
     }
 
     public record NewChunkOverride(UUID id, UUID spaceId, UUID childChunkId, UUID documentRevisionId,
-            String reason, String replacedTextHash, UUID createdBy, Instant now) {
+            String replacementContentRef, String reason, String replacedTextHash, UUID createdBy, Instant now) {
+        /** Source-compatible constructor retained for callers compiled before V10. */
+        public NewChunkOverride(UUID id, UUID spaceId, UUID childChunkId, UUID documentRevisionId,
+                String reason, String replacedTextHash, UUID createdBy, Instant now) {
+            this(id, spaceId, childChunkId, documentRevisionId, null, reason, replacedTextHash, createdBy, now);
+        }
     }
 
     private final JdbcTemplate jdbc;
@@ -140,6 +152,7 @@ public class ChunkRepository {
     /** Creates override version 1. A different target revision than the child forces NEEDS_REVIEW. */
     @Transactional
     public ChunkOverride createOverride(NewChunkOverride input) {
+        validateOpaqueContentRef(input.replacementContentRef());
         UUID childRevisionId = jdbc.queryForObject(
                 "SELECT document_revision_id FROM child_chunks WHERE space_id = ? AND id = ?",
                 UUID.class, input.spaceId(), input.childChunkId());
@@ -150,11 +163,12 @@ public class ChunkRepository {
         jdbc.update("""
                 INSERT INTO chunk_overrides
                     (id, space_id, child_chunk_id, document_revision_id, version_no, override_state,
-                     override_source, reason, replaced_text_hash, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'MANUAL', ?, ?, ?, ?, ?)
+                     override_source, reason, replaced_text_hash, replacement_content_ref,
+                     created_by, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'MANUAL', ?, ?, ?, ?, ?, ?)
                 """, input.id(), input.spaceId(), input.childChunkId(), input.documentRevisionId(),
                 nextVersion, initialState.name(), input.reason(), input.replacedTextHash(),
-                input.createdBy(), timestamp(input.now()), timestamp(input.now()));
+                input.replacementContentRef(), input.createdBy(), timestamp(input.now()), timestamp(input.now()));
         return findLatestOverride(input.spaceId(), input.childChunkId()).orElseThrow();
     }
 
@@ -168,11 +182,12 @@ public class ChunkRepository {
         jdbc.update("""
                 INSERT INTO chunk_overrides
                     (id, space_id, child_chunk_id, document_revision_id, version_no, override_state,
-                     override_source, reason, replaced_text_hash, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'MANUAL', ?, ?, ?, ?, ?)
+                     override_source, reason, replaced_text_hash, replacement_content_ref,
+                     created_by, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'MANUAL', ?, ?, ?, ?, ?, ?)
                 """, UUID.randomUUID(), spaceId, current.childChunkId(), current.documentRevisionId(),
                 nextVersion, targetState.name(), current.reason(), current.replacedTextHash(),
-                current.createdBy(), timestamp(current.createdAt()), timestamp(updatedAt));
+                current.replacementContentRef(), current.createdBy(), timestamp(current.createdAt()), timestamp(updatedAt));
         return findLatestOverride(spaceId, current.childChunkId()).orElseThrow();
     }
 
@@ -180,7 +195,7 @@ public class ChunkRepository {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""
                     SELECT id, space_id, child_chunk_id, document_revision_id, version_no, override_state,
-                           reason, replaced_text_hash, created_by, created_at, updated_at
+                           reason, replaced_text_hash, replacement_content_ref, created_by, created_at, updated_at
                     FROM chunk_overrides WHERE space_id = ? AND child_chunk_id = ?
                     ORDER BY version_no DESC LIMIT 1
                     """, (rs, row) -> mapOverride(rs), spaceId, childChunkId));
@@ -193,7 +208,7 @@ public class ChunkRepository {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""
                     SELECT id, space_id, child_chunk_id, document_revision_id, version_no, override_state,
-                           reason, replaced_text_hash, created_by, created_at, updated_at
+                           reason, replaced_text_hash, replacement_content_ref, created_by, created_at, updated_at
                     FROM chunk_overrides WHERE space_id = ? AND id = ?
                     """, (rs, row) -> mapOverride(rs), spaceId, overrideId));
         } catch (EmptyResultDataAccessException ignored) {
@@ -204,7 +219,7 @@ public class ChunkRepository {
     public List<ChunkOverride> listOverrides(UUID spaceId, OverrideState state) {
         return jdbc.query("""
                 SELECT id, space_id, child_chunk_id, document_revision_id, version_no, override_state,
-                       reason, replaced_text_hash, created_by, created_at, updated_at
+                       reason, replaced_text_hash, replacement_content_ref, created_by, created_at, updated_at
                 FROM chunk_overrides WHERE space_id = ? AND override_state = ?
                 ORDER BY updated_at DESC
                 """, (rs, row) -> mapOverride(rs), spaceId, state.name());
@@ -216,7 +231,18 @@ public class ChunkRepository {
                 rs.getObject("child_chunk_id", UUID.class), rs.getObject("document_revision_id", UUID.class),
                 rs.getInt("version_no"), OverrideState.valueOf(rs.getString("override_state")),
                 rs.getString("reason"), rs.getString("replaced_text_hash"),
-                rs.getObject("created_by", UUID.class), instant(rs, "created_at"), instant(rs, "updated_at"));
+                rs.getObject("created_by", UUID.class), instant(rs, "created_at"), instant(rs, "updated_at"),
+                rs.getString("replacement_content_ref"));
+    }
+
+    private static void validateOpaqueContentRef(String contentRef) {
+        if (contentRef == null || contentRef.isBlank() || contentRef.length() > 512
+                || contentRef.chars().anyMatch(Character::isWhitespace)
+                || contentRef.chars().anyMatch(Character::isISOControl)
+                || contentRef.matches("(?i).*(fullText|full_text|rawText|raw_text|rawDocument|raw_document|"
+                        + "documentContent|document_content|vector|embedding).*")) {
+            throw new IllegalArgumentException("replacementContentRef must be a non-sensitive opaque reference");
+        }
     }
 
     private String jsonArray(List<String> values) {
