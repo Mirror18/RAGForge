@@ -1,0 +1,283 @@
+export type PlatformRole = "PLATFORM_ADMIN" | "USER";
+export type SpaceRole = "SPACE_ADMIN" | "EDITOR" | "VIEWER";
+
+export interface ProblemDetails {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+  instance: string;
+  code: string;
+  correlationId: string;
+  fieldErrors?: Array<{ field: string; code: string; message: string }>;
+  retryable?: boolean;
+  retryAfterSeconds?: number;
+}
+
+export class ApiError extends Error {
+  readonly problem: ProblemDetails | null;
+  readonly status: number;
+  readonly correlationId: string | null;
+
+  constructor(message: string, status: number, problem: ProblemDetails | null, correlationId: string | null) {
+    super(message);
+    this.name = "ApiError";
+    this.problem = problem;
+    this.status = status;
+    this.correlationId = correlationId;
+  }
+}
+
+export interface CurrentSession {
+  session: {
+    sessionId: string;
+    userId: string;
+    expiresAt: string;
+    csrfToken: string;
+  };
+  user: {
+    userId: string;
+    email: string;
+    displayName: string;
+    platformRole: PlatformRole;
+  };
+}
+
+export interface Space {
+  spaceId: string;
+  name: string;
+  description?: string;
+  status: "ACTIVE" | "ARCHIVED";
+  role: SpaceRole;
+  createdAt: string;
+  version?: number;
+}
+
+export interface SpacePage {
+  items: Space[];
+  nextCursor: string | null;
+}
+
+export interface Anchor {
+  headingPath: string[];
+  pageNumber?: number;
+  sheet?: string;
+  slideNumber?: number;
+  lineRange?: { startLine: number; endLine: number };
+  tableCell?: string;
+}
+
+export interface ChunkStudioProjection {
+  spaceId: string;
+  documentRevisionId: string;
+  childChunkId: string;
+  parentChunkId: string;
+  contentRef: string;
+  textHash: string;
+  parentChild: {
+    parentChunkId: string;
+    childChunkId: string;
+    relationship: "CHILD_OF";
+    parentContentRef: string;
+    childIndex: number;
+  };
+  provenance: {
+    sourceId: string;
+    documentId: string;
+    documentRevisionId: string;
+    sourcePath: string;
+    revisionVersion: number;
+  };
+  anchor: Anchor;
+  vectorStatus: {
+    state: "NOT_INDEXED" | "PENDING" | "INDEXED" | "STALE" | "FAILED";
+    indexVersionId: string | null;
+    vectorDimension: number | null;
+    updatedAt: string;
+  };
+  override: {
+    overrideId: string | null;
+    state: "NONE" | "ACTIVE" | "NEEDS_REVIEW" | "DISCARDED";
+    version: number;
+    reason: string | null;
+    createdBy: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+}
+
+export interface ChunkOverrideResponse {
+  spaceId: string;
+  documentRevisionId: string;
+  childChunkId: string;
+  contentRef: string;
+  textHash: string;
+  override: {
+    overrideId: string;
+    state: "NONE" | "ACTIVE" | "NEEDS_REVIEW" | "DISCARDED";
+    version: number;
+    source: "MANUAL";
+    reason: string;
+    replacedTextHash?: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface RetrievalHit {
+  childChunkId: string;
+  documentRevisionId: string;
+  rank: number;
+  score: number;
+  contentRef: string;
+  textHash: string;
+}
+
+export interface StageTrace {
+  items: RetrievalHit[];
+  metrics: { candidateCount: number; latencyMs: number };
+}
+
+export interface RetrievalTrace {
+  dense: StageTrace;
+  bm25: StageTrace;
+  rrf: StageTrace;
+  rerank: StageTrace;
+  context: { childChunkIds: string[]; totalTokens: number; maxContextTokens: number; truncated: boolean };
+  evidence: {
+    items: Array<{
+      evidenceId: string;
+      spaceId: string;
+      childChunkId: string;
+      documentRevisionId: string;
+      contentRef: string;
+      textHash: string;
+      anchor: Anchor;
+      citationAllowed: true;
+    }>;
+    allowListVersion: string;
+  };
+}
+
+export interface RetrievalSide {
+  indexVersionId: string;
+  profile: { profileId: string; version: number; candidateOnly: true };
+  trace: RetrievalTrace;
+  metrics: { latencyMs: number; evidenceCount: number };
+}
+
+export interface RetrievalExperiment {
+  experimentId: string;
+  spaceId: string;
+  query: string;
+  normalizedQuery: string;
+  indexVersionId: string;
+  profileA: RetrievalSide;
+  profileB: RetrievalSide | null;
+  abstention: {
+    profileA: { abstained: boolean; reasonCode: "NO_EVIDENCE" | "LOW_CONFIDENCE" | "POLICY_BLOCKED" | null };
+    profileB: { abstained: boolean; reasonCode: "NO_EVIDENCE" | "LOW_CONFIDENCE" | "POLICY_BLOCKED" | null } | null;
+  };
+  activeProfileUnchanged: true;
+}
+
+type ApiFetchOptions = Omit<RequestInit, "body" | "headers" | "method"> & {
+  method?: string;
+  body?: unknown;
+  headers?: HeadersInit;
+  idempotencyKey?: string;
+};
+
+let csrfToken: string | null = null;
+
+function uuidV7(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const timestamp = Date.now();
+  for (let index = 5; index >= 0; index -= 1) {
+    bytes[index] = timestamp / 2 ** (8 * (5 - index)) % 256;
+  }
+  bytes[6] = bytes[6] & 0x0f | 0x70;
+  bytes[8] = bytes[8] & 0x3f | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function idempotencyKey(): string {
+  return crypto.randomUUID().replaceAll("-", "");
+}
+
+async function parseResponse(response: Response): Promise<unknown> {
+  if (response.status === 204) return null;
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("json")) return response.json();
+  return response.text();
+}
+
+async function readProblem(response: Response): Promise<ProblemDetails | null> {
+  try {
+    const payload = await parseResponse(response);
+    if (typeof payload === "object" && payload !== null && "status" in payload && "detail" in payload) {
+      return payload as ProblemDetails;
+    }
+  } catch {
+    // The caller still receives the HTTP status and a safe generic message.
+  }
+  return null;
+}
+
+export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
+  const mutating = !["GET", "HEAD", "OPTIONS"].includes(method);
+  if (mutating && !csrfToken) {
+    const session = await fetchCurrentSession();
+    csrfToken = session.session.csrfToken;
+  }
+
+  const headers = new Headers(options.headers);
+  headers.set("Accept", "application/json");
+  headers.set("X-Correlation-Id", uuidV7());
+  if (mutating) {
+    headers.set("X-CSRF-Token", csrfToken ?? "");
+    headers.set("Idempotency-Key", options.idempotencyKey ?? idempotencyKey());
+  }
+  if (options.body !== undefined) headers.set("Content-Type", "application/json");
+
+  const response = await fetch(path, {
+    ...options,
+    method,
+    headers,
+    credentials: "include",
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+  if (!response.ok) {
+    const problem = await readProblem(response);
+    const correlationId = problem?.correlationId ?? response.headers.get("X-Correlation-Id");
+    const detail = problem?.detail ?? `请求失败（HTTP ${response.status}）`;
+    throw new ApiError(detail, response.status, problem, correlationId);
+  }
+  return (await parseResponse(response)) as T;
+}
+
+async function fetchCurrentSession(): Promise<CurrentSession> {
+  const response = await fetch("/api/v1/sessions/current", {
+    headers: { Accept: "application/json", "X-Correlation-Id": uuidV7() },
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const problem = await readProblem(response);
+    throw new ApiError(problem?.detail ?? "当前会话不可用，请重新登录。", response.status, problem, problem?.correlationId ?? null);
+  }
+  const session = (await parseResponse(response)) as CurrentSession;
+  csrfToken = session.session.csrfToken;
+  return session;
+}
+
+export async function getCurrentSession(): Promise<CurrentSession> {
+  return fetchCurrentSession();
+}
+
+export function clearCsrfToken(): void {
+  csrfToken = null;
+}
