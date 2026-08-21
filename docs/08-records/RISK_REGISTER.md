@@ -13,7 +13,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-005 | 低质量引用导致“看似可信”答案 | 4 | 5 | 20 | server citation validation、evidence provenance、120-case eval | RAG | OPEN |
 | R-006 | Parser/OCR 恶意文件造成 RCE/DoS | 3 | 5 | 15 | quarantine、AV、sandbox、limits、malicious corpus | Security | OPEN |
 | R-007 | 消息重投造成重复索引或成本 | 4 | 4 | 16 | Outbox、幂等 key、attempt/ledger dedupe、fault tests | Platform | OPEN |
-| R-008 | 半构建 Qdrant index 被发布 | 3 | 5 | 15 | candidate state、validation、atomic active pointer、rollback | Retrieval | OPEN |
+| R-008 | 半构建 Qdrant index 被发布 | 3 | 5 | 15 | candidate state、validation、atomic active pointer、rollback；Phase 4 evidence 已覆盖 | Retrieval | CLOSED |
 | R-009 | 过早微服务化拖慢学习和交付 | 3 | 4 | 12 | ADR-0001、架构测试、证据驱动拆分 | Architecture | MITIGATING |
 | R-010 | 第三方许可证影响未来公开/商业使用 | 3 | 5 | 15 | license gate、SBOM、reuse register、禁止限制源码复制 | Compliance | MITIGATING |
 | R-011 | 框架版本过新导致生态不兼容 | 3 | 3 | 9 | Boot 3.5/Spring AI 1.1 基线；编码前 compatibility spike | Platform | MITIGATING |
@@ -28,6 +28,8 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-020 | MinIO 等运行时镜像使用 tag，许可证和生产 digest 尚未锁定 | 2 | 5 | 10 | Phase 1 依赖登记；发布前 SBOM、许可证复核、immutable digest 和镜像扫描 | Compliance / Operations | MITIGATING |
 | R-021 | Run retry context 仅保存在进程内，重启后历史失败 Run 无法继续 retry | 3 | 4 | 12 | Phase 2 已验证同进程 timeout/retry；Phase 3/6 设计持久化 retry command/context 和恢复演练 | Platform | OPEN |
 | R-022 | 真实 OCR runtime 不可用导致扫描 PDF 质量门禁无法闭环 | 4 | 4 | 16 | Tesseract 受限子进程、PDFBox 渲染、输入/页数/输出/超时上限；Windows 与 Ubuntu CI 真实 2/2 样本 | Ingestion / Operations | CLOSED |
+| R-023 | BM25 当前为进程内确定性实现，重启后 lexical index 需重建 | 3 | 4 | 12 | Phase 4 明确 provider seam 与 space/index scope；Phase 5/6 选择 durable lexical provider 前不得宣称重启持久化 | Retrieval | OPEN |
+| R-024 | 1M Qdrant 证据使用 8 维合成向量，不能直接外推生产 embedding 维度和混合并发 | 3 | 4 | 12 | Qdrant `v1.11.5` 1M 真实 filter probe p95 1101.3382ms；生产 embedding 维度、并发和索引重建需 Phase 6 复测 | Performance / Retrieval | MITIGATING |
 
 ## 2. 维护规则
 
@@ -68,3 +70,11 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-010` 继续 MITIGATING：PDFBox 2.0.30、POI 5.4.0、MinIO SDK 8.6.0、OkHttp JVM 5.1.0、Tesseract/Leptonica 运行时已记录于 [`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md)；Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 的 Syft/Grype 通过，正式发布仍必须复核传递依赖、训练数据和目标发行包许可证。
 - `R-020` 继续 MITIGATING：MinIO 测试镜像使用固定 release tag 但尚未锁定生产 digest；发布前必须完成 digest、SBOM、许可证和镜像扫描。
 - `R-022` 已关闭：`TesseractOcrEngineTest` 真实执行两份无文本层合成 PDF，Windows `5.4.0.20240606` 与 Ubuntu CI `5.3.4-1build5` 均 2/2 成功；Parse Report 具备 artifact、页码、版本、触发原因与 `COMPLETED` 审计状态，证据见 [`phase3-ocr-runtime-summary.json`](../../tests/evidence/phase3-ocr-runtime-summary.json)。
+
+## 7. Phase 4 复审（2026-08-21）
+
+- `R-003` 仍为 OPEN，但范围已收窄：Phase 4 已用 PostgreSQL/Qdrant/Valkey 和 targeted Maven 17/17 覆盖 chunk、override、embedding cache、索引指针和检索过滤；Phase 5 的 citation validator、只读工具和跨空间回答仍未完成，不能关闭全局风险。
+- `R-008` 已关闭：candidate 必须经 VALIDATING/READY 和完整校验后才能 ACTIVE；失败验证不污染 active pointer；第二索引切换记录 previous pointer，旧索引至少保留 24 小时。证据见 [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json)。
+- `R-012` 继续 OPEN：Phase 4 30 问固定切片达到 Recall/MRR 阈值，但全量 120+ 评估、人工复核和生成质量仍属于 Phase 5/6。
+- 新增 `R-023`：BM25 provider 当前为进程内确定性实现，重启后的 durable lexical index 尚未选型；在该风险关闭前不宣称重启后 lexical 数据持久化。
+- 新增 `R-024`：Qdrant 1M 真实本地探针使用 8 维合成向量和 100 次查询，Recall@10 `1.0`、p95 `1101.3382 ms`；该结果满足当前阶段退出条件，但不替代生产 embedding 维度、并发和混合索引容量复测。

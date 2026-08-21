@@ -10,9 +10,9 @@
 | RF-SRC-002 | 只读增量同步与 checkpoint | PRD 3.3 | ADR-0006 | add/modify/move/delete/redelivery | 3 |
 | RF-ING-001 | 版本化可观察 Pipeline | PRD 3.4 | ADR-0006 | job/step provenance integration | 3 |
 | RF-ING-002 | 原生解析 + OCR fallback | PRD 3.4 | Ingestion 5 | parser/OCR corpus | 3 |
-| RF-ING-003 | 父子分块与 override | PRD 3.4/3.8 | Ingestion 6/8 | chunk golden + override conflict | 4 |
-| RF-IDX-001 | Candidate index 原子发布 | PRD 3.4 | ADR-0006 | fault injection + rollback | 4 |
-| RF-RET-001 | dense + BM25 + RRF + rerank | PRD 3.5 | [Retrieval](../02-architecture/RETRIEVAL_AND_CHAT.md) | Recall/MRR evaluation | 4 |
+| RF-ING-003 | 父子分块与 override | PRD 3.4/3.8 | Ingestion 6/8 | `ChunkingEngineTest` + [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json) | 4 |
+| RF-IDX-001 | Candidate index 原子发布 | PRD 3.4 | ADR-0006 | `Phase4ChunkIndexPersistenceIntegrationTest` + [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json) | 4 |
+| RF-RET-001 | dense + BM25 + RRF + rerank | PRD 3.5 | [Retrieval](../02-architecture/RETRIEVAL_AND_CHAT.md) | [`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json) + Qdrant scope integration | 4 |
 | RF-CIT-001 | 精确、可鉴权引用 | PRD 3.5 | Retrieval 3 | citation precision + forged ID | 5 |
 | RF-ANS-001 | 证据不足拒答 | PRD 3.5 | Retrieval 4 | abstention dataset | 5–6 |
 | RF-PRV-001 | Ollama + OpenAI-compatible | PRD 3.6 | ADR-0005 | provider contract matrix | 2 |
@@ -23,7 +23,7 @@
 | RF-AGT-001 | 只读安全工具 | PRD 3.7 | Retrieval 6 + threat model | SSRF/schema/permission red-team | 5–6 |
 | RF-EVL-001 | 120+ 可版本化评估 | PRD 4/5 | ADR-0008 | [Evaluation plan](../04-quality/RAG_EVALUATION.md) | 6 |
 | RF-OBS-001 | 端到端可观测 | PRD 4 | ADR-0008 | trace continuity + dashboards | 1–6 |
-| RF-PERF-001 | 目标规模和 p95 | Charter 4/5 | Performance plan | load/soak reports | 4–7 |
+| RF-PERF-001 | 目标规模和 p95 | Charter 4/5 | Performance plan | [`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json)；生产维度/并发复测留在 Phase 6 | 4–7 |
 | RF-OPS-001 | Compose Linux 交付 | PRD 4 | [Deployment](../05-operations/DEPLOYMENT.md) | clean Ubuntu acceptance | 7 |
 | RF-OPS-002 | RPO24h/RTO4h | Charter 4 | [Backup](../05-operations/BACKUP_RESTORE.md) | isolated restore drill | 6–7 |
 | RF-OSS-001 | 第三方许可证可追溯 | Charter 7 | ADR-0009 | SBOM/license/notice CI | 0–7 |
@@ -72,3 +72,14 @@
 | P3-SRC-001 | 文件/本地目录/Git 全量增量和跨平台 manifest | [`apps/ingestion-worker/src/main/java/com/ragforge/ingestion/connector/`](../../apps/ingestion-worker/src/main/java/com/ragforge/ingestion/connector/)、[`connector-manifest.json`](../../tests/fixtures/phase3/connector-manifest.json)、[`test_phase3_cross_platform_connectors.py`](../../tests/acceptance/test_phase3_cross_platform_connectors.py) | Windows stable ID/hash/五类变更通过；GitHub Actions Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) Ubuntu acceptance 全步骤通过，JVM artifact `9183633612` | P3-EXIT-01 已满足；继续保留固定 manifest |
 | P3-PARSER-001 | 六类原生格式、Parse Report、OCR 边界 | [`NativeDocumentParser.java`](../../apps/ingestion-worker/src/main/java/com/ragforge/ingestion/parser/NativeDocumentParser.java)、[`TesseractOcrEngine.java`](../../apps/ingestion-worker/src/main/java/com/ragforge/ingestion/parser/TesseractOcrEngine.java)、[`parser-corpus.json`](../../tests/fixtures/phase3/parser-corpus.json)、[`test_phase3_parser_quality.py`](../../tests/acceptance/test_phase3_parser_quality.py)、[`phase3-ocr-runtime-summary.json`](../../tests/evidence/phase3-ocr-runtime-summary.json)、[`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md) | 原生 6/6；image-only PDF 2/2；真实 Tesseract OCR 2/2；Parse Report 来源、页码、引擎版本、触发原因、审计状态和 artifact 引用完整；Windows 本地与 Ubuntu CI acceptance 通过 | Phase 4 继续扩展 OCR quarantine/AV/sandbox 和多语言评估 |
 | P3-SAFE-001 | checkpoint、active pointer、object key 和故障安全 | [`CheckpointFailureBoundaryTest.java`](../../apps/ingestion-worker/src/test/java/com/ragforge/ingestion/connector/CheckpointFailureBoundaryTest.java)、[`test_phase3_fault_checkpoint.py`](../../tests/security/test_phase3_fault_checkpoint.py)、[`ObjectStoreTest.java`](../../apps/ingestion-worker/src/test/java/com/ragforge/ingestion/objectstore/ObjectStoreTest.java) | parser/object/OCR/DB/message fault cases 通过；Secret scan、对象校验和/空间隔离通过 | Phase 4 继续扩展 quarantine/AV/sandbox |
+
+## Phase 4 实施证据
+
+| 证据 ID | 验收内容 | 实现与验证 | 结果 | 后续 |
+|---|---|---|---|---|
+| P4-CHUNK-001 | 父子 chunk、专用边界策略、锚点和确定性 | `ChunkingEngine`、`ChunkingEngineTest`、`chunking-domain.v1` fixtures | contract 42/42，Maven 全量通过 | Phase 5 将 Evidence Bundle 接到稳定 anchor |
+| P4-CACHE-001 | normalized text hash + embedding profile + dimension 的缓存幂等 | `EmbeddingCacheKeyTest`、`EmbeddingCacheServiceTest`、`ValkeyEmbeddingCacheStoreIntegrationTest` | 命中、维度/配置隔离、空间 key 隔离通过 | durable cache TTL/容量在 Phase 6 复测 |
+| P4-INDEX-001 | candidate validation、原子 active pointer、回滚和 24h retention | `Phase4ChunkIndexPersistenceIntegrationTest`、`CandidateIndexServiceIntegrationTest`、[`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json) | targeted 17/17；半构建 candidate 不可 ACTIVE | Phase 6 加入重建/恢复演练 |
+| P4-RET-001 | dense/BM25/RRF/rerank/parent expansion、profile/version/provenance | `RetrievalServiceTest`、`RetrievalServiceQdrantIntegrationTest`、[`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json) | Recall@10 0.965517、MRR@10 0.827586、forbidden leak 0 | Phase 5 接入生成与 citation validator |
+| P4-SCALE-001 | 1M child chunks 下 Qdrant filter、召回和 p95 | [`qdrant_scale_benchmark.py`](../../scripts/phase4/qdrant_scale_benchmark.py)、[`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json) | 1,000,000 points、Recall@10 1.0、p95 1101.3382ms | 生产 embedding 维度、20 并发和混合索引留 Phase 6 |
+| P4-STUDIO-001 | Chunk Studio/Playground 权限、敏感字段裁剪、override 审计 | `ChunkStudioServiceTest`、`RetrievalPlaygroundServiceTest`、`StudioControllerMockMvcTest`、web build | targeted Maven 17/17；web format/build 通过 | Phase 5 扩展只读工具和证据交互 |

@@ -1,7 +1,7 @@
 # 项目状态
 
-- Updated: 2026-08-15
-- Current stage: Phase 3 版本化摄取流水线已完成阶段验收，下一入口为 Phase 4
+- Updated: 2026-08-21
+- Current stage: Phase 4 Chunk Studio、索引与检索已完成阶段验收，下一入口为 Phase 5 带引用问答与只读 Agent
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - External remote: `origin` configured；Phase 3 OCR runtime implementation 已推送至 `2ca3a75`；GitHub Actions quality Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 成功，Phase 3 JVM evidence artifact `9183633612`、Syft SBOM artifact `9183518984`、Grype SARIF artifact `9183542524` 已生成。
@@ -32,18 +32,25 @@
 ## 2. 当前声明
 
 - Phase 3 已完成阶段闭环：原生格式 6/6、image-only PDF 2/2、真实 Tesseract OCR 2/2；检索、分块、引用回答仍未进入本阶段。
-- Phase 4 进行中（2026-08-15）：执行计划与 Checklist 已建立；P4-B 领域契约（chunking-domain/index-version/retrieval-profile）与 P4-C 持久化（V9 migration + Chunk/Index/RetrievalProfile repositories + 状态机）已合入 main（merge `8138e85`）；P4-D 分块引擎已在 worktree `codex/p4-chunk-engine-a1` 实现（`ChunkingEngine`/`TokenEstimator`/`ChunkingStrategy` + 测试），单元验证待续。根 reactor `mvn test` BUILD SUCCESS（server 101/101、worker 28/28），contract 39/39、format/link/secret 门禁通过。技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段无 Java/Boot 升级计划。
+- Phase 4 已完成阶段闭环（2026-08-21）：P4-D 父子分块、P4-E embedding cache/Qdrant candidate index、P4-F dense/BM25/RRF/rerank/parent expansion、P4-G Chunk Studio/Retrieval Playground 与 P4-H 评测/规模/证据已合入 main。阶段合并提交包括 `300569b`、`ab81ed1`、`1f6450e`、`fed0034`、`041bf34`、`e27ae75`、`ca6db93` 及其对应 worker commits。30 问 Recall@10 `0.965517`、MRR@10 `0.827586`；Qdrant 1M synthetic child points Recall@10 `1.0`、p95 `1101.3382 ms`；空间过滤/索引切换回滚/override 冲突 targeted Maven 17/17。证据见 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)、[`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json)、[`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json) 和 [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json)。技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段未升级 Java/Boot。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
-- 已配置 GitHub remote `Mirror18/RAGForge`；本阶段实现和记录已推送，尚未创建 release。GitHub Actions Syft/Grype 已在 Run `31706823033` 通过，仍是正式发布前的有效 SBOM/SCA 门禁。
+- 已配置 GitHub remote `Mirror18/RAGForge`；Phase 4 当前实现已推送至 `origin/main`，尚未创建 release。最终 Phase 4 记录提交需触发新的 GitHub Actions quality Run；GitHub Actions Syft/Grype 仍是正式发布前的有效 SBOM/SCA 门禁。
 - Obsidian 仓库没有被写入项目进度。
-- Phase 0 实验发现的跨空间、provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态，不得视为产品通过安全验收；OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
+- Phase 0 实验发现的 provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态；Phase 4 已关闭 candidate index 半构建发布风险的阶段范围，并验证 chunk/Qdrant/cache 的空间边界，但 Phase 5 citation/agent 访问边界仍需继续验证；OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
 - 本机 Java 21 根 Maven Testcontainers 已通过，Worker 28/28、Phase 3 Python acceptance 2/2；格式、架构、secret、Markdown link、依赖清单、contract 32/32 均通过。测试日志中的 Testcontainers/Valkey 关闭后重连 warning 不影响测试结果，但保留为后续生命周期清理项。
 
-## 3. 下一入口
+## 3. Phase 4 闭环摘要
 
-Phase 4 当前入口为 chunking/index candidate 管线；必须继续保持 `space_id`、revision/artifact immutable、provenance 和 at-least-once 幂等边界。Phase 4 执行计划与 Checklist 见 [`PHASE_4_EXECUTION_PLAN.md`](phase-4/PHASE_4_EXECUTION_PLAN.md) 与 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)；Phase 3 阶段复盘见 [`PHASE_3_RETROSPECTIVE.md`](retrospectives/PHASE_3_RETROSPECTIVE.md)；既有 Phase 0–2 复盘继续保留。
+- P4-CONTRACT-01 至 P4-CONTRACT-06 全部满足；contract test 42/42。
+- P4-EXIT-01 至 P4-EXIT-04 全部满足；退出证据均为仓库内 JSON、测试或脚本，可重跑且不含生产数据。
+- 根 Maven `BUILD SUCCESS`；Phase 4 targeted Maven 17/17；format、architecture、Markdown link、secret、dependency inventory、Compose、web format/build 通过。CI workflow 已加入 Phase 4 deterministic benchmark gate；Qdrant 1M 演练为本地 Docker 受控容量证据，不作为 CI 每次运行的负载测试。
+- 保留风险：BM25 当前为进程内确定性实现，durable lexical provider 需后续架构选择；1M Qdrant 证据为 8 维合成向量，生产 embedding 维度/并发/混合负载仍需容量复测；全量 120+ 评估与 citation/agent 安全门禁属于 Phase 5/6。
 
-## 4. 更新规则
+## 4. 下一入口
+
+Phase 5 当前入口为 Evidence Bundle、citation validator、版本化 RAG prompt 和只读安全工具；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 4 执行计划与 Checklist 见 [`PHASE_4_EXECUTION_PLAN.md`](phase-4/PHASE_4_EXECUTION_PLAN.md) 与 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)；Phase 4 阶段复盘见 [`PHASE_4_RETROSPECTIVE.md`](retrospectives/PHASE_4_RETROSPECTIVE.md)；Phase 3 阶段复盘见 [`PHASE_3_RETROSPECTIVE.md`](retrospectives/PHASE_3_RETROSPECTIVE.md)；既有 Phase 0–2 复盘继续保留。
+
+## 5. 更新规则
 
 阶段状态、阻塞、退出证据和下一动作先更新本文件；阶段复盘保存在 `retrospectives/`。项目进入稳定开发后，再决定将何种摘要同步到 Obsidian。
