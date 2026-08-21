@@ -4,7 +4,7 @@
   "info": {
     "title": "RAGForge API",
     "version": "1.0.0",
-    "description": "Phase 1, Phase 2 and Phase 3 public REST/SSE contract. The operations are planned contracts; they do not claim that a server implementation is available. Phase 3 source, sync-job, document and revision projections are versioned and space-scoped.",
+    "description": "Phase 1, Phase 2 and Phase 3 public REST/SSE contract plus frozen Phase 4-G Chunk Studio and Retrieval Playground projections. Phase 1-3 operations retain their planned/contract status; Phase 4-G is a frozen implementation contract and does not claim that the whole API is implemented.",
     "license": {
       "name": "Proprietary project contract"
     }
@@ -12,6 +12,7 @@
   "x-ragforge-contract-status": "planned",
   "x-ragforge-phase2-status": "phase2-contract",
   "x-ragforge-phase3-status": "phase3-contract",
+  "x-ragforge-phase4-status": "phase4-contract",
   "servers": [
     {
       "url": "/",
@@ -42,6 +43,12 @@
     },
     {
       "name": "ingestion"
+    },
+    {
+      "name": "chunk-studio"
+    },
+    {
+      "name": "retrieval-playground"
     }
   ],
   "paths": {
@@ -613,6 +620,119 @@
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
         "responses": {"200": {"description": "Document revision", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DocumentRevision"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
+    },
+    "/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}": {
+      "x-ragforge-implementation-status": "phase4-contract",
+      "parameters": [
+        {"$ref": "#/components/parameters/SpaceId"},
+        {"$ref": "#/components/parameters/ChildChunkId"}
+      ],
+      "get": {
+        "tags": ["chunk-studio"],
+        "operationId": "getChunkStudioChild",
+        "summary": "Get a child chunk studio projection",
+        "description": "Returns parent-child linkage, provenance, citation anchor, vector/index status and the current override summary. The projection contains contentRef and textHash only; it never returns fullText, rawText or vector values.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {
+          "200": {"description": "Chunk Studio child projection", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ChunkStudioChildProjection"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}/overrides": {
+      "x-ragforge-implementation-status": "phase4-contract",
+      "parameters": [
+        {"$ref": "#/components/parameters/SpaceId"},
+        {"$ref": "#/components/parameters/ChildChunkId"}
+      ],
+      "post": {
+        "tags": ["chunk-studio"],
+        "operationId": "createChunkOverride",
+        "summary": "Create a manual child chunk override",
+        "description": "Creates an auditable manual override for the child chunk in the requested space and document revision. The repository owns the initial NONE semantics; the client cannot provide state, createdBy, timestamps or other audit identity. The service derives audit fields from the authenticated principal and never accepts fullText or rawText.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CorrelationId"},
+          {"$ref": "#/components/parameters/CsrfToken"},
+          {"$ref": "#/components/parameters/IdempotencyKey"}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateChunkOverrideRequest"}}}},
+        "responses": {
+          "201": {"description": "Chunk override created", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ChunkOverrideResponse"}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "412": {"$ref": "#/components/responses/PreconditionFailed"},
+          "422": {"$ref": "#/components/responses/UnprocessableEntity"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}/overrides/{overrideId}/transitions": {
+      "x-ragforge-implementation-status": "phase4-contract",
+      "parameters": [
+        {"$ref": "#/components/parameters/SpaceId"},
+        {"$ref": "#/components/parameters/ChildChunkId"},
+        {"$ref": "#/components/parameters/OverrideId"}
+      ],
+      "post": {
+        "tags": ["chunk-studio"],
+        "operationId": "transitionChunkOverrideState",
+        "summary": "Transition a chunk override state",
+        "description": "The only allowed transitions are ACTIVE -> NEEDS_REVIEW, NEEDS_REVIEW -> ACTIVE, and NEEDS_REVIEW -> DISCARDED. NONE is repository-owned creation semantics and is not a client transition; DISCARDED is terminal. The response keeps the override tied to the same space, child chunk and document revision.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CorrelationId"},
+          {"$ref": "#/components/parameters/CsrfToken"},
+          {"$ref": "#/components/parameters/IdempotencyKey"}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TransitionChunkOverrideRequest"}}}},
+        "responses": {
+          "200": {"description": "Chunk override state transitioned", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ChunkOverrideResponse"}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "412": {"$ref": "#/components/responses/PreconditionFailed"},
+          "422": {"$ref": "#/components/responses/UnprocessableEntity"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/retrieval-playground/experiments": {
+      "x-ragforge-implementation-status": "phase4-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "post": {
+        "tags": ["retrieval-playground"],
+        "operationId": "submitRetrievalPlaygroundExperiment",
+        "summary": "Submit one retrieval playground experiment",
+        "description": "Runs a read-only retrieval experiment against the requested candidate profile versions. Profile A/B are candidates only and cannot change the active profile pointer. The response contains normalized query and structured trace/metrics references but never document正文, rawText, fullText, vectors, secrets, credentials or free-form citations outside the Citation/Evidence allow-list. queryVector is an internal synthetic-test seam only; it is write-only, must not enter the response, logs or audit records, and is not a public client feature.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CorrelationId"},
+          {"$ref": "#/components/parameters/CsrfToken"},
+          {"$ref": "#/components/parameters/IdempotencyKey"}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RetrievalPlaygroundExperimentRequest"}}}},
+        "responses": {
+          "201": {"description": "Retrieval experiment completed", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RetrievalPlaygroundExperiment"}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "422": {"$ref": "#/components/responses/UnprocessableEntity"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
     }
   },
   "components": {
@@ -715,6 +835,18 @@
       },
       "DocumentRevisionId": {
         "name": "revisionId",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "ChildChunkId": {
+        "name": "childChunkId",
+        "in": "path",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "OverrideId": {
+        "name": "overrideId",
         "in": "path",
         "required": true,
         "schema": {"$ref": "#/components/schemas/UuidV7"}
@@ -1026,6 +1158,306 @@
       "SseEvent": {"type": "object", "additionalProperties": false, "required": ["id", "sequence", "runId", "spaceId", "correlationId", "occurredAt", "type", "version", "payload"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "sequence": {"type": "integer", "minimum": 1}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "occurredAt": {"type": "string", "format": "date-time"}, "type": {"type": "string", "enum": ["run.snapshot", "run.status", "step.status", "answer.delta", "citation.added", "usage.updated", "run.error", "run.completed"]}, "version": {"type": "string", "pattern": "^v[1-9][0-9]*$"}, "payload": {"type": "object", "propertyNames": {"not": {"enum": ["password", "secret", "apiKey", "accessToken", "documentContent", "fullText", "rawDocument"]}}}}, "description": "SSE IDs are monotonic by sequence per run. Last-Event-ID replay is followed by live events; snapshot recovery is used when the cursor is unavailable."},
       "CancelRunRequest": {"type": "object", "additionalProperties": false, "properties": {"reason": {"type": "string", "maxLength": 500}}},
       "RetryRunRequest": {"type": "object", "additionalProperties": false, "properties": {"reason": {"type": "string", "maxLength": 500}, "maxAttempts": {"type": "integer", "minimum": 1, "maximum": 5}}},
+      "ChunkStudioParentChild": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["parentChunkId", "childChunkId", "relationship", "parentContentRef", "childIndex"],
+        "properties": {
+          "parentChunkId": {"$ref": "#/components/schemas/UuidV7"},
+          "childChunkId": {"$ref": "#/components/schemas/UuidV7"},
+          "relationship": {"type": "string", "const": "CHILD_OF"},
+          "parentContentRef": {"type": "string", "minLength": 1, "maxLength": 512},
+          "childIndex": {"type": "integer", "minimum": 0}
+        }
+      },
+      "ChunkStudioProvenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sourceId", "documentId", "documentRevisionId", "sourcePath", "revisionVersion"],
+        "properties": {
+          "sourceId": {"$ref": "#/components/schemas/UuidV7"},
+          "documentId": {"$ref": "#/components/schemas/UuidV7"},
+          "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"},
+          "sourcePath": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "revisionVersion": {"type": "integer", "minimum": 1}
+        },
+        "description": "Provenance identity only; no source bytes or extracted document text is returned."
+      },
+      "ChunkStudioAnchor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["headingPath"],
+        "properties": {
+          "headingPath": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+          "pageNumber": {"type": "integer", "minimum": 1},
+          "sheet": {"type": "string", "minLength": 1, "maxLength": 255},
+          "slideNumber": {"type": "integer", "minimum": 1},
+          "lineRange": {"type": "object", "additionalProperties": false, "required": ["startLine", "endLine"], "properties": {"startLine": {"type": "integer", "minimum": 1}, "endLine": {"type": "integer", "minimum": 1}}},
+          "tableCell": {"type": "string", "minLength": 1, "maxLength": 512}
+        },
+        "description": "Citation anchor allow-list; it carries location metadata, never a quote or free-form citation."
+      },
+      "ChunkStudioVectorStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state", "indexVersionId", "vectorDimension", "updatedAt"],
+        "properties": {
+          "state": {"type": "string", "enum": ["NOT_INDEXED", "PENDING", "INDEXED", "STALE", "FAILED"]},
+          "indexVersionId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]},
+          "vectorDimension": {"type": ["integer", "null"], "minimum": 1},
+          "updatedAt": {"type": "string", "format": "date-time"}
+        },
+        "description": "Vector/index metadata only; the vector itself is never returned."
+      },
+      "ChunkOverrideSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["overrideId", "state", "version", "reason", "createdBy", "createdAt", "updatedAt"],
+        "properties": {
+          "overrideId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]},
+          "state": {"type": "string", "enum": ["NONE", "ACTIVE", "NEEDS_REVIEW", "DISCARDED"]},
+          "version": {"type": "integer", "minimum": 0},
+          "reason": {"type": ["string", "null"], "maxLength": 2000},
+          "createdBy": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]},
+          "createdAt": {"type": ["string", "null"], "format": "date-time"},
+          "updatedAt": {"type": ["string", "null"], "format": "date-time"}
+        },
+        "description": "Current override summary. NONE has repository-owned zero/empty audit values; populated audit fields are server-generated."
+      },
+      "ChunkStudioChildProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["spaceId", "documentRevisionId", "childChunkId", "parentChunkId", "contentRef", "textHash", "parentChild", "provenance", "anchor", "vectorStatus", "override"],
+        "properties": {
+          "spaceId": {"$ref": "#/components/schemas/UuidV7"},
+          "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"},
+          "childChunkId": {"$ref": "#/components/schemas/UuidV7"},
+          "parentChunkId": {"$ref": "#/components/schemas/UuidV7"},
+          "contentRef": {"type": "string", "minLength": 1, "maxLength": 512},
+          "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+          "parentChild": {"$ref": "#/components/schemas/ChunkStudioParentChild"},
+          "provenance": {"$ref": "#/components/schemas/ChunkStudioProvenance"},
+          "anchor": {"$ref": "#/components/schemas/ChunkStudioAnchor"},
+          "vectorStatus": {"$ref": "#/components/schemas/ChunkStudioVectorStatus"},
+          "override": {"$ref": "#/components/schemas/ChunkOverrideSummary"}
+        },
+        "description": "Space-scoped child projection for Chunk Studio. It exposes references, hashes and location metadata, never fullText, rawText or vector values."
+      },
+      "CreateChunkOverrideRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["documentRevisionId", "contentRef", "textHash", "reason"],
+        "properties": {
+          "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"},
+          "contentRef": {"type": "string", "minLength": 1, "maxLength": 512, "description": "Opaque service-managed content reference; it is not inline text."},
+          "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+          "reason": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "description": "Override content is addressed by a service-managed reference and hash. State, source, createdBy and timestamps are server/repository fields; fullText and rawText are forbidden."
+      },
+      "TransitionChunkOverrideRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["targetState", "expectedVersion", "reason"],
+        "properties": {
+          "targetState": {"type": "string", "enum": ["ACTIVE", "NEEDS_REVIEW", "DISCARDED"]},
+          "expectedVersion": {"type": "integer", "minimum": 1},
+          "reason": {"type": "string", "minLength": 1, "maxLength": 2000}
+        },
+        "description": "The server checks the current state and permits only ACTIVE -> NEEDS_REVIEW -> ACTIVE or DISCARDED. NONE is not a client transition."
+      },
+      "ChunkOverrideRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["overrideId", "state", "version", "source", "reason", "createdBy", "createdAt", "updatedAt"],
+        "properties": {
+          "overrideId": {"$ref": "#/components/schemas/UuidV7"},
+          "state": {"type": "string", "enum": ["NONE", "ACTIVE", "NEEDS_REVIEW", "DISCARDED"]},
+          "version": {"type": "integer", "minimum": 1},
+          "source": {"type": "string", "const": "MANUAL"},
+          "reason": {"type": "string", "minLength": 1, "maxLength": 2000},
+          "replacedTextHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+          "createdBy": {"$ref": "#/components/schemas/UuidV7"},
+          "createdAt": {"type": "string", "format": "date-time"},
+          "updatedAt": {"type": "string", "format": "date-time"}
+        },
+        "description": "Server-audited override state. Creation may expose repository-owned NONE semantics; subsequent client transitions follow ACTIVE -> NEEDS_REVIEW -> ACTIVE or DISCARDED. No client-supplied identity or timestamp is reflected here."
+      },
+      "ChunkOverrideResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["spaceId", "documentRevisionId", "childChunkId", "contentRef", "textHash", "override"],
+        "properties": {
+          "spaceId": {"$ref": "#/components/schemas/UuidV7"},
+          "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"},
+          "childChunkId": {"$ref": "#/components/schemas/UuidV7"},
+          "contentRef": {"type": "string", "minLength": 1, "maxLength": 512},
+          "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+          "override": {"$ref": "#/components/schemas/ChunkOverrideRecord"}
+        },
+        "description": "Explicit space/revision/child identity plus content reference/hash and server audit fields; no content body is returned."
+      },
+      "RetrievalProfileVersionRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profileId", "version", "candidateOnly"],
+        "properties": {
+          "profileId": {"$ref": "#/components/schemas/UuidV7"},
+          "version": {"type": "integer", "minimum": 1},
+          "candidateOnly": {"type": "boolean", "const": true}
+        },
+        "description": "Exact immutable profile version used for an experiment; it is a candidate and never an active-pointer mutation."
+      },
+      "RetrievalPlaygroundExperimentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query", "indexVersionId", "profileA"],
+        "properties": {
+          "query": {"type": "string", "minLength": 1, "maxLength": 10000},
+          "indexVersionId": {"$ref": "#/components/schemas/UuidV7"},
+          "profileA": {"$ref": "#/components/schemas/RetrievalProfileVersionRef"},
+          "profileB": {"oneOf": [{"$ref": "#/components/schemas/RetrievalProfileVersionRef"}, {"type": "null"}]},
+          "queryVector": {"type": "array", "minItems": 1, "maxItems": 4096, "items": {"type": "number"}, "writeOnly": true, "x-ragforge-internal-only": true, "description": "Internal synthetic-test seam for the current P4-F queryVector path; never returned, logged or audited and not a public client capability."}
+        },
+        "description": "The request is space-scoped by the path; spaceId is intentionally absent so the body cannot override the path boundary. A/B selects immutable candidate profile versions only."
+      },
+      "RetrievalTraceHit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["childChunkId", "documentRevisionId", "rank", "score", "contentRef", "textHash"],
+        "properties": {
+          "childChunkId": {"$ref": "#/components/schemas/UuidV7"},
+          "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"},
+          "rank": {"type": "integer", "minimum": 1},
+          "score": {"type": "number"},
+          "contentRef": {"type": "string", "minLength": 1, "maxLength": 512},
+          "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}
+        },
+        "description": "Structured candidate reference only; no chunk text or embedding is present."
+      },
+      "RetrievalCandidateTrace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "metrics"],
+        "properties": {
+          "items": {"type": "array", "maxItems": 100, "items": {"$ref": "#/components/schemas/RetrievalTraceHit"}},
+          "metrics": {"$ref": "#/components/schemas/RetrievalStageMetrics"}
+        }
+      },
+      "RrfTrace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "metrics"],
+        "properties": {
+          "items": {"type": "array", "maxItems": 100, "items": {"$ref": "#/components/schemas/RetrievalTraceHit"}},
+          "metrics": {"$ref": "#/components/schemas/RetrievalStageMetrics"}
+        }
+      },
+      "RerankTrace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "metrics"],
+        "properties": {
+          "items": {"type": "array", "maxItems": 100, "items": {"$ref": "#/components/schemas/RetrievalTraceHit"}},
+          "metrics": {"$ref": "#/components/schemas/RetrievalStageMetrics"}
+        }
+      },
+      "ContextTrace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["childChunkIds", "totalTokens", "maxContextTokens", "truncated"],
+        "properties": {
+          "childChunkIds": {"type": "array", "maxItems": 20, "items": {"$ref": "#/components/schemas/UuidV7"}},
+          "totalTokens": {"type": "integer", "minimum": 0},
+          "maxContextTokens": {"type": "integer", "minimum": 0},
+          "truncated": {"type": "boolean"}
+        }
+      },
+      "CitationEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidenceId", "spaceId", "childChunkId", "documentRevisionId", "contentRef", "textHash", "anchor", "citationAllowed"],
+        "properties": {
+          "evidenceId": {"$ref": "#/components/schemas/UuidV7"},
+          "spaceId": {"$ref": "#/components/schemas/UuidV7"},
+          "childChunkId": {"$ref": "#/components/schemas/UuidV7"},
+          "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"},
+          "contentRef": {"type": "string", "minLength": 1, "maxLength": 512},
+          "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+          "anchor": {"$ref": "#/components/schemas/ChunkStudioAnchor"},
+          "citationAllowed": {"type": "boolean", "const": true}
+        },
+        "description": "The only citation/evidence representation permitted in a playground response. It is an allow-listed reference and contains no quote or generated citation text."
+      },
+      "EvidenceTrace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "allowListVersion"],
+        "properties": {
+          "items": {"type": "array", "maxItems": 20, "items": {"$ref": "#/components/schemas/CitationEvidence"}},
+          "allowListVersion": {"type": "string", "minLength": 1, "maxLength": 64}
+        }
+      },
+      "RetrievalStageMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidateCount", "latencyMs"],
+        "properties": {
+          "candidateCount": {"type": "integer", "minimum": 0},
+          "latencyMs": {"type": "number", "minimum": 0}
+        }
+      },
+      "RetrievalTrace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dense", "bm25", "rrf", "rerank", "context", "evidence"],
+        "properties": {
+          "dense": {"$ref": "#/components/schemas/RetrievalCandidateTrace"},
+          "bm25": {"$ref": "#/components/schemas/RetrievalCandidateTrace"},
+          "rrf": {"$ref": "#/components/schemas/RrfTrace"},
+          "rerank": {"$ref": "#/components/schemas/RerankTrace"},
+          "context": {"$ref": "#/components/schemas/ContextTrace"},
+          "evidence": {"$ref": "#/components/schemas/EvidenceTrace"}
+        },
+        "description": "Read-only structured trace for every retrieval stage; it contains references, ranks, scores, counts and allow-listed evidence only."
+      },
+      "RetrievalAbstention": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["abstained", "reasonCode"],
+        "properties": {
+          "abstained": {"type": "boolean"},
+          "reasonCode": {"type": ["string", "null"], "enum": ["NO_EVIDENCE", "LOW_CONFIDENCE", "POLICY_BLOCKED", null]}
+        }
+      },
+      "RetrievalPlaygroundSide": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["indexVersionId", "profile", "trace", "metrics"],
+        "properties": {
+          "indexVersionId": {"$ref": "#/components/schemas/UuidV7"},
+          "profile": {"$ref": "#/components/schemas/RetrievalProfileVersionRef"},
+          "trace": {"$ref": "#/components/schemas/RetrievalTrace"},
+          "metrics": {"type": "object", "additionalProperties": false, "required": ["latencyMs", "evidenceCount"], "properties": {"latencyMs": {"type": "number", "minimum": 0}, "evidenceCount": {"type": "integer", "minimum": 0}}}
+        }
+      },
+      "RetrievalPlaygroundExperiment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["experimentId", "spaceId", "query", "normalizedQuery", "indexVersionId", "profileA", "profileB", "abstention", "activeProfileUnchanged"],
+        "properties": {
+          "experimentId": {"$ref": "#/components/schemas/UuidV7"},
+          "spaceId": {"$ref": "#/components/schemas/UuidV7"},
+          "query": {"type": "string", "minLength": 1, "maxLength": 10000},
+          "normalizedQuery": {"type": "string", "minLength": 1, "maxLength": 10000},
+          "indexVersionId": {"$ref": "#/components/schemas/UuidV7"},
+          "profileA": {"$ref": "#/components/schemas/RetrievalPlaygroundSide"},
+          "profileB": {"oneOf": [{"$ref": "#/components/schemas/RetrievalPlaygroundSide"}, {"type": "null"}]},
+          "abstention": {"type": "object", "additionalProperties": false, "required": ["profileA", "profileB"], "properties": {"profileA": {"$ref": "#/components/schemas/RetrievalAbstention"}, "profileB": {"oneOf": [{"$ref": "#/components/schemas/RetrievalAbstention"}, {"type": "null"}]}}},
+          "activeProfileUnchanged": {"type": "boolean", "const": true}
+        },
+        "description": "A read-only experiment result. Exact index/profile versions and per-side traces are preserved; activeProfileUnchanged is always true. No正文, vectors, credentials, secrets or free-form citation text are returned."
+      },
       "FieldError": {
         "type": "object",
         "additionalProperties": false,

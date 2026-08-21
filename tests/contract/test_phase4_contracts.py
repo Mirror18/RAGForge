@@ -15,6 +15,7 @@ CONTRACTS = ROOT / "contracts"
 INGESTION = CONTRACTS / "ingestion"
 RETRIEVAL = CONTRACTS / "retrieval"
 FIXTURES = ROOT / "tests" / "contract" / "fixtures" / "phase4"
+OPENAPI = ROOT / "contracts" / "openapi" / "ragforge-api-v1.yaml"
 UUID_V7 = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-"
     r"[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
@@ -141,9 +142,39 @@ def walk_keys(value: Any, forbidden: set[str]) -> list[str]:
     return hits
 
 
+def ref_name(ref: str) -> str:
+    prefix = "#/components/schemas/"
+    if not ref.startswith(prefix):
+        raise AssertionError(f"expected local schema ref, got {ref}")
+    return ref[len(prefix) :]
+
+
+def schema_property_names(document: dict[str, Any], schema: Any, seen: set[str] | None = None) -> set[str]:
+    """Collect property names reachable from a local OpenAPI schema ref."""
+    seen = set() if seen is None else seen
+    names: set[str] = set()
+    if not isinstance(schema, dict):
+        return names
+    if "$ref" in schema:
+        name = ref_name(schema["$ref"])
+        if name in seen:
+            return names
+        seen.add(name)
+        return schema_property_names(document, document["components"]["schemas"][name], seen)
+    names.update(schema.get("properties", {}))
+    for value in schema.values():
+        if isinstance(value, dict):
+            names.update(schema_property_names(document, value, seen))
+        elif isinstance(value, list):
+            for item in value:
+                names.update(schema_property_names(document, item, seen))
+    return names
+
+
 class Phase4ContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        cls.openapi = json.loads(OPENAPI.read_text(encoding="utf-8"))
         cls.chunk_path = INGESTION / "chunking-domain.v1.schema.json"
         cls.chunk = load_json(cls.chunk_path)
         cls.index_path = INGESTION / "index-version.v1.schema.json"
@@ -153,6 +184,115 @@ class Phase4ContractTest(unittest.TestCase):
         cls.valid_chunk = load_json(FIXTURES / "valid" / "chunking-domain.json")
         cls.valid_index = load_json(FIXTURES / "valid" / "index-version.json")
         cls.valid_profile = load_json(FIXTURES / "valid" / "retrieval-profile.json")
+
+    def test_phase4_g_openapi_projection_is_space_scoped_and_operation_ids_are_unique(self) -> None:
+        document = self.openapi
+        self.assertEqual(document["openapi"], "3.1.0")
+        self.assertEqual(document["x-ragforge-contract-status"], "planned")
+        self.assertEqual(document["x-ragforge-phase2-status"], "phase2-contract")
+        self.assertEqual(document["x-ragforge-phase3-status"], "phase3-contract")
+        self.assertEqual(document["x-ragforge-phase4-status"], "phase4-contract")
+        phase4_paths = {
+            path: item
+            for path, item in document["paths"].items()
+            if item.get("x-ragforge-implementation-status") == "phase4-contract"
+        }
+        self.assertEqual(
+            set(phase4_paths),
+            {
+                "/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}",
+                "/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}/overrides",
+                "/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}/overrides/{overrideId}/transitions",
+                "/api/v1/spaces/{spaceId}/retrieval-playground/experiments",
+            },
+        )
+        operation_ids: list[str] = []
+        for path, path_item in phase4_paths.items():
+            self.assertIn("/api/v1/spaces/{spaceId}/", path)
+            for method, operation in path_item.items():
+                if method not in {"get", "post", "put", "patch", "delete"}:
+                    continue
+                operation_ids.append(operation["operationId"])
+                self.assertEqual(
+                    {tuple(security)[0] for security in operation["security"]},
+                    {"cookieAuth", "serviceToken"},
+                )
+                refs = {
+                    parameter["$ref"].rsplit("/", 1)[-1]
+                    for parameter in path_item.get("parameters", []) + operation.get("parameters", [])
+                    if "$ref" in parameter
+                }
+                self.assertIn("SpaceId", refs)
+                if method in {"post", "put", "patch", "delete"}:
+                    self.assertIn("CsrfToken", refs)
+                    self.assertIn("IdempotencyKey", refs)
+                for status, response in operation["responses"].items():
+                    if int(status) >= 400:
+                        response_name = response["$ref"].rsplit("/", 1)[-1]
+                        response_schema = document["components"]["responses"][response_name]["content"]["application/problem+json"]["schema"]
+                        self.assertTrue(response_schema["$ref"].endswith("/ProblemDetails"), (path, method, status))
+        self.assertEqual(len(operation_ids), len(set(operation_ids)))
+
+    def test_chunk_studio_projection_freezes_audited_override_and_state_machine(self) -> None:
+        schemas = self.openapi["components"]["schemas"]
+        child = schemas["ChunkStudioChildProjection"]
+        self.assertTrue(
+            {"spaceId", "documentRevisionId", "childChunkId", "contentRef", "textHash", "parentChild", "provenance", "anchor", "vectorStatus", "override"}
+            <= set(child["required"])
+        )
+        override_summary = schemas["ChunkOverrideSummary"]
+        self.assertTrue(
+            {"state", "version", "reason", "createdBy", "createdAt", "updatedAt"}
+            <= set(override_summary["required"])
+        )
+        response = schemas["ChunkOverrideResponse"]
+        self.assertTrue(
+            {"spaceId", "documentRevisionId", "childChunkId", "contentRef", "textHash", "override"}
+            <= set(response["required"])
+        )
+        create_request = schemas["CreateChunkOverrideRequest"]
+        self.assertNotIn("createdBy", create_request["properties"])
+        self.assertNotIn("state", create_request["properties"])
+        self.assertNotIn("fullText", schema_property_names(self.openapi, create_request))
+        self.assertNotIn("rawText", schema_property_names(self.openapi, create_request))
+        transition = schemas["TransitionChunkOverrideRequest"]
+        self.assertEqual(set(transition["properties"]["targetState"]["enum"]), {"ACTIVE", "NEEDS_REVIEW", "DISCARDED"})
+        self.assertNotIn("NONE", transition["properties"]["targetState"]["enum"])
+        transition_description = transition["description"]
+        self.assertIn("ACTIVE -> NEEDS_REVIEW", transition_description)
+        self.assertIn("NEEDS_REVIEW -> ACTIVE or DISCARDED", transition_description)
+        self.assertIn("NONE is not a client transition", transition_description)
+
+    def test_retrieval_playground_is_candidate_only_and_trace_is_minimal(self) -> None:
+        schemas = self.openapi["components"]["schemas"]
+        request = schemas["RetrievalPlaygroundExperimentRequest"]
+        self.assertEqual(set(request["required"]), {"query", "indexVersionId", "profileA"})
+        self.assertNotIn("spaceId", request["properties"])
+        query_vector = request["properties"]["queryVector"]
+        self.assertTrue(query_vector["writeOnly"])
+        self.assertTrue(query_vector["x-ragforge-internal-only"])
+        self.assertIn("never returned", query_vector["description"])
+        self.assertIn("not a public client capability", query_vector["description"])
+        profile_ref = schemas["RetrievalProfileVersionRef"]
+        self.assertEqual(profile_ref["properties"]["candidateOnly"]["const"], True)
+        response = schemas["RetrievalPlaygroundExperiment"]
+        self.assertTrue(
+            {"spaceId", "query", "normalizedQuery", "indexVersionId", "profileA", "profileB", "abstention", "activeProfileUnchanged"}
+            <= set(response["required"])
+        )
+        self.assertEqual(response["properties"]["activeProfileUnchanged"]["const"], True)
+        trace = schemas["RetrievalTrace"]
+        self.assertEqual(set(trace["required"]), {"dense", "bm25", "rrf", "rerank", "context", "evidence"})
+        evidence = schemas["CitationEvidence"]
+        self.assertEqual(evidence["properties"]["citationAllowed"]["const"], True)
+        forbidden_response_fields = {
+            "fullText", "rawText", "documentContent", "rawDocument", "vector", "embedding",
+            "queryVector", "secret", "credential", "credentialRef", "apiKey", "accessToken", "password",
+        }
+        self.assertEqual(
+            schema_property_names(self.openapi, response) & forbidden_response_fields,
+            set(),
+        )
 
     def test_all_phase4_json_contracts_and_fixtures_are_parseable(self) -> None:
         for path in list(INGESTION.glob("*.json")) + list(RETRIEVAL.glob("*.json")):
