@@ -1,6 +1,14 @@
 package com.ragforge.server.run;
 
+import com.ragforge.server.answer.Answer;
+import com.ragforge.server.answer.AnswerPersistencePort;
+import com.ragforge.server.answer.AnswerProvenance;
+import com.ragforge.server.answer.AnswerStatus;
+import com.ragforge.server.answer.Citation;
+import com.ragforge.server.answer.Claim;
 import com.ragforge.server.prompt.PromptRepository;
+import com.ragforge.server.answer.persistence.JdbcAnswerPersistence;
+import com.ragforge.server.retrieval.EvidenceBundle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -15,6 +23,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.Duration;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -61,13 +71,67 @@ class Phase5PersistenceIntegrationTest {
     @Autowired
     RunRepository runs;
 
+    @Autowired
+    JdbcAnswerPersistence answers;
+
     @BeforeEach
     void cleanDatabase() {
-        jdbc.execute("TRUNCATE rag_model_invocation_provenance, rag_step_provenance, rag_run_provenance, "
+        jdbc.execute("TRUNCATE rag_answer_events, rag_answer_abstentions, rag_answer_citations, "
+                + "rag_answer_claims, rag_answers, rag_model_invocation_provenance, rag_step_provenance, "
+                + "rag_run_provenance, "
                 + "rag_prompt_versions, usage_ledger, model_invocations, run_steps, runs, "
                 + "retrieval_profiles, index_versions, model_route_candidates, model_route_versions, "
                 + "model_profile_versions, provider_connections, prompt_versions, prompt_templates, "
                 + "knowledge_spaces, users CASCADE");
+    }
+
+    @Test
+    void answerHistoryIsSpaceScopedIdempotentReplayableAndPurgeable() {
+        UUID spaceA = createSpace("phase5-answer-history-a");
+        UUID spaceB = createSpace("phase5-answer-history-b");
+        UUID correlation = UUID.randomUUID();
+        UUID run = runs.createRun(new RunRepository.NewRun(UUID.randomUUID(), spaceA, null, correlation,
+                RunRepository.RequestKind.CHAT, RunRepository.RunStatus.QUEUED, null, null, null, null,
+                null, null, null, null, NOW)).id();
+        UUID evidence = UUID.randomUUID();
+        UUID claimId = UUID.randomUUID();
+        String key = "phase5-history-key-01";
+        EvidenceBundle.Anchor anchor = new EvidenceBundle.Anchor(List.of("Chapter 1"), 0, 2, 0, 12,
+                1, null, null, null, null, null);
+        Claim claim = new Claim("v1", claimId, spaceA, correlation, run, key, "Stable answer",
+                List.of(evidence), 0, 13);
+        Citation citation = new Citation("v1", evidence, claimId, spaceA, correlation, run, key,
+                UUID.randomUUID(), 1, HASH_A, UUID.randomUUID(), UUID.randomUUID(), 1,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "opaque://chunk/1", HASH_B,
+                anchor, 0, 13, true);
+        AnswerProvenance provenance = new AnswerProvenance("v1", spaceA, correlation, run, key,
+                citation.evidenceBundleId(), 1, HASH_A, "opaque://bundle/1", citation.indexVersionId(),
+                citation.retrievalProfileId(), 1, UUID.randomUUID(), HASH_B, UUID.randomUUID(), UUID.randomUUID(),
+                "local-test-model", "{}", HASH_A, HASH_B, UUID.randomUUID());
+        Answer answer = new Answer("v1", UUID.randomUUID(), spaceA, correlation, run, key,
+                AnswerStatus.COMPLETED, "Stable answer", List.of(claim), List.of(citation), null, List.of(),
+                provenance, NOW);
+
+        AnswerPersistencePort.PersistedAnswer saved = answers.saveIfAbsent(answer);
+        assertThat(saved.answerId()).isEqualTo(answer.answerId());
+        assertThat(answers.saveIfAbsent(answer)).isEqualTo(saved);
+        assertThat(answers.findAnswerByRun(spaceA, run)).get()
+                .satisfies(replayed -> assertThat(replayed.answerText()).isEqualTo("Stable answer"));
+        assertThat(answers.findAnswerByRun(spaceB, run)).isEmpty();
+        assertThat(answers.find(spaceB, key)).isEmpty();
+        assertThat(answers.findCitationPreview(spaceB, run, evidence)).isEmpty();
+        assertThat(answers.findCitationPreview(spaceA, run, evidence)).get()
+                .satisfies(preview -> assertThat(preview.contentRef()).isEqualTo("opaque://chunk/1"));
+
+        AnswerPersistencePort.AnswerEvent event = new AnswerPersistencePort.AnswerEvent(
+                UUID.randomUUID(), answer.answerId(), spaceA, run, 0,
+                AnswerPersistencePort.EventType.ANSWER_DONE, HASH_A, "{}", NOW);
+        assertThat(answers.appendEvent(event)).isEqualTo(event);
+        assertThat(answers.replayEvents(spaceA, run, -1)).containsExactly(event);
+        assertThatThrownBy(() -> jdbc.update("UPDATE rag_answers SET answer_text = 'tampered' WHERE id = ?",
+                answer.answerId())).isInstanceOf(DataAccessException.class);
+        assertThat(answers.purgeExpired(NOW.plus(Duration.ofDays(31)))).isEqualTo(1);
+        assertThat(answers.findAnswer(spaceA, answer.answerId())).isEmpty();
     }
 
     @Test
