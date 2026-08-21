@@ -1,7 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-21
-- Current stage: Phase 4 Chunk Studio、索引与检索已完成阶段验收，下一入口为 Phase 5 带引用问答与只读 Agent
+- Current stage: Phase 5 带引用问答与只读 Agent 已完成本地实现/安全/质量门禁，但因生产 provider/material/session 接线缺口保持 blocked；下一入口为 Phase 6 provider seam 与真实端到端验收
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - External remote: `origin` configured；Phase 3 OCR runtime implementation 已推送至 `2ca3a75`；GitHub Actions quality Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 成功，Phase 3 JVM evidence artifact `9183633612`、Syft SBOM artifact `9183518984`、Grype SARIF artifact `9183542524` 已生成。
@@ -37,7 +37,7 @@
 - 尚未选择根级开源许可证。
 - 已配置 GitHub remote `Mirror18/RAGForge`；Phase 4 当前实现已推送至 `origin/main`，GitHub Actions quality Run [32450998792](https://github.com/Mirror18/RAGForge/actions/runs/32450998792) 对 `9d21b48` 全绿（4m19s），Phase 4 evidence artifact `9435734012`、SBOM artifact `9435662885`、Grype SARIF artifact `9435676463` 已生成；尚未创建 release。GitHub Actions Syft/Grype 仍是正式发布前的有效 SBOM/SCA 门禁。
 - Obsidian 仓库没有被写入项目进度。
-- Phase 0 实验发现的 provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态；Phase 4 已关闭 candidate index 半构建发布风险的阶段范围，并验证 chunk/Qdrant/cache 的空间边界，但 Phase 5 citation/agent 访问边界仍需继续验证；OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
+- Phase 0 实验发现的 provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态；Phase 4 已关闭 candidate index 半构建发布风险的阶段范围，并验证 chunk/Qdrant/cache 的空间边界；Phase 5 已完成 citation/agent 访问边界的本地验证，但生产回答仍由 fail-closed graph 拒绝，原因是缺少真实 embedding provider、evidence material resolver 与 session-to-space authorizer。OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
 - 本机 Java 21 根 Maven Testcontainers 已通过，Worker 28/28、Phase 3 Python acceptance 2/2；格式、架构、secret、Markdown link、依赖清单、contract 32/32 均通过。测试日志中的 Testcontainers/Valkey 关闭后重连 warning 不影响测试结果，但保留为后续生命周期清理项。
 
 ## 3. Phase 4 闭环摘要
@@ -47,9 +47,19 @@
 - 根 Maven `BUILD SUCCESS`；Phase 4 targeted Maven 17/17；format、architecture、Markdown link、secret、dependency inventory、Compose、web format/build 通过。CI workflow 已加入 Phase 4 deterministic benchmark gate；Qdrant 1M 演练为本地 Docker 受控容量证据，不作为 CI 每次运行的负载测试。
 - 保留风险：BM25 当前为进程内确定性实现，durable lexical provider 需后续架构选择；1M Qdrant 证据为 8 维合成向量，生产 embedding 维度/并发/混合负载仍需容量复测；全量 120+ 评估与 citation/agent 安全门禁属于 Phase 5/6。
 
+## 3. Phase 5 当前闭环与证据（2026-08-21）
+
+- 当前 HEAD：`be8602a37ef0e5e0ef13abccd6703e3c6be39b29`（本地验收代码）；阶段合并提交包括 `8fb9e63`、`4245975`、`3c52e62`、`45682c7`、`273f4f5`、`43aa7c1`、`d12369a`、`e19d052`、`b001f5e` 及 `be8602a`。
+- 合同：`python scripts/ci/contract_test.py` 检查 21 artifacts、52 tests；Phase 5 定向 contract 10/10。
+- 质量：[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json) 的合成 12 cases candidate citation precision/faithfulness/abstention accuracy 均为 `1.0`；Phase 6 仍需 120+ 和人工评估。
+- 安全：[`phase5-security.json`](../../tests/evidence/phase5-security.json) 的 AgentToolSecurity 9/9、回答/出境 19/19，未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。
+- 性能：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json) 为版本化合成 fixture，E2E p50/p95 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`；retrieval/generation 指标是代理测量，不是生产容量承诺。
+- 全量本地门禁：根 Maven Server+Worker `28/28`、Flyway V1–V12 成功；Web `tsc --noEmit` 与 `vite build` 成功；format/architecture/Markdown/secret/dependency/Compose/contract/Phase 2 security/Phase 4 evaluation 均通过。
+- 阶段结论：P5 功能和安全边界已落地，但生产回答路线保持 fail-closed，不能把合成 provider 测试当作真实可用回答；阶段状态为 blocked。
+
 ## 4. 下一入口
 
-Phase 5 当前入口为 Evidence Bundle、citation validator、版本化 RAG prompt 和只读安全工具；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 4 执行计划与 Checklist 见 [`PHASE_4_EXECUTION_PLAN.md`](phase-4/PHASE_4_EXECUTION_PLAN.md) 与 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)；Phase 4 阶段复盘见 [`PHASE_4_RETROSPECTIVE.md`](retrospectives/PHASE_4_RETROSPECTIVE.md)；Phase 3 阶段复盘见 [`PHASE_3_RETROSPECTIVE.md`](retrospectives/PHASE_3_RETROSPECTIVE.md)；既有 Phase 0–2 复盘继续保留。
+Phase 6 入口为 provider/material/session seam 的架构决定与真实受控端到端验收；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
 
 ## 5. 更新规则
 

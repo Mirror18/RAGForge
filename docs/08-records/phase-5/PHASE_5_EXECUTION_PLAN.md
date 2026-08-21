@@ -2,7 +2,7 @@
 
 - 目标阶段：Phase 5 带引用问答与只读 Agent
 - 记录日期：2026-08-21
-- 统一 base SHA：`76b46085d2cda87781e2aaf02b211568e7c8daab`
+- 统一 base SHA：`43aa7c16668f4728e20a76863e82ddbf65cd1444`
 - 主分支：`main`
 - 主 Agent：Orchestrator
 - 技术基线：Java 21 + Spring Boot 3.5.x；维持模块化单体 + 独立 ingestion worker。
@@ -49,9 +49,13 @@ P5-F 可在 P5-A 合入后与 P5-B/P5-C 并行，但不得写同一 migration、
 
 | Task | 状态 | 证据/备注 |
 |---|---|---|
-| P5-A | in_progress | 本文件与 checklist 首次冻结 |
-| P5-B | pending | |
-| P5-C/D | pending | |
-| P5-E | pending | |
-| P5-F | pending | |
-| P5-G/H | pending | |
+| P5-A | completed | 合同、fixture、执行口径已冻结；阶段基线为 `43aa7c1` |
+| P5-B | completed | V11/V12、答案/引用/事件持久化与回滚说明；PostgreSQL 集成通过 |
+| P5-C/D | completed-with-blocker | core、citation validator、fail-closed production graph 与定向测试完成；真实 embedding/material/session adapter 尚未选型/接入 |
+| P5-E | completed | API、严格 SSE、Last-Event-ID、cancel、citation preview、Web build 已通过 |
+| P5-F | completed | 三个只读工具、SSRF、跨空间、输出上限和审计投影测试已通过 |
+| P5-G/H | completed-local | 生成/性能/安全证据与本地全量门禁已通过；远端 CI Run 待本次 push 后记录 |
+
+## 阶段结论
+
+本阶段完成了所有不依赖真实 provider/material/session 接线的安全工作和可验收实现，但不关闭 Phase 5：生产默认路径必须 fail-closed，避免把无 embedding、无证据正文或无会话授权误报成可用回答。该阻塞需要明确 provider、artifact/content material resolver 与会话授权的架构归属后继续。

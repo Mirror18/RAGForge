@@ -78,3 +78,11 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-012` 继续 OPEN：Phase 4 30 问固定切片达到 Recall/MRR 阈值，但全量 120+ 评估、人工复核和生成质量仍属于 Phase 5/6。
 - 新增 `R-023`：BM25 provider 当前为进程内确定性实现，重启后的 durable lexical index 尚未选型；在该风险关闭前不宣称重启后 lexical 数据持久化。
 - 新增 `R-024`：Qdrant 1M 真实本地探针使用 8 维合成向量和 100 次查询，Recall@10 `1.0`、p95 `1101.3382 ms`；该结果满足当前阶段退出条件，但不替代生产 embedding 维度、并发和混合索引容量复测。
+
+## 8. Phase 5 复审（2026-08-21）
+
+- 新增 `R-025`：生产 Phase 5 graph 尚无真实 embedding ProviderAdapter、版本化 evidence material resolver 和 session-to-space authorizer；当前 Spring 接线显式 fail-closed，避免无证据正文或无授权时生成看似成功的回答。P=4、I=5、Score=20，Answer / Retrieval，OPEN；Phase 6 必须先完成架构归属、实现和真实受控端到端证据。
+- 新增 `R-026`：答案历史与事件已落 PostgreSQL，但 `RunEventStore` 的 SSE replay 仍是进程内实现，进程重启后不能仅靠 V12 恢复事件游标。P=3、I=4、Score=12，Platform，OPEN；Phase 6 做重启恢复演练并将 durable answer_events 接入 replay source。
+- `R-003` 继续 OPEN，但 Phase 5 已用 `RAGAnswerServiceTest`、`AnswerApiControllerTest`、`AgentToolSecurityTest` 和安全证据验证回答/工具路径的空间边界；尚不能关闭全局空间隔离风险，直到真实 material resolver 与 session authorizer 接入。
+- `R-005` 继续 MITIGATING：合成 12 cases 的 candidate citation precision、faithfulness、abstention accuracy 均为 `1.0`，但样本规模和 judge 均为 deterministic fixture；Phase 6 扩展 120+ 样本、人工复核和 prompt-injection/red-team。
+- `R-012` 继续 OPEN：Phase 5 的性能文件只提供合成 E2E/TTFT 及 retrieval/generation 代理；生产 embedding 维度、并发、模型上下文和成本仍需真实环境复测。

@@ -1,9 +1,9 @@
 # Phase 5 Checklist：带引用问答与只读 Agent
 
 - 阶段：Phase 5
-- 状态：in_progress
+- 状态：blocked（Phase 5 代码与本地验收门禁完成；生产回答接线缺少必须的 embedding/material/auth provider 选择）
 - 冻结日期：2026-08-21
-- 统一基线：`76b46085d2cda87781e2aaf02b211568e7c8daab`
+- 统一基线：`43aa7c16668f4728e20a76863e82ddbf65cd1444`（阶段执行记录基线）；当前验收 HEAD 以证据文件 `code_commit` 为准
 - 范围：在 Phase 4 检索证据之上完成可追溯的 RAG 回答、流式引用交互和三个受控只读工具。
 - 非范围：可写 Agent、任意 Shell/SQL/网络、跨空间回答、生产云端出境、release、接受新 ADR/许可证。
 
@@ -22,14 +22,14 @@
 
 ## 任务退出条件
 
-- [ ] P5-A：Checklist、执行计划、契约和评估数据口径提交。
-- [ ] P5-B：RAG prompt、run/step 版本投影和兼容/回滚说明提交。
-- [ ] P5-C：授权检索、context budget、版本化 prompt、route/egress 检查、结构化拒答提交。
-- [ ] P5-D：结构化 citation token 解析、bundle allow-list、持久化 provenance 和安全拒答提交。
-- [ ] P5-E：SSE answer/citation/abstention/tool/usage/error/done、重连、取消和前端引用交互提交。
-- [ ] P5-F：三种只读工具、SSRF/白名单/输出限制、schema 校验和审计提交。
-- [ ] P5-G：版本化 generation/citation/abstention 数据集、baseline/candidate、质量/性能/安全证据提交。
-- [ ] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation、Markdown link 和 CI 全部通过。
+- [x] P5-A：Checklist、执行计划、契约和评估数据口径提交。
+- [x] P5-B：RAG prompt、run/step 版本投影和兼容/回滚说明提交。
+- [x] P5-C：授权检索、context budget、版本化 prompt、route/egress 检查、结构化拒答提交；生产缺少真实 embedding/material/session adapter，当前按 fail-closed 接线。
+- [x] P5-D：结构化 citation token 解析、bundle allow-list、持久化 provenance 和安全拒答提交。
+- [x] P5-E：SSE answer/citation/abstention/tool/usage/error/done、重连、取消和前端引用交互提交。
+- [x] P5-F：三种只读工具、SSRF/白名单/输出限制、schema 校验和审计提交。
+- [x] P5-G：版本化 generation/citation/abstention 数据集、baseline/candidate、质量/性能/安全证据提交。
+- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation、Markdown link 和 CI 本地门禁全部通过；远端 CI 需以本次 push 后 Run 为最终证据。
 
 ## 合并前强制检查
 
@@ -42,7 +42,13 @@
 
 ## 阶段闭环记录
 
-- 质量证据：待实现后填入 `tests/evidence/phase5-generation-evaluation.json`。
-- 安全证据：待实现后填入 `tests/evidence/phase5-security.json`。
-- 性能/成本证据：待实现后填入 `tests/evidence/phase5-performance.json`。
-- Retrospective：待实现后创建 `docs/08-records/retrospectives/PHASE_5_RETROSPECTIVE.md`。
+- 质量证据：[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json)，合成 12 cases，candidate precision/faithfulness/abstention 均为 `1.0`；不替代 Phase 6 的 120+ 与人工评估。
+- 安全证据：[`phase5-security.json`](../../tests/evidence/phase5-security.json)，契约 10/10、AgentToolSecurity 9/9、回答/出境 19/19；六项安全不变量均为 `0`。
+- 性能/成本证据：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json)，合成 fixture：E2E p50/p95 `79.7/88.8ms`，TTFT p50 `29.4ms`，并明确标记 retrieval/generation 为代理测量。
+- Retrospective：[`PHASE_5_RETROSPECTIVE.md`](../08-records/retrospectives/PHASE_5_RETROSPECTIVE.md)。
+
+## 阻塞与阶段结论
+
+- 已满足：本清单的合同、引用 allow-list、拒答、只读工具安全、SSE 取消/重放、答案历史与本地质量/性能/安全门禁均有可重跑证据。
+- 未闭环：生产 Spring graph 当前显式使用 fail-closed ports；仓库没有真实 embedding provider、会话到 `space_id` 的 authorizer、或从版本化 artifact/content store 读取 evidence material 的 resolver。没有这些依赖，不能声称生产成功回答或关闭 Phase 5。
+- 下一入口：Phase 6 先完成 provider/material/auth seam 的架构决定与真实受控端到端验收，再补 120+ generation/evaluation、SSE 重启恢复和 step/model provenance 演练。

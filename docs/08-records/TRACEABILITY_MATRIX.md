@@ -83,3 +83,15 @@
 | P4-RET-001 | dense/BM25/RRF/rerank/parent expansion、profile/version/provenance | `RetrievalServiceTest`、`RetrievalServiceQdrantIntegrationTest`、[`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json) | Recall@10 0.965517、MRR@10 0.827586、forbidden leak 0 | Phase 5 接入生成与 citation validator |
 | P4-SCALE-001 | 1M child chunks 下 Qdrant filter、召回和 p95 | [`qdrant_scale_benchmark.py`](../../scripts/phase4/qdrant_scale_benchmark.py)、[`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json) | 1,000,000 points、Recall@10 1.0、p95 1101.3382ms | 生产 embedding 维度、20 并发和混合索引留 Phase 6 |
 | P4-STUDIO-001 | Chunk Studio/Playground 权限、敏感字段裁剪、override 审计 | `ChunkStudioServiceTest`、`RetrievalPlaygroundServiceTest`、`StudioControllerMockMvcTest`、web build | targeted Maven 17/17；web format/build 通过 | Phase 5 扩展只读工具和证据交互 |
+
+## Phase 5 实施证据
+
+| 证据 ID | 验收内容 | 实现与验证 | 结果 | 后续 |
+|---|---|---|---|---|
+| P5-CONTRACT-001 | Answer/Claim/Citation/Abstention/Tool/SSE v1 合同与敏感字段边界 | [`contracts/answer/`](../../contracts/answer/)、[`contracts/agent/`](../../contracts/agent/)、[`contracts/events/answer.sse.v1.schema.json`](../../contracts/events/answer.sse.v1.schema.json)、[`test_phase5_contracts.py`](../../tests/contract/test_phase5_contracts.py) | Phase 5 contract 10/10；全 contract 52/52、21 artifacts | v1 兼容窗口；新增字段只可 optional |
+| RF-CIT-001 | Evidence Bundle allow-list、结构化引用与拒答 | `RAGAnswerService`、`RAGAnswerServiceTest`、`AnswerApiControllerTest`、[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json) | candidate citation precision/faithfulness `1.0/1.0`；Evidence 外引用安全计数 `0` | Phase 6 扩展真实/人工评估 |
+| RF-ANS-001 | context budget、结构化状态、幂等、失败安全 | `RAGAnswerServiceTest`、`AnswerApiControllerTest`、V12 answer history | targeted answer tests 15/15；未配置 provider 明确拒答并持久化 | 真实 embedding/material/session seam 仍为 R-025 |
+| RF-EGR-001 | route/egress 显式授权、无静默 cloud fallback | `Phase5ProviderIntegrationTest`、Phase 2 egress tests、[`phase5-security.json`](../../tests/evidence/phase5-security.json) | answer/security 19/19；未授权云调用 `0` | 真实 provider route 端到端验收 |
+| RF-AGT-001 | 三个只读工具、跨空间、SSRF、输出上限和审计裁剪 | `AgentToolSecurityTest`、tool v1 schemas、[`phase5-security.json`](../../tests/evidence/phase5-security.json) | AgentToolSecurity 9/9；cross-space/SSRF/shell/SQL/external-write `0` | session authorizer 与真实 material source 接入后复测 |
+| RF-OBS-001 | run/step/model/tool provenance、历史引用 preview、严格 SSE | V11/V12 migrations、`JdbcAnswerPersistence`、`AnswerApiController`、`AnswerEventPublisher` | PostgreSQL V1–V12 migration and persistence 2/2；SSE/API targeted tests 7/7 | durable replay restart drill 留 Phase 6 |
+| RF-PERF-001 | retrieval/generation/TTFT/E2E、token、cost、fault counters | [`phase5-performance.json`](../../tests/evidence/phase5-performance.json)、`performance_evidence.py` | synthetic E2E p50/p95 `79.7/88.8ms`，TTFT p50 `29.4ms`，calls `12`，fault counters `0` | 仅代理测量；真实容量与 120+ 评估留 Phase 6 |
