@@ -2,6 +2,7 @@ import importlib.util
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).with_name("capacity_benchmark.py")
@@ -27,6 +28,24 @@ class CapacityBenchmarkTest(unittest.TestCase):
         self.assertEqual(result["status"], "BLOCKED")
         self.assertEqual(result["reason"], "server_url_not_provided")
         self.assertIn("online_latency_probe.py", result["repro_command"])
+
+    def test_upload_retries_same_idempotent_batch(self) -> None:
+        calls = []
+
+        def qdrant_put(*args, **kwargs):
+            calls.append((args, kwargs))
+            if len(calls) == 1:
+                raise MODULE.urllib.error.URLError("simulated connection timeout")
+            return {}
+
+        with patch.object(MODULE, "qdrant_json", side_effect=qdrant_put), patch.object(MODULE, "resource_diagnostics", return_value={}), patch.object(MODULE.time, "sleep"):
+            result = MODULE.upload("http://127.0.0.1:26347", 768, 2, 2, 1, 5)
+
+        self.assertEqual(result["batch_count"], 1)
+        self.assertEqual(result["retry_count"], 1)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0][0], calls[1][0])
+        self.assertEqual(calls[0][1], calls[1][1])
 
 
 if __name__ == "__main__":
