@@ -13,12 +13,13 @@
 - 完成隔离恢复演练：RPO `0s`、RTO `12.416s`，覆盖 PostgreSQL、Qdrant、对象、active index、tombstone/delete ledger 和 outbox/job 幂等。
 - 实现 retention、space-scoped audit export、cost aggregation 和 SSE event cleanup。
 - 在用户明确授权下完成真实本地 Ollama `LOCAL_ONLY` RAG E2E；复用 provider connection，由 revision/artifact service 提供 material，并保留 citation/provenance。
+- 在隔离 Compose server 上通过正式 register/login session 认证创建 synthetic LOCAL_ONLY run，完成 100 次 non-AI API 与 100 次 SSE first-event 测量；p95 分别为 `28.7487ms` 和 `35.9285ms`，cookie 未进入证据。
 
 ## Evidence gaps
 
 - 评估 candidate 的确定性指标全部为 1.0，但人工/red-team review 尚未完成；不得把 runner 结果写成真实模型质量结论。
 - 真实 Ollama embedding 维度 768 和 1,000,000 点 Qdrant 混合检索已取得有效证据：Recall@10 `0.995`、p95 `119.8761ms`、20 并发错误率 `0`；向量值仍是 live dimension 下的公共合成值。
-- non-AI API p95 和 SSE first event p95 缺少运行中的隔离 server 与认证 harness；同步适配器 TTFT 仍 `NOT_MEASURED`。
+- 在线 API/SSE 性能门槛已取得认证隔离运行证据；同步适配器 TTFT 仍 `NOT_MEASURED`，不将首事件 p95 解释为 TTFT。
 - retention/cleanup 已有实现与单元证据，但真实受控定时运行和多实例 live fan-out 尚未完成。
 
 ## Learnings
@@ -31,8 +32,8 @@
 ## Next actions
 
 1. 由 Quality/Security 完成人工与 red-team review manifest，逐 case 记录 reviewer、decision、解释和退化处置。
-2. 启动隔离 server，准备不含真实凭据的认证 run harness，分别重跑 non-AI API p95 和 SSE first event p95；TTFT 单独标记。
-3. 执行 retention/audit/cost/SSE cleanup 的受控定时演练，并明确多实例 live fan-out 的实现或延期决策。
+2. 由 Quality/Security 完成人工与 red-team review manifest，并记录逐 case 决策和退化处置。
+3. 执行 retention/audit/cost/SSE cleanup 的受控定时演练，并明确多实例 live fan-out 的实现或延期决策；补齐真实模型成本证据。
 
 ## Closure rule
 
