@@ -154,6 +154,18 @@ public class RunRepository {
         }
     }
 
+    public List<ModelInvocationRecord> findInvocations(UUID spaceId, UUID runId) {
+        return jdbc.query("""
+                        SELECT id, space_id, run_id, step_id, provider_connection_id,
+                               model_profile_version_id, model_route_version_id, prompt_version_id,
+                               provider_request_identity, prompt_render_hash, request_metadata,
+                               response_hash, status, error_class, error_code, created_at, updated_at,
+                               correlation_id
+                        FROM model_invocations WHERE run_id = ? AND space_id = ?
+                        ORDER BY created_at, id
+                        """, (rs, rowNum) -> mapInvocation(rs), runId, spaceId);
+    }
+
     /**
      * Records provider-reported and locally estimated usage independently. Repeating the
      * same invocation/source/dedupe key updates the existing ledger row and never creates

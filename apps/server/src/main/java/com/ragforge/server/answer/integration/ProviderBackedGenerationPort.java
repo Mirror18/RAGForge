@@ -168,7 +168,7 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
                 claims.add(new GeneratedClaim(claim.path("claim_text").textValue(), tokens, start, end));
             }
             return new GenerationResult(root.path("answer_text").textValue(), claims,
-                    response.model(), request.egressDecision());
+                    response.model(), request.egressDecision(), response.usage());
         } catch (ProviderAdapterException failure) {
             throw failure;
         } catch (Exception failure) {

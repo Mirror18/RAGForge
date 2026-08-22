@@ -33,6 +33,7 @@ public final class RAGAnswerService {
     private final GenerationPort generationPort;
     private final AnswerPersistencePort answerPersistence;
     private final AnswerProvenancePort provenancePort;
+    private final GenerationAuditPort generationAudit;
     private final CitationTokenParser tokenParser;
     private final ConcurrentHashMap<IdempotencyScope, Answer> answerCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<IdempotencyScope, Object> idempotencyLocks = new ConcurrentHashMap<>();
@@ -51,12 +52,20 @@ public final class RAGAnswerService {
                 new IllegalStateException("GenerationPort is not configured")),
                 new RejectingAnswerPersistence(), provenance -> {
                     throw new IllegalStateException("AnswerProvenancePort is not configured");
-                });
+                }, GenerationAuditPort.noop());
     }
 
     public RAGAnswerService(SpaceAuthorizer authorizer, QueryEmbeddingProvider embeddingProvider,
                             RetrievalPort retrievalPort, RagPromptPort promptPort, GenerationPort generationPort,
                             AnswerPersistencePort answerPersistence, AnswerProvenancePort provenancePort) {
+        this(authorizer, embeddingProvider, retrievalPort, promptPort, generationPort, answerPersistence,
+                provenancePort, GenerationAuditPort.noop());
+    }
+
+    public RAGAnswerService(SpaceAuthorizer authorizer, QueryEmbeddingProvider embeddingProvider,
+                            RetrievalPort retrievalPort, RagPromptPort promptPort, GenerationPort generationPort,
+                            AnswerPersistencePort answerPersistence, AnswerProvenancePort provenancePort,
+                            GenerationAuditPort generationAudit) {
         this.authorizer = Objects.requireNonNull(authorizer, "authorizer");
         this.embeddingProvider = Objects.requireNonNull(embeddingProvider, "embeddingProvider");
         this.retrievalPort = Objects.requireNonNull(retrievalPort, "retrievalPort");
@@ -64,6 +73,7 @@ public final class RAGAnswerService {
         this.generationPort = Objects.requireNonNull(generationPort, "generationPort");
         this.answerPersistence = Objects.requireNonNull(answerPersistence, "answerPersistence");
         this.provenancePort = Objects.requireNonNull(provenancePort, "provenancePort");
+        this.generationAudit = Objects.requireNonNull(generationAudit, "generationAudit");
         this.tokenParser = new CitationTokenParser();
     }
 
@@ -201,6 +211,7 @@ public final class RAGAnswerService {
                 return refusal(request, AnswerStatus.FAILED, AbstentionReason.POLICY_BLOCKED,
                         "The generation route did not satisfy the requested egress policy.", List.of(), provenance);
             }
+            generationAudit.record(request, generated, provenance);
             try {
                 return complete(request, bounded, generated, provenance);
             } catch (CitationTokenParser.CitationTokenException invalidCitation) {
@@ -243,7 +254,7 @@ public final class RAGAnswerService {
             List<UUID> evidenceIds = tokenParser.parse(generatedClaim.citationTokens(), snapshot.bundle(),
                     request.spaceId());
             UUID claimId = UuidV7.random();
-            Claim claim = new Claim(request.spaceId(), request.correlationId(), request.runId(),
+            Claim claim = new Claim("v1", claimId, request.spaceId(), request.correlationId(), request.runId(),
                     request.idempotencyKey(), generatedClaim.claimText(), evidenceIds, start, end);
             claims.add(claim);
             for (UUID evidenceId : evidenceIds) {

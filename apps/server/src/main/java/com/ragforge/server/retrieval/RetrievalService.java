@@ -1,6 +1,7 @@
 package com.ragforge.server.retrieval;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -299,9 +300,23 @@ public final class RetrievalService {
     }
 
     private static UUID evidenceId(Request request, UUID childId) {
-        return UUID.nameUUIDFromBytes((request.spaceId() + ":" + request.indexVersionId() + ":"
-                + request.profile().id() + ":" + request.profile().versionNo() + ":" + childId)
-                .getBytes(StandardCharsets.UTF_8));
+        String identity = request.spaceId() + ":" + request.indexVersionId() + ":"
+                + request.profile().id() + ":" + request.profile().versionNo() + ":" + childId;
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(identity.getBytes(StandardCharsets.UTF_8));
+            long mostSignificant = 0;
+            long leastSignificant = 0;
+            for (int index = 0; index < 8; index++) {
+                mostSignificant = (mostSignificant << 8) | (digest[index] & 0xffL);
+                leastSignificant = (leastSignificant << 8) | (digest[index + 8] & 0xffL);
+            }
+            // Keep the deterministic identity while conforming to the public UUIDv7 token contract.
+            mostSignificant = (mostSignificant & 0xffffffffffff0fffL) | 0x7000L;
+            leastSignificant = (leastSignificant & 0x3fffffffffffffffL) | 0x8000000000000000L;
+            return new UUID(mostSignificant, leastSignificant);
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 is required by the runtime", impossible);
+        }
     }
 
     private record ContextSelection(ChunkCatalog.ChildMetadata child, RrfMerger.MergedCandidate candidate,

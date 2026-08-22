@@ -41,9 +41,18 @@ public final class OllamaProviderAdapter extends AbstractHttpProviderAdapter {
             item.put("role", message.role());
             item.put("content", message.content());
         });
+        // Phase 5 generation is a typed JSON contract; Ollama's native JSON mode
+        // makes the provider honor that contract instead of relying on prompt-only prose.
+        root.put("format", "json");
+        // qwen3.5 exposes reasoning in a separate field; disable it for this
+        // synchronous adapter so the typed answer is returned in message.content.
+        root.put("think", false);
         root.put("stream", false);
+        ObjectNode options = root.putObject("options");
+        options.put("temperature", 0);
+        options.put("seed", 0);
         if (request.maxOutputTokens() != null) {
-            root.putObject("options").put("num_predict", request.maxOutputTokens());
+            options.put("num_predict", request.maxOutputTokens());
         }
         return root;
     }

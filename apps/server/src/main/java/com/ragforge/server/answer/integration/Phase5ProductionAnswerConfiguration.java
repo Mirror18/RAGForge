@@ -3,6 +3,7 @@ package com.ragforge.server.answer.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerProvenancePort;
+import com.ragforge.server.answer.GenerationAuditPort;
 import com.ragforge.server.answer.GenerationPort;
 import com.ragforge.server.answer.QueryEmbeddingProvider;
 import com.ragforge.server.answer.RAGAnswerService;
@@ -62,6 +63,13 @@ public class Phase5ProductionAnswerConfiguration {
     }
 
     @Bean
+    GenerationAuditPort phase5GenerationAudit(RunRepository runs, ProviderRepository providers,
+                                              SpaceBindingRepository bindings) {
+        return new JdbcGenerationAuditPort(runs,
+                new RepositoryProviderRouteResolver(providers, bindings, Phase5IntegrationObserver.noop()));
+    }
+
+    @Bean
     RetrievalPort phase5Retrieval(RetrievalService retrieval, RetrievalExecutionResolver executions,
                                   RevisionArtifactMaterialService materials) {
         return Phase5IntegrationConfiguration.revisionArtifactRetrieval(retrieval, executions, materials,
@@ -86,7 +94,9 @@ public class Phase5ProductionAnswerConfiguration {
     @Bean
     RAGAnswerService phase5RealAnswerService(SpaceAuthorizer authorizer, QueryEmbeddingProvider embedding,
                                              RetrievalPort retrieval, RagPromptPort prompt, GenerationPort generation,
-                                             AnswerPersistencePort persistence, AnswerProvenancePort provenance) {
-        return new RAGAnswerService(authorizer, embedding, retrieval, prompt, generation, persistence, provenance);
+                                             AnswerPersistencePort persistence, AnswerProvenancePort provenance,
+                                             GenerationAuditPort generationAudit) {
+        return new RAGAnswerService(authorizer, embedding, retrieval, prompt, generation, persistence,
+                provenance, generationAudit);
     }
 }

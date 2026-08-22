@@ -56,6 +56,8 @@ class RetrievalServiceTest {
         assertThat(bundle.evidence()).allSatisfy(evidence -> {
             assertThat(evidence.spaceId()).isEqualTo(SPACE);
             assertThat(evidence.indexVersionId()).isEqualTo(INDEX);
+            assertThat(evidence.evidenceId().version()).isEqualTo(7);
+            assertThat(evidence.evidenceId().variant()).isEqualTo(2);
             assertThat(evidence.contentRef()).startsWith("s3://space/");
             assertThat(evidence.inclusionReason()).isNotBlank();
         });

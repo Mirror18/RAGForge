@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "phase5-run-events-restart-cancel-v1",
+  "serverRestart": {
+    "beforeProcessId": 26424,
+    "afterProcessId": 44900,
+    "sameDatabase": true,
+    "healthCheck": "200",
+    "healthEndpoint": "/actuator/health"
+  },
+  "durableReplayAfterStoreRestart": true,
+  "lastEventIdCursorStatus": "AVAILABLE",
+  "sequenceMonotonicityVerified": true,
+  "stableEventIdentityVerified": true,
+  "crossSpaceReplayCount": 0,
+  "duplicateCancelIsIdempotent": true,
+  "lateAnswerDeltaRejectedAfterCancel": true,
+  "testClass": "com.ragforge.server.run.Phase5PersistenceIntegrationTest",
+  "rawPayloadPersistedInEvidence": false,
+  "secretPersisted": false,
+  "liveFanoutScope": "single-process subscribers; durable replay is the restart boundary"
+}
