@@ -3,6 +3,10 @@ package com.ragforge.server.run;
 import com.ragforge.server.common.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
@@ -16,11 +20,24 @@ import java.util.function.Consumer;
 public class RunEventService {
     private final RunRepository runRepository;
     private final RunEventStore eventStore;
+    private final TransactionTemplate cancellationTransition;
     private final ConcurrentHashMap<RunKey, Object> cancellationLocks = new ConcurrentHashMap<>();
 
     public RunEventService(RunRepository runRepository, RunEventStore eventStore) {
+        this(runRepository, eventStore, null);
+    }
+
+    @Autowired
+    public RunEventService(RunRepository runRepository, RunEventStore eventStore,
+                           PlatformTransactionManager transactionManager) {
         this.runRepository = Objects.requireNonNull(runRepository, "runRepository");
         this.eventStore = Objects.requireNonNull(eventStore, "eventStore");
+        if (transactionManager == null) {
+            this.cancellationTransition = null;
+        } else {
+            this.cancellationTransition = new TransactionTemplate(transactionManager);
+            this.cancellationTransition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        }
     }
 
     public RunEvent append(UUID spaceId, UUID runId, UUID correlationId, String type, int version,
@@ -82,9 +99,7 @@ public class RunEventService {
                     break;
                 }
                 try {
-                    runRepository.transitionRun(spaceId, runId, RunRepository.RunStatus.CANCELLED,
-                            RunRepository.ErrorClass.CANCELLED, "run_cancelled", java.time.Instant.now(),
-                            current.version());
+                    transitionCancellation(spaceId, runId, current.version());
                     cancellationConfirmed = true;
                     break;
                 } catch (IllegalStateException exception) {
@@ -112,6 +127,17 @@ public class RunEventService {
                         : lastRace;
             }
             return eventStore.cancel(spaceId, runId, correlationId);
+        }
+    }
+
+    private void transitionCancellation(UUID spaceId, UUID runId, long expectedVersion) {
+        Runnable transition = () -> runRepository.transitionRun(spaceId, runId,
+                RunRepository.RunStatus.CANCELLED, RunRepository.ErrorClass.CANCELLED, "run_cancelled",
+                java.time.Instant.now(), expectedVersion);
+        if (cancellationTransition == null) {
+            transition.run();
+        } else {
+            cancellationTransition.executeWithoutResult(status -> transition.run());
         }
     }
 
