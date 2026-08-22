@@ -81,6 +81,8 @@
 - 真实 RAG 与成本基线：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json) 已记录真实本地 Ollama RAG、768 维 embedding、revision/artifact material、citation/provenance、usage 和 `LOCAL_ONLY` 出境约束；[`phase6-cost-local-ollama.v1.json`](../../tests/evidence/phase6-cost-local-ollama.v1.json) 固化了 1 次 provider call、293 tokens、provider-reported usage 和本地估算成本 `0 USD`。该证据满足本轮用户授权的真实 E2E 和本地成本基线，但不替代 Phase 6 人工评估、并发成本模型或云端商业定价。
 - 当前阶段结论：P6-C、P6-D、P6-E、P6-OBS-02、P6-OBS-03、standalone 本地流式 TTFT 探针和 P6-G 单实例实现/专项证据已具备；P6-EVAL-04 人工/red-team、P6-G 多实例 live fan-out，以及真实并发/云端成本边界仍未完全闭环，现有同步 RAG graph 的集成 TTFT 仍未测量，P6-H 不得关闭。阶段状态保持 `in-progress`。
 
+权威更正：上一行“现有同步 RAG graph 的集成 TTFT 仍未测量”属于历史记录；当前证据已由 `phase6-real-ollama-rag-graph-stream.v1.json` 补齐 graph stream boundary。并发成本也已由 `phase6-cost-local-ollama-concurrent.v1.json` 补齐；当前未闭环项仅保留人工/red-team 签名、ADR-0011 决策及其后续多实例演练。
+
 ## 5. 下一入口
 
 - 记录更正：本轮已补齐真实 RAG graph stream boundary 与本地 2 并发成本证据；因此下一入口不再是“补测 graph TTFT/本地并发”，而是人工/red-team 签名、未接受 ADR-0011 的多实例选择，以及未授权的云端/生产级质量与成本边界。
