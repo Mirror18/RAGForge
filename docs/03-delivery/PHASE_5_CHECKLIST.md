@@ -29,7 +29,7 @@
 - [x] P5-E：SSE answer/citation/abstention/tool/usage/error/done、重连、取消和前端引用交互提交。
 - [x] P5-F：三种只读工具、SSRF/白名单/输出限制、schema 校验和审计提交。
 - [x] P5-G：版本化 generation/citation/abstention 数据集、baseline/candidate、质量/性能/安全证据提交。
-- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation 和 Markdown link 本地门禁通过；旧 CI Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 对旧提交 `76bf953` 成功，当前实现需以推送后的新 CI 为正式远程证据。
+- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation 和 Markdown link 本地门禁通过；GitHub Actions quality Run [`32560686933`](https://github.com/Mirror18/RAGForge/actions/runs/32560686933) 对阶段闭环提交 `4e04771` 全绿，并生成 SBOM/Grype/Phase 3/4/5 evidence artifacts。
 
 ## 合并前强制检查
 
@@ -53,5 +53,5 @@
 
 - 已满足：P5-CONTRACT-01、P5-EXIT-01 至 P5-EXIT-05、P5-PERF-01、P5-SEC-01 均有仓库内测试或 JSON 证据；真实 E2E 使用用户授权的本地 `LOCAL_ONLY` Ollama，不启用云出境。
 - 约束声明：真实 E2E 是单空间、单 fixture、单模型组合的受控验收，不代表生产容量或 120+ 质量评估；同步非流式适配器的 TTFT 保持 `NOT_MEASURED`，不将完整响应时间冒充 TTFT。
-- 本地验证：JDK 21 根 Maven reports 汇总 `227` tests、`0` failures、`0` errors、`1` skipped；格式、架构、链接、秘密、依赖清单、Compose、契约、安全、生成评估和性能证据脚本均通过。SBOM 本地脚本因环境缺少 `syft/trivy` 未通过，必须依赖推送后的 CI SBOM job 复核。
+- 本地验证：JDK 21 根 Maven reports 汇总 `227` tests、`0` failures、`0` errors、`1` skipped；格式、架构、链接、秘密、依赖清单、Compose、契约、安全、生成评估和性能证据脚本均通过。SBOM 本地脚本因环境缺少 `syft/trivy` 未执行通过，但远程 CI 已成功完成 Syft/Grype。
 - 下一入口：Phase 6 扩展 120+ 数据集与人工/red-team 评估、真实并发容量/成本、流式 TTFT、多实例 live fan-out、过期事件清理和生产镜像 digest/SBOM；Phase 5 不再保持 blocked。

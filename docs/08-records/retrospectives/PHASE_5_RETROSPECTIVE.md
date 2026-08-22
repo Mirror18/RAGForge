@@ -15,7 +15,7 @@
 - 合成性能证据 E2E p50/p95 为 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`、provider calls `12`。retrieval/generation 使用代理测量，见 [`phase5-performance.json`](../../../tests/evidence/phase5-performance.json)。
 - 真实 E2E [`phase5-real-ollama-rag-e2e.v1.json`](../../../tests/evidence/phase5-real-ollama-rag-e2e.v1.json) 通过：Ollama chat/embedding digest、LOCAL_ONLY、revision/artifact material、citation/provenance、usage 和空间隔离均验证；retrieval/generation/E2E `129.0/3986.7/6423.9ms`，token `196/101/297`，provider usage persisted，fault counters 全为 `0`；同步非流式 TTFT 为 `NOT_MEASURED`。
 - 事件演练 [`phase5-run-events-restart-cancel.v1.json`](../../../tests/evidence/phase5-run-events-restart-cancel.v1.json) 通过：server 真实进程重启后 health `200`，durable replay、cursor、序列、身份、取消幂等和 late delta 拒绝均通过。
-- 当前提交尚无新的 GitHub Actions 结果；旧 Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 仅作为历史基线，不替代 `600960f` 的远程验证。旧 CI 的 Syft/Grype 成功，当前本地 SBOM 因缺少 `syft/trivy` 未执行。
+- GitHub Actions quality Run [`32560686933`](https://github.com/Mirror18/RAGForge/actions/runs/32560686933) 对阶段闭环提交 `4e04771` 全绿（4m37s），Maven、Phase 5 生成/性能/安全、Phase 3/4、Web、Syft SBOM 与 Grype 均成功；SBOM artifact `9472682673`、Grype SARIF `9472691197`、Phase 5 evidence `9472724446`。本地仍缺 `syft/trivy`，因此以 CI 作为 SBOM 证据。
 - 根 Maven 全量 reports 汇总 `227` tests、`0` failures、`0` errors、`1` skipped；`Phase5ProductionGraphContextTest`、durable replay、真实 Ollama E2E 与新增 generation audit 均通过。
 
 ## Keep

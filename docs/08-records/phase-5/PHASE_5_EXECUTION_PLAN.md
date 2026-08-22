@@ -54,7 +54,7 @@ P5-F 可在 P5-A 合入后与 P5-B/P5-C 并行，但不得写同一 migration、
 | P5-C/D | completed | core、citation validator、typed session authorizer、provider embedding、版本化 material service、prompt hash resolver、active retrieval identity、opt-in production graph 与真实 LOCAL_ONLY Ollama RAG E2E 完成 |
 | P5-E | completed | API、严格 SSE、Last-Event-ID、cancel、citation preview、V13 durable replay、Web build 已通过 |
 | P5-F | completed | 三个只读工具、SSRF、跨空间、输出上限和审计投影测试已通过 |
-| P5-G/H | completed | 生成/性能/安全证据、真实 Ollama RAG E2E、真实进程重启演练与本地全量门禁已通过；根 reports `227` tests、0 failures/errors、1 skipped；旧 CI Run `32550604371` 仅作为历史证据，当前提交待新 CI 复核 |
+| P5-G/H | completed | 生成/性能/安全证据、真实 Ollama RAG E2E、真实进程重启演练与本地全量门禁已通过；根 reports `227` tests、0 failures/errors、1 skipped；CI Run `32560686933` 对 `4e04771` 全绿并生成 SBOM/Grype/evidence artifacts |
 
 ## 阶段结论
 
