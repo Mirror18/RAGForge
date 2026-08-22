@@ -77,7 +77,7 @@ def query(prometheus_url: str, expression: str) -> list[dict]:
     return result.get("data", {}).get("result", [])
 
 
-def otlp_counter(metric_name: str, value: int) -> dict:
+def otlp_counter(metric_name: str, value: int, drill_id: str) -> dict:
     now = str(time.time_ns())
     return {
         "resourceMetrics": [
@@ -86,6 +86,7 @@ def otlp_counter(metric_name: str, value: int) -> dict:
                     "attributes": [
                         {"key": "service.name", "value": {"stringValue": "ragforge-phase6-drill"}},
                         {"key": "environment", "value": {"stringValue": "local-drill"}},
+                        {"key": "drill_id", "value": {"stringValue": drill_id}},
                     ]
                 },
                 "scopeMetrics": [
@@ -114,11 +115,11 @@ def otlp_counter(metric_name: str, value: int) -> dict:
     }
 
 
-def send_counter(otel_url: str, value: int) -> None:
+def send_counter(otel_url: str, value: int, drill_id: str) -> None:
     request_json(
         f"{otel_url.rstrip('/')}/v1/metrics",
         method="POST",
-        payload=otlp_counter("ragforge_egress_denied_total", value),
+        payload=otlp_counter("ragforge_egress_denied_total", value, drill_id),
     )
 
 
@@ -255,11 +256,13 @@ def main() -> int:
 
         # First sample establishes a cumulative counter; second sample creates a
         # real increase that Prometheus can evaluate against the P1 egress rule.
-        send_counter(args.otel_url, 0)
-        wait_for(lambda: query(args.prometheus_url, "ragforge_egress_denied_total"), "initial OTLP metric scrape")
-        send_counter(args.otel_url, 1)
+        drill_id = f"drill-{uuid.uuid4().hex[:12]}"
+        send_counter(args.otel_url, 0, drill_id)
+        selector = f'ragforge_egress_denied_total{{drill_id="{drill_id}"}}'
+        wait_for(lambda: query(args.prometheus_url, selector), "initial OTLP metric scrape")
+        send_counter(args.otel_url, 1, drill_id)
         observed = wait_for(
-            lambda: query(args.prometheus_url, "ragforge_egress_denied_total > 0"),
+            lambda: query(args.prometheus_url, f'{selector} > 0'),
             "injected egress-denied metric",
         )
         alert = wait_for(
