@@ -1,7 +1,7 @@
 {
   "evidence_version": "phase5-security-v1",
   "synthetic_only": false,
-  "code_commit": "be8602a37ef0e5e0ef13abccd6703e3c6be39b29",
+  "code_commit": "600960fe0bb73511e4891d7c7c123a76ebbc11f7",
   "tests": [
     {
       "name": "phase5-contracts",

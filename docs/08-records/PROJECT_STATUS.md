@@ -1,7 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-22
-- Current stage: Phase 5 带引用问答与只读 Agent 已完成本地实现/安全/质量门禁；typed authorization、既有 provider connection embedding、版本化 revision/artifact material service 和显式 opt-in production Spring graph 已合入，但真实 provider route/credential 配置与 RAG E2E 证据缺失，阶段保持 blocked
+- Current stage: Phase 5 带引用问答与只读 Agent 已完成；ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E；阶段已闭环
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - External remote: `origin` configured；Phase 3 OCR runtime implementation 已推送至 `2ca3a75`；GitHub Actions quality Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 成功，Phase 3 JVM evidence artifact `9183633612`、Syft SBOM artifact `9183518984`、Grype SARIF artifact `9183542524` 已生成。
@@ -50,19 +50,21 @@
 
 ## 3. Phase 5 当前闭环与证据（2026-08-22）
 
-- 当前代码验收基线：`c62e42e`；本轮 material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`、`5cc8329`、`fbbd38a`，上下文验收提交为 `76bf953`，durable SSE 事件提交为 `c62e42e`。
+- 当前代码验收基线：`600960f`；ADR-0010 接受提交 `246f993`，真实 Ollama RAG 生成审计提交 `600960f`。
 - 合同：`python scripts/ci/contract_test.py` 检查 21 artifacts、52 tests；Phase 5 定向 contract 10/10。
 - 质量：[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json) 的合成 12 cases candidate citation precision/faithfulness/abstention accuracy 均为 `1.0`；Phase 6 仍需 120+ 和人工评估。
 - 安全：[`phase5-security.json`](../../tests/evidence/phase5-security.json) 的 AgentToolSecurity 9/9、回答/出境 19/19，未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。
 - 性能：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json) 为版本化合成 fixture，E2E p50/p95 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`；retrieval/generation 指标是代理测量，不是生产容量承诺。
+- 真实 RAG：[`phase5-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase5-real-ollama-rag-e2e.v1.json) 记录本地 Ollama `qwen3.5:9b`/`nomic-embed-text:latest` digest、`LOCAL_ONLY`、revision/artifact material、citation/provenance、usage 和 `space_id` 验证；retrieval/generation/E2E `129.0/3986.7/6423.9ms`，input/output/total `196/101/297`，provider call/invocation `1/1`，timeout/retry/degraded/cancel `0`。
+- 事件恢复：[`phase5-run-events-restart-cancel.v1.json`](../../tests/evidence/phase5-run-events-restart-cancel.v1.json) 记录真实 server 进程重启、健康检查 `200`、新 store durable replay、cursor/序列/事件身份、取消幂等及 late delta 拒绝。
 - 全量本地门禁：此前根 Maven Server+Worker `28/28`、Flyway V1–V13、Web `tsc --noEmit`/`vite build`、format/architecture/Markdown/secret/dependency/Compose/contract/Phase 2 security/Phase 4 evaluation 均通过；本轮加入 Flyway V13 durable run events 后 server 全量 `198/198`（0 failures/errors/skips），新增 durable replay 在隔离 Testcontainers PostgreSQL/Valkey 上通过。
 - CI：GitHub Actions quality Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 对 `76bf953` 全绿（4m58s），包含 Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype。
-- 本轮本地门禁：`mvn -f pom.xml -pl apps/server -am test`（JDK 21）`198/198` 通过；新增 prompt space/hash resolver、retrieval identity、production graph 条件接线、durable run event restart-instance replay 相关测试与材料服务已包含在回归中。真实 provider 凭据、真实 RAG E2E 和云出境未在本轮启用。
-- 阶段结论：P5 功能、安全边界、typed authorization、embedding/provider/material seam、完整 opt-in graph 已落地，但默认回答仍 fail-closed，不能把合成 provider/material 测试当作真实可用回答；阶段状态仍为 blocked。[`ADR-0010`](../02-architecture/adr/0010-phase5-provider-material-composition.md) 仍为 Proposed，用户已选择 A、复用既有 provider connection、由 revision/artifact service 提供材料，但仍需受控 route/credential 数据和真实 E2E 证据。
+- 本轮本地门禁：根 `mvn -q test`（JDK 21）reports 汇总 `227` tests、`0` failures、`0` errors、`1` skipped；新增 prompt space/hash resolver、retrieval identity、production graph 条件接线、durable run event replay、generation audit 和真实 Ollama RAG E2E 均包含在回归中。未提交真实 provider secret，云出境未启用。
+- 阶段结论：P5 的合同、引用/拒答、工具安全、SSE replay/cancel、typed authorization、provider/material graph、真实本地 Ollama RAG E2E 和审计 provenance 均已验证；ADR-0010 已 Accepted。真实 E2E 仅授权并覆盖 LOCAL_ONLY 单 fixture，不等同于云出境、生产容量或 Phase 6 评估。
 
 ## 4. 下一入口
 
-Phase 5 继续入口为受控 provider route/credential 配置审查、真实空间级 RAG E2E 和新增 CI Run 证据；ADR-0010 仍需人工接受后才可作为绑定决策。durable run event 已支持新 store 实例从 PostgreSQL 回放，但真实进程重启、120+ 评估和容量/成本演练仍是后续证据。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
+Phase 6 入口为 120+ 数据集与人工/red-team 评估、真实并发容量/成本、流式 TTFT、多实例 live fan-out、过期事件清理和发布级 SBOM/digest 复核。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
 
 ## 5. 更新规则
 

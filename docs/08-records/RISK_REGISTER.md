@@ -81,8 +81,10 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 ## 8. Phase 5 复审（2026-08-22）
 
-- `R-025` 复审：typed session-to-space authorizer、既有 provider connection 的 embedding ProviderAdapter、空间绑定的版本化 revision/artifact material service、prompt hash resolver、active retrieval identity 和显式 opt-in production port graph 已实现；受控 provider route/credential 数据与真实 RAG E2E 仍缺失。P=4、I=5、Score=20，Answer / Retrieval，OPEN；完成真实依赖及证据前默认继续 fail-closed。
-- `R-026` 复审：新增 Flyway V13 `rag_run_event_streams`/`rag_run_events` 与 `JdbcRunEventStore`，并以 PostgreSQL Testcontainers 验证新 store 实例可按 Last-Event-ID 回放、跨空间读取为空、取消幂等和取消后 delta 拒绝；真实进程重启演练和过期事件清理仍未完成。P=3、I=3、Score=9，Platform，MITIGATING；继续保留重启演练证据要求。
-- `R-003` 继续 OPEN，但 Phase 5 已用 `RAGAnswerServiceTest`、`AnswerApiControllerTest`、`AgentToolSecurityTest`、`SessionSpaceAnswerAuthorizerTest`、material service tests 和完整 opt-in graph 编译/回归验证回答/工具路径的空间边界；尚不能关闭全局空间隔离风险，直到真实 provider route/credential 与 RAG E2E 接入。
+- `R-025` 已关闭（阶段范围）：用户接受 ADR-0010 方案 A；既有 provider connection、空间绑定 revision/artifact material service、显式 opt-in graph 和本地 Ollama `LOCAL_ONLY` 真实 RAG E2E 已通过，证据见 [`phase5-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase5-real-ollama-rag-e2e.v1.json)。云 route/生产凭据仍不在授权范围，继续由 ADR-0005 和 fail-closed 约束。
+- `R-026` 阶段范围已关闭：真实 server 重启后健康检查和 durable replay/cancel 证据通过，见 [`phase5-run-events-restart-cancel.v1.json`](../../tests/evidence/phase5-run-events-restart-cancel.v1.json)。过期事件清理和多实例 live fan-out 转入 Phase 6，因此不宣称运维风险全局关闭。
+- `R-003` 仍为 OPEN（全局范围）：Phase 5 的真实单空间 E2E、安全测试和审计均未发现泄漏，但仍需 Phase 6 多租户压力、云 route 和更大规模数据复测后再关闭全局风险。
 - `R-005` 继续 MITIGATING：合成 12 cases 的 candidate citation precision、faithfulness、abstention accuracy 均为 `1.0`，但样本规模和 judge 均为 deterministic fixture；Phase 6 扩展 120+ 样本、人工复核和 prompt-injection/red-team。
 - `R-012` 继续 OPEN：Phase 5 的性能文件只提供合成 E2E/TTFT 及 retrieval/generation 代理；生产 embedding 维度、并发、模型上下文和成本仍需真实环境复测。
+- `R-027` 新增：同步非流式 Ollama 适配器不暴露首 token 时间，真实 E2E 只能记录 retrieval/generation/E2E，TTFT 明确为 `NOT_MEASURED`。P=2、I=3、Score=6，Performance，MITIGATING；Phase 6 流式协议和 TTFT 观测补齐前不得声称真实 TTFT 达标。
+- `R-028` 新增：本地 SBOM 门禁因环境缺少 `syft/trivy` 未能执行，当前依赖旧 CI 证据且需新提交 CI 复核。P=2、I=4、Score=8，Compliance，MITIGATING；推送后以 GitHub Actions SBOM/Grype artifact 作为本提交证据。

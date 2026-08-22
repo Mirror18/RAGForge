@@ -1,9 +1,9 @@
 # Phase 5 Checklist：带引用问答与只读 Agent
 
 - 阶段：Phase 5
-- 状态：blocked（授权上下文、provider embedding、revision/artifact material service 与 opt-in production Spring graph 已实现并通过本地门禁；真实 provider route/credential 配置与 RAG 端到端证据仍缺失）
+- 状态：completed（ADR-0010 已接受；方案 A typed authorization context、既有 provider connection、revision/artifact material service 与显式 LOCAL_ONLY Ollama RAG E2E 均有证据）
 - 冻结日期：2026-08-22
-- 统一基线：`49d9160`；本轮实现合并提交为 material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`
+- 统一基线：`600960f`；ADR 接受提交 `246f993`，真实 RAG 审计实现提交 `600960f`
 - 范围：在 Phase 4 检索证据之上完成可追溯的 RAG 回答、流式引用交互和三个受控只读工具。
 - 非范围：可写 Agent、任意 Shell/SQL/网络、跨空间回答、生产云端出境、release、接受新 ADR/许可证。
 
@@ -29,7 +29,7 @@
 - [x] P5-E：SSE answer/citation/abstention/tool/usage/error/done、重连、取消和前端引用交互提交。
 - [x] P5-F：三种只读工具、SSRF/白名单/输出限制、schema 校验和审计提交。
 - [x] P5-G：版本化 generation/citation/abstention 数据集、baseline/candidate、质量/性能/安全证据提交。
-- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation、Markdown link 和 CI 全部通过；GitHub Actions quality Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 对 `76bf953` 成功。
+- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation 和 Markdown link 本地门禁通过；旧 CI Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 对旧提交 `76bf953` 成功，当前实现需以推送后的新 CI 为正式远程证据。
 
 ## 合并前强制检查
 
@@ -45,11 +45,13 @@
 - 质量证据：[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json)，合成 12 cases，candidate precision/faithfulness/abstention 均为 `1.0`；不替代 Phase 6 的 120+ 与人工评估。
 - 安全证据：[`phase5-security.json`](../../tests/evidence/phase5-security.json)，契约 10/10、AgentToolSecurity 9/9、回答/出境 19/19；六项安全不变量均为 `0`。
 - 性能/成本证据：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json)，合成 fixture：E2E p50/p95 `79.7/88.8ms`，TTFT p50 `29.4ms`，并明确标记 retrieval/generation 为代理测量。
+- 真实 RAG 证据：[`phase5-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase5-real-ollama-rag-e2e.v1.json)，Ollama `qwen3.5:9b` + `nomic-embed-text:latest`，两者均记录 digest；`LOCAL_ONLY`、space/revision/material/citation/provenance 均验证，retrieval/generation/E2E 为 `129.0/3986.7/6423.9ms`，token `196/101/297`，provider usage 已持久化，云调用/跨空间/外部 Evidence 均为 `0`。同步非流式适配器不暴露 TTFT，因此明确记录 `NOT_MEASURED`。
+- 事件恢复证据：[`phase5-run-events-restart-cancel.v1.json`](../../tests/evidence/phase5-run-events-restart-cancel.v1.json)，真实 server PID `26424 -> 44900` 重启后健康检查 `200`；durable replay、cursor、序列、事件身份、取消幂等和取消后 delta 拒绝均通过。
 - Retrospective：[`PHASE_5_RETROSPECTIVE.md`](../08-records/retrospectives/PHASE_5_RETROSPECTIVE.md)。
 
 ## 阻塞与阶段结论
 
-- 已满足：本清单的合同、引用 allow-list、拒答、只读工具安全、SSE 取消/重放、答案历史与本地质量/性能/安全门禁均有可重跑证据。
-- 未闭环：真实 graph 只在显式 `ragforge.object-storage.enabled=true` 且对象存储凭据完整时启用；仍缺受控 provider route/credential 数据、真实 embedding/retrieval/material/generation RAG E2E、生产模型质量/延迟/成本证据。没有这些依赖，不能声称生产成功回答或关闭 Phase 5。
-- 本轮验证：JDK 21 下 main 合并后 server 全量 `198` tests、`0` failures/errors/skips；`Phase5ProductionGraphContextTest` 与 durable run event replay 在隔离 Testcontainers PostgreSQL/Valkey 上验证显式 opt-in production graph、默认 fail-closed 条件和新 store 实例回放。此前 Qdrant 与本地 Ollama acceptance 仍通过；本轮无真实 provider 凭据写入仓库。
-- 下一入口：在 ADR-0010 仍保持 Proposed 的前提下，提供/审查受控 provider route/credential 配置并运行真实空间级 RAG E2E；随后补 120+ generation/evaluation、真实进程重启/多实例 SSE 演练和 step/model provenance 证据。
+- 已满足：P5-CONTRACT-01、P5-EXIT-01 至 P5-EXIT-05、P5-PERF-01、P5-SEC-01 均有仓库内测试或 JSON 证据；真实 E2E 使用用户授权的本地 `LOCAL_ONLY` Ollama，不启用云出境。
+- 约束声明：真实 E2E 是单空间、单 fixture、单模型组合的受控验收，不代表生产容量或 120+ 质量评估；同步非流式适配器的 TTFT 保持 `NOT_MEASURED`，不将完整响应时间冒充 TTFT。
+- 本地验证：JDK 21 根 Maven reports 汇总 `227` tests、`0` failures、`0` errors、`1` skipped；格式、架构、链接、秘密、依赖清单、Compose、契约、安全、生成评估和性能证据脚本均通过。SBOM 本地脚本因环境缺少 `syft/trivy` 未通过，必须依赖推送后的 CI SBOM job 复核。
+- 下一入口：Phase 6 扩展 120+ 数据集与人工/red-team 评估、真实并发容量/成本、流式 TTFT、多实例 live fan-out、过期事件清理和生产镜像 digest/SBOM；Phase 5 不再保持 blocked。
