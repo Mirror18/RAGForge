@@ -1,9 +1,9 @@
 # Phase 5 Checklist：带引用问答与只读 Agent
 
 - 阶段：Phase 5
-- 状态：blocked（授权上下文、provider embedding 与 revision/artifact material seam 已实现并通过本地门禁；生产 Spring graph 仍缺少实际依赖组装与真实端到端证据）
+- 状态：blocked（授权上下文、provider embedding、revision/artifact material service 与 opt-in production Spring graph 已实现并通过本地门禁；真实 provider route/credential 配置与 RAG 端到端证据仍缺失）
 - 冻结日期：2026-08-22
-- 统一基线：`b9f9ca54203e8212af80caca4c402ed863c6cdbc`；本轮实现合并提交为 worker `75082bc` 及其 no-ff merge commit
+- 统一基线：`49d9160`；本轮实现合并提交为 material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`
 - 范围：在 Phase 4 检索证据之上完成可追溯的 RAG 回答、流式引用交互和三个受控只读工具。
 - 非范围：可写 Agent、任意 Shell/SQL/网络、跨空间回答、生产云端出境、release、接受新 ADR/许可证。
 
@@ -24,7 +24,7 @@
 
 - [x] P5-A：Checklist、执行计划、契约和评估数据口径提交。
 - [x] P5-B：RAG prompt、run/step 版本投影和兼容/回滚说明提交。
-- [x] P5-C：授权检索、context budget、版本化 prompt、route/egress 检查、结构化拒答提交；typed session context、既有 provider connection 的 embedding capability、revision/artifact material service adapter 已完成，但生产 graph 仍按 fail-closed 接线。
+- [x] P5-C：授权检索、context budget、版本化 prompt、route/egress 检查、结构化拒答提交；typed session context、既有 provider connection 的 embedding capability、版本化 revision/artifact material service 与 opt-in production graph 已完成，默认仍按 fail-closed 接线。
 - [x] P5-D：结构化 citation token 解析、bundle allow-list、持久化 provenance 和安全拒答提交。
 - [x] P5-E：SSE answer/citation/abstention/tool/usage/error/done、重连、取消和前端引用交互提交。
 - [x] P5-F：三种只读工具、SSRF/白名单/输出限制、schema 校验和审计提交。
@@ -50,6 +50,6 @@
 ## 阻塞与阶段结论
 
 - 已满足：本清单的合同、引用 allow-list、拒答、只读工具安全、SSE 取消/重放、答案历史与本地质量/性能/安全门禁均有可重跑证据。
-- 未闭环：生产 Spring graph 当前显式使用 fail-closed ports；本轮已提供 `ProviderBackedQueryEmbeddingProvider`、`AnswerAuthorizationContext`/`SessionSpaceAnswerAuthorizer` 和 `RevisionArtifactMaterialService` 适配边界，但尚未提供实际 material service bean、完整检索/prompt/generation 组装、受控 provider 凭据/路由数据和真实 RAG E2E 证据。没有这些依赖，不能声称生产成功回答或关闭 Phase 5。
-- 本轮验证：`mvn -f apps/server/pom.xml test` 在 JDK 21 下 `185` tests、`0` failures/errors/skips；包含 Testcontainers PostgreSQL/Valkey/Qdrant 与本地 Ollama acceptance。新增授权 3/3、材料 resolver 2/2、provider HTTP 29/29 通过。
-- 下一入口：先由架构/产品 owner 接受 ADR-0010 的绑定范围并提供实际 material service/provider route 配置，再组装真实 graph；随后补 120+ generation/evaluation、SSE 重启恢复和 step/model provenance 演练。
+- 未闭环：真实 graph 只在显式 `ragforge.object-storage.enabled=true` 且对象存储凭据完整时启用；仍缺受控 provider route/credential 数据、真实 embedding/retrieval/material/generation RAG E2E、生产模型质量/延迟/成本证据。没有这些依赖，不能声称生产成功回答或关闭 Phase 5。
+- 本轮验证：JDK 21 下 main 合并后 server 全量 `196` tests、`0` failures/errors/skips；新增 prompt space/hash resolver、stable retrieval identity 与 opt-in graph 代码编译通过。此前 Testcontainers PostgreSQL/Valkey/Qdrant 与本地 Ollama acceptance 仍通过；本轮无真实 provider 凭据写入仓库。
+- 下一入口：在 ADR-0010 仍保持 Proposed 的前提下，提供/审查受控 provider route/credential 配置并运行真实空间级 RAG E2E；随后补 120+ generation/evaluation、SSE 重启恢复和 step/model provenance 演练。

@@ -79,10 +79,10 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - 新增 `R-023`：BM25 provider 当前为进程内确定性实现，重启后的 durable lexical index 尚未选型；在该风险关闭前不宣称重启后 lexical 数据持久化。
 - 新增 `R-024`：Qdrant 1M 真实本地探针使用 8 维合成向量和 100 次查询，Recall@10 `1.0`、p95 `1101.3382 ms`；该结果满足当前阶段退出条件，但不替代生产 embedding 维度、并发和混合索引容量复测。
 
-## 8. Phase 5 复审（2026-08-21）
+## 8. Phase 5 复审（2026-08-22）
 
-- `R-025` 复审：typed session-to-space authorizer、既有 provider connection 的 embedding ProviderAdapter 和版本化 evidence material resolver seam 已实现并通过本地测试；实际 material service bean、完整生产 port graph、受控 provider route/credential 数据和真实 RAG E2E 仍缺失。P=4、I=5、Score=20，Answer / Retrieval，OPEN；完成这些依赖及真实证据前继续 fail-closed。
+- `R-025` 复审：typed session-to-space authorizer、既有 provider connection 的 embedding ProviderAdapter、空间绑定的版本化 revision/artifact material service、prompt hash resolver、active retrieval identity 和显式 opt-in production port graph 已实现；受控 provider route/credential 数据与真实 RAG E2E 仍缺失。P=4、I=5、Score=20，Answer / Retrieval，OPEN；完成真实依赖及证据前默认继续 fail-closed。
 - 新增 `R-026`：答案历史与事件已落 PostgreSQL，但 `RunEventStore` 的 SSE replay 仍是进程内实现，进程重启后不能仅靠 V12 恢复事件游标。P=3、I=4、Score=12，Platform，OPEN；Phase 6 做重启恢复演练并将 durable answer_events 接入 replay source。
-- `R-003` 继续 OPEN，但 Phase 5 已用 `RAGAnswerServiceTest`、`AnswerApiControllerTest`、`AgentToolSecurityTest`、`SessionSpaceAnswerAuthorizerTest` 和安全证据验证回答/工具路径的空间边界；尚不能关闭全局空间隔离风险，直到真实 material service 与完整生产 graph 接入。
+- `R-003` 继续 OPEN，但 Phase 5 已用 `RAGAnswerServiceTest`、`AnswerApiControllerTest`、`AgentToolSecurityTest`、`SessionSpaceAnswerAuthorizerTest`、material service tests 和完整 opt-in graph 编译/回归验证回答/工具路径的空间边界；尚不能关闭全局空间隔离风险，直到真实 provider route/credential 与 RAG E2E 接入。
 - `R-005` 继续 MITIGATING：合成 12 cases 的 candidate citation precision、faithfulness、abstention accuracy 均为 `1.0`，但样本规模和 judge 均为 deterministic fixture；Phase 6 扩展 120+ 样本、人工复核和 prompt-injection/red-team。
 - `R-012` 继续 OPEN：Phase 5 的性能文件只提供合成 E2E/TTFT 及 retrieval/generation 代理；生产 embedding 维度、并发、模型上下文和成本仍需真实环境复测。
