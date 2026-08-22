@@ -1,0 +1,39 @@
+{
+  "evidence_version": "phase6-real-ollama-stream-metrics.v1",
+  "status": "PASSED",
+  "executed_at_utc": "2026-08-22T13:49:08Z",
+  "exact_command_redacted": "python scripts/phase6/ollama_stream_metrics.py [arguments redacted]",
+  "fixture": {
+    "classification": "Public synthetic",
+    "prompt_sha256": "089a12f77dc5b1d6ea53b75d0c9e5c4f5d6611e98e20955689605a2dd8a2d130",
+    "raw_prompt_persisted": false
+  },
+  "measurement": {
+    "status": "PASSED",
+    "route": "LOCAL_ONLY",
+    "endpoint": "http://127.0.0.1:11434/api/chat",
+    "model": "qwen3.5:9b",
+    "stream": true,
+    "chunk_count": 46,
+    "ttft_ms": 9130.6742,
+    "stream_wall_time_ms": 11475.2584,
+    "provider_total_duration_ms": 11456.3744,
+    "prompt_eval_duration_ms": 144.189,
+    "eval_duration_ms": 2344.828,
+    "tokens_per_second": 19.6176,
+    "usage": {
+      "input_tokens": 35,
+      "output_tokens": 46,
+      "total_tokens": 81,
+      "provider_usage_source": "PROVIDER_REPORTED"
+    },
+    "output": {
+      "char_count": 234,
+      "sha256": "9d0192041d49c75a2a6a79c4950e6800166c4050f2cab8b2e807305f96f050a6"
+    },
+    "raw_prompt_persisted": false,
+    "raw_provider_body_persisted": false,
+    "estimated_cost_usd": 0,
+    "cost_basis": "Local Ollama has no provider price schedule; zero is an observed local estimate, not a production cost forecast."
+  }
+}
