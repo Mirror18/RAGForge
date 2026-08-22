@@ -3,6 +3,7 @@ package com.ragforge.server.run;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -42,6 +43,7 @@ public class RunEventFanout implements SmartLifecycle {
     private final AtomicLong handlerFailures = new AtomicLong();
     private volatile boolean running;
 
+    @Autowired
     public RunEventFanout(StringRedisTemplate redis, ObjectMapper objectMapper,
                           RedisConnectionFactory connectionFactory,
                           @Value("${ragforge.run-events.fanout.channel:" + DEFAULT_CHANNEL + "}") String channel,
