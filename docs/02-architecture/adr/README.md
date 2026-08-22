@@ -13,6 +13,6 @@ ADR 采用不可变历史：决策变更时新增 ADR 并把旧文档标记为 `
 | [0007](0007-session-authentication.md) | Accepted | 服务端 Session，不使用浏览器长期 JWT |
 | [0008](0008-evaluation-and-llm-observability.md) | Accepted | 自有评估为准、Promptfoo CI、Langfuse 可选 |
 | [0009](0009-upstream-reuse-policy.md) | Accepted | 依赖优先、源码复用登记和许可证闸门 |
-| [0010](0010-phase5-provider-material-composition.md) | Proposed | Phase 5 真实 embedding、版本化 evidence material 与 session authorizer 的组合边界（待人工接受） |
+| [0010](0010-phase5-provider-material-composition.md) | Accepted | Phase 5 真实 embedding、版本化 evidence material 与 session authorizer 的组合边界 |
 
 模板必填项：Status、Date、Context、Decision、Consequences、Alternatives、References。

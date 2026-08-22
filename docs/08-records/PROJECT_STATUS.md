@@ -1,7 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-22
-- Current stage: Phase 5 带引用问答与只读 Agent 已完成；ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E；阶段已闭环
+- Current stage: Phase 6 评估、观测、安全与恢复进行中；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - External remote: `origin` configured；Phase 3 OCR runtime implementation 已推送至 `2ca3a75`；GitHub Actions quality Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 成功，Phase 3 JVM evidence artifact `9183633612`、Syft SBOM artifact `9183518984`、Grype SARIF artifact `9183542524` 已生成。
@@ -11,7 +11,7 @@
 - 独立 RAGForge 目录和本地 Git 仓库初始化。
 - 产品章程、PRD、用户故事和非功能边界。
 - 总体/领域/摄取/检索/Provider/API 架构基线。
-- 9 项 Accepted ADR。
+- 10 项 Accepted ADR（包括 ADR-0010；ADR README 与各 ADR 状态一致）。
 - Phase 0–7 路线、开发流程和完成定义。
 - 测试、RAG 评估、性能、部署、观测、恢复、安全和开源合规计划。
 - GitHub 成熟项目比较、引用清单和上游复用登记表。
@@ -35,10 +35,10 @@
 - Phase 4 已完成阶段闭环（2026-08-21）：P4-D 父子分块、P4-E embedding cache/Qdrant candidate index、P4-F dense/BM25/RRF/rerank/parent expansion、P4-G Chunk Studio/Retrieval Playground 与 P4-H 评测/规模/证据已合入 main。阶段合并提交包括 `300569b`、`ab81ed1`、`1f6450e`、`fed0034`、`041bf34`、`e27ae75`、`ca6db93` 及其对应 worker commits。30 问 Recall@10 `0.965517`、MRR@10 `0.827586`；Qdrant 1M synthetic child points Recall@10 `1.0`、p95 `1101.3382 ms`；空间过滤/索引切换回滚/override 冲突 targeted Maven 17/17。证据见 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)、[`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json)、[`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json) 和 [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json)。技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段未升级 Java/Boot。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
-- 本轮 Phase 5 实现合并提交：material worker `624c6df` / no-ff merge `49368e4`，graph worker `c874df3` / no-ff merge `49d9160`；授权上下文、embedding route/provider adapter、版本化材料读取服务、prompt hash resolver、active retrieval identity 和 opt-in production graph 及回归测试均已纳入。
+- 本轮 Phase 5 实现合并提交：material worker `624c6df` / no-ff merge `49368e4`，graph worker `c874df3` / no-ff merge `49d9160`；授权上下文、embedding route/provider adapter、版本化材料读取服务、prompt hash resolver、active retrieval identity 和 opt-in production graph 及回归测试均已纳入。Phase 5 阶段闭环提交为 `4e04771`，远程记录提交为 `0fe22db`。
 - 已配置 GitHub remote `Mirror18/RAGForge`；Phase 4 当前实现已推送至 `origin/main`，GitHub Actions quality Run [32450998792](https://github.com/Mirror18/RAGForge/actions/runs/32450998792) 对 `9d21b48` 全绿（4m19s），Phase 4 evidence artifact `9435734012`、SBOM artifact `9435662885`、Grype SARIF artifact `9435676463` 已生成；尚未创建 release。GitHub Actions Syft/Grype 仍是正式发布前的有效 SBOM/SCA 门禁。
 - Obsidian 仓库没有被写入项目进度。
-- Phase 0 实验发现的 provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态；Phase 4 已关闭 candidate index 半构建发布风险的阶段范围，并验证 chunk/Qdrant/cache 的空间边界；Phase 5 已完成 citation/agent 访问边界的本地验证，并实现 typed session-to-space authorizer、既有 provider adapter embedding、空间绑定的版本化 material service、prompt hash resolver 和 active retrieval identity。真实 graph 仅显式对象存储启用时组装；受控 provider route/credential 数据和真实 RAG E2E 证据尚未具备。OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
+- Phase 0 实验发现的 provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态；Phase 4 已关闭 candidate index 半构建发布风险的阶段范围，并验证 chunk/Qdrant/cache 的空间边界；Phase 5 已完成 citation/agent 访问边界、真实 LOCAL_ONLY RAG E2E 和 generation audit。Phase 6 继续收敛评估规模、观测/告警、上传与提示注入安全、隔离恢复、真实 embedding 容量和 retention/deletion。OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
 - 本机 Java 21 根 Maven Testcontainers 已通过，Worker 28/28、Phase 3 Python acceptance 2/2；格式、架构、secret、Markdown link、依赖清单、contract 32/32 均通过。测试日志中的 Testcontainers/Valkey 关闭后重连 warning 不影响测试结果，但保留为后续生命周期清理项。
 
 ## 3. Phase 4 闭环摘要
@@ -64,7 +64,7 @@
 
 ## 4. 下一入口
 
-Phase 6 入口为 120+ 数据集与人工/red-team 评估、真实并发容量/成本、流式 TTFT、多实例 live fan-out、过期事件清理和发布级 SBOM/digest 复核。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
+Phase 6 当前入口为 120+ 数据集与人工/red-team 评估、真实并发容量/成本、OTel Dashboard/告警/Runbook、隔离恢复、保留删除和多实例事件清理。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
 
 ## 5. 更新规则
 
