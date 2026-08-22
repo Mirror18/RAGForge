@@ -15,7 +15,9 @@ import json
 import math
 import os
 import platform
+import shlex
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -29,9 +31,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "tests" / "evidence" / "phase6-capacity-retrieval.v1.json"
 COMPOSE_FILE = ROOT / "deploy" / "compose" / "compose.yaml"
-COMPOSE_PROJECT = "ragforge-p6-capacity-a1"
-QDRANT_PORT = 26337
-QDRANT_GRPC_PORT = 26338
+COMPOSE_PROJECT = "ragforge-p6-capacity-a2"
+QDRANT_PORT = 26347
+QDRANT_GRPC_PORT = 26348
 COLLECTION = "ragforge_phase6_capacity_1m"
 QDRANT_IMAGE = "qdrant/qdrant:v1.11.5"
 LOCAL_QDRANT_AUTH_VALUE = "phase6-capacity-local-only"
@@ -43,6 +45,16 @@ CONCURRENCY = 20
 SPACES = ("space-alpha", "space-beta", "space-gamma", "space-delta")
 INDEX_VERSION = "phase6-capacity-v1"
 CONFIG_VERSION = "phase6-capacity-config-v1"
+DEFAULT_BATCH_SIZE = 256
+UPLOAD_RETRIES = 6
+UPLOAD_REQUEST_TIMEOUT = 900
+
+
+class UploadError(RuntimeError):
+    def __init__(self, cause: Exception, diagnostics: list[dict[str, Any]]) -> None:
+        super().__init__(str(cause))
+        self.cause = cause
+        self.diagnostics = diagnostics
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -134,6 +146,47 @@ def compose(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     )
 
 
+def docker_qdrant_container_id() -> str | None:
+    result = compose("ps", "-q", "qdrant", check=False)
+    container_id = result.stdout.strip()
+    return container_id or None
+
+
+def resource_diagnostics() -> dict[str, Any]:
+    """Capture bounded local diagnostics without exposing container env/secrets."""
+    diagnostics: dict[str, Any] = {
+        "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "compose_ps": None,
+        "docker_stats": None,
+        "qdrant_state": None,
+        "qdrant_logs_tail": None,
+    }
+    try:
+        ps = compose("ps", "--all", check=False)
+        diagnostics["compose_ps"] = {"returncode": ps.returncode, "stdout": ps.stdout[-4000:], "stderr": ps.stderr[-2000:]}
+        container_id = docker_qdrant_container_id()
+        if not container_id:
+            return diagnostics
+        state = subprocess.run(
+            ["docker", "inspect", "--format", "{{json .State}}", container_id],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        diagnostics["qdrant_state"] = {"returncode": state.returncode, "stdout": state.stdout[-4000:], "stderr": state.stderr[-2000:]}
+        stats = subprocess.run(
+            ["docker", "stats", "--no-stream", "--format", "{{json .}}", container_id],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        diagnostics["docker_stats"] = {"returncode": stats.returncode, "stdout": stats.stdout[-4000:], "stderr": stats.stderr[-2000:]}
+        logs = subprocess.run(
+            ["docker", "logs", "--tail", "80", container_id],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        diagnostics["qdrant_logs_tail"] = (logs.stdout + logs.stderr)[-12000:]
+    except OSError as exc:
+        diagnostics["diagnostic_error"] = {"type": type(exc).__name__, "message": str(exc)}
+    return diagnostics
+
+
 def wait_ready(base_url: str) -> None:
     deadline = time.time() + 180
     while time.time() < deadline:
@@ -157,26 +210,47 @@ def create_collection(base_url: str, dimension: int) -> None:
         })
 
 
-def upload(base_url: str, dimension: int, child_count: int, batch_size: int) -> float:
+def upload(base_url: str, dimension: int, child_count: int, batch_size: int, max_retries: int, request_timeout: int) -> dict[str, Any]:
     started = time.perf_counter()
+    batch_count = math.ceil(child_count / batch_size)
+    retry_count = 0
+    failed_batches: list[dict[str, Any]] = []
     for start in range(0, child_count, batch_size):
         points = [{
             "id": child_id,
             "vector": vector_for(child_id, dimension),
             "payload": {"space_id": SPACES[child_id % len(SPACES)], "index_version": INDEX_VERSION},
         } for child_id in range(start, min(start + batch_size, child_count))]
-        for attempt in range(3):
+        for attempt in range(max_retries + 1):
             try:
                 # Point IDs make retrying a timed-out request idempotent. A
                 # server may have accepted the batch before the client timed
                 # out, so the same payload is deliberately retried as-is.
-                qdrant_json(base_url, "PUT", f"/collections/{COLLECTION}/points?wait=true", {"points": points}, timeout=900)
+                qdrant_json(base_url, "PUT", f"/collections/{COLLECTION}/points?wait=true", {"points": points}, timeout=request_timeout)
                 break
-            except (OSError, urllib.error.URLError, urllib.error.HTTPError):
-                if attempt == 2:
-                    raise
-                time.sleep(2 ** attempt)
-    return time.perf_counter() - started
+            except (OSError, urllib.error.URLError, urllib.error.HTTPError) as exc:
+                retry_count += 1
+                diagnostic = {
+                    "batch_start": start,
+                    "batch_size": len(points),
+                    "attempt": attempt + 1,
+                    "max_attempts": max_retries + 1,
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                }
+                diagnostic["resource_diagnostics"] = resource_diagnostics()
+                if len(failed_batches) < 12:
+                    failed_batches.append(diagnostic)
+                if attempt == max_retries:
+                    raise UploadError(exc, failed_batches) from exc
+                time.sleep(min(30, 2 ** attempt))
+    return {
+        "duration_seconds": round(time.perf_counter() - started, 4),
+        "batch_size": batch_size,
+        "batch_count": batch_count,
+        "retry_count": retry_count,
+        "failed_batches": failed_batches,
+    }
 
 
 def query_one(base_url: str, child_id: int, dimension: int, with_payload: bool) -> dict[str, Any]:
@@ -250,19 +324,35 @@ def blocked_online_result(server_url: str | None) -> dict[str, Any]:
     }
 
 
+def retry_command() -> str:
+    command = [sys.executable, "scripts/phase6/capacity_benchmark.py", *sys.argv[1:]]
+    return shlex.join(command)
+
+
+def is_blocked_failure(exc: Exception) -> bool:
+    cause = exc.cause if isinstance(exc, UploadError) else exc
+    if isinstance(cause, (OSError, TimeoutError, urllib.error.URLError)):
+        return True
+    if isinstance(cause, urllib.error.HTTPError):
+        return cause.code in {408, 425, 429} or cause.code >= 500
+    return isinstance(exc, subprocess.CalledProcessError)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--child-count", type=int, default=CHILD_COUNT)
     parser.add_argument("--query-count", type=int, default=QUERY_COUNT)
     parser.add_argument("--concurrency", type=int, default=CONCURRENCY)
-    parser.add_argument("--batch-size", type=int, default=2_000)
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--upload-retries", type=int, default=UPLOAD_RETRIES)
+    parser.add_argument("--upload-request-timeout", type=int, default=UPLOAD_REQUEST_TIMEOUT)
     parser.add_argument("--ollama-url", default=OLLAMA_URL)
     parser.add_argument("--embedding-model", default=EMBEDDING_MODEL)
     parser.add_argument("--server-url")
     parser.add_argument("--keep-stack", action="store_true")
     args = parser.parse_args()
-    if args.child_count <= 0 or args.query_count <= 0 or args.concurrency <= 0:
+    if args.child_count <= 0 or args.query_count <= 0 or args.concurrency <= 0 or args.batch_size <= 0 or args.upload_retries < 0 or args.upload_request_timeout <= 0:
         parser.error("child/query/concurrency counts must be positive")
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     report: dict[str, Any] = {
@@ -271,12 +361,13 @@ def main() -> int:
         "started_at_utc": started_at,
         "code_commit": git_value("rev-parse", "HEAD"),
         "config_version": CONFIG_VERSION,
-        "config_sha256": sha256_bytes(json.dumps({"child_count": args.child_count, "query_count": args.query_count, "concurrency": args.concurrency, "batch_size": args.batch_size, "collection": COLLECTION}, sort_keys=True).encode("utf-8")),
+        "config_sha256": sha256_bytes(json.dumps({"child_count": args.child_count, "query_count": args.query_count, "concurrency": args.concurrency, "batch_size": args.batch_size, "upload_retries": args.upload_retries, "upload_request_timeout": args.upload_request_timeout, "collection": COLLECTION}, sort_keys=True).encode("utf-8")),
         "script_sha256": sha256_file(Path(__file__)),
-        "environment": {"platform": platform.platform(), "machine": platform.machine(), "python": platform.python_version(), "docker_compose_project": COMPOSE_PROJECT, "qdrant_image": QDRANT_IMAGE},
+        "environment": {"platform": platform.platform(), "machine": platform.machine(), "python": platform.python_version(), "docker_compose_project": COMPOSE_PROJECT, "qdrant_port": QDRANT_PORT, "qdrant_grpc_port": QDRANT_GRPC_PORT, "qdrant_image": QDRANT_IMAGE},
         "dataset": {"classification": "Public synthetic", "seed": "phase6-capacity:<child_id>", "child_count_requested": args.child_count, "vector_source": "deterministic synthetic vectors at live Ollama embedding dimension; not production embedding values", "space_count": len(SPACES)},
         "thresholds": {"retrieval_p95_ms_lt": 1500, "retrieval_recall_at_10_gte": 0.90, "non_ai_api_p95_ms_lt": 300, "sse_first_event_p95_ms_lt": 500},
         "online": blocked_online_result(args.server_url),
+        "upload_configuration": {"batch_size": args.batch_size, "max_retries": args.upload_retries, "request_timeout_seconds": args.upload_request_timeout, "retry_backoff_seconds": [1, 2, 4, 8, 16, 30]},
     }
     base_url = f"http://127.0.0.1:{QDRANT_PORT}"
     phase = "embedding_probe"
@@ -289,15 +380,20 @@ def main() -> int:
         phase = "collection_create"
         create_collection(base_url, report["embedding_probe"]["dimension"])
         phase = "point_upload"
-        report["upload_seconds"] = round(upload(base_url, report["embedding_probe"]["dimension"], args.child_count, args.batch_size), 4)
+        report["upload"] = upload(base_url, report["embedding_probe"]["dimension"], args.child_count, args.batch_size, args.upload_retries, args.upload_request_timeout)
+        report["upload_seconds"] = report["upload"]["duration_seconds"]
         phase = "mixed_retrieval"
         report["retrieval"] = run_queries(base_url, report["embedding_probe"]["dimension"], args.child_count, args.query_count, args.concurrency)
         retrieval = report["retrieval"]
         report["status"] = "PASSED" if args.child_count == CHILD_COUNT and retrieval["error_rate"] == 0 and retrieval["recall_at_10"] >= 0.90 and retrieval["p95_ms"] < 1500 else "FAILED"
     except Exception as exc:  # noqa: BLE001 - evidence must preserve blocked/failed cause
-        report["status"] = "BLOCKED" if isinstance(exc, (OSError, TimeoutError, urllib.error.URLError, subprocess.CalledProcessError)) else "FAILED"
-        report["failure"] = {"phase": phase, "type": type(exc).__name__, "message": str(exc)}
-        report["retry_command"] = "python scripts/phase6/capacity_benchmark.py --output tests/evidence/phase6-capacity-retrieval.v1.json"
+        report["status"] = "BLOCKED" if is_blocked_failure(exc) else "FAILED"
+        cause = exc.cause if isinstance(exc, UploadError) else exc
+        report["failure"] = {"phase": phase, "type": type(cause).__name__, "message": str(cause)}
+        if isinstance(exc, UploadError):
+            report["failure"]["upload_retry_diagnostics"] = exc.diagnostics
+        report["failure"]["resource_diagnostics"] = resource_diagnostics()
+        report["retry_command"] = retry_command()
     finally:
         try:
             qdrant_json(base_url, "DELETE", f"/collections/{COLLECTION}", timeout=30)
@@ -306,6 +402,7 @@ def main() -> int:
         if not args.keep_stack:
             compose("down", "-v", check=False)
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    report.setdefault("retry_command", retry_command())
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["status"] == "PASSED" else 2
