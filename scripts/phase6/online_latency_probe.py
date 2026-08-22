@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import time
 import urllib.error
 import urllib.request
@@ -25,18 +26,41 @@ def percentile(values: list[float], fraction: float) -> float | None:
     return round(ordered[min(len(ordered) - 1, max(0, math.ceil(len(ordered) * fraction) - 1))], 4)
 
 
-def probe(url: str, count: int, timeout: int) -> dict[str, Any]:
+def _read_first_sse_event(response: Any) -> bool:
+    """Read one complete SSE event without waiting for the stream to close."""
+    saw_content = False
+    while True:
+        line = response.readline()
+        if not line:
+            return False
+        if line in (b"\n", b"\r\n"):
+            if saw_content:
+                return True
+            continue
+        if line.strip():
+            saw_content = True
+
+
+def probe(url: str, count: int, timeout: int, *, headers: dict[str, str] | None = None,
+          first_event: bool = False) -> dict[str, Any]:
     values: list[float] = []
     errors = 0
     for _ in range(count):
         started = time.perf_counter_ns()
         try:
-            request = urllib.request.Request(url, method="GET", headers={"Accept": "application/json"})
+            request_headers = {"Accept": "text/event-stream" if first_event else "application/json"}
+            request_headers.update(headers or {})
+            request = urllib.request.Request(url, method="GET", headers=request_headers)
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                response.read(4096)
                 if response.status >= 500:
                     errors += 1
                     continue
+                if first_event:
+                    if not _read_first_sse_event(response):
+                        errors += 1
+                        continue
+                else:
+                    response.read(4096)
             values.append((time.perf_counter_ns() - started) / 1_000_000)
         except (OSError, urllib.error.URLError, urllib.error.HTTPError):
             errors += 1
@@ -48,6 +72,8 @@ def main() -> int:
     parser.add_argument("--server-url", required=True)
     parser.add_argument("--non-ai-path", default="/actuator/health")
     parser.add_argument("--sse-url", help="An already-created run SSE URL; no run is created by this probe")
+    parser.add_argument("--sse-cookie-env",
+                        help="Environment variable containing the HttpOnly session cookie for the SSE request")
     parser.add_argument("--count", type=int, default=100)
     parser.add_argument("--timeout", type=int, default=15)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -58,7 +84,25 @@ def main() -> int:
         if not args.sse_url:
             report["sse_first_event"] = {"status": "BLOCKED", "reason": "sse_url_not_provided; a run must be created by an authenticated harness"}
         else:
-            report["sse_first_event"] = probe(args.sse_url, args.count, args.timeout)
+            sse_headers: dict[str, str] = {}
+            if args.sse_cookie_env:
+                cookie = os.environ.get(args.sse_cookie_env)
+                if not cookie:
+                    report["sse_first_event"] = {
+                        "status": "BLOCKED",
+                        "reason": "sse_cookie_env_is_missing_or_empty",
+                        "auth_source": "environment_variable",
+                        "auth_env": args.sse_cookie_env,
+                    }
+                else:
+                    sse_headers["Cookie"] = cookie
+                    report["sse_first_event"] = probe(
+                        args.sse_url, args.count, args.timeout, headers=sse_headers, first_event=True)
+                    report["sse_first_event"]["auth_source"] = "environment_variable"
+                    report["sse_first_event"]["auth_env"] = args.sse_cookie_env
+            else:
+                report["sse_first_event"] = probe(args.sse_url, args.count, args.timeout, first_event=True)
+                report["sse_first_event"]["auth_source"] = "none"
         report["status"] = "PASSED" if report["non_ai_api"]["errors"] == 0 and report["non_ai_api"]["p95_ms"] < 300 and report["sse_first_event"].get("p95_ms") is not None and report["sse_first_event"]["p95_ms"] < 500 else "FAILED"
     except Exception as exc:  # noqa: BLE001 - preserve external service blocker
         report["status"] = "BLOCKED"
