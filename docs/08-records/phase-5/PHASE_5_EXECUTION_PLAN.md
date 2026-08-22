@@ -54,7 +54,7 @@ P5-F 可在 P5-A 合入后与 P5-B/P5-C 并行，但不得写同一 migration、
 | P5-C/D | completed-with-blocker | core、citation validator、typed session authorizer、provider embedding、版本化 material service、prompt hash resolver、active retrieval identity 与 opt-in production graph 完成；真实 provider route/credential 与 RAG E2E 仍缺 |
 | P5-E | completed | API、严格 SSE、Last-Event-ID、cancel、citation preview、Web build 已通过 |
 | P5-F | completed | 三个只读工具、SSRF、跨空间、输出上限和审计投影测试已通过 |
-| P5-G/H | completed-local | 生成/性能/安全证据与本地全量门禁已通过；main server `196/196`；GitHub Actions quality Run `32549602459` 对 `0c13eb0` 成功 |
+| P5-G/H | completed-local | 生成/性能/安全证据与本地全量门禁已通过；main server `197/197`，新增 production graph context 验收通过；GitHub Actions quality Run `32550604371` 对 `76bf953` 成功 |
 
 ## 阶段结论
 

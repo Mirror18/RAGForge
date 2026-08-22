@@ -24,12 +24,12 @@
 
 - [x] P5-A：Checklist、执行计划、契约和评估数据口径提交。
 - [x] P5-B：RAG prompt、run/step 版本投影和兼容/回滚说明提交。
-- [x] P5-C：授权检索、context budget、版本化 prompt、route/egress 检查、结构化拒答提交；typed session context、既有 provider connection 的 embedding capability、版本化 revision/artifact material service 与 opt-in production graph 已完成，默认仍按 fail-closed 接线。
+- [x] P5-C：授权检索、context budget、版本化 prompt、route/egress 检查、结构化拒答提交；typed session context、既有 provider connection 的 embedding capability、版本化 revision/artifact material service 与 opt-in production graph 已完成，默认仍按 fail-closed 接线；`Phase5ProductionGraphContextTest` 已在隔离 PostgreSQL/Valkey 上验证显式 opt-in 的完整 bean graph。
 - [x] P5-D：结构化 citation token 解析、bundle allow-list、持久化 provenance 和安全拒答提交。
 - [x] P5-E：SSE answer/citation/abstention/tool/usage/error/done、重连、取消和前端引用交互提交。
 - [x] P5-F：三种只读工具、SSRF/白名单/输出限制、schema 校验和审计提交。
 - [x] P5-G：版本化 generation/citation/abstention 数据集、baseline/candidate、质量/性能/安全证据提交。
-- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation、Markdown link 和 CI 全部通过；GitHub Actions quality Run [`32549602459`](https://github.com/Mirror18/RAGForge/actions/runs/32549602459) 对 `0c13eb0` 成功。
+- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation、Markdown link 和 CI 全部通过；GitHub Actions quality Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 对 `76bf953` 成功。
 
 ## 合并前强制检查
 
@@ -51,5 +51,5 @@
 
 - 已满足：本清单的合同、引用 allow-list、拒答、只读工具安全、SSE 取消/重放、答案历史与本地质量/性能/安全门禁均有可重跑证据。
 - 未闭环：真实 graph 只在显式 `ragforge.object-storage.enabled=true` 且对象存储凭据完整时启用；仍缺受控 provider route/credential 数据、真实 embedding/retrieval/material/generation RAG E2E、生产模型质量/延迟/成本证据。没有这些依赖，不能声称生产成功回答或关闭 Phase 5。
-- 本轮验证：JDK 21 下 main 合并后 server 全量 `196` tests、`0` failures/errors/skips；新增 prompt space/hash resolver、stable retrieval identity 与 opt-in graph 代码编译通过。此前 Testcontainers PostgreSQL/Valkey/Qdrant 与本地 Ollama acceptance 仍通过；本轮无真实 provider 凭据写入仓库。
+- 本轮验证：JDK 21 下 main 合并后 server 全量 `197` tests、`0` failures/errors/skips；`Phase5ProductionGraphContextTest` 在隔离 Testcontainers PostgreSQL/Valkey 上验证显式 opt-in 的 production graph 与默认 fail-closed bean 条件。此前 Qdrant 与本地 Ollama acceptance 仍通过；本轮无真实 provider 凭据写入仓库。
 - 下一入口：在 ADR-0010 仍保持 Proposed 的前提下，提供/审查受控 provider route/credential 配置并运行真实空间级 RAG E2E；随后补 120+ generation/evaluation、SSE 重启恢复和 step/model provenance 演练。

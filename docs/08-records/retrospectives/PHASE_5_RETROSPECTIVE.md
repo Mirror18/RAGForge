@@ -2,7 +2,7 @@
 
 - 日期：2026-08-22
 - 阶段状态：blocked（授权/provider/material seam、版本化 material service 和 opt-in production graph 已完成，本地门禁通过；真实 provider route/credential 与 RAG E2E 待完成）
-- 当前验收 HEAD：`079041a`；material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`
+- 当前验收 HEAD：`76bf953`；material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`、`5cc8329`，上下文验收提交为 `76bf953`
 - 阶段执行计划：[`PHASE_5_EXECUTION_PLAN.md`](../phase-5/PHASE_5_EXECUTION_PLAN.md)
 - 阶段清单：[`PHASE_5_CHECKLIST.md`](../../03-delivery/PHASE_5_CHECKLIST.md)
 
@@ -13,8 +13,8 @@
 - 合成 generation dataset v1 为 12 cases。candidate citation precision、faithfulness、abstention accuracy 均为 `1.0`；baseline 为 `0.7273/0.5833/0.0`。完整结果见 [`phase5-generation-evaluation.json`](../../../tests/evidence/phase5-generation-evaluation.json)。
 - 安全定向证据为 contract 10/10、AgentToolSecurity 9/9、answer/security 19/19；未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。见 [`phase5-security.json`](../../../tests/evidence/phase5-security.json)。
 - 合成性能证据 E2E p50/p95 为 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`、provider calls `12`。retrieval/generation 使用代理测量，见 [`phase5-performance.json`](../../../tests/evidence/phase5-performance.json)。
-- GitHub Actions quality Run [`32549602459`](https://github.com/Mirror18/RAGForge/actions/runs/32549602459) 对 `0c13eb0` 全绿；Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype 均成功。
-- 本轮 `mvn -f pom.xml -pl apps/server -am test`（JDK 21）通过 196/196；Testcontainers PostgreSQL/Valkey/Qdrant 与本地 Ollama acceptance 通过。新增 material service、prompt space/hash resolver、retrieval identity 和 graph 条件接线相关测试均通过。
+- GitHub Actions quality Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 对 `76bf953` 全绿；Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype 均成功。
+- 本轮 `mvn -f pom.xml -pl apps/server -am test`（JDK 21）通过 197/197；`Phase5ProductionGraphContextTest` 在隔离 Testcontainers PostgreSQL/Valkey 上通过，另有 Qdrant 与本地 Ollama acceptance 证据。新增 material service、prompt space/hash resolver、retrieval identity 和 graph 条件接线相关测试均通过。
 
 ## Keep
 
