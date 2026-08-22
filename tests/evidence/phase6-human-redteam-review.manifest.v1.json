@@ -1,7 +1,7 @@
 {
   "evidence_version": "phase6-human-redteam-review.v1",
   "status": "PENDING_HUMAN_REVIEW",
-  "code_commit": "5cc6bfad6ec2f539d5d20e7f563faee651d31729",
+  "code_commit": "9502a9e5beff439812302112f20ddf7e1d35c8e9",
   "dataset_version": "phase6-evaluation-dataset.v1",
   "config_version": "phase6-evaluation-config.v1",
   "environment": "reviewer-controlled isolated environment; synthetic fixtures only",
