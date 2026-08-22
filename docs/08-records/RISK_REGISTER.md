@@ -96,5 +96,5 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-024` 已关闭（Phase 6 容量门槛范围）：a2 隔离 Compose 使用真实 Ollama 768 维、1,000,000 synthetic child chunks、4-space filter、20 并发混合负载完成；Recall@10 `0.995`、p95 `119.8761ms`、错误率 `0`，证据见 [`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json)。向量值为 live dimension 下的公共合成值，生产语义质量和成本仍不由该证据承诺。
 - 新增 `R-029`：Phase 6 non-AI API p95、SSE first event p95 缺少运行中的 server 和已认证 run harness，证据分别为 `FAILED/BLOCKED`。P=3、I=4、Score=12，Performance / Operations，OPEN；补齐隔离 server/load harness 后重跑，TTFT 必须单独排除。
 - `R-027` 继续 MITIGATING：真实 Ollama RAG E2E 已成功，但当前同步适配器仍不测 TTFT；SSE first event 门槛尚未取得有效数据。
-- `R-028` 已关闭（本提交范围）：本地 Syft/跟踪内容 Grype 已通过，GitHub Actions quality [`32570689145`](https://github.com/Mirror18/RAGForge/actions/runs/32570689145) 全绿；SBOM artifact `9475233814`、Grype SARIF artifact `9475239975` 已生成。发布前仍需按目标镜像/digest 重跑发布级扫描。
+- `R-028` 已关闭（本提交范围）：本地 Syft/跟踪内容 Grype 已通过，最新 GitHub Actions quality [`32571964923`](https://github.com/Mirror18/RAGForge/actions/runs/32571964923) 全绿；SBOM artifact `9475538975`、Grype SARIF artifact `9475547194` 已生成。发布前仍需按目标镜像/digest 重跑发布级扫描。
 - 观测 profile、fault drill、隔离恢复和 23/23 安全专项均已取得证据，但 `R-003` 全局风险仍 OPEN，需容量压力与人工安全复核完成后再评审关闭。
