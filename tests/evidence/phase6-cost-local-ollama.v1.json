@@ -1,0 +1,51 @@
+{
+  "evidence_version": "phase6-cost-local-ollama.v1",
+  "status": "PASSED",
+  "executed_at_utc": "2026-08-22T11:02:36Z",
+  "code_commit": "6d2dd87425c87f04f721f86665f86a014e65a0fa",
+  "config_version": "phase5-real-ollama-rag-e2e-v1",
+  "environment": {
+    "platform": "Windows 11",
+    "java": "21.0.7",
+    "docker_compose_project": "ragforge-p5-real-orch",
+    "provider": "Ollama",
+    "egress_policy": "LOCAL_ONLY",
+    "cloud_egress_enabled": false
+  },
+  "fixture": {
+    "classification": "Public synthetic",
+    "fixture_version": "phase5-real-fixture-v1",
+    "raw_prompt_persisted": false,
+    "raw_provider_body_persisted": false,
+    "concurrency": 1
+  },
+  "model": {
+    "chat": "qwen3.5:9b",
+    "chat_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+    "embedding": "nomic-embed-text:latest",
+    "embedding_digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+    "embedding_dimension": 768
+  },
+  "usage": {
+    "provider_usage_source": "PROVIDER_REPORTED",
+    "provider_call_count": 1,
+    "input_tokens": 194,
+    "output_tokens": 99,
+    "total_tokens": 293,
+    "retry_count": 0,
+    "cancel_count": 0,
+    "timeout_count": 0,
+    "estimated_cost_usd": 0,
+    "cost_basis": "Local Ollama has no provider price schedule; zero is an observed local estimate, not a cloud price or production cost forecast."
+  },
+  "security": {
+    "unauthorized_cloud_call_count": 0,
+    "space_isolation_verified": true,
+    "evidence_outside_bundle_count": 0
+  },
+  "source_evidence": "tests/evidence/phase6-real-ollama-rag-e2e.v1.json",
+  "limitations": [
+    "This is one synthetic LOCAL_ONLY RAG run and not a concurrent cost model.",
+    "Cloud provider pricing, quota, and production traffic cost remain out of scope until an explicit cloud authorization exists."
+  ]
+}
