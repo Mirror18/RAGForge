@@ -1,0 +1,50 @@
+{
+  "status": "PASSED",
+  "verification_scope": "static_asset_only",
+  "runtime_dashboard_verified": false,
+  "code_commit": "ad873d99d85f1609fab8633934660a6ed38ec92f",
+  "checked_at": "2026-08-22T11:07:51.175557+00:00",
+  "profile": "observability",
+  "services": [
+    "grafana",
+    "loki",
+    "otel-collector",
+    "prometheus",
+    "tempo"
+  ],
+  "dashboard_uid": "ragforge-phase6-oncall",
+  "dashboard_panels": [
+    "Generation latency 与 Provider timeout",
+    "Retrieval p50/p95",
+    "SSE first event 与断连",
+    "摄取失败、重试与 active index",
+    "数据库、对象存储与 Qdrant 容量",
+    "最近备份时间与恢复点年龄",
+    "登录 5xx 错误率",
+    "问答错误率与拒答",
+    "队列深度、最老消息与 DLQ"
+  ],
+  "alerts": [
+    "RAGForgeActiveIndexUnavailable",
+    "RAGForgeAnswerErrorRateHigh",
+    "RAGForgeDatabaseCapacityHigh",
+    "RAGForgeDeadLetterQueueNotEmpty",
+    "RAGForgeLoginErrorRateHigh",
+    "RAGForgeProviderTimeoutRateHigh",
+    "RAGForgeQueueAgeHigh",
+    "RAGForgeRecoveryPointStale",
+    "RAGForgeUnauthorizedEgress"
+  ],
+  "runbooks": [
+    "database-capacity.md",
+    "ingestion-backlog.md",
+    "provider-outage.md",
+    "unauthorized-egress.md"
+  ],
+  "secret_scan": {
+    "private_key": 0,
+    "cloud_key_pattern": 0,
+    "raw_customer_content": 0
+  },
+  "note": "Compose and runtime dashboard verification require the separate observability_drill.py command."
+}
