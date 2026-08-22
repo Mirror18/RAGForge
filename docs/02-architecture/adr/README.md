@@ -14,5 +14,6 @@ ADR 采用不可变历史：决策变更时新增 ADR 并把旧文档标记为 `
 | [0008](0008-evaluation-and-llm-observability.md) | Accepted | 自有评估为准、Promptfoo CI、Langfuse 可选 |
 | [0009](0009-upstream-reuse-policy.md) | Accepted | 依赖优先、源码复用登记和许可证闸门 |
 | [0010](0010-phase5-provider-material-composition.md) | Accepted | Phase 5 真实 embedding、版本化 evidence material 与 session authorizer 的组合边界 |
+| [0011](0011-multi-instance-run-event-fanout.md) | Proposed | 多实例 Run Event live fan-out（待用户接受） |
 
 模板必填项：Status、Date、Context、Decision、Consequences、Alternatives、References。
