@@ -1,11 +1,11 @@
 {
   "evidence_version": "phase6-recovery.v1",
-  "run_id": "6466f1ec-9776-4070-9c6f-918e084dca0f",
+  "run_id": "64a2c72e-e235-4eb5-b157-686501fcae5f",
   "base_sha": "0fe22db5979aa5ae7892165c227a5c8a484bdfb9",
-  "code_commit": "c90a98b8c0b226fb925d08da7a78e951139b0e43",
+  "code_commit": "e2f2d63cff9cdb26406142176c664c0c5fad12fb",
   "environment": {
     "production_connection": false,
-    "compose_project": "ragforge-p6-recovery-a1post",
+    "compose_project": "ragforge-p6-recovery-v14",
     "compose_file": "deploy/compose/compose.yaml",
     "postgres_host": "127.0.0.1",
     "qdrant_host": "127.0.0.1",
@@ -15,7 +15,7 @@
     "java_or_model": "not used; recovery-only harness"
   },
   "verification": {
-    "command": "python scripts/phase6/recovery_verification.py --project-name ragforge-p6-recovery-a1post --output tests/evidence/phase6-recovery.v1.json",
+    "command": "python scripts/phase6/recovery_verification.py --project-name ragforge-p6-recovery-v14 --output tests/evidence/phase6-recovery.v1.json",
     "compose_services": [
       "postgres",
       "qdrant",
@@ -34,8 +34,8 @@
   },
   "backup": {
     "postgres": {
-      "backup_id": "pg-6466f1ec-9776-4070-9c6f-918e084dca0f",
-      "schema_version": "V13__phase5_durable_run_events.sql",
+      "backup_id": "pg-64a2c72e-e235-4eb5-b157-686501fcae5f",
+      "schema_version": "V14__phase6_space_scoped_retention.sql",
       "migration_manifest": [
         {
           "file": "V1__initial_schema.sql",
@@ -88,13 +88,17 @@
         {
           "file": "V13__phase5_durable_run_events.sql",
           "sha256": "ad2d4c66b69d1c1f07094a32230915780ed703d55bc92d7b867e5b02a0e64ee4"
+        },
+        {
+          "file": "V14__phase6_space_scoped_retention.sql",
+          "sha256": "04e20feb1b4dce1d289db51624c60c29d2043dbb411a6b591d0ef0f74ec58701"
         }
       ],
-      "bytes": 182115,
-      "sha256": "6ce91ab2e49e6defe303baf0ef5d4930a911cfe50ff63fbba782983c23e900e0"
+      "bytes": 182178,
+      "sha256": "dc0ac31b9adf25ca3faa221c331782d295cbaa127b5315dcc38e74be37f9b08e"
     },
     "object": {
-      "manifest_id": "object-6466f1ec-9776-4070-9c6f-918e084dca0f",
+      "manifest_id": "object-64a2c72e-e235-4eb5-b157-686501fcae5f",
       "bucket": "ragforge",
       "objects": [
         {
@@ -103,14 +107,14 @@
           "bytes": 122
         }
       ],
-      "manifest_sha256": "d9acf92e84598af36b275a2dfa176862669d6b207f39b09461299553b9fff6ee"
+      "manifest_sha256": "b91fdad9da3df451df3fc12f0fbcb98d1f1a63e35077042494642d6f8c962050"
     },
     "qdrant": {
-      "snapshot_id": "recovery_6466f1ec977640709c6f-8228201050473802-2026-08-22-10-53-04.snapshot",
-      "collection": "recovery_6466f1ec977640709c6f",
+      "snapshot_id": "recovery_64a2c72ee2354eb5b157-4951866008900016-2026-08-22-12-41-56.snapshot",
+      "collection": "recovery_64a2c72ee2354eb5b157",
       "vector_dimension": 3,
       "source_points_after_delete": 1,
-      "index_version": "8aa98dbd-7bd2-5fdd-ac89-f1b215cf7cab"
+      "index_version": "73d20f52-fe5f-576b-9284-4d2d1f4bdbbb"
     }
   },
   "scenarios": {
@@ -122,7 +126,7 @@
     },
     "complete_restore": {
       "passed": true,
-      "schema_version": "V13__phase5_durable_run_events.sql",
+      "schema_version": "V14__phase6_space_scoped_retention.sql",
       "schema_table_counts_match": true,
       "key_counts": {
         "users": 1,
@@ -137,21 +141,21 @@
     "postgres_single_point": {
       "passed": true,
       "target_database": "recovery_pg_only",
-      "schema_version": "V13__phase5_durable_run_events.sql",
+      "schema_version": "V14__phase6_space_scoped_retention.sql",
       "key_counts_match": true
     },
     "active_index_rollback": {
       "passed": true,
-      "from": "8aa98dbd-7bd2-5fdd-ac89-f1b215cf7cab",
-      "to": "3f44e0f7-4beb-58a8-abc7-80452528a3b0",
+      "from": "73d20f52-fe5f-576b-9284-4d2d1f4bdbbb",
+      "to": "55ccfe30-364f-566e-bccf-910831c4dafb",
       "pointer_verified": true
     },
     "qdrant_loss_rebuild": {
       "passed": true,
-      "snapshot_id": "recovery_6466f1ec977640709c6f-8228201050473802-2026-08-22-10-53-04.snapshot",
+      "snapshot_id": "recovery_64a2c72ee2354eb5b157-4951866008900016-2026-08-22-12-41-56.snapshot",
       "collection_deleted": true,
       "rebuild_source": "recovered PostgreSQL child_chunks",
-      "index_version": "3f44e0f7-4beb-58a8-abc7-80452528a3b0",
+      "index_version": "55ccfe30-364f-566e-bccf-910831c4dafb",
       "pre_tombstone_count": 2,
       "post_tombstone_count": 1,
       "vector_dimension": 3
@@ -173,10 +177,10 @@
     }
   },
   "rpo_rto": {
-    "backup_started_at": "2026-08-22T10:53:04.296753Z",
-    "backup_completed_at": "2026-08-22T10:53:12.162960Z",
+    "backup_started_at": "2026-08-22T12:41:56.164807Z",
+    "backup_completed_at": "2026-08-22T12:42:03.648553Z",
     "rpo_seconds": 0,
-    "rto_seconds": 12.416,
+    "rto_seconds": 11.885,
     "rpo_threshold_seconds": 86400,
     "rto_threshold_seconds": 14400,
     "rpo_passed": true,
