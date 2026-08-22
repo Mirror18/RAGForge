@@ -19,6 +19,7 @@
 ## Evidence gaps
 
 - 评估 candidate 的确定性指标全部为 1.0，但人工/red-team review 尚未完成；不得把 runner 结果写成真实模型质量结论。
+- 已执行 Agent-assisted adversarial pre-review：Python 安全/合同 23 tests + AgentToolSecurity 9 tests 均通过；报告明确保留人工 review 状态，不能作为人工签名。
 - 真实 Ollama embedding 维度 768 和 1,000,000 点 Qdrant 混合检索已取得有效证据：Recall@10 `0.995`、p95 `119.8761ms`、20 并发错误率 `0`；向量值仍是 live dimension 下的公共合成值。
 - 在线 API/SSE 性能门槛已取得认证隔离运行证据；同步适配器 TTFT 仍 `NOT_MEASURED`，不将首事件 p95 解释为 TTFT。
 - retention/cleanup 的空间限定单实例受控定时运行已通过；多实例 live fan-out 尚未完成。
