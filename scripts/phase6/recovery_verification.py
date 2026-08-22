@@ -43,7 +43,7 @@ COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.yaml"
 MIGRATION_DIR = REPO_ROOT / "apps" / "server" / "src" / "main" / "resources" / "db" / "migration"
 FIXTURE_FILE = REPO_ROOT / "tests" / "fixtures" / "phase6" / "recovery" / "recovery-fixture.v1.json"
 DEFAULT_EVIDENCE = REPO_ROOT / "tests" / "evidence" / "phase6-recovery.v1.json"
-SCHEMA_VERSION = "V13__phase5_durable_run_events.sql"
+SCHEMA_VERSION = "V14__phase6_space_scoped_retention.sql"
 
 SAFE_PROJECT_RE = re.compile(r"^ragforge-p6-recovery-[a-z0-9-]{3,40}$")
 PRODUCTION_WORDS = ("prod", "production", "staging", "release", "main")
@@ -462,7 +462,7 @@ def run_recovery(project: str, evidence_path: Path, keep_stack: bool = False) ->
         wait_http(f"{runtime.qdrant_url()}/readyz", timeout=120)
         wait_http(f"http://127.0.0.1:{runtime.ports['S3_PORT']}/minio/health/ready", timeout=120)
         migration_text, migration_manifest = migration_sql()
-        runtime.psql(source_db, migration_text, label="执行 V1-V13 migrations")
+        runtime.psql(source_db, migration_text, label="执行 V1-V14 migrations")
         captured_at = utc_now()
         runtime.psql(source_db, build_fixture_sql(run_id, fixture, ids, captured_at), label="装载合成 recovery fixture")
         material = str(fixture["material"]).encode("utf-8")

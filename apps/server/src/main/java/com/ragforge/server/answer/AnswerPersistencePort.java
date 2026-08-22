@@ -48,8 +48,8 @@ public interface AnswerPersistencePort {
         return List.of();
     }
 
-    /** Deletes expired answer aggregates and their children; this is the documented purge policy. */
-    default int purgeExpired(Instant now) {
+    /** Deletes expired answer aggregates and their children for one explicitly authorized space. */
+    default int purgeExpired(UUID spaceId, Instant now) {
         return 0;
     }
 

@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,14 +34,16 @@ class Phase6OperationsServiceTest {
     void cleanupPurgesAnswersAndDurableEventsWithSameOperatorTime() {
         JdbcAnswerPersistence answers = mock(JdbcAnswerPersistence.class);
         JdbcRunEventStore events = mock(JdbcRunEventStore.class);
-        Phase6OperationsService service = new Phase6OperationsService(answers, events, mock(JdbcTemplate.class),
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForList(anyString(), eq(UUID.class))).thenReturn(List.of(SPACE_ID));
+        Phase6OperationsService service = new Phase6OperationsService(answers, events, jdbc,
                 Clock.fixed(NOW, ZoneOffset.UTC));
-        when(answers.purgeExpired(NOW)).thenReturn(4);
-        when(events.purgeExpired(NOW)).thenReturn(7);
+        when(answers.purgeExpired(SPACE_ID, NOW)).thenReturn(4);
+        when(events.purgeExpired(SPACE_ID, NOW)).thenReturn(7);
 
         assertThat(service.purgeExpiredData()).isEqualTo(new Phase6OperationsService.CleanupResult(NOW, 4, 7));
-        verify(answers).purgeExpired(NOW);
-        verify(events).purgeExpired(NOW);
+        verify(answers).purgeExpired(SPACE_ID, NOW);
+        verify(events).purgeExpired(SPACE_ID, NOW);
     }
 
     @Test

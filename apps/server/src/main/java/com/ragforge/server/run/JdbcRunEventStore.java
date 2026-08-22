@@ -161,9 +161,11 @@ public class JdbcRunEventStore implements RunEventStore {
      * a sequence number and replay can report an expired cursor consistently.
      */
     @Transactional
-    public int purgeExpired(Instant now) {
+    public int purgeExpired(UUID spaceId, Instant now) {
+        Objects.requireNonNull(spaceId, "spaceId");
         Objects.requireNonNull(now, "now");
-        return jdbc.update("DELETE FROM rag_run_events WHERE expires_at < ?", timestamp(now));
+        return jdbc.update("DELETE FROM rag_run_events WHERE space_id = ? AND expires_at < ?",
+                spaceId, timestamp(now));
     }
 
     private ReplayResult replayLocked(UUID spaceId, UUID runId, String lastEventId, Instant now) {

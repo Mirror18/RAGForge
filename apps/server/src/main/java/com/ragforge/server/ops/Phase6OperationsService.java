@@ -49,8 +49,12 @@ public class Phase6OperationsService {
     @Scheduled(fixedDelayString = "${ragforge.phase6.operations.cleanup.fixed-delay-ms:3600000}")
     public CleanupResult purgeExpiredData() {
         Instant now = Instant.now(clock);
-        int answersPurged = answers.purgeExpired(now);
-        int eventsPurged = runEvents.purgeExpired(now);
+        int answersPurged = 0;
+        int eventsPurged = 0;
+        for (UUID spaceId : jdbc.queryForList("SELECT id FROM knowledge_spaces", UUID.class)) {
+            answersPurged += answers.purgeExpired(spaceId, now);
+            eventsPurged += runEvents.purgeExpired(spaceId, now);
+        }
         return new CleanupResult(now, answersPurged, eventsPurged);
     }
 

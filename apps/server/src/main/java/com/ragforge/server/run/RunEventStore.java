@@ -29,6 +29,11 @@ public interface RunEventStore {
 
     Optional<RunEvent> find(UUID spaceId, UUID runId, UUID eventId);
 
+    /** Deletes expired durable events for one explicitly authorized space. */
+    default int purgeExpired(UUID spaceId, java.time.Instant now) {
+        return 0;
+    }
+
     record OpenedStream(ReplayResult replay, Subscription subscription) {
     }
 

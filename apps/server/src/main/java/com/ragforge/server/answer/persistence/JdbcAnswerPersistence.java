@@ -207,12 +207,12 @@ public class JdbcAnswerPersistence implements AnswerPersistencePort {
     }
 
     @Override
-    public int purgeExpired(Instant now) {
-        if (now == null) {
-            throw new IllegalArgumentException("purge time is required");
+    public int purgeExpired(UUID spaceId, Instant now) {
+        if (spaceId == null || now == null) {
+            throw new IllegalArgumentException("space and purge time are required");
         }
-        Integer deleted = jdbc.queryForObject("SELECT ragforge_purge_expired_answers(?)", Integer.class,
-                timestamp(now));
+        Integer deleted = jdbc.queryForObject("SELECT ragforge_purge_expired_answers(?, ?)", Integer.class,
+                spaceId, timestamp(now));
         return deleted == null ? 0 : deleted;
     }
 
