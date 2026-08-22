@@ -4,6 +4,8 @@ import com.ragforge.server.answer.persistence.JdbcAnswerPersistence;
 import com.ragforge.server.run.JdbcRunEventStore;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -12,6 +14,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,5 +95,20 @@ class Phase6OperationsServiceTest {
     @SuppressWarnings("unchecked")
     private static RowMapper<Phase6OperationsService.UsageCostRow> anyUsageRowMapper() {
         return (RowMapper<Phase6OperationsService.UsageCostRow>) any(RowMapper.class);
+    }
+
+    @Test
+    void springCanConstructTheEnabledServiceWithProductionDependencies() {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("phase6-test",
+                    Map.of("ragforge.phase6.operations.enabled", "true")));
+            context.registerBean(JdbcAnswerPersistence.class, () -> mock(JdbcAnswerPersistence.class));
+            context.registerBean(JdbcRunEventStore.class, () -> mock(JdbcRunEventStore.class));
+            context.registerBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class));
+            context.register(Phase6OperationsService.class);
+            context.refresh();
+
+            assertThat(context.getBean(Phase6OperationsService.class)).isNotNull();
+        }
     }
 }
