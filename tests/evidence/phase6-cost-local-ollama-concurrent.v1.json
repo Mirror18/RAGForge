@@ -1,0 +1,146 @@
+{
+  "evidence_version": "phase6-cost-local-ollama-concurrent.v1",
+  "status": "PASSED",
+  "executed_at_utc": "2026-08-22T14:28:32Z",
+  "code_commit": "113eb44f599b107811988cb69649ceafe81cd653",
+  "config_version": "phase6-local-ollama-concurrent-cost-v1",
+  "exact_command_redacted": "python scripts/phase6/ollama_concurrent_cost.py [arguments redacted]",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13"
+  },
+  "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "fixture": {
+    "classification": "Public synthetic",
+    "prompt_template_sha256": "d4ae6df2c7b9985d8b6aebf76b611273ca0ee7e8bf8a827f30c3e56c739ca376",
+    "raw_prompt_persisted": false
+  },
+  "measurement": {
+    "status": "PASSED",
+    "route": "LOCAL_ONLY",
+    "endpoint": "http://127.0.0.1:11434/api/chat",
+    "model": "qwen3.5:9b",
+    "warmup_call_count": 1,
+    "requested_call_count": 4,
+    "completed_call_count": 4,
+    "failed_call_count": 0,
+    "provider_call_count": 5,
+    "max_in_flight_observed": 2,
+    "configured_concurrency": 2,
+    "error_rate": 0.0,
+    "latency_ms": {
+      "ttft": {
+        "p50": 1482.8559,
+        "p95": 2688.212,
+        "p99": 2688.212
+      },
+      "stream_wall_time": {
+        "p50": 2762.1378,
+        "p95": 4013.6133,
+        "p99": 4013.6133
+      },
+      "provider_total_duration": {
+        "p50": 2750.811,
+        "p95": 3987.2235,
+        "p99": 3987.2235
+      }
+    },
+    "usage": {
+      "provider_usage_source": "PROVIDER_REPORTED",
+      "input_tokens": 144,
+      "output_tokens": 108,
+      "total_tokens": 252,
+      "retry_count": 0,
+      "cancel_count": 0,
+      "timeout_count": 0
+    },
+    "cost": {
+      "estimated_cost_usd": 0,
+      "cost_basis": "Local Ollama has no provider price schedule; zero is an observed local estimate, not a production cost forecast."
+    },
+    "cases": [
+      {
+        "case": 0,
+        "status": "PASSED",
+        "prompt_sha256": "866978eef78946303e4bd6edb17d520ae05837e52af13d30d3d707583e6edb53",
+        "ttft_ms": 2688.212,
+        "stream_wall_time_ms": 4013.6133,
+        "provider_total_duration_ms": 3987.2235,
+        "tokens_per_second": 20.3739,
+        "usage": {
+          "input_tokens": 36,
+          "output_tokens": 27,
+          "total_tokens": 63,
+          "provider_usage_source": "PROVIDER_REPORTED"
+        },
+        "output": {
+          "char_count": 153,
+          "sha256": "98fdfd4a2f99ed93952f7bc6ab2fbb63e6f839f40968161d543ee7df94c0711d"
+        },
+        "started_offset_ms": 0.4036
+      },
+      {
+        "case": 1,
+        "status": "PASSED",
+        "prompt_sha256": "9c0c1f40976248b3d1d26d589062043321a7dbd9b00546ed7faf716e52c56cfc",
+        "ttft_ms": 1221.1456,
+        "stream_wall_time_ms": 2582.4687,
+        "provider_total_duration_ms": 2579.7453,
+        "tokens_per_second": 19.8413,
+        "usage": {
+          "input_tokens": 36,
+          "output_tokens": 27,
+          "total_tokens": 63,
+          "provider_usage_source": "PROVIDER_REPORTED"
+        },
+        "output": {
+          "char_count": 153,
+          "sha256": "98fdfd4a2f99ed93952f7bc6ab2fbb63e6f839f40968161d543ee7df94c0711d"
+        },
+        "started_offset_ms": 0.9233
+      },
+      {
+        "case": 2,
+        "status": "PASSED",
+        "prompt_sha256": "c2510f2bc86c26bbcc372e591aed4234cbf34a2d03c7fd4f89c16895087b3d56",
+        "ttft_ms": 1543.1789,
+        "stream_wall_time_ms": 2794.3643,
+        "provider_total_duration_ms": 2792.568,
+        "tokens_per_second": 21.5954,
+        "usage": {
+          "input_tokens": 36,
+          "output_tokens": 27,
+          "total_tokens": 63,
+          "provider_usage_source": "PROVIDER_REPORTED"
+        },
+        "output": {
+          "char_count": 153,
+          "sha256": "98fdfd4a2f99ed93952f7bc6ab2fbb63e6f839f40968161d543ee7df94c0711d"
+        },
+        "started_offset_ms": 2583.6166
+      },
+      {
+        "case": 3,
+        "status": "PASSED",
+        "prompt_sha256": "91b43361528a90ac9478222087e5cbc5589ef24b46637154a8bb027caa3d3c88",
+        "ttft_ms": 1482.8559,
+        "stream_wall_time_ms": 2762.1378,
+        "provider_total_duration_ms": 2750.811,
+        "tokens_per_second": 21.1069,
+        "usage": {
+          "input_tokens": 36,
+          "output_tokens": 27,
+          "total_tokens": 63,
+          "provider_usage_source": "PROVIDER_REPORTED"
+        },
+        "output": {
+          "char_count": 153,
+          "sha256": "98fdfd4a2f99ed93952f7bc6ab2fbb63e6f839f40968161d543ee7df94c0711d"
+        },
+        "started_offset_ms": 4014.2553
+      }
+    ],
+    "raw_prompt_persisted": false,
+    "raw_provider_body_persisted": false
+  }
+}
