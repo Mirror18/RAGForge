@@ -1,6 +1,7 @@
 package com.ragforge.server.provider.adapter;
 
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
 
 public interface ProviderAdapter {
     ProviderType providerType();
@@ -10,6 +11,16 @@ public interface ProviderAdapter {
             EgressDecision egressDecision,
             ProviderChatRequest request,
             CancellationToken cancellationToken);
+
+    default CompletionStage<ProviderEmbeddingResponse> embed(
+            ProviderConnection connection,
+            EgressDecision egressDecision,
+            ProviderEmbeddingRequest request,
+            CancellationToken cancellationToken) {
+        return CompletableFuture.failedFuture(new ProviderAdapterException(
+                ProviderErrorClass.UNSUPPORTED_CAPABILITY, "Provider embedding is not supported",
+                request == null || request.identity() == null ? null : request.identity().requestId(), 0));
+    }
 
     default CompletionStage<ProviderChatResponse> chat(
             ProviderConnection connection,

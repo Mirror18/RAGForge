@@ -14,6 +14,14 @@ final class ProviderEndpointPaths {
         return append(endpoint, "/v1/chat/completions", "/v1", "/v1/chat/completions");
     }
 
+    static URI ollamaEmbedding(URI endpoint) {
+        return append(endpoint, "/api/embeddings", "/api", "/api/embeddings");
+    }
+
+    static URI openAiEmbedding(URI endpoint) {
+        return append(endpoint, "/v1/embeddings", "/v1", "/v1/embeddings");
+    }
+
     private static URI append(URI endpoint, String defaultPath, String basePath, String fullPath) {
         String current = endpoint.getPath() == null ? "" : endpoint.getPath();
         String path;

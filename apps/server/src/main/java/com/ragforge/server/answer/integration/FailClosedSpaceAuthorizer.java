@@ -1,6 +1,7 @@
 package com.ragforge.server.answer.integration;
 
 import com.ragforge.server.answer.AnswerRequest;
+import com.ragforge.server.answer.AnswerAuthorizationContext;
 import com.ragforge.server.answer.SpaceAccessDeniedException;
 import com.ragforge.server.answer.SpaceAuthorizer;
 
@@ -26,5 +27,10 @@ public final class FailClosedSpaceAuthorizer implements SpaceAuthorizer {
         observer.record(new Phase5IntegrationObserver.Decision(spaceId, request.runId(),
                 request.correlationId(), "authorization", "REJECTED", "UNCONFIGURED", request.egressDecision()));
         throw new SpaceAccessDeniedException("Answer session authorization is not configured");
+    }
+
+    @Override
+    public void requireAccess(UUID spaceId, AnswerRequest request, AnswerAuthorizationContext context) {
+        requireAccess(spaceId, request);
     }
 }

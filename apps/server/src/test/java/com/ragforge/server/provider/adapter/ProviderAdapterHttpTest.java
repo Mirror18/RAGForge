@@ -114,6 +114,21 @@ class ProviderAdapterHttpTest {
     }
 
     @Test
+    void embeddingUsesTheExistingProviderConnectionAndParsesVector() throws Exception {
+        behavior.set((exchange, body) -> respond(exchange, 200,
+                "{\"model\":\"nomic-embed\",\"embedding\":[0.1, -0.2, 0.3]}"));
+        RequestIdentity identity = identity("ollama-embedding");
+        ProviderEmbeddingResponse response = ollama().embed(connection(ProviderType.OLLAMA), EgressDecision.LOCAL_ONLY,
+                new ProviderEmbeddingRequest(SPACE_ID, identity, "nomic-embed", "question", Duration.ofSeconds(2)),
+                new CancellationToken()).toCompletableFuture().get(3, TimeUnit.SECONDS);
+
+        assertThat(observedPath.get()).isEqualTo("/api/embeddings");
+        assertThat(response.identity()).isEqualTo(identity);
+        assertThat(response.embedding()).containsExactly(0.1, -0.2, 0.3);
+        assertThat(observedBody.get()).contains("question");
+    }
+
+    @Test
     void nonNoneLocalOllamaWithoutConfiguredCredentialIsRejectedBeforeHttpCall() {
         AtomicInteger resolutions = new AtomicInteger();
         OllamaProviderAdapter adapter = new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,

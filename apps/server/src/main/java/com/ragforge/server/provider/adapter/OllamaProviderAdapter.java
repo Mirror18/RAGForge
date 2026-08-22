@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class OllamaProviderAdapter extends AbstractHttpProviderAdapter {
     public OllamaProviderAdapter(ObjectMapper objectMapper, CredentialResolver credentialResolver) {
@@ -75,6 +77,30 @@ public final class OllamaProviderAdapter extends AbstractHttpProviderAdapter {
         } catch (Exception exception) {
             throw invalidResponse(request);
         }
+    }
+
+    @Override
+    protected URI embeddingEndpoint(URI endpoint) { return ProviderEndpointPaths.ollamaEmbedding(endpoint); }
+
+    @Override
+    protected ObjectNode embeddingRequestBody(ProviderEmbeddingRequest request) {
+        return objectMapper().createObjectNode().put("model", request.model()).put("prompt", request.input());
+    }
+
+    @Override
+    protected ProviderEmbeddingResponse parseEmbeddingResponse(ProviderEmbeddingRequest request, String body) {
+        try {
+            JsonNode root = objectMapper().readTree(body);
+            JsonNode values = root == null ? null : root.get("embedding");
+            if (values == null || !values.isArray() || values.isEmpty()) throw invalidEmbeddingResponse(request);
+            List<Double> embedding = new ArrayList<>();
+            for (JsonNode value : values) {
+                if (!value.isNumber() || !Double.isFinite(value.doubleValue())) throw invalidEmbeddingResponse(request);
+                embedding.add(value.doubleValue());
+            }
+            return new ProviderEmbeddingResponse(request.identity(), request.model(), embedding, null);
+        } catch (ProviderAdapterException exception) { throw exception; }
+        catch (Exception exception) { throw invalidEmbeddingResponse(request); }
     }
 
     private static String textOrNull(JsonNode node, String field) {
