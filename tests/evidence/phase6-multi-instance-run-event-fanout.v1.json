@@ -1,0 +1,63 @@
+{
+  "evidence_version": "phase6-multi-instance-run-event-fanout.v1",
+  "status": "PASSED",
+  "code_commit": "8321c759c646fd3228eed25fbbbccf7838c113c8",
+  "dataset_version": "phase6-run-event-fanout-fixtures.v1",
+  "config_version": "phase6-run-event-fanout-config.v1",
+  "schema_version": "run-event-hint.v1",
+  "database_schema": "Flyway V14",
+  "owner": "platform-operations",
+  "created_at": "2026-08-23T00:20:00+08:00",
+  "environment": {
+    "os": "Windows 11",
+    "java": "21.0.7",
+    "docker_engine": "29.6.1",
+    "postgres_image": "postgres:16.4-alpine",
+    "valkey_image": "valkey/valkey:8.0.1-alpine",
+    "data": "synthetic fixtures only"
+  },
+  "commands": [
+    {
+      "command": "mvn -q -pl apps/server '-Dtest=RunEventFanoutTest,MultiInstanceRunEventFanoutIntegrationTest' test",
+      "result": "4/4 passed"
+    },
+    {
+      "command": "mvn -q -pl apps/server '-Dtest=TwoServerInstancesRunEventFanoutIntegrationTest' test",
+      "result": "1/1 passed; two independent Spring server contexts"
+    },
+    {
+      "command": "mvn -q -pl apps/server test",
+      "result": "210 tests, 0 failures, 0 errors, 1 skipped"
+    },
+    {
+      "command": "python scripts/ci/format_check.py",
+      "result": "688 tracked files passed"
+    }
+  ],
+  "assertions": {
+    "cross_instance_delivery": true,
+    "same_space_only": true,
+    "cross_space_leakage": 0,
+    "post_commit_publish": true,
+    "rollback_local_or_remote_leakage": false,
+    "duplicate_and_out_of_order_hint_recovery": true,
+    "durable_replay_after_valkey_pause": true,
+    "event_id_sequence_consistency_check": true,
+    "payload_or_credentials_in_pubsub_envelope": false,
+    "listener_lifecycle_and_metrics": true,
+    "two_server_listener_shutdown": true
+  },
+  "envelope_fields": [
+    "schema_version",
+    "event_id",
+    "run_id",
+    "space_id",
+    "sequence"
+  ],
+  "failure_action": "Keep Phase 6 in progress and block merge if any assertion or full regression fails.",
+  "boundaries": [
+    "Valkey Pub/Sub is a best-effort live hint and never the durable queue.",
+    "PostgreSQL remains the event source of truth for replay and gap filling.",
+    "The evidence uses two independently started full Spring application contexts with shared isolated PostgreSQL and Valkey; it does not claim a production deployment or cloud behavior."
+  ]
+}
