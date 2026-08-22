@@ -18,6 +18,7 @@
 - 增加 loopback `LOCAL_ONLY` Ollama streaming probe；真实 `qwen3.5:9b` standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall `11475.2584ms`、`19.6176 tokens/s`、usage `35/46/81`，输出仅保留 hash/长度。
 - 增加真实 revision/artifact-backed RAG graph stream boundary evidence；graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`，并显式标注生产同步 `GenerationPort` 尚未暴露 streaming。
 - 增加本地 Ollama 2 并发成本证据；4 个 measured requests 全部成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、retry/cancel/timeout `0`、估算成本 `0 USD`。
+- 本轮主线提交 `4481bef` 的 GitHub Actions quality Run `32579989036` 全绿，并生成 SBOM `9477533715`、Grype `9477541287`、Phase 3/4/5 evidence artifacts；本轮证据可追溯到 CI。
 
 ## Evidence gaps
 
