@@ -50,19 +50,19 @@
 
 ## 3. Phase 5 当前闭环与证据（2026-08-22）
 
-- 当前代码验收基线：`76bf953`；本轮 material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`、`5cc8329`、`fbbd38a`，上下文验收提交为 `76bf953`。
+- 当前代码验收基线：`c62e42e`；本轮 material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`、`5cc8329`、`fbbd38a`，上下文验收提交为 `76bf953`，durable SSE 事件提交为 `c62e42e`。
 - 合同：`python scripts/ci/contract_test.py` 检查 21 artifacts、52 tests；Phase 5 定向 contract 10/10。
 - 质量：[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json) 的合成 12 cases candidate citation precision/faithfulness/abstention accuracy 均为 `1.0`；Phase 6 仍需 120+ 和人工评估。
 - 安全：[`phase5-security.json`](../../tests/evidence/phase5-security.json) 的 AgentToolSecurity 9/9、回答/出境 19/19，未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。
 - 性能：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json) 为版本化合成 fixture，E2E p50/p95 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`；retrieval/generation 指标是代理测量，不是生产容量承诺。
-- 全量本地门禁：此前根 Maven Server+Worker `28/28`、Flyway V1–V12、Web `tsc --noEmit`/`vite build`、format/architecture/Markdown/secret/dependency/Compose/contract/Phase 2 security/Phase 4 evaluation 均通过；本轮 main 合并后 server 全量 `197/197`（0 failures/errors/skips），新增上下文验收在隔离 Testcontainers PostgreSQL/Valkey 上通过。
+- 全量本地门禁：此前根 Maven Server+Worker `28/28`、Flyway V1–V13、Web `tsc --noEmit`/`vite build`、format/architecture/Markdown/secret/dependency/Compose/contract/Phase 2 security/Phase 4 evaluation 均通过；本轮加入 Flyway V13 durable run events 后 server 全量 `198/198`（0 failures/errors/skips），新增 durable replay 在隔离 Testcontainers PostgreSQL/Valkey 上通过。
 - CI：GitHub Actions quality Run [`32550604371`](https://github.com/Mirror18/RAGForge/actions/runs/32550604371) 对 `76bf953` 全绿（4m58s），包含 Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype。
-- 本轮本地门禁：`mvn -f pom.xml -pl apps/server -am test`（JDK 21）`196/196` 通过；新增 prompt space/hash resolver、retrieval identity、production graph 条件接线相关测试与材料服务已包含在回归中。真实 provider 凭据、真实 RAG E2E 和云出境未在本轮启用。
+- 本轮本地门禁：`mvn -f pom.xml -pl apps/server -am test`（JDK 21）`198/198` 通过；新增 prompt space/hash resolver、retrieval identity、production graph 条件接线、durable run event restart-instance replay 相关测试与材料服务已包含在回归中。真实 provider 凭据、真实 RAG E2E 和云出境未在本轮启用。
 - 阶段结论：P5 功能、安全边界、typed authorization、embedding/provider/material seam、完整 opt-in graph 已落地，但默认回答仍 fail-closed，不能把合成 provider/material 测试当作真实可用回答；阶段状态仍为 blocked。[`ADR-0010`](../02-architecture/adr/0010-phase5-provider-material-composition.md) 仍为 Proposed，用户已选择 A、复用既有 provider connection、由 revision/artifact service 提供材料，但仍需受控 route/credential 数据和真实 E2E 证据。
 
 ## 4. 下一入口
 
-Phase 5 继续入口为受控 provider route/credential 配置审查、真实空间级 RAG E2E 和新增 CI Run 证据；ADR-0010 仍需人工接受后才可作为绑定决策。随后进入 Phase 6 的 120+ 评估、SSE 重启恢复和容量/成本演练。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
+Phase 5 继续入口为受控 provider route/credential 配置审查、真实空间级 RAG E2E 和新增 CI Run 证据；ADR-0010 仍需人工接受后才可作为绑定决策。durable run event 已支持新 store 实例从 PostgreSQL 回放，但真实进程重启、120+ 评估和容量/成本演练仍是后续证据。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
 
 ## 5. 更新规则
 

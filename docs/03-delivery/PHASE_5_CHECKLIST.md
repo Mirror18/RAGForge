@@ -51,5 +51,5 @@
 
 - 已满足：本清单的合同、引用 allow-list、拒答、只读工具安全、SSE 取消/重放、答案历史与本地质量/性能/安全门禁均有可重跑证据。
 - 未闭环：真实 graph 只在显式 `ragforge.object-storage.enabled=true` 且对象存储凭据完整时启用；仍缺受控 provider route/credential 数据、真实 embedding/retrieval/material/generation RAG E2E、生产模型质量/延迟/成本证据。没有这些依赖，不能声称生产成功回答或关闭 Phase 5。
-- 本轮验证：JDK 21 下 main 合并后 server 全量 `197` tests、`0` failures/errors/skips；`Phase5ProductionGraphContextTest` 在隔离 Testcontainers PostgreSQL/Valkey 上验证显式 opt-in 的 production graph 与默认 fail-closed bean 条件。此前 Qdrant 与本地 Ollama acceptance 仍通过；本轮无真实 provider 凭据写入仓库。
-- 下一入口：在 ADR-0010 仍保持 Proposed 的前提下，提供/审查受控 provider route/credential 配置并运行真实空间级 RAG E2E；随后补 120+ generation/evaluation、SSE 重启恢复和 step/model provenance 演练。
+- 本轮验证：JDK 21 下 main 合并后 server 全量 `198` tests、`0` failures/errors/skips；`Phase5ProductionGraphContextTest` 与 durable run event replay 在隔离 Testcontainers PostgreSQL/Valkey 上验证显式 opt-in production graph、默认 fail-closed 条件和新 store 实例回放。此前 Qdrant 与本地 Ollama acceptance 仍通过；本轮无真实 provider 凭据写入仓库。
+- 下一入口：在 ADR-0010 仍保持 Proposed 的前提下，提供/审查受控 provider route/credential 配置并运行真实空间级 RAG E2E；随后补 120+ generation/evaluation、真实进程重启/多实例 SSE 演练和 step/model provenance 证据。

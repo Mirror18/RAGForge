@@ -50,12 +50,12 @@ P5-F 可在 P5-A 合入后与 P5-B/P5-C 并行，但不得写同一 migration、
 | Task | 状态 | 证据/备注 |
 |---|---|---|
 | P5-A | completed | 合同、fixture、执行口径已冻结；阶段基线为 `43aa7c1` |
-| P5-B | completed | V11/V12、答案/引用/事件持久化与回滚说明；PostgreSQL 集成通过 |
+| P5-B | completed | V11/V12/V13、答案/引用/事件持久化与回滚说明；PostgreSQL 集成通过 |
 | P5-C/D | completed-with-blocker | core、citation validator、typed session authorizer、provider embedding、版本化 material service、prompt hash resolver、active retrieval identity 与 opt-in production graph 完成；真实 provider route/credential 与 RAG E2E 仍缺 |
-| P5-E | completed | API、严格 SSE、Last-Event-ID、cancel、citation preview、Web build 已通过 |
+| P5-E | completed | API、严格 SSE、Last-Event-ID、cancel、citation preview、V13 durable replay、Web build 已通过 |
 | P5-F | completed | 三个只读工具、SSRF、跨空间、输出上限和审计投影测试已通过 |
-| P5-G/H | completed-local | 生成/性能/安全证据与本地全量门禁已通过；main server `197/197`，新增 production graph context 验收通过；GitHub Actions quality Run `32550604371` 对 `76bf953` 成功 |
+| P5-G/H | completed-local | 生成/性能/安全证据与本地全量门禁已通过；main server `198/198`，新增 production graph context 与 durable replay 验收通过；GitHub Actions quality Run `32550604371` 对 `76bf953` 成功 |
 
 ## 阶段结论
 
-本阶段完成了真实 material service、session authorizer 和 opt-in provider/retrieval/prompt/generation graph 的仓库内实现与本地回归，但不关闭 Phase 5：默认路径必须 fail-closed，且真实 provider route/credential 与受控 RAG E2E 证据尚未具备。该阻塞需要在 ADR-0010 人工接受前提下完成配置审查和真实环境验收。
+本阶段完成了真实 material service、session authorizer、opt-in provider/retrieval/prompt/generation graph 和 PostgreSQL durable run-event replay 的仓库内实现与本地回归，但不关闭 Phase 5：默认路径必须 fail-closed，且真实 provider route/credential 与受控 RAG E2E 证据尚未具备。该阻塞需要在 ADR-0010 人工接受前提下完成配置审查和真实环境验收；真实进程重启演练仍需补充。
