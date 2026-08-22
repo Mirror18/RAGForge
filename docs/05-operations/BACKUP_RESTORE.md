@@ -40,3 +40,37 @@
 - 不把包含真实 Secret 的备份上传公共 artifact。
 - 不未经验证就把恢复环境接回生产数据源。
 - 不把缓存或消息队列当作唯一恢复来源。
+
+## 7. Phase 6 隔离恢复演练
+
+仓库提供一个只使用合成 fixture 的可重复演练 harness：
+[`scripts/phase6/recovery_verification.py`](../../scripts/phase6/recovery_verification.py)。它复用仓库 Compose 基础设施，但强制使用 `ragforge-p6-recovery-<suffix>` project、独立端口和独立 volume；生产、`main`、`staging` 等 project 名称会被拒绝。演练不读取应用生产配置，不接受非本机 PostgreSQL/Qdrant/Object endpoint，也不输出凭据或原文到证据。
+
+fixture 固定在 [`tests/fixtures/phase6/recovery/recovery-fixture.v1.json`](../../tests/fixtures/phase6/recovery/recovery-fixture.v1.json)，内容只包含 RAGForge 自有的公开合成材料。执行命令：
+
+```powershell
+python scripts/phase6/recovery_verification.py `
+  --project-name ragforge-p6-recovery-local `
+  --output tests/evidence/phase6-recovery.v1.json
+```
+
+演练实际执行以下恢复链路，而不是只执行 `backup_smoke.py`：
+
+1. 启动隔离 PostgreSQL、MinIO 和 Qdrant，执行仓库 V1–V13 migration，并把合成 fixture 写入真实 schema。
+2. 创建 PostgreSQL `pg_dump`，恢复到 `recovery_full` 和 `recovery_pg_only` 两个独立数据库，比较 schema version、migration hash、关键表计数和 material hash。
+3. 在 MinIO 创建对象 manifest，保存对象 SHA-256；先删除对象验证 404 缺失检测，再恢复并重新校验 hash。
+4. 在 Qdrant 创建三维测试集合和 snapshot，模拟 collection 丢失，从恢复后的 PostgreSQL `child_chunks` 重建，校验向量维度、active index 版本和空间 payload。
+5. 将 active index pointer 从当前版本回滚到 previous 版本，重放 synthetic delete ledger；重复重放必须保持计数不变。
+6. 使用数据库唯一约束和 `ON CONFLICT DO NOTHING` 重放 Outbox/job，验证行数、事件 ID 和 ingestion idempotency key 均不重复。
+
+最新一次真实隔离演练的完整证据在 [`tests/evidence/phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json)，包括 backup ID、PostgreSQL schema/migration manifest、对象 manifest/hash、Qdrant snapshot/rebuild/index/counts、RPO/RTO、差异、人工步骤和 owner。证据中的 `production_connection=false`、Compose project、fixture SHA-256 与安全范围字段必须随每次演练保留。
+
+失败路径包括 PostgreSQL readiness polling、migration/fixture 约束失败、Qdrant 未授权或不可用、对象缺失 404、对象 hash 不匹配、schema/关键计数不一致、active index 未回滚、tombstone 重放非幂等以及 Outbox/job 重复。失败后 harness 会写入部分证据，并在默认模式清理仅由该唯一 project 创建的隔离 volume；调试时可使用 `--keep-stack`，但仍不得连接生产。
+
+测试命令：
+
+```powershell
+python -m unittest scripts/phase6/test_recovery_verification.py -v
+```
+
+值班 owner：`platform-oncall`；恢复改进 owner：`platform-data`。恢复窗口仍须由值班人员在执行前确认并冻结写入；本 harness 的 `RPO=0s` 是冻结的合成演练结果，不外推为生产 PITR 保证。
