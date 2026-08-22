@@ -2,7 +2,7 @@
 
 - 日期：2026-08-22
 - 阶段状态：blocked（授权/provider/material seam、版本化 material service 和 opt-in production graph 已完成，本地门禁通过；真实 provider route/credential 与 RAG E2E 待完成）
-- 当前验收 HEAD：`76bf953`；material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`、`5cc8329`，上下文验收提交为 `76bf953`
+- 当前代码验收基线：`76bf953`；material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`、`5cc8329`、`fbbd38a`，上下文验收提交为 `76bf953`
 - 阶段执行计划：[`PHASE_5_EXECUTION_PLAN.md`](../phase-5/PHASE_5_EXECUTION_PLAN.md)
 - 阶段清单：[`PHASE_5_CHECKLIST.md`](../../03-delivery/PHASE_5_CHECKLIST.md)
 
