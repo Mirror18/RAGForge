@@ -155,6 +155,17 @@ public class JdbcRunEventStore implements RunEventStore {
                 eventId, runId, spaceId, timestamp(Instant.now(clock))).stream().findFirst();
     }
 
+    /**
+     * Deletes only durable events whose per-event retention deadline has passed.
+     * The stream cursor is intentionally retained so a later append cannot reuse
+     * a sequence number and replay can report an expired cursor consistently.
+     */
+    @Transactional
+    public int purgeExpired(Instant now) {
+        Objects.requireNonNull(now, "now");
+        return jdbc.update("DELETE FROM rag_run_events WHERE expires_at < ?", timestamp(now));
+    }
+
     private ReplayResult replayLocked(UUID spaceId, UUID runId, String lastEventId, Instant now) {
         List<RunEvent> retained = jdbc.query("""
                 SELECT id, sequence_no, run_id, space_id, correlation_id, occurred_at,

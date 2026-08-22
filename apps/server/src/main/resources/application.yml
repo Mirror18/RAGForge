@@ -66,3 +66,8 @@ ragforge:
       fixed-delay-ms: ${RAGFORGE_OUTBOX_RELAY_DELAY_MS:1000}
   run-events:
     retention: ${RAGFORGE_RUN_EVENT_RETENTION:PT15M}
+  phase6:
+    operations:
+      enabled: ${RAGFORGE_PHASE6_OPERATIONS_ENABLED:false}
+      cleanup:
+        fixed-delay-ms: ${RAGFORGE_PHASE6_CLEANUP_DELAY_MS:3600000}
