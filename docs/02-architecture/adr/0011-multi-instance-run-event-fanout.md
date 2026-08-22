@@ -1,6 +1,6 @@
 # ADR-0011：多实例 Run Event live fan-out
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-22
 
 ## Context
@@ -16,7 +16,7 @@ cancel 或 retention 语义。广播只用于低延迟唤醒，断线重连仍�
 
 ## Decision
 
-**Proposed，等待用户明确接受后才作为绑定决策实施：** 复用现有 Valkey/Redis 协议，
+**Accepted（2026-08-22，用户明确接受方案）：** 复用现有 Valkey/Redis 协议，
 为每个 server 实例建立受控 Pub/Sub listener。事件提交事务成功后发布最小 envelope：
 `event_id`、`run_id`、`space_id`、`sequence` 和 schema version；接收实例只在拥有
 对应 `space_id/run_id` 的本地 subscriber 时按 `event_id` 从 PostgreSQL 读取事件，

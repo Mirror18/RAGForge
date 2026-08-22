@@ -6,6 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -23,30 +27,48 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-/** PostgreSQL-backed event stream; live delivery remains process-local while replay is durable. */
+/** PostgreSQL-backed event stream with Valkey live hints and PostgreSQL durable replay. */
 @Component
 public class JdbcRunEventStore implements RunEventStore {
     public static final Duration DEFAULT_RETENTION = Duration.ofMinutes(15);
+    private static final Logger log = LoggerFactory.getLogger(JdbcRunEventStore.class);
 
     private final JdbcTemplate jdbc;
     private final Duration retention;
     private final Clock clock;
+    private final RunEventFanout fanout;
     private final Map<RunKey, StreamState> streams = new ConcurrentHashMap<>();
     private final AtomicLong subscriberIds = new AtomicLong();
+    private final AtomicLong remoteHints = new AtomicLong();
+    private final AtomicLong remoteDuplicates = new AtomicLong();
+    private final AtomicLong remoteGaps = new AtomicLong();
+    private final AtomicLong remoteNoSubscriber = new AtomicLong();
+    private final AtomicLong remoteRejected = new AtomicLong();
 
     @Autowired
     public JdbcRunEventStore(JdbcTemplate jdbc,
-                             @Value("${ragforge.run-events.retention:PT15M}") Duration retention) {
+                             @Value("${ragforge.run-events.retention:PT15M}") Duration retention,
+                             RunEventFanout fanout) {
+        this(jdbc, retention, Clock.systemUTC(), fanout);
+    }
+
+    JdbcRunEventStore(JdbcTemplate jdbc, Duration retention) {
         this(jdbc, retention, Clock.systemUTC());
     }
 
     JdbcRunEventStore(JdbcTemplate jdbc, Duration retention, Clock clock) {
+        this(jdbc, retention, clock, RunEventFanout.disabled());
+    }
+
+    JdbcRunEventStore(JdbcTemplate jdbc, Duration retention, Clock clock, RunEventFanout fanout) {
         this.jdbc = Objects.requireNonNull(jdbc, "jdbc");
         if (retention == null || retention.isNegative() || retention.isZero()) {
             throw new IllegalArgumentException("retention must be positive");
         }
         this.retention = retention;
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.fanout = Objects.requireNonNull(fanout, "fanout");
+        this.fanout.register(this::handleRemoteHint);
     }
 
     @Override
@@ -65,7 +87,7 @@ public class JdbcRunEventStore implements RunEventStore {
                     draft.correlationId(), now, draft.type(), draft.version(), draft.payloadJson());
             insert(event, now.plus(retention));
             updateCursor(draft.spaceId(), draft.runId(), event.sequence(), null);
-            publishLocked(state, event);
+            publishAfterCommit(state, event);
         }
         return event;
     }
@@ -83,6 +105,9 @@ public class JdbcRunEventStore implements RunEventStore {
                     "{\"status\":\"%s\",\"reason\":\"%s\"}".formatted(status, reason));
             insert(event, now.plus(retention));
             updateCursor(spaceId, runId, event.sequence(), null);
+            // Snapshot is returned directly to the opening HTTP stream and is intentionally
+            // not broadcast; advance the local watermark to avoid replaying it on the next hint.
+            state.observedSequence = Math.max(state.observedSequence, event.sequence());
             return event;
         }
     }
@@ -102,6 +127,7 @@ public class JdbcRunEventStore implements RunEventStore {
             ReplayResult replay = replayLocked(spaceId, runId, lastEventId, Instant.now(clock));
             Subscriber subscriber = new Subscriber(state, consumer);
             state.subscribers.put(subscriber.id, subscriber);
+            state.observedSequence = Math.max(state.observedSequence, replay.latestSequence());
             return new OpenedStream(replay, subscriber);
         }
     }
@@ -114,8 +140,43 @@ public class JdbcRunEventStore implements RunEventStore {
             Subscriber subscriber = new Subscriber(state, consumer);
             subscriber.active = true;
             state.subscribers.put(subscriber.id, subscriber);
+            state.observedSequence = Math.max(state.observedSequence, latestSequence(spaceId, runId));
             return subscriber;
         }
+    }
+
+    /** Handles a best-effort remote hint by reading durable rows in sequence order. */
+    void handleRemoteHint(RunEventFanoutEnvelope envelope) {
+        remoteHints.incrementAndGet();
+        RunKey key = new RunKey(envelope.spaceId(), envelope.runId());
+        StreamState state = streams.get(key);
+        if (state == null || state.subscribers.isEmpty()) {
+            remoteNoSubscriber.incrementAndGet();
+            return;
+        }
+        synchronized (state) {
+            if (envelope.sequence() <= state.observedSequence) {
+                remoteDuplicates.incrementAndGet();
+                return;
+            }
+            Optional<RunEvent> hinted = find(envelope.spaceId(), envelope.runId(), envelope.eventId());
+            if (hinted.isEmpty() || hinted.get().sequence() != envelope.sequence()) {
+                remoteRejected.incrementAndGet();
+                return;
+            }
+            deliverDurableEvents(state, envelope.sequence());
+            if (state.observedSequence < envelope.sequence()) {
+                remoteGaps.incrementAndGet();
+                log.warn("run event fan-out durable gap runIdHash={} spaceIdHash={} expectedSequence={} hintedSequence={}",
+                        envelope.runId(), envelope.spaceId(), state.observedSequence + 1, envelope.sequence());
+            }
+        }
+    }
+
+    public FanoutDeliveryMetrics fanoutDeliveryMetrics() {
+        long backlog = streams.values().stream().mapToLong(StreamState::backlogSize).sum();
+        return new FanoutDeliveryMetrics(remoteHints.get(), remoteDuplicates.get(), remoteGaps.get(),
+                remoteNoSubscriber.get(), remoteRejected.get(), backlog);
     }
 
     @Override
@@ -135,7 +196,7 @@ public class JdbcRunEventStore implements RunEventStore {
                             .formatted(runId, spaceId));
             insert(event, now.plus(retention));
             updateCursor(spaceId, runId, event.sequence(), event.eventId());
-            publishLocked(state, event);
+            publishAfterCommit(state, event);
             return new CancellationResult(true, event);
         }
     }
@@ -276,7 +337,60 @@ public class JdbcRunEventStore implements RunEventStore {
     }
 
     private StreamState state(UUID spaceId, UUID runId) {
-        return streams.computeIfAbsent(new RunKey(spaceId, runId), ignored -> new StreamState());
+        RunKey key = new RunKey(spaceId, runId);
+        return streams.computeIfAbsent(key, StreamState::new);
+    }
+
+    private void publishAfterCommit(StreamState state, RunEvent event) {
+        Runnable publish = () -> {
+            synchronized (state) {
+                deliverDurableEvents(state, event.sequence());
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    publish.run();
+                }
+            });
+        } else {
+            // Direct store tests have no Spring transaction synchronization.
+            publish.run();
+        }
+        fanout.publishAfterCommit(event);
+    }
+
+    private void deliverDurableEvents(StreamState state, long targetSequence) {
+        if (targetSequence <= state.observedSequence) {
+            return;
+        }
+        List<RunEvent> pending = eventsAfter(state.key.spaceId(), state.key.runId(), state.observedSequence);
+        for (RunEvent event : pending) {
+            if (event.sequence() > targetSequence) {
+                break;
+            }
+            long expected = state.observedSequence + 1;
+            if (event.sequence() != expected) {
+                return;
+            }
+            publishLocked(state, event);
+            state.observedSequence = event.sequence();
+        }
+    }
+
+    private List<RunEvent> eventsAfter(UUID spaceId, UUID runId, long sequence) {
+        return jdbc.query("""
+                SELECT id, sequence_no, run_id, space_id, correlation_id, occurred_at,
+                       event_type, event_version, payload::text
+                FROM rag_run_events
+                WHERE run_id = ? AND space_id = ? AND sequence_no > ? AND expires_at > ?
+                ORDER BY sequence_no
+                """, (rs, rowNum) -> mapEvent(rs.getObject("id", UUID.class), rs.getLong("sequence_no"),
+                rs.getObject("run_id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("correlation_id", UUID.class), rs.getTimestamp("occurred_at").toInstant(),
+                rs.getString("event_type"), rs.getInt("event_version"), rs.getString("payload")),
+                runId, spaceId, sequence, timestamp(Instant.now(clock)));
     }
 
     private void publishLocked(StreamState state, RunEvent event) {
@@ -365,6 +479,16 @@ public class JdbcRunEventStore implements RunEventStore {
 
     private final class StreamState {
         private final Map<Long, Subscriber> subscribers = new ConcurrentHashMap<>();
+        private final RunKey key;
+        private long observedSequence;
+
+        private StreamState(RunKey key) {
+            this.key = key;
+        }
+
+        private long backlogSize() {
+            return subscribers.values().stream().mapToLong(subscriber -> subscriber.backlog.size()).sum();
+        }
     }
 
     private record StreamCursor(long latestSequence, boolean cancelled, UUID cancellationEventId) {
@@ -375,5 +499,10 @@ public class JdbcRunEventStore implements RunEventStore {
             Objects.requireNonNull(spaceId, "spaceId");
             Objects.requireNonNull(runId, "runId");
         }
+    }
+
+    public record FanoutDeliveryMetrics(long remoteHints, long remoteDuplicates, long remoteGaps,
+                                        long remoteNoSubscriber, long remoteRejected,
+                                        long subscriberBacklogEvents) {
     }
 }
