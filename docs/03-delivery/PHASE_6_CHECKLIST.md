@@ -61,3 +61,5 @@
 - P6-OBS-02：[`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json)；隔离 server `ragforge-p6-online` 使用正式 register/login session 认证创建 synthetic LOCAL_ONLY Ollama run，100 次 health API 与 100 次 SSE first-event 均无错误，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`，满足阈值；cookie 仅通过环境变量注入且未写入证据。
 - P6-OBS-03：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json)；768 维、1M points、4-space filter、20 concurrency、Recall@10 `0.995`、p95 `119.8761ms`、error rate `0`，满足检索容量阈值；向量值为 live dimension 下的公共合成值。
 - 用户授权的真实 E2E：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json)；仅证明本地 `LOCAL_ONLY` 真实 RAG 链路，不替代 Phase 6 质量和容量门槛。
+- 人工/red-team 评审 manifest：[`phase6-human-redteam-review.manifest.v1.json`](../../tests/evidence/phase6-human-redteam-review.manifest.v1.json)；当前为 `PENDING_HUMAN_REVIEW`，不得用自动化结果代签。
+- 多实例 live fan-out：[`ADR-0011`](../../docs/02-architecture/adr/0011-multi-instance-run-event-fanout.md) 为 `Proposed`；在用户明确接受前不得实现为绑定架构决策或宣称门槛已满足。
