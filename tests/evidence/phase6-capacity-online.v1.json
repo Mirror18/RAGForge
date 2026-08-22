@@ -1,23 +1,60 @@
 {
   "evidence_version": "phase6-capacity-online.v1",
-  "status": "FAILED",
+  "status": "PASSED",
+  "started_at_utc": "2026-08-22T12:22:00Z",
+  "ended_at_utc": "2026-08-22T12:24:00Z",
+  "code_commit": "fc7989c4e55e424d0dd1adfe286fd8693e0b9f56",
+  "config_version": "phase6-online-config-v1",
+  "script_sha256": "36edb4187685a9472c02df9641e2ebff6b9e3635f3afafef136b6197eb316a35",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "python": "3.12.13",
+    "server_url": "http://127.0.0.1:18086",
+    "compose_project": "ragforge-p6-online",
+    "server_port": 18086,
+    "ollama_endpoint": "http://127.0.0.1:11434",
+    "cloud_egress": "disabled"
+  },
+  "dataset": {
+    "classification": "Public synthetic",
+    "space_id": "01a0296b-bf38-7764-ab7b-81c2e97be233",
+    "run_id": "f3d843e6-8d69-4e4e-8f59-12b7177fae0a",
+    "run_status": "SUCCEEDED",
+    "model_route": "LOCAL_ONLY Ollama",
+    "request_count": 100,
+    "note": "The run was created through register/login session authentication; no credential, cookie, prompt, or provider body is stored in this evidence."
+  },
   "thresholds": {
     "non_ai_api_p95_ms_lt": 300,
     "sse_first_event_p95_ms_lt": 500,
     "ttft_excluded": true
   },
-  "exact_command": "python scripts/phase6/online_latency_probe.py --server-url http://127.0.0.1:8080 --count 1 --timeout 1 --output tests/evidence/phase6-capacity-online.v1.json",
+  "exact_command": "python scripts/phase6/online_latency_probe.py --server-url http://127.0.0.1:18086 --sse-url http://127.0.0.1:18086/api/v1/spaces/01a0296b-bf38-7764-ab7b-81c2e97be233/runs/f3d843e6-8d69-4e4e-8f59-12b7177fae0a/events --sse-cookie-env RAGFORGE_PHASE6_SSE_COOKIE --count 100 --timeout 10 --output tests/evidence/phase6-capacity-online.v1.json",
   "non_ai_api": {
-    "url": "http://127.0.0.1:8080/actuator/health",
-    "count": 1,
-    "errors": 1,
-    "error_rate": 1.0,
-    "p50_ms": null,
-    "p95_ms": null,
-    "p99_ms": null
+    "url": "http://127.0.0.1:18086/actuator/health",
+    "count": 100,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 15.0339,
+    "p95_ms": 28.7487,
+    "p99_ms": 29.8174
   },
   "sse_first_event": {
-    "status": "BLOCKED",
-    "reason": "sse_url_not_provided; a run must be created by an authenticated harness"
+    "url": "http://127.0.0.1:18086/api/v1/spaces/01a0296b-bf38-7764-ab7b-81c2e97be233/runs/f3d843e6-8d69-4e4e-8f59-12b7177fae0a/events",
+    "count": 100,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 30.056,
+    "p95_ms": 35.9285,
+    "p99_ms": 36.6699,
+    "auth_source": "environment_variable",
+    "auth_env": "RAGFORGE_PHASE6_SSE_COOKIE"
+  },
+  "auth": {
+    "method": "HttpOnly session cookie",
+    "injection": "environment variable at execution time",
+    "persisted_secret": false,
+    "cloud_egress_authorized": false
   }
 }
