@@ -46,6 +46,15 @@ app:
     ttl: ${SESSION_TTL:PT8H}
 
 ragforge:
+  object-storage:
+    # Explicit opt-in: without this flag the Phase 5 answer graph stays fail-closed.
+    enabled: ${RAGFORGE_OBJECT_STORAGE_ENABLED:false}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+    bucket: ${S3_BUCKET:ragforge}
+    prefix: ${S3_PREFIX:phase3}
+    max-artifact-bytes: ${S3_MAX_ARTIFACT_BYTES:50000000}
   qdrant:
     url: ${QDRANT_URL:http://localhost:6333}
     api-key: ${QDRANT_API_KEY:}
