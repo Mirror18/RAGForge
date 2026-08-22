@@ -7,6 +7,7 @@ import com.ragforge.server.answer.V11RunProvenanceRecorder;
 import com.ragforge.server.run.RunRepository;
 import com.ragforge.server.provider.SpaceAuthorization;
 import java.time.Clock;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
  * configured; refusal and audit records still use durable storage.
  */
 @Configuration
+@ConditionalOnProperty(prefix = "ragforge.object-storage", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class Phase5SpringAnswerConfiguration {
     @Bean
     public AnswerProvenancePort phase5AnswerProvenancePort(RunRepository runs) {

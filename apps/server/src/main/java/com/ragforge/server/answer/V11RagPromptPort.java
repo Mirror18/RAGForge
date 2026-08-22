@@ -9,7 +9,7 @@ import java.util.UUID;
 public final class V11RagPromptPort implements RagPromptPort {
     @FunctionalInterface
     public interface TemplateResolver {
-        String resolve(String promptOpaqueRef);
+        String resolve(UUID spaceId, String promptOpaqueRef, String promptHash);
     }
 
     private final PromptRepository prompts;
@@ -24,7 +24,13 @@ public final class V11RagPromptPort implements RagPromptPort {
     public VersionedRagPrompt load(UUID spaceId, UUID promptVersionId, UUID correlationId) {
         PromptRepository.RagPromptVersion version = prompts.findRagVersion(spaceId, promptVersionId)
                 .orElseThrow(() -> new IllegalArgumentException("RAG prompt version is not available in this space"));
-        String template = templates.resolve(version.promptOpaqueRef());
+        if (!spaceId.equals(version.spaceId())) {
+            throw new IllegalArgumentException("RAG prompt version crosses the requested space");
+        }
+        String template = templates.resolve(spaceId, version.promptOpaqueRef(), version.promptHash());
+        if (template == null || template.isBlank()) {
+            throw new IllegalArgumentException("RAG prompt template is not available for the requested version");
+        }
         return new VersionedRagPrompt(version.id(), version.spaceId(), version.promptKey(), version.versionNo(),
                 template, version.promptOpaqueRef(), version.promptHash());
     }
