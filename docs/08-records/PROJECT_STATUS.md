@@ -50,7 +50,7 @@
 
 ## 3. Phase 5 当前闭环与证据（2026-08-22）
 
-- 当前 HEAD：`49d9160`；本轮 material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，均保留任务提交历史。
+- 当前 HEAD：`079041a`；本轮 material worker `624c6df` / merge `49368e4`，graph worker `c874df3` / merge `49d9160`，记录更新提交为 `0c13eb0`、`079041a`。
 - 合同：`python scripts/ci/contract_test.py` 检查 21 artifacts、52 tests；Phase 5 定向 contract 10/10。
 - 质量：[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json) 的合成 12 cases candidate citation precision/faithfulness/abstention accuracy 均为 `1.0`；Phase 6 仍需 120+ 和人工评估。
 - 安全：[`phase5-security.json`](../../tests/evidence/phase5-security.json) 的 AgentToolSecurity 9/9、回答/出境 19/19，未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。
