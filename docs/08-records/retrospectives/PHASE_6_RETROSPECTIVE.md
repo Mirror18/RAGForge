@@ -2,7 +2,7 @@
 
 - 日期：2026-08-22
 - 状态：未闭环，保留在 `in-progress`
-- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`a80321a5507181cbf3ebb5554781522431fe5dff`
+- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`07f973c84fa60dd239ed5c60a443e1edbb801eed`
 
 ## Done
 
@@ -16,14 +16,16 @@
 - 在用户明确授权下完成真实本地 Ollama `LOCAL_ONLY` RAG E2E；复用 provider connection，由 revision/artifact service 提供 material，并保留 citation/provenance。
 - 在隔离 Compose server 上通过正式 register/login session 认证创建 synthetic LOCAL_ONLY run，完成 100 次 non-AI API 与 100 次 SSE first-event 测量；p95 分别为 `28.7487ms` 和 `35.9285ms`，cookie 未进入证据。
 - 增加 loopback `LOCAL_ONLY` Ollama streaming probe；真实 `qwen3.5:9b` standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall `11475.2584ms`、`19.6176 tokens/s`、usage `35/46/81`，输出仅保留 hash/长度。
+- 增加真实 revision/artifact-backed RAG graph stream boundary evidence；graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`，并显式标注生产同步 `GenerationPort` 尚未暴露 streaming。
+- 增加本地 Ollama 2 并发成本证据；4 个 measured requests 全部成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、retry/cancel/timeout `0`、估算成本 `0 USD`。
 
 ## Evidence gaps
 
 - 评估 candidate 的确定性指标全部为 1.0，但人工/red-team review 尚未完成；不得把 runner 结果写成真实模型质量结论。
 - 已执行 Agent-assisted adversarial pre-review：Python 安全/合同 23 tests + AgentToolSecurity 9 tests 均通过；报告明确保留人工 review 状态，不能作为人工签名。
 - 真实 Ollama embedding 维度 768 和 1,000,000 点 Qdrant 混合检索已取得有效证据：Recall@10 `0.995`、p95 `119.8761ms`、20 并发错误率 `0`；向量值仍是 live dimension 下的公共合成值。
-- 在线 API/SSE 性能门槛已取得认证隔离运行证据；standalone streaming TTFT 已测量，但同步 RAG graph 集成路径仍 `NOT_MEASURED`，不将 SSE 首事件或 standalone 探针冒充为集成 TTFT。
-- standalone 本地成本仍为单次 0 USD 观测；真实 RAG graph 并发成本与云端价格仍未授权/未测量。
+- 在线 API/SSE 性能门槛已取得认证隔离运行证据；真实 RAG graph stream boundary 已测量，但生产同步 `GenerationPort` streaming 仍未实现，不将边界探针冒充为生产 API 能力。
+- 本地 2 并发成本已观测且估算为 0 USD；云端价格、云 route 和生产级并发模型仍未授权/未测量。
 - retention/cleanup 的空间限定单实例受控定时运行已通过；多实例 live fan-out 尚未完成。
 
 ## Learnings

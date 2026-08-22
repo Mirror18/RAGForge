@@ -4,6 +4,7 @@
 - Current stage: Phase 6 评估、观测、安全与恢复进行中；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
+- 本轮记录：本地 `main` 当前为 `07f973c84fa60dd239ed5c60a443e1edbb801eed`，包含真实 RAG graph stream 与本地并发成本证据；推送后补记本提交对应的 CI/SBOM/Grype 结果。上方历史远端行保留为上一已知 CI 基线，不能作为本轮提交验证。
 - External remote: `origin` configured；当前 `main`/`origin/main` 为 `a80321a5507181cbf3ebb5554781522431fe5dff`；GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿（4m52s），SBOM artifact `9477027172`、Grype SARIF `9477036384`、Phase 3 JVM `9477081726`、Phase 4 retrieval `9477081302`、Phase 5 evidence `9477073334` 已生成。历史 Phase 3 OCR、SBOM 和 Grype artifact 仍按各自阶段记录保留；尚未创建 release。
 
 ## 1. 已完成
@@ -64,6 +65,8 @@
 
 ## 4. Phase 6 当前进度与证据（2026-08-22）
 
+- 本轮增量证据：真实 revision/artifact-backed RAG graph stream 已测得 graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`；本地 Ollama 2 并发成本 probe 4/4 成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、估算成本 `0 USD`。两项均为 `LOCAL_ONLY`，不代表生产同步 streaming、云端商业定价或生产语义质量。
+
 - 基线与治理：Phase 6 checklist/执行计划已冻结，统一基线为 `0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线为 `a80321a5507181cbf3ebb5554781522431fe5dff`。ADR-0010 已由用户接受，方案 A、既有 provider connection、revision/artifact material service 和本地 Ollama `LOCAL_ONLY` 授权均已落实。
 - 评估：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json) 有 128 个版本化公共合成用例，runner 校验与 7/7 单元测试通过；candidate report 的确定性指标为 1.0，但人工/red-team review manifest 仍为 `PENDING`，不能关闭 P6-EVAL-04，也不能把 synthetic candidate 当作真实模型质量结论。
 - 观测：[`phase6-observability-assets.v1.json`](../../tests/evidence/phase6-observability-assets.v1.json) 与 [`phase6-observability-fault-drill.v1.json`](../../tests/evidence/phase6-observability-fault-drill.v1.json) 已验证 OTel/Prometheus/Grafana/Loki/Tempo profile、dashboard provisioning、trace/log 脱敏和未授权出境告警演练；观测资源测试 3/3 通过。浏览器视觉验收仍未宣称完成。
@@ -74,6 +77,8 @@
 - 当前阶段结论：P6-C、P6-D、P6-E、P6-OBS-02、P6-OBS-03、standalone 本地流式 TTFT 探针和 P6-G 单实例实现/专项证据已具备；P6-EVAL-04 人工/red-team、P6-G 多实例 live fan-out，以及真实并发/云端成本边界仍未完全闭环，现有同步 RAG graph 的集成 TTFT 仍未测量，P6-H 不得关闭。阶段状态保持 `in-progress`。
 
 ## 5. 下一入口
+
+- 记录更正：本轮已补齐真实 RAG graph stream boundary 与本地 2 并发成本证据；因此下一入口不再是“补测 graph TTFT/本地并发”，而是人工/red-team 签名、未接受 ADR-0011 的多实例选择，以及未授权的云端/生产级质量与成本边界。
 
 Phase 6 当前入口为 120+ 数据集与人工/red-team 评估、真实 RAG graph 流式/并发成本证据、retention/audit/cost/SSE cleanup 受控演练及多实例事件清理。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
 
