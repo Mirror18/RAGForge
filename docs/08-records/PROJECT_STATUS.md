@@ -4,6 +4,7 @@
 - Current stage: Phase 6 评估、观测、安全与恢复进行中；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
+- 当前权威状态（覆盖本文档中的历史基线行）：`main`/`origin/main` 为 `e20548fe7881feffe8a777d49de79591750371fa`，GitHub Actions quality Run [`32580314959`](https://github.com/Mirror18/RAGForge/actions/runs/32580314959) 全绿；SBOM `9477611776`、Grype SARIF `9477620481`、Phase 3 JVM `9477664771`、Phase 4 retrieval `9477664518`、Phase 5 evidence `9477656081` 已生成。真实 RAG graph stream 与本地 2 并发成本证据已完成；旧 SHA/旧 CI 行仅保留为历史记录。
 - 本轮记录：功能合并基线为 `07f973c84fa60dd239ed5c60a443e1edbb801eed`，包含真实 RAG graph stream 与本地并发成本证据；阶段记录提交及其 CI/SBOM/Grype 结果已在下方补记。上方历史远端行保留为上一已知 CI 基线，不能作为本轮提交验证。
 - 本轮 CI 已补记：GitHub Actions quality Run [`32579989036`](https://github.com/Mirror18/RAGForge/actions/runs/32579989036) 对提交 `4481bef34cdeed59068b45d03f8a5abbc48bb379` 全绿；SBOM `9477533715`、Grype SARIF `9477541287`、Phase 3 JVM `9477586833`、Phase 4 retrieval `9477586457`、Phase 5 evidence `9477579925` 均已生成。
 - External remote: `origin` configured；当前 `main`/`origin/main` 为 `a80321a5507181cbf3ebb5554781522431fe5dff`；GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿（4m52s），SBOM artifact `9477027172`、Grype SARIF `9477036384`、Phase 3 JVM `9477081726`、Phase 4 retrieval `9477081302`、Phase 5 evidence `9477073334` 已生成。历史 Phase 3 OCR、SBOM 和 Grype artifact 仍按各自阶段记录保留；尚未创建 release。
@@ -65,6 +66,8 @@
 - 阶段结论：P5 的合同、引用/拒答、工具安全、SSE replay/cancel、typed authorization、provider/material graph、真实本地 Ollama RAG E2E 和审计 provenance 均已验证；ADR-0010 已 Accepted。真实 E2E 仅授权并覆盖 LOCAL_ONLY 单 fixture，不等同于云出境、生产容量或 Phase 6 评估。
 
 ## 4. Phase 6 当前进度与证据（2026-08-22）
+
+- 权威补充：本阶段已完成真实 revision/artifact-backed RAG graph stream boundary 测量（graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`）和本地 Ollama 2 并发成本测量（4/4 成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`）。旧段落中“同步 RAG graph 集成 TTFT 仍未测量”仅描述旧证据状态，现由 [`phase6-real-ollama-rag-graph-stream.v1.json`](../../tests/evidence/phase6-real-ollama-rag-graph-stream.v1.json) 更新；该证据仍不宣称生产同步 `GenerationPort` 已提供 streaming。
 
 - 本轮增量证据：真实 revision/artifact-backed RAG graph stream 已测得 graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`；本地 Ollama 2 并发成本 probe 4/4 成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、估算成本 `0 USD`。两项均为 `LOCAL_ONLY`，不代表生产同步 streaming、云端商业定价或生产语义质量。
 
