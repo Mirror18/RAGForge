@@ -34,6 +34,7 @@ QDRANT_PORT = 26337
 QDRANT_GRPC_PORT = 26338
 COLLECTION = "ragforge_phase6_capacity_1m"
 QDRANT_IMAGE = "qdrant/qdrant:v1.11.5"
+LOCAL_QDRANT_API_KEY = "phase6-capacity-local-only"
 OLLAMA_URL = "http://127.0.0.1:11434"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
 CHILD_COUNT = 1_000_000
@@ -59,11 +60,11 @@ def git_value(*args: str) -> str:
         return "unknown"
 
 
-def http_json(base_url: str, method: str, path: str, payload: dict[str, Any] | None = None, timeout: int = 120) -> dict[str, Any]:
+def http_json(base_url: str, method: str, path: str, payload: dict[str, Any] | None = None, timeout: int = 120, headers: dict[str, str] | None = None) -> dict[str, Any]:
     data = None if payload is None else json.dumps(payload, separators=(",", ":")).encode("utf-8")
     request = urllib.request.Request(
         f"{base_url}{path}", data=data, method=method,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **(headers or {})},
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         body = response.read().decode("utf-8")
@@ -73,6 +74,10 @@ def http_json(base_url: str, method: str, path: str, payload: dict[str, Any] | N
             return json.loads(body)
         except json.JSONDecodeError:
             return {"body": body}
+
+
+def qdrant_json(base_url: str, method: str, path: str, payload: dict[str, Any] | None = None, timeout: int = 120) -> dict[str, Any]:
+    return http_json(base_url, method, path, payload, timeout, {"api-key": LOCAL_QDRANT_API_KEY})
 
 
 def live_embedding_probe(ollama_url: str, model: str) -> dict[str, Any]:
@@ -115,6 +120,7 @@ def compose_env() -> dict[str, str]:
         "COMPOSE_PROJECT_NAME": COMPOSE_PROJECT,
         "QDRANT_PORT": str(QDRANT_PORT),
         "QDRANT_GRPC_PORT": str(QDRANT_GRPC_PORT),
+        "QDRANT_API_KEY": LOCAL_QDRANT_API_KEY,
         "RAGFORGE_VOLUME_PREFIX": COMPOSE_PROJECT,
         "RAGFORGE_NETWORK_NAME": f"{COMPOSE_PROJECT}-core",
     })
@@ -132,7 +138,7 @@ def wait_ready(base_url: str) -> None:
     deadline = time.time() + 180
     while time.time() < deadline:
         try:
-            http_json(base_url, "GET", "/readyz", timeout=5)
+            qdrant_json(base_url, "GET", "/readyz", timeout=5)
             return
         except (OSError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError):
             time.sleep(1)
@@ -140,13 +146,13 @@ def wait_ready(base_url: str) -> None:
 
 
 def create_collection(base_url: str, dimension: int) -> None:
-    http_json(base_url, "PUT", f"/collections/{COLLECTION}", {
+    qdrant_json(base_url, "PUT", f"/collections/{COLLECTION}", {
         "vectors": {"size": dimension, "distance": "Cosine"},
         "hnsw_config": {"m": 16, "ef_construct": 100},
         "on_disk_payload": True,
     })
     for field in ("space_id", "index_version"):
-        http_json(base_url, "PUT", f"/collections/{COLLECTION}/index", {
+        qdrant_json(base_url, "PUT", f"/collections/{COLLECTION}/index", {
             "field_name": field, "field_schema": "keyword",
         })
 
@@ -159,7 +165,7 @@ def upload(base_url: str, dimension: int, child_count: int, batch_size: int) -> 
             "vector": vector_for(child_id, dimension),
             "payload": {"space_id": SPACES[child_id % len(SPACES)], "index_version": INDEX_VERSION},
         } for child_id in range(start, min(start + batch_size, child_count))]
-        http_json(base_url, "PUT", f"/collections/{COLLECTION}/points?wait=true", {"points": points}, timeout=300)
+        qdrant_json(base_url, "PUT", f"/collections/{COLLECTION}/points?wait=true", {"points": points}, timeout=300)
     return time.perf_counter() - started
 
 
@@ -176,7 +182,7 @@ def query_one(base_url: str, child_id: int, dimension: int, with_payload: bool) 
     }
     started = time.perf_counter_ns()
     try:
-        result = http_json(base_url, "POST", f"/collections/{COLLECTION}/points/search", payload, timeout=120)
+        result = qdrant_json(base_url, "POST", f"/collections/{COLLECTION}/points/search", payload, timeout=120)
         elapsed_ms = (time.perf_counter_ns() - started) / 1_000_000
         ids = {item.get("id") for item in result.get("result", [])}
         return {"latency_ms": elapsed_ms, "ok": child_id in ids, "error": None, "with_payload": with_payload}
@@ -278,7 +284,7 @@ def main() -> int:
         report["retry_command"] = "python scripts/phase6/capacity_benchmark.py --output tests/evidence/phase6-capacity-retrieval.v1.json"
     finally:
         try:
-            http_json(base_url, "DELETE", f"/collections/{COLLECTION}", timeout=30)
+            qdrant_json(base_url, "DELETE", f"/collections/{COLLECTION}", timeout=30)
         except Exception:  # noqa: BLE001 - cleanup is best effort and recorded by Docker state
             pass
         if not args.keep_stack:
