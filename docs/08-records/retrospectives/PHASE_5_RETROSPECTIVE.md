@@ -13,6 +13,7 @@
 - 合成 generation dataset v1 为 12 cases。candidate citation precision、faithfulness、abstention accuracy 均为 `1.0`；baseline 为 `0.7273/0.5833/0.0`。完整结果见 [`phase5-generation-evaluation.json`](../../../tests/evidence/phase5-generation-evaluation.json)。
 - 安全定向证据为 contract 10/10、AgentToolSecurity 9/9、answer/security 19/19；未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。见 [`phase5-security.json`](../../../tests/evidence/phase5-security.json)。
 - 合成性能证据 E2E p50/p95 为 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`、provider calls `12`。retrieval/generation 使用代理测量，见 [`phase5-performance.json`](../../../tests/evidence/phase5-performance.json)。
+- GitHub Actions quality Run [`32462939899`](https://github.com/Mirror18/RAGForge/actions/runs/32462939899) 对 `e88a654` 全绿；Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype 均成功。
 
 ## Keep
 
@@ -39,3 +40,5 @@
 - evidence material 是否从对象存储按 opaque `content_ref` 读取，还是由 server-side revision service 提供一次性授权读取？
 - embedding provider 是否复用 Ollama/OpenAI-compatible 的 provider route，还是引入独立 embedding capability/配置版本？
 - session-to-space authorizer 是否复用现有 Run controller 的 authorization context，还是在 answer API 建立独立 policy port？
+
+上述选择已整理为未接受的 [`ADR-0010`](../../02-architecture/adr/0010-phase5-provider-material-composition.md)；在人工接受前不执行架构绑定或生产迁移。

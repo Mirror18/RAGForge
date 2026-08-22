@@ -55,7 +55,8 @@
 - 安全：[`phase5-security.json`](../../tests/evidence/phase5-security.json) 的 AgentToolSecurity 9/9、回答/出境 19/19，未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。
 - 性能：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json) 为版本化合成 fixture，E2E p50/p95 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`；retrieval/generation 指标是代理测量，不是生产容量承诺。
 - 全量本地门禁：根 Maven Server+Worker `28/28`、Flyway V1–V12 成功；Web `tsc --noEmit` 与 `vite build` 成功；format/architecture/Markdown/secret/dependency/Compose/contract/Phase 2 security/Phase 4 evaluation 均通过。
-- 阶段结论：P5 功能和安全边界已落地，但生产回答路线保持 fail-closed，不能把合成 provider 测试当作真实可用回答；阶段状态为 blocked。
+- CI：GitHub Actions quality Run [`32462939899`](https://github.com/Mirror18/RAGForge/actions/runs/32462939899) 对 `e88a654` 全绿，包含 Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype。
+- 阶段结论：P5 功能和安全边界已落地，但生产回答路线保持 fail-closed，不能把合成 provider 测试当作真实可用回答；阶段状态为 blocked。生产接线方案已形成未接受的 [`ADR-0010`](../02-architecture/adr/0010-phase5-provider-material-composition.md)，等待人工决定后才能继续。
 
 ## 4. 下一入口
 

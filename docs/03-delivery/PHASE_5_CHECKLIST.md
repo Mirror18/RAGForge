@@ -29,7 +29,7 @@
 - [x] P5-E：SSE answer/citation/abstention/tool/usage/error/done、重连、取消和前端引用交互提交。
 - [x] P5-F：三种只读工具、SSRF/白名单/输出限制、schema 校验和审计提交。
 - [x] P5-G：版本化 generation/citation/abstention 数据集、baseline/candidate、质量/性能/安全证据提交。
-- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation、Markdown link 和 CI 本地门禁全部通过；远端 CI 需以本次 push 后 Run 为最终证据。
+- [x] P5-H：根 Maven、worker、web、contract、architecture、format、secret、dependency、security、evaluation、Markdown link 和 CI 全部通过；GitHub Actions quality Run [`32462939899`](https://github.com/Mirror18/RAGForge/actions/runs/32462939899) 对 `e88a654` 成功。
 
 ## 合并前强制检查
 
