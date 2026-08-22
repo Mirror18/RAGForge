@@ -56,7 +56,7 @@
 - 安全：[`phase5-security.json`](../../tests/evidence/phase5-security.json) 的 AgentToolSecurity 9/9、回答/出境 19/19，未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。
 - 性能：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json) 为版本化合成 fixture，E2E p50/p95 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`；retrieval/generation 指标是代理测量，不是生产容量承诺。
 - 全量本地门禁：此前根 Maven Server+Worker `28/28`、Flyway V1–V12、Web `tsc --noEmit`/`vite build`、format/architecture/Markdown/secret/dependency/Compose/contract/Phase 2 security/Phase 4 evaluation 均通过；本轮 main 合并后 server 全量 `196/196`（0 failures/errors/skips）。
-- CI：GitHub Actions quality Run [`32462939899`](https://github.com/Mirror18/RAGForge/actions/runs/32462939899) 对 `e88a654` 全绿，包含 Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype。
+- CI：GitHub Actions quality Run [`32549602459`](https://github.com/Mirror18/RAGForge/actions/runs/32549602459) 对 `0c13eb0` 全绿（4m58s），包含 Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype。
 - 本轮本地门禁：`mvn -f pom.xml -pl apps/server -am test`（JDK 21）`196/196` 通过；新增 prompt space/hash resolver、retrieval identity、production graph 条件接线相关测试与材料服务已包含在回归中。真实 provider 凭据、真实 RAG E2E 和云出境未在本轮启用。
 - 阶段结论：P5 功能、安全边界、typed authorization、embedding/provider/material seam、完整 opt-in graph 已落地，但默认回答仍 fail-closed，不能把合成 provider/material 测试当作真实可用回答；阶段状态仍为 blocked。[`ADR-0010`](../02-architecture/adr/0010-phase5-provider-material-composition.md) 仍为 Proposed，用户已选择 A、复用既有 provider connection、由 revision/artifact service 提供材料，但仍需受控 route/credential 数据和真实 E2E 证据。
 

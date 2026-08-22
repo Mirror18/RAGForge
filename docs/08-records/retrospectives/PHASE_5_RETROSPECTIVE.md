@@ -13,7 +13,7 @@
 - 合成 generation dataset v1 为 12 cases。candidate citation precision、faithfulness、abstention accuracy 均为 `1.0`；baseline 为 `0.7273/0.5833/0.0`。完整结果见 [`phase5-generation-evaluation.json`](../../../tests/evidence/phase5-generation-evaluation.json)。
 - 安全定向证据为 contract 10/10、AgentToolSecurity 9/9、answer/security 19/19；未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。见 [`phase5-security.json`](../../../tests/evidence/phase5-security.json)。
 - 合成性能证据 E2E p50/p95 为 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`、provider calls `12`。retrieval/generation 使用代理测量，见 [`phase5-performance.json`](../../../tests/evidence/phase5-performance.json)。
-- GitHub Actions quality Run [`32462939899`](https://github.com/Mirror18/RAGForge/actions/runs/32462939899) 对 `e88a654` 全绿；Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype 均成功。
+- GitHub Actions quality Run [`32549602459`](https://github.com/Mirror18/RAGForge/actions/runs/32549602459) 对 `0c13eb0` 全绿；Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype 均成功。
 - 本轮 `mvn -f pom.xml -pl apps/server -am test`（JDK 21）通过 196/196；Testcontainers PostgreSQL/Valkey/Qdrant 与本地 Ollama acceptance 通过。新增 material service、prompt space/hash resolver、retrieval identity 和 graph 条件接线相关测试均通过。
 
 ## Keep
