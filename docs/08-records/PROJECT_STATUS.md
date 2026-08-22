@@ -1,10 +1,10 @@
 # 项目状态
 
-- Updated: 2026-08-22
+- Updated: 2026-08-23
 - Current stage: Phase 6 评估、观测、安全与恢复进行中；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
-- 当前权威状态（覆盖本文档中的历史基线行）：`main`/`origin/main` 为 `e20548fe7881feffe8a777d49de79591750371fa`，GitHub Actions quality Run [`32580314959`](https://github.com/Mirror18/RAGForge/actions/runs/32580314959) 全绿；SBOM `9477611776`、Grype SARIF `9477620481`、Phase 3 JVM `9477664771`、Phase 4 retrieval `9477664518`、Phase 5 evidence `9477656081` 已生成。真实 RAG graph stream 与本地 2 并发成本证据已完成；旧 SHA/旧 CI 行仅保留为历史记录。
+- 当前权威状态（覆盖本文档中的历史基线行）：`main`/`origin/main` 为 `bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`，GitHub Actions quality Run [`32586867110`](https://github.com/Mirror18/RAGForge/actions/runs/32586867110) 全绿；该运行覆盖静态、契约、SBOM/Grype、Maven、Phase 3–5、评估、安全、性能、Web 门禁。旧 SHA/旧 CI 行仅保留为历史记录。
 - 本轮记录：功能合并基线为 `07f973c84fa60dd239ed5c60a443e1edbb801eed`，包含真实 RAG graph stream 与本地并发成本证据；阶段记录提交及其 CI/SBOM/Grype 结果已在下方补记。上方历史远端行保留为上一已知 CI 基线，不能作为本轮提交验证。
 - 本轮 CI 已补记：GitHub Actions quality Run [`32579989036`](https://github.com/Mirror18/RAGForge/actions/runs/32579989036) 对提交 `4481bef34cdeed59068b45d03f8a5abbc48bb379` 全绿；SBOM `9477533715`、Grype SARIF `9477541287`、Phase 3 JVM `9477586833`、Phase 4 retrieval `9477586457`、Phase 5 evidence `9477579925` 均已生成。
 - 最新功能/阶段证据基线：`462c7a5fded50e4a39e9ee99c26f5254da5c8788`；其 GitHub Actions quality Run [`32580715731`](https://github.com/Mirror18/RAGForge/actions/runs/32580715731) 全绿，SBOM `9477714534`、Grype SARIF `9477725361`、Phase 3 JVM `9477775662`、Phase 4 retrieval `9477775256`、Phase 5 evidence `9477766441` 已生成。后续仅记录性提交不改变该功能验证基线。
@@ -15,7 +15,7 @@
 - 独立 RAGForge 目录和本地 Git 仓库初始化。
 - 产品章程、PRD、用户故事和非功能边界。
 - 总体/领域/摄取/检索/Provider/API 架构基线。
-- 10 项 Accepted ADR（包括 ADR-0010；ADR README 与各 ADR 状态一致）。
+- 11 项 Accepted ADR（包括 ADR-0010、ADR-0011；ADR README 与各 ADR 状态一致）。
 - Phase 0–7 路线、开发流程和完成定义。
 - 测试、RAG 评估、性能、部署、观测、恢复、安全和开源合规计划。
 - GitHub 成熟项目比较、引用清单和上游复用登记表。
@@ -78,6 +78,7 @@
 - 安全与供应链：[`phase6-security.v1.json`](../../tests/evidence/phase6-security.v1.json) 的 Phase 6 corpus、出境回归、Phase 5 合同安全和 AgentToolSecurity 合计 23/23；本轮 [`phase6-redteam-agent-pre-review.v1.json`](../../tests/evidence/phase6-redteam-agent-pre-review.v1.json) 又执行 32 个安全/合同/工具边界测试并全部通过。cross-space、Evidence 外引用、unauthorized cloud、SSRF、Shell/SQL/任意网络/外部写入、解析/OCR 绕过、prompt injection 越权和 raw prompt/provider body 持久化均为 0。最新 GitHub Actions quality workflow [`32577917976`](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿；该 run 重新执行了 SBOM/Grype、Maven、Phase 3–5、Web 和 Phase 4 门禁。阶段 SBOM artifact `9477027172`、Grype SARIF `9477036384`、Phase 3 JVM `9477081726`、Phase 4 retrieval `9477081302`、Phase 5 evidence `9477073334` 可追溯。Agent-assisted pre-review 明确不替代人工签名。
 - 恢复与运维：[`phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json) 记录隔离完整恢复、PG 单点、Qdrant 重建、对象缺失/hash、active index 回滚、tombstone/delete ledger 和 outbox/job 幂等；V14 后 RPO `0s`、RTO `11.885s`。retention、space-scoped audit export、cost aggregation 和 SSE event cleanup 已实现，`Phase6OperationsServiceTest` 5/5 通过，且 [`phase6-operations-runtime.v1.json`](../../tests/evidence/phase6-operations-runtime.v1.json) 证明带 `space_id` 的过期 synthetic event 可在隔离 scheduler 中 4 秒内从 1 条清理至 0 条。
 - 多实例 live fan-out：[`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json) 对两个独立 Spring server context、共享隔离 PostgreSQL/Valkey 完成跨实例投递；同时覆盖提交后发布、回滚不泄漏、同空间/跨空间隔离、重复/乱序补洞、Valkey 暂停后的 PostgreSQL Last-Event-ID durable replay、envelope 最小字段和 listener shutdown。新增 fan-out/双实例测试与完整 server 回归均通过。
+- 本轮集成与质量闭环：多实例实现及记录提交 `0ff2d13`/`869fee7` 已推送；取消执行竞态修复 `f02d14d`、事务边界修复 `f086169` 经两个独立 worker 提交后，以 `08b3bfa`、`bde93eb` 非快进合并。基线取消测试在 `eea37ea` 已复现原有竞态；修复后 server `210` tests、根工程 `238` tests 均为 0 failures/0 errors/1 skipped，最新 quality Run `32586867110` 全绿。
 - 容量与在线性能：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json) 已真实测得 Ollama `nomic-embed-text:latest` 为 768 维；1,000,000 synthetic child chunks、4 spaces、20 并发混合过滤检索通过，Recall@10 `0.995`、p95 `119.8761ms`、错误率 `0`，满足 P6-OBS-03。该证据仍明确标注向量值为 live dimension 下的公共合成向量，不外推生产语义质量。新的 [`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json) 在隔离 server 和正式 session 认证 run 上完成 100 次 health API 与 SSE first-event 测量：non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`、错误率均为 `0`，满足 P6-OBS-02。另有 [`phase6-real-ollama-stream-metrics.v1.json`](../../tests/evidence/phase6-real-ollama-stream-metrics.v1.json) 通过 loopback `LOCAL_ONLY` 流式探针测得 standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall time `11475.2584ms`、吞吐 `19.6176 tokens/s`、usage `35/46/81`；该证据不冒充同步 RAG graph TTFT，也不代表并发成本模型。
 - 真实 RAG 与成本基线：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json) 已记录真实本地 Ollama RAG、768 维 embedding、revision/artifact material、citation/provenance、usage 和 `LOCAL_ONLY` 出境约束；[`phase6-cost-local-ollama.v1.json`](../../tests/evidence/phase6-cost-local-ollama.v1.json) 固化了 1 次 provider call、293 tokens、provider-reported usage 和本地估算成本 `0 USD`。该证据满足本轮用户授权的真实 E2E 和本地成本基线，但不替代 Phase 6 人工评估、并发成本模型或云端商业定价。
 - 当前阶段结论（历史记录）：P6-C、P6-D、P6-E、P6-OBS-02、P6-OBS-03、standalone 本地流式 TTFT 探针和 P6-G 单实例实现/专项证据已具备；此前 P6-G 多实例 live fan-out 尚未完成。该结论已由后续多实例实现与证据更新。
@@ -88,7 +89,7 @@
 
 - 记录更正：本轮已补齐真实 RAG graph stream boundary、本地 2 并发成本证据和 ADR-0011 多实例 live fan-out 演练；下一入口仅为人工/red-team 签名。云端/生产级质量与成本仍是本阶段明确边界，不得由本地证据外推。
 
-Phase 6 当前入口为 120+ 数据集与人工/red-team 评估及阶段闭环审计；真实 RAG graph 流式/并发成本、retention/audit/cost/SSE cleanup 和多实例事件扇出演练均已有证据。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
+Phase 6 当前入口为 120+ 数据集与人工/red-team 评估及阶段闭环审计；真实 RAG graph 流式/并发成本、retention/audit/cost/SSE cleanup 和多实例事件扇出演练均已有证据，当前代码与 CI 质量门禁已闭环。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
 
 ## 6. 更新规则
 

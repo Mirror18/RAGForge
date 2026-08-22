@@ -2,7 +2,7 @@
 
 - 日期：2026-08-23
 - 状态：未闭环，保留在 `in-progress`
-- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线实现验证 SHA：`0ff2d13`
+- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线实现验证 SHA：`bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`
 
 ## Done
 
@@ -20,6 +20,8 @@
 - 增加本地 Ollama 2 并发成本证据；4 个 measured requests 全部成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、retry/cancel/timeout `0`、估算成本 `0 USD`。
 - 接受 ADR-0011 并实现多实例 run-event live fan-out；两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 的跨实例投递、空间隔离、提交后发布、回滚、乱序补洞、durable replay、最小 envelope 和 listener shutdown 均有专项测试与证据。
 - 本轮主线提交 `4481bef` 的 GitHub Actions quality Run `32579989036` 全绿，并生成 SBOM `9477533715`、Grype `9477541287`、Phase 3/4/5 evidence artifacts；本轮证据可追溯到 CI。
+- 处理了 CI 暴露的取消执行竞态：先提交 `CANCELLED` 再 signal provider，并以 `REQUIRES_NEW` 隔离乐观锁失败，避免外层事务被标记 rollback-only；worker commits `f02d14d`/`f086169`，main merges `08b3bfa`/`bde93eb`，本地 server/root 全量测试与 quality Run `32586867110` 全部通过。
+- 当前 main 已推送且工作区干净；quality Run `32586867110` 对 `bde93eb` 全绿，Phase 6 自动化/安全/供应链/评估门禁证据已更新。
 
 ## Evidence gaps
 
