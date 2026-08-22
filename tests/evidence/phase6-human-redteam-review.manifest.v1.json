@@ -79,7 +79,6 @@
   "signatures": [],
   "decision": "PENDING",
   "blocking_reasons": [
-    "No human or red-team reviewer signature has been recorded.",
-    "The multi-instance live fan-out architecture remains Proposed in ADR-0011."
+    "No human or red-team reviewer signature has been recorded."
   ]
 }

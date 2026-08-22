@@ -102,4 +102,4 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - 新增 `R-030`：本地 Ollama 2 并发成本 probe 已完成 4/4 成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、估算成本 `0 USD`；该结果只反映 loopback 本地观测，不代表云端商业价格、生产资源容量或真实模型质量。P=3、I=3、Score=9，Performance / Platform，MITIGATING。
 - `R-028` 已关闭（本提交范围）：本地 Syft/跟踪内容 Grype 已通过，最新 GitHub Actions quality [`32577917976`](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿；阶段 SBOM artifact `9477027172`、Grype SARIF artifact `9477036384` 可追溯。发布前仍需按目标镜像/digest 重跑发布级扫描。
 - 观测 profile、fault drill、隔离恢复和 23/23 安全专项均已取得证据，但 `R-003` 全局风险仍 OPEN，需容量压力与人工安全复核完成后再评审关闭。
-- 多实例 live fan-out 当前由 [`ADR-0011`](../02-architecture/adr/0011-multi-instance-run-event-fanout.md) 提出 Valkey Pub/Sub 方案，状态仍为 `Proposed`；在用户接受前不实施、不宣称门槛满足。
+- `R-031` 已关闭（多实例 run-event fan-out）：ADR-0011 已于 2026-08-22 由用户接受；两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 的跨实例、同/跨空间隔离、提交后发布、回滚不泄漏、重复/乱序补洞、Last-Event-ID durable replay 和 listener shutdown 均通过，证据见 [`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json)。该结论不外推生产容量、云端部署或跨区域语义。

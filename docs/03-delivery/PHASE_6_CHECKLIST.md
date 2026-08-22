@@ -4,9 +4,9 @@
 - 状态：in-progress
 - 冻结日期：2026-08-22
 - 阶段基线：`0fe22db`
-- 已接受 ADR：10 项；Phase 5 已完成闭环
+- 已接受 ADR：11 项；Phase 5 已完成闭环
 - 范围：持续评估、全链路观测、提示注入/上传/越权/供应链安全收敛、隔离恢复、真实容量、保留删除和 on-call 演练。
-- 非范围：release、生产迁移、启用云端出境、接受新 ADR/许可证、引入第二套业务 backend。
+- 非范围：release、生产迁移、启用云端出境、接受未经用户明确接受的新 ADR/许可证、引入第二套业务 backend。
 
 ## 不可变退出门槛
 
@@ -51,7 +51,7 @@
 4. 恢复演练只使用隔离基础设施和合成数据；不得接入生产数据源。
 5. P0/P1、跨空间、Evidence 外引用和未授权出境任一失败时立即 fail-closed。
 
-## 当前证据索引（2026-08-22）
+## 当前证据索引（2026-08-23）
 
 - P6-EVAL-01/02/03：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json)、[`phase6-evaluation-report.v1.json`](../../tests/evidence/phase6-evaluation-report.v1.json)；128 cases 和 deterministic candidate runner 已通过，人工/red-team review 仍 `PENDING`。
 - P6-SEC-01/02/03/04：[`phase6-security.v1.json`](../../tests/evidence/phase6-security.v1.json)、[quality run 32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)；23/23 安全回归通过，Syft/Grype CI 通过，阶段 SBOM artifact `9477027172`、Grype SARIF `9477036384` 可追溯。
@@ -59,7 +59,7 @@
 - 当前头提交 CI：quality Run [`32580314959`](https://github.com/Mirror18/RAGForge/actions/runs/32580314959) 对 `e20548f` 全绿，SBOM `9477611776`、Grype SARIF `9477620481`、Phase 3/4/5 artifacts `9477664771`/`9477664518`/`9477656081` 可追溯。
 - P6-OBS-01/04：[`phase6-observability-assets.v1.json`](../../tests/evidence/phase6-observability-assets.v1.json)、[`phase6-observability-fault-drill.v1.json`](../../tests/evidence/phase6-observability-fault-drill.v1.json)；profile、dashboard、脱敏和告警演练已通过。
 - P6-REC-01/02：[`phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json)；V14 后 RPO `0s`、RTO `11.885s`，恢复场景已覆盖。
-- P6-OPS-01：[`PHASE_6_RETENTION_AUDIT_COST.md`](../../docs/05-operations/PHASE_6_RETENTION_AUDIT_COST.md)、[`phase6-operations-runtime.v1.json`](../../tests/evidence/phase6-operations-runtime.v1.json)；V14 后实现、space/time scope、审计 hash-only、cost aggregation 和 `Phase6OperationsServiceTest` 5/5 通过；隔离 server 启用 scheduler 后，带 `space_id` 的过期 synthetic SSE event 4 秒内从 1 条清理至 0 条。多实例 live fan-out 仍单独待演练。
+- P6-OPS-01：[`PHASE_6_RETENTION_AUDIT_COST.md`](../../docs/05-operations/PHASE_6_RETENTION_AUDIT_COST.md)、[`phase6-operations-runtime.v1.json`](../../tests/evidence/phase6-operations-runtime.v1.json)、[`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json)；V14 后实现、space/time scope、审计 hash-only、cost aggregation 和 `Phase6OperationsServiceTest` 5/5 通过；隔离 scheduler 清理 1 → 0，多实例 live fan-out 已在两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 中完成跨实例、隔离、回滚、乱序补洞、durable replay 和 shutdown 演练。
 - P6-OBS-02：[`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json)；隔离 server `ragforge-p6-online` 使用正式 register/login session 认证创建 synthetic LOCAL_ONLY Ollama run，100 次 health API 与 100 次 SSE first-event 均无错误，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`，满足阈值；cookie 仅通过环境变量注入且未写入证据。
 - 真实流式指标补充：[`phase6-real-ollama-stream-metrics.v1.json`](../../tests/evidence/phase6-real-ollama-stream-metrics.v1.json)、[`phase6-real-ollama-rag-graph-stream.v1.json`](../../tests/evidence/phase6-real-ollama-rag-graph-stream.v1.json)、[`ollama_stream_metrics.py`](../../scripts/phase6/ollama_stream_metrics.py)；loopback `LOCAL_ONLY` standalone probe 与真实 revision/artifact-backed RAG graph stream 均通过。graph 证据测得 graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`；只保存 hash/长度，不保存 prompt/body/output 原文；证据明确不宣称生产同步 `GenerationPort` 已暴露 streaming。
 - P6-OBS-03：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json)；768 维、1M points、4-space filter、20 concurrency、Recall@10 `0.995`、p95 `119.8761ms`、error rate `0`，满足检索容量阈值；向量值为 live dimension 下的公共合成值。
@@ -67,4 +67,4 @@
 - 本地并发成本：[`phase6-cost-local-ollama-concurrent.v1.json`](../../tests/evidence/phase6-cost-local-ollama-concurrent.v1.json)；隔离 loopback Ollama、2 并发、4 个 measured requests 全部成功，TTFT p50/p95 `1482.8559/2688.2120ms`、stream wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、retry/cancel/timeout `0`、估算成本 `0 USD`；仅为本地观测，不代表云端商业价格或生产容量。
 - 人工/red-team 评审 manifest：[`phase6-human-redteam-review.manifest.v1.json`](../../tests/evidence/phase6-human-redteam-review.manifest.v1.json)；当前为 `PENDING_HUMAN_REVIEW`，不得用自动化结果代签。
 - Agent-assisted red-team 前置报告：[`phase6-redteam-agent-pre-review.v1.json`](../../tests/evidence/phase6-redteam-agent-pre-review.v1.json)；4 组可重跑安全/合同/工具测试共 32 tests 通过，但明确不替代人工签名。
-- 多实例 live fan-out：[`ADR-0011`](../../docs/02-architecture/adr/0011-multi-instance-run-event-fanout.md) 为 `Proposed`；在用户明确接受前不得实现为绑定架构决策或宣称门槛已满足。
+- 多实例 live fan-out：[`ADR-0011`](../../docs/02-architecture/adr/0011-multi-instance-run-event-fanout.md) 已由用户于 2026-08-22 接受；[`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json) 与双 Spring context 集成测试通过。该证据仅覆盖隔离 PostgreSQL/Valkey 与合成数据，不外推生产容量或云端部署。

@@ -1,8 +1,8 @@
 # Phase 6 Retrospective：评估、观测、安全与恢复
 
-- 日期：2026-08-22
+- 日期：2026-08-23
 - 状态：未闭环，保留在 `in-progress`
-- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`07f973c84fa60dd239ed5c60a443e1edbb801eed`
+- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线实现验证 SHA：`0ff2d13`
 
 ## Done
 
@@ -18,6 +18,7 @@
 - 增加 loopback `LOCAL_ONLY` Ollama streaming probe；真实 `qwen3.5:9b` standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall `11475.2584ms`、`19.6176 tokens/s`、usage `35/46/81`，输出仅保留 hash/长度。
 - 增加真实 revision/artifact-backed RAG graph stream boundary evidence；graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`，并显式标注生产同步 `GenerationPort` 尚未暴露 streaming。
 - 增加本地 Ollama 2 并发成本证据；4 个 measured requests 全部成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、retry/cancel/timeout `0`、估算成本 `0 USD`。
+- 接受 ADR-0011 并实现多实例 run-event live fan-out；两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 的跨实例投递、空间隔离、提交后发布、回滚、乱序补洞、durable replay、最小 envelope 和 listener shutdown 均有专项测试与证据。
 - 本轮主线提交 `4481bef` 的 GitHub Actions quality Run `32579989036` 全绿，并生成 SBOM `9477533715`、Grype `9477541287`、Phase 3/4/5 evidence artifacts；本轮证据可追溯到 CI。
 
 ## Evidence gaps
@@ -27,7 +28,7 @@
 - 真实 Ollama embedding 维度 768 和 1,000,000 点 Qdrant 混合检索已取得有效证据：Recall@10 `0.995`、p95 `119.8761ms`、20 并发错误率 `0`；向量值仍是 live dimension 下的公共合成值。
 - 在线 API/SSE 性能门槛已取得认证隔离运行证据；真实 RAG graph stream boundary 已测量，但生产同步 `GenerationPort` streaming 仍未实现，不将边界探针冒充为生产 API 能力。
 - 本地 2 并发成本已观测且估算为 0 USD；云端价格、云 route 和生产级并发模型仍未授权/未测量。
-- retention/cleanup 的空间限定单实例受控定时运行已通过；多实例 live fan-out 尚未完成。
+- retention/cleanup 的空间限定单实例受控定时运行和多实例 live fan-out 已通过隔离演练；证据不外推生产容量、云端部署或跨区域语义。
 
 ## Learnings
 
@@ -39,8 +40,8 @@
 ## Next actions
 
 1. 由 Quality/Security 完成人工与 red-team review manifest，逐 case 记录 reviewer、decision、解释和退化处置。
-2. 由用户决定是否接受 ADR-0011；若接受，按其边界实现并完成双实例/故障恢复演练。
-3. 补齐人工/red-team 评审和 ADR-0011 证据后，再进行阶段闭环审计。
+2. 完成人工/red-team review manifest：至少 2 名人类 reviewer 和 1 名 red-team reviewer，逐切片记录结论、解释和退化处置。
+3. 在人工签名完成后，重跑阶段退出条件审计并创建 Phase 6 closure commit；云端与生产质量/容量仍保持明确边界。
 
 ## Closure rule
 
