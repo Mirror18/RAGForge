@@ -62,10 +62,21 @@
 - 本轮本地门禁：根 `mvn -q test`（JDK 21）reports 汇总 `227` tests、`0` failures、`0` errors、`1` skipped；新增 prompt space/hash resolver、retrieval identity、production graph 条件接线、durable run event replay、generation audit 和真实 Ollama RAG E2E 均包含在回归中。未提交真实 provider secret，云出境未启用。
 - 阶段结论：P5 的合同、引用/拒答、工具安全、SSE replay/cancel、typed authorization、provider/material graph、真实本地 Ollama RAG E2E 和审计 provenance 均已验证；ADR-0010 已 Accepted。真实 E2E 仅授权并覆盖 LOCAL_ONLY 单 fixture，不等同于云出境、生产容量或 Phase 6 评估。
 
-## 4. 下一入口
+## 4. Phase 6 当前进度与证据（2026-08-22）
+
+- 基线与治理：Phase 6 checklist/执行计划已冻结，统一基线为 `0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；ADR-0010 已由用户接受，方案 A、既有 provider connection、revision/artifact material service 和本地 Ollama `LOCAL_ONLY` 授权均已落实。
+- 评估：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json) 有 128 个版本化公共合成用例，runner 校验与 7/7 单元测试通过；candidate report 的确定性指标为 1.0，但人工/red-team review manifest 仍为 `PENDING`，不能关闭 P6-EVAL-04，也不能把 synthetic candidate 当作真实模型质量结论。
+- 观测：[`phase6-observability-assets.v1.json`](../../tests/evidence/phase6-observability-assets.v1.json) 与 [`phase6-observability-fault-drill.v1.json`](../../tests/evidence/phase6-observability-fault-drill.v1.json) 已验证 OTel/Prometheus/Grafana/Loki/Tempo profile、dashboard provisioning、trace/log 脱敏和未授权出境告警演练；观测资源测试 3/3 通过。浏览器视觉验收仍未宣称完成。
+- 安全与供应链：[`phase6-security.v1.json`](../../tests/evidence/phase6-security.v1.json) 的 Phase 6 corpus、出境回归、Phase 5 合同安全和 AgentToolSecurity 合计 23/23；cross-space、Evidence 外引用、unauthorized cloud、SSRF、Shell/SQL/任意网络/外部写入、解析/OCR 绕过、prompt injection 越权和 raw prompt/provider body 持久化均为 0。GitHub Actions quality workflow [`32570689145`](https://github.com/Mirror18/RAGForge/actions/runs/32570689145) 全绿，Syft SBOM artifact `9475233814`、Grype SARIF artifact `9475239975` 已生成。
+- 恢复与运维：[`phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json) 记录隔离完整恢复、PG 单点、Qdrant 重建、对象缺失/hash、active index 回滚、tombstone/delete ledger 和 outbox/job 幂等；RPO `0s`、RTO `12.416s`。retention、space-scoped audit export、cost aggregation 和 SSE event cleanup 已实现并通过 4/4 定向测试。
+- 容量与在线性能：[`phase6-capacity-retrieval.v1.json`](../../tests/evidence/phase6-capacity-retrieval.v1.json) 已真实测得 Ollama `nomic-embed-text:latest` 为 768 维，但 1,000,000 点 Qdrant 批量写入因 WinError 10060 阻塞；不能用 10,000 点 smoke 或旧 8 维结果替代。non-AI API p95 和 SSE first event 也分别因无 server/run harness 留为 `FAILED/BLOCKED`，因此 P6-OBS-02/P6-OBS-03 未满足。
+- 真实 RAG：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json) 已记录真实本地 Ollama RAG、768 维 embedding、revision/artifact material、citation/provenance、usage 和 `LOCAL_ONLY` 出境约束；该证据满足本轮用户授权的真实 E2E，但不替代 Phase 6 人工评估和容量门槛。
+- 当前阶段结论：P6-C、P6-D、P6-E、P6-G 的实现/专项证据已具备；P6-EVAL-04、P6-OBS-02、P6-OBS-03 仍未满足，P6-H 不得关闭。阶段状态保持 `in-progress`。
+
+## 5. 下一入口
 
 Phase 6 当前入口为 120+ 数据集与人工/red-team 评估、真实并发容量/成本、OTel Dashboard/告警/Runbook、隔离恢复、保留删除和多实例事件清理。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
 
-## 5. 更新规则
+## 6. 更新规则
 
 阶段状态、阻塞、退出证据和下一动作先更新本文件；阶段复盘保存在 `retrospectives/`。项目进入稳定开发后，再决定将何种摘要同步到 Obsidian。

@@ -88,3 +88,13 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-012` 继续 OPEN：Phase 5 的性能文件只提供合成 E2E/TTFT 及 retrieval/generation 代理；生产 embedding 维度、并发、模型上下文和成本仍需真实环境复测。
 - `R-027` 新增：同步非流式 Ollama 适配器不暴露首 token 时间，真实 E2E 只能记录 retrieval/generation/E2E，TTFT 明确为 `NOT_MEASURED`。P=2、I=3、Score=6，Performance，MITIGATING；Phase 6 流式协议和 TTFT 观测补齐前不得声称真实 TTFT 达标。
 - `R-028` 新增：本地 SBOM 门禁因环境缺少 `syft/trivy` 未能执行，当前依赖旧 CI 证据且需新提交 CI 复核。P=2、I=4、Score=8，Compliance，MITIGATING；推送后以 GitHub Actions SBOM/Grype artifact 作为本提交证据。
+
+## 9. Phase 6 复审（2026-08-22）
+
+- `R-005` 继续 MITIGATING：Phase 6 已形成 128 个版本化公共合成评估用例，确定性 candidate 指标为 1.0；人工/red-team review manifest 尚未完成，不能关闭引用、拒答和冲突场景的质量风险。
+- `R-012` 继续 OPEN：评估规模门槛已达到 128 cases，但人工复核和真实模型质量证据仍缺失；不得以 deterministic fixture 指标替代人工 review。
+- `R-024` 继续 OPEN：真实 Ollama embedding 维度已测得 768，但 1M Qdrant 批量写入因 WinError 10060 阻塞，尚无有效 retrieval p95/Recall@10 结论；P6 容量门槛未关闭。
+- 新增 `R-029`：Phase 6 non-AI API p95、SSE first event p95 缺少运行中的 server 和已认证 run harness，证据分别为 `FAILED/BLOCKED`。P=3、I=4、Score=12，Performance / Operations，OPEN；补齐隔离 server/load harness 后重跑，TTFT 必须单独排除。
+- `R-027` 继续 MITIGATING：真实 Ollama RAG E2E 已成功，但当前同步适配器仍不测 TTFT；SSE first event 门槛尚未取得有效数据。
+- `R-028` 已关闭（本提交范围）：本地 Syft/跟踪内容 Grype 已通过，GitHub Actions quality [`32570689145`](https://github.com/Mirror18/RAGForge/actions/runs/32570689145) 全绿；SBOM artifact `9475233814`、Grype SARIF artifact `9475239975` 已生成。发布前仍需按目标镜像/digest 重跑发布级扫描。
+- 观测 profile、fault drill、隔离恢复和 23/23 安全专项均已取得证据，但 `R-003` 全局风险仍 OPEN，需容量压力与人工安全复核完成后再评审关闭。

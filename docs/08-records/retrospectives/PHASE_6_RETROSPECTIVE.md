@@ -1,0 +1,40 @@
+# Phase 6 Retrospective：评估、观测、安全与恢复
+
+- 日期：2026-08-22
+- 状态：未闭环，保留在 `in-progress`
+- 基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`
+
+## Done
+
+- 冻结了 Phase 6 checklist、执行计划、证据字段和所有权边界。
+- 建立 128 个版本化公共合成评估用例和可复现 runner；安全、权限、冲突、无答案和注入切片已进入数据集。
+- 完成 OTel/Prometheus/Grafana/Loki/Tempo profile、告警、dashboard、脱敏验证和未授权出境 fault drill。
+- 完成 Phase 6 安全 corpus、出境/合同/AgentToolSecurity 回归；未发现跨空间、Evidence 外引用、未授权出境、SSRF 或工具越权。
+- 完成隔离恢复演练：RPO `0s`、RTO `12.416s`，覆盖 PostgreSQL、Qdrant、对象、active index、tombstone/delete ledger 和 outbox/job 幂等。
+- 实现 retention、space-scoped audit export、cost aggregation 和 SSE event cleanup。
+- 在用户明确授权下完成真实本地 Ollama `LOCAL_ONLY` RAG E2E；复用 provider connection，由 revision/artifact service 提供 material，并保留 citation/provenance。
+
+## Evidence gaps
+
+- 评估 candidate 的确定性指标全部为 1.0，但人工/red-team review 尚未完成；不得把 runner 结果写成真实模型质量结论。
+- 真实 Ollama embedding 维度 768 已取得；1,000,000 点 Qdrant 批量写入出现 WinError 10060，尚未取得有效 retrieval p95/Recall@10。
+- non-AI API p95 和 SSE first event p95 缺少运行中的隔离 server 与认证 harness；同步适配器 TTFT 仍 `NOT_MEASURED`。
+- retention/cleanup 已有实现与单元证据，但真实受控定时运行和多实例 live fan-out 尚未完成。
+
+## Learnings
+
+- “有 runner”不等于“有人工质量结论”；证据状态必须把 deterministic、synthetic、real、manual 分开记录。
+- 容量演练的真实维度探针、批量写入、混合查询和在线 API/SSE 探针应拆成可独立重试的阶段，避免一个 Qdrant 超时阻塞所有指标。
+- Windows 子进程的 PATH 大小写和本地工具安装位置会影响供应链门禁；runner 应把工具可见性作为可验证输入，而不是只依赖 shell 中的命令解析。
+- 观测 profile 的运行时查询和告警 fault drill 比静态配置更接近可运营证据，但 dashboard 视觉验收仍需独立记录。
+
+## Next actions
+
+1. 由 Quality/Security 完成人工与 red-team review manifest，逐 case 记录 reviewer、decision、解释和退化处置。
+2. 修复隔离 Qdrant 1M 批量写入超时，先保留 768 维和 4-space filter 约束，再重跑 1M/20 并发混合负载。
+3. 启动隔离 server，准备不含真实凭据的认证 run harness，分别重跑 non-AI API p95 和 SSE first event p95；TTFT 单独标记。
+4. 执行 retention/audit/cost/SSE cleanup 的受控定时演练，并明确多实例 live fan-out 的实现或延期决策。
+
+## Closure rule
+
+在上述证据缺口关闭、P0/P1 风险为零、所有 CI/SBOM/Grype 结果固化后，才能更新 checklist、PROJECT_STATUS、RISK_REGISTER、TRACEABILITY_MATRIX 并创建 Phase 6 closure commit。当前不得创建阶段闭环提交。

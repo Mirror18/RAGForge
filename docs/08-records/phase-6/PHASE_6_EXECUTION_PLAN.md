@@ -52,12 +52,12 @@ P6-B、P6-C、P6-E 可在文件 ownership 不冲突时并行；P6-D 依赖 A 与
 | Task | 状态 | 证据/备注 |
 |---|---|---|
 | P6-A | completed | Checklist、执行计划和验收门槛已冻结，基线 `0fe22db` |
-| P6-B | pending | 现有 Phase 5 仅 12 cases；需要 >=120 与人工/red-team |
-| P6-C | pending | 当前只有设计文档，需真实可运行 dashboard/alert/runbook |
-| P6-D | pending | Phase 5 安全回归存在，但 Phase 6 专项 corpus/SCA 收敛未完成 |
-| P6-E | pending | 只有 backup smoke/事件 replay；完整隔离恢复未完成 |
-| P6-F | pending | 现有 1M 证据为 8 维合成向量，不满足真实容量门槛 |
-| P6-G | pending | retention/deletion/audit export/cost/SSE cleanup 尚未闭环 |
+| P6-B | partial | 128 cases、runner、candidate report 和 7/7 unit 已完成；人工/red-team review `PENDING` |
+| P6-C | completed | OTel/Prometheus/Grafana/Loki/Tempo profile、脱敏、dashboard、告警与 fault drill 已有真实证据 |
+| P6-D | partial | 23/23 Phase 6 安全回归通过，quality run `32570689145` 的 Syft/Grype/Maven/既有安全门禁全绿；人工/red-team review 仍待完成 |
+| P6-E | completed | 隔离恢复 5/5；完整、PG、Qdrant、对象、active index、tombstone/outbox 场景覆盖，RPO/RTO 达标 |
+| P6-F | blocked | 768 维探针成功；1M Qdrant 写入 WinError 10060，在线 API/SSE harness 也未提供，证据保留为 BLOCKED/FAILED |
+| P6-G | partial | retention、audit export、cost aggregation、SSE cleanup 实现和 4/4 定向测试通过；受控运行与多实例 live fan-out 仍待演练 |
 | P6-H | pending | 等全部门槛与 CI 证据完成后执行 |
 
 ## 阶段结论

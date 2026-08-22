@@ -50,3 +50,13 @@
 3. 不把 8 维向量、单请求、合成延迟或 Phase 5 单 fixture 外推为容量结论。
 4. 恢复演练只使用隔离基础设施和合成数据；不得接入生产数据源。
 5. P0/P1、跨空间、Evidence 外引用和未授权出境任一失败时立即 fail-closed。
+
+## 当前证据索引（2026-08-22）
+
+- P6-EVAL-01/02/03：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json)、[`phase6-evaluation-report.v1.json`](../../tests/evidence/phase6-evaluation-report.v1.json)；128 cases 和 deterministic candidate runner 已通过，人工/red-team review 仍 `PENDING`。
+- P6-SEC-01/02/03/04：[`phase6-security.v1.json`](../../tests/evidence/phase6-security.v1.json)、[quality run 32570689145](https://github.com/Mirror18/RAGForge/actions/runs/32570689145)；23/23 安全回归通过，Syft/Grype CI 通过，SBOM artifact `9475233814`、Grype SARIF `9475239975` 已生成。
+- P6-OBS-01/04：[`phase6-observability-assets.v1.json`](../../tests/evidence/phase6-observability-assets.v1.json)、[`phase6-observability-fault-drill.v1.json`](../../tests/evidence/phase6-observability-fault-drill.v1.json)；profile、dashboard、脱敏和告警演练已通过。
+- P6-REC-01/02：[`phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json)；RPO `0s`、RTO `12.416s`，恢复场景已覆盖。
+- P6-OPS-01：[`PHASE_6_RETENTION_AUDIT_COST.md`](../../docs/05-operations/PHASE_6_RETENTION_AUDIT_COST.md)；实现和 4/4 定向测试通过，真实定时运行/多实例 live fan-out 仍待演练。
+- P6-OBS-02/03：[`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json)、[`phase6-capacity-retrieval.v1.json`](../../tests/evidence/phase6-capacity-retrieval.v1.json)；当前分别 `FAILED/BLOCKED`，以及 1M 写入 WinError 10060，未满足阈值。
+- 用户授权的真实 E2E：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json)；仅证明本地 `LOCAL_ONLY` 真实 RAG 链路，不替代 Phase 6 质量和容量门槛。
