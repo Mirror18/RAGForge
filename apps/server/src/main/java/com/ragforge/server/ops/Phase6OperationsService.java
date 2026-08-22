@@ -2,6 +2,7 @@ package com.ragforge.server.ops;
 
 import com.ragforge.server.answer.persistence.JdbcAnswerPersistence;
 import com.ragforge.server.run.JdbcRunEventStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,6 +29,7 @@ public class Phase6OperationsService {
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
+    @Autowired
     public Phase6OperationsService(JdbcAnswerPersistence answers, JdbcRunEventStore runEvents,
                                    JdbcTemplate jdbc) {
         this(answers, runEvents, jdbc, Clock.systemUTC());
