@@ -68,9 +68,17 @@ public final class RAGAnswerService {
     }
 
     public Answer answer(AnswerRequest request) {
+        return answer(request, null);
+    }
+
+    public Answer answer(AnswerRequest request, AnswerAuthorizationContext authorizationContext) {
         Objects.requireNonNull(request, "request");
         try {
-            authorizer.requireAccess(request.spaceId(), request);
+            if (authorizationContext == null) {
+                authorizer.requireAccess(request.spaceId(), request);
+            } else {
+                authorizer.requireAccess(request.spaceId(), request, authorizationContext);
+            }
         } catch (SpaceAccessDeniedException | SecurityException denied) {
             return refusal(request, AnswerStatus.ABSTAINED, AbstentionReason.SPACE_ACCESS_DENIED,
                     "The requested knowledge space is not available to this request.", List.of(),

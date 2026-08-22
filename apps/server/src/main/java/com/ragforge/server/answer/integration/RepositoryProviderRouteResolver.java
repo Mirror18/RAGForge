@@ -81,6 +81,56 @@ public final class RepositoryProviderRouteResolver implements ProviderRouteResol
                 providerType, decision);
     }
 
+    @Override
+    public ResolvedRoute resolveEmbedding(UUID spaceId, EgressDecision decision, UUID correlationId) {
+        SpaceBindingRepository.SpaceBindingRecord binding = bindings.findCurrent(spaceId)
+                .filter(item -> item.embeddingRouteId() != null)
+                .orElseThrow(() -> denied(spaceId, correlationId, decision, "EMBEDDING_ROUTE_NOT_BOUND"));
+        ProviderRepository.ModelRouteVersion route = providers.findRouteVersion(spaceId, binding.embeddingRouteId())
+                .filter(item -> item.status() == ProviderRepository.ModelRouteStatus.PUBLISHED
+                        && item.purpose() == ProviderRepository.RoutePurpose.EMBEDDING)
+                .orElseThrow(() -> denied(spaceId, correlationId, decision, "EMBEDDING_ROUTE_NOT_PUBLISHED"));
+        ProviderRepository.ModelProfileVersion profile = providers.listRouteCandidates(spaceId, route.id()).stream()
+                .map(item -> providers.findProfileVersion(spaceId, item.profileVersionId()).orElse(null))
+                .filter(item -> item != null && item.status() == ProviderRepository.ModelProfileStatus.PUBLISHED
+                        && item.embeddingDimension() != null)
+                .findFirst()
+                .orElseThrow(() -> denied(spaceId, correlationId, decision, "EMBEDDING_PROFILE_NOT_AVAILABLE"));
+        ProviderRepository.ProviderConnection connection = providers.findConnectionInSpace(spaceId,
+                        profile.providerConnectionId())
+                .filter(item -> item.status() == ProviderRepository.ProviderStatus.ACTIVE)
+                .orElseThrow(() -> denied(spaceId, correlationId, decision, "PROVIDER_NOT_ACTIVE_IN_SPACE"));
+        if (decision == EgressDecision.LOCAL_ONLY) {
+            if (route.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY
+                    || connection.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY) {
+                throw denied(spaceId, correlationId, decision, "LOCAL_ONLY_REJECTED_CLOUD_ROUTE");
+            }
+        } else if (route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
+                || !route.allowCloudEgress() || connection.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
+                || !binding.cloudEgressEnabled() || !validCloudAuthorization(binding.authorization(), "EMBEDDING")) {
+            throw denied(spaceId, correlationId, decision, "CLOUD_EGRESS_NOT_AUTHORIZED");
+        }
+        ProviderType providerType;
+        ProviderConnection adapterConnection;
+        try {
+            providerType = ProviderType.valueOf(connection.providerType().name());
+            adapterConnection = new ProviderConnection(spaceId, connection.id(),
+                    Math.max(1, connection.version()), providerType,
+                    connection.egressPolicy() == ProviderRepository.EgressPolicy.CLOUD_ALLOWED
+                            ? EgressClass.CLOUD : EgressClass.LOCAL,
+                    URI.create(connection.endpointUri()),
+                    connection.credentialRef() == null ? "missing-ref" : connection.credentialRef(),
+                    connection.authScheme());
+            EgressPolicy.validateConnection(spaceId, decision, adapterConnection);
+        } catch (RuntimeException failure) {
+            throw denied(spaceId, correlationId, decision, "PROVIDER_CONNECTION_INVALID");
+        }
+        observer.record(new Phase5IntegrationObserver.Decision(spaceId, correlationId, correlationId,
+                "embedding-route", "AUTHORIZED", "EXACT_ROUTE", decision));
+        return new ResolvedRoute(spaceId, route.id(), profile.id(), profile.modelName(), adapterConnection,
+                providerType, decision);
+    }
+
     private void validateEgress(UUID spaceId, UUID correlationId, EgressDecision decision,
                                 ProviderRepository.ModelRouteVersion route,
                                 ProviderRepository.ProviderConnection connection,
@@ -102,13 +152,18 @@ public final class RepositoryProviderRouteResolver implements ProviderRouteResol
     }
 
     private static boolean validCloudAuthorization(SpaceBindingRepository.CloudAuthorization authorization) {
+        return validCloudAuthorization(authorization, "CHAT");
+    }
+
+    private static boolean validCloudAuthorization(SpaceBindingRepository.CloudAuthorization authorization,
+                                                   String requiredScope) {
         if (authorization == null || authorization.approvedAt() == null || authorization.expiresAt() == null
                 || !authorization.approvedAt().isBefore(authorization.expiresAt())
                 || !authorization.expiresAt().isAfter(Instant.now())) {
             return false;
         }
         String scope = authorization.scope() == null ? "" : authorization.scope().trim().toUpperCase(java.util.Locale.ROOT);
-        return "CHAT".equals(scope) || "ALL".equals(scope);
+        return requiredScope.equals(scope) || "ALL".equals(scope);
     }
 
     private ProviderAdapterException denied(UUID spaceId, UUID correlationId,

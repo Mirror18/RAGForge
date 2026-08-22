@@ -19,6 +19,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.List;
+import java.util.ArrayList;
 
 public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
     private final HttpClient httpClient;
@@ -42,8 +44,14 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
 
     protected abstract ProviderChatResponse parseResponse(ProviderChatRequest request, String body);
 
+    protected abstract URI embeddingEndpoint(URI endpoint);
+
+    protected abstract ObjectNode embeddingRequestBody(ProviderEmbeddingRequest request);
+
+    protected abstract ProviderEmbeddingResponse parseEmbeddingResponse(ProviderEmbeddingRequest request, String body);
+
     protected Set<ModelCapability> supportedCapabilities() {
-        return Set.of(ModelCapability.CHAT, ModelCapability.USAGE_REPORTING);
+        return Set.of(ModelCapability.CHAT, ModelCapability.EMBEDDING, ModelCapability.USAGE_REPORTING);
     }
 
     @Override
@@ -84,6 +92,37 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
         }
     }
 
+    @Override
+    public final java.util.concurrent.CompletionStage<ProviderEmbeddingResponse> embed(
+            ProviderConnection connection, EgressDecision egressDecision, ProviderEmbeddingRequest request,
+            CancellationToken cancellationToken) {
+        try {
+            validateEmbeddingCall(connection, egressDecision, request, cancellationToken);
+            String authorization = resolveAuthorization(connection, request.identity().requestId());
+            String body = objectMapper.writeValueAsString(embeddingRequestBody(request));
+            HttpRequest.Builder builder = HttpRequest.newBuilder(embeddingEndpoint(connection.endpoint()))
+                    .timeout(request.timeout()).header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .header("X-RAGForge-Request-Id", request.identity().requestId().toString())
+                    .header("X-RAGForge-Correlation-Id", request.identity().correlationId().toString())
+                    .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+            if (authorization != null && !authorization.isBlank()) {
+                if (authorization.indexOf('\r') >= 0 || authorization.indexOf('\n') >= 0) {
+                    throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
+                            "Resolved authorization header is invalid", request.identity().requestId(), 0);
+                }
+                builder.header("Authorization", authorization);
+            }
+            return sendEmbedding(builder.build(), request, cancellationToken);
+        } catch (ProviderAdapterException exception) {
+            return CompletableFuture.failedFuture(exception);
+        } catch (IOException | RuntimeException exception) {
+            return CompletableFuture.failedFuture(new ProviderAdapterException(
+                    ProviderErrorClass.INVALID_RESPONSE, "Provider embedding request could not be prepared",
+                    request == null || request.identity() == null ? null : request.identity().requestId(), 0));
+        }
+    }
+
     private void validateCall(ProviderConnection connection, EgressDecision egressDecision,
                               ProviderChatRequest request, CancellationToken cancellationToken) {
         if (connection == null || egressDecision == null || request == null || cancellationToken == null) {
@@ -112,6 +151,10 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
     }
 
     private String resolveAuthorization(ProviderConnection connection, ProviderChatRequest request) {
+        return resolveAuthorization(connection, request.identity().requestId());
+    }
+
+    private String resolveAuthorization(ProviderConnection connection, UUID requestId) {
         if (connection.isExplicitLocalNoAuth()) {
             return null;
         }
@@ -119,8 +162,67 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
             return credentialResolver.resolveAuthorization(connection);
         } catch (RuntimeException exception) {
             throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
-                    "Provider credential resolution failed", request.identity().requestId(), 0);
+                    "Provider credential resolution failed", requestId, 0);
         }
+    }
+
+    private void validateEmbeddingCall(ProviderConnection connection, EgressDecision egressDecision,
+                                       ProviderEmbeddingRequest request, CancellationToken cancellationToken) {
+        if (connection == null || egressDecision == null || request == null || cancellationToken == null) {
+            throw new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE, "Provider request is incomplete");
+        }
+        if (connection.providerType() != providerType()) {
+            throw new ProviderAdapterException(ProviderErrorClass.UNSUPPORTED_CAPABILITY,
+                    "Provider adapter does not match the configured provider", request.identity().requestId(), 0);
+        }
+        EgressPolicy.validateConnection(request.spaceId(), egressDecision, connection);
+        if (cancellationToken.isCancellationRequested()) {
+            throw cancellation(request.identity().requestId());
+        }
+        if (!supportedCapabilities().containsAll(request.requiredCapabilities())) {
+            throw new ProviderAdapterException(ProviderErrorClass.UNSUPPORTED_CAPABILITY,
+                    "Requested provider capability is not supported", request.identity().requestId(), 0);
+        }
+    }
+
+    private CompletableFuture<ProviderEmbeddingResponse> sendEmbedding(HttpRequest request,
+                                                                        ProviderEmbeddingRequest embeddingRequest,
+                                                                        CancellationToken cancellationToken) {
+        CompletableFuture<ProviderEmbeddingResponse> result = new CompletableFuture<>();
+        final CompletableFuture<HttpResponse<String>> transport;
+        try {
+            transport = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (RuntimeException exception) {
+            result.completeExceptionally(mapTransportFailure(exception, embeddingRequest.identity().requestId(), cancellationToken));
+            return result;
+        }
+        cancellationToken.onCancel(() -> { transport.cancel(true); result.completeExceptionally(cancellation(embeddingRequest.identity().requestId())); });
+        transport.orTimeout(embeddingRequest.timeout().toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+                .whenComplete((response, failure) -> {
+                    if (failure != null) {
+                        result.completeExceptionally(mapTransportFailure(failure, embeddingRequest.identity().requestId(), cancellationToken));
+                        return;
+                    }
+                    if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                        result.completeExceptionally(ProviderErrorMapper.map(response.statusCode(), response.body(),
+                                embeddingRequest.identity().requestId(), objectMapper));
+                        return;
+                    }
+                    try {
+                        result.complete(parseEmbeddingResponse(embeddingRequest, response.body()));
+                    } catch (ProviderAdapterException exception) {
+                        result.completeExceptionally(exception);
+                    } catch (RuntimeException exception) {
+                        result.completeExceptionally(new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE,
+                                "Provider embedding response was invalid", embeddingRequest.identity().requestId(), response.statusCode()));
+                    }
+                });
+        return result;
+    }
+
+    protected final ProviderAdapterException invalidEmbeddingResponse(ProviderEmbeddingRequest request) {
+        return new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE,
+                "Provider embedding response was invalid", request.identity().requestId(), 0);
     }
 
     private CompletableFuture<ProviderChatResponse> send(HttpRequest request,

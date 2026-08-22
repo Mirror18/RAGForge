@@ -5,6 +5,8 @@ import com.ragforge.server.answer.AnswerProvenancePort;
 import com.ragforge.server.answer.RAGAnswerService;
 import com.ragforge.server.answer.V11RunProvenanceRecorder;
 import com.ragforge.server.run.RunRepository;
+import com.ragforge.server.provider.SpaceAuthorization;
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,8 +24,10 @@ public class Phase5SpringAnswerConfiguration {
 
     @Bean
     public RAGAnswerService phase5AnswerService(AnswerPersistencePort persistence,
-                                                AnswerProvenancePort provenance) {
+                                    AnswerProvenancePort provenance, SpaceAuthorization authorization,
+                                    RunRepository runs) {
         return Phase5IntegrationConfiguration.failClosed(persistence, provenance,
-                Phase5IntegrationObserver.noop()).answerService();
+                Phase5IntegrationObserver.noop(),
+                new SessionSpaceAnswerAuthorizer(authorization, runs, Clock.systemUTC())).answerService();
     }
 }

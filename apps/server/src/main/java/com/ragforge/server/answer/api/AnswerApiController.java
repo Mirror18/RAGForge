@@ -3,6 +3,7 @@ package com.ragforge.server.answer.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.answer.Answer;
+import com.ragforge.server.answer.AnswerAuthorizationContext;
 import com.ragforge.server.answer.AnswerRequest;
 import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerStatus;
@@ -56,6 +57,7 @@ public class AnswerApiController {
     private final AnswerApiProjectionStore projections;
     private final AnswerEventPublisher publisher;
     private final AnswerSseEventAdapter sseAdapter;
+    private final AnswerAuthorizationContextFactory authorizationContexts;
 
     public AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                                ObjectMapper objectMapper) {
@@ -64,12 +66,20 @@ public class AnswerApiController {
 
     @Autowired
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
-                        ObjectMapper objectMapper, AnswerPersistencePort persistence) {
-        this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore(persistence));
+                        ObjectMapper objectMapper, AnswerPersistencePort persistence,
+                        AnswerAuthorizationContextFactory authorizationContexts) {
+        this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore(persistence),
+                authorizationContexts);
     }
 
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerApiProjectionStore projections) {
+        this(answers, events, authorization, objectMapper, projections, null);
+    }
+
+    AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
+                        ObjectMapper objectMapper, AnswerApiProjectionStore projections,
+                        AnswerAuthorizationContextFactory authorizationContexts) {
         this.answers = answers;
         this.events = events;
         this.authorization = authorization;
@@ -77,6 +87,7 @@ public class AnswerApiController {
         this.projections = projections;
         this.publisher = new AnswerEventPublisher(events, objectMapper, projections.persistence());
         this.sseAdapter = new AnswerSseEventAdapter(objectMapper);
+        this.authorizationContexts = authorizationContexts;
     }
 
     @PostMapping(value = "/answers", consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -96,7 +107,10 @@ public class AnswerApiController {
         }
         UUID correlationId = correlationId(servletRequest);
         AnswerRequest answerRequest = request.toDomain(spaceId, correlationId, idempotencyKey);
-        Answer answer = answers.answer(answerRequest);
+        Answer answer = authorizationContexts == null
+                ? answers.answer(answerRequest)
+                : answers.answer(answerRequest, authorizationContexts.issue(principal(authentication), spaceId,
+                request.runId(), correlationId, request.runId()));
         Answer stored = projections.saveIfAbsent(answer);
         publisher.publish(stored);
         return stored;

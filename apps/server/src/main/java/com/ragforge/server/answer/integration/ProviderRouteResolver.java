@@ -12,6 +12,10 @@ public interface ProviderRouteResolver {
     ResolvedRoute resolve(UUID spaceId, UUID routeVersionId, UUID profileVersionId,
                           String model, EgressDecision egressDecision, UUID correlationId);
 
+    default ResolvedRoute resolveEmbedding(UUID spaceId, EgressDecision egressDecision, UUID correlationId) {
+        throw new IllegalStateException("Embedding route is not configured");
+    }
+
     record ResolvedRoute(UUID spaceId, UUID routeVersionId, UUID profileVersionId, String model,
                          ProviderConnection connection, ProviderType providerType,
                          EgressDecision egressDecision) {
