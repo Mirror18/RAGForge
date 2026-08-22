@@ -110,6 +110,11 @@ public class RunExecutionService {
         } finally {
             controls.remove(runId, control);
         }
+        RunRepository.RunRecord completed = runs.findRun(spaceId, runId).orElseThrow();
+        if (completed.status() == RunRepository.RunStatus.CANCELLED
+                && runs.findSteps(spaceId, runId).isEmpty()) {
+            recordCancellationBeforeExecution(completed, request, route, prompt);
+        }
         return runs.findRun(spaceId, runId).orElseThrow();
     }
 
@@ -117,9 +122,6 @@ public class RunExecutionService {
                                           UUID correlationId) {
         requireRole(spaceId, principal, true);
         ExecutionControl control = controls.get(runId);
-        if (control != null) {
-            control.cancel();
-        }
         RunRepository.RunRecord current = runs.findRun(spaceId, runId)
                 .orElseThrow(() -> notFound("run_not_found", "Run not found"));
         if (current.status() == RunRepository.RunStatus.QUEUED
@@ -135,6 +137,11 @@ public class RunExecutionService {
                     throw race;
                 }
             }
+        }
+        // Signal the provider only after the durable transition commits, so the
+        // execution future cannot return a stale QUEUED record.
+        if (control != null) {
+            control.cancel();
         }
         return runs.findRun(spaceId, runId).orElseThrow();
     }
@@ -173,7 +180,10 @@ public class RunExecutionService {
         Instant now = Instant.now();
         RunRepository.RunRecord running;
         try {
-            if (control.token.isCancellationRequested()) {
+            if (control.token.isCancellationRequested()
+                    || runs.findRun(spaceId, run.id())
+                    .map(current -> current.status() == RunRepository.RunStatus.CANCELLED)
+                    .orElse(false)) {
                 return;
             }
             running = runs.transitionRun(spaceId, run.id(), RunRepository.RunStatus.RUNNING,
@@ -250,6 +260,25 @@ public class RunExecutionService {
                 emit(failed, "run.status", statusPayload(failed.status().name(), errorCode));
             }
         }
+    }
+
+    private void recordCancellationBeforeExecution(RunRepository.RunRecord run, RunRequest request,
+                                                    ValidatedRoute route,
+                                                    PromptRepository.PromptVersion prompt) {
+        Instant now = Instant.now();
+        UUID stepId = UUID.randomUUID();
+        runs.createStep(new RunRepository.NewStep(stepId, run.spaceId(), run.id(),
+                "generate", RunRepository.StepType.GENERATE, 1, 1, RunRepository.RunStatus.CANCELLED,
+                RunRepository.ErrorClass.CANCELLED, "run_cancelled", now, run.correlationId()));
+        UUID invocationId = UUID.randomUUID();
+        String providerIdentity = "run-" + run.id();
+        runs.createInvocation(new RunRepository.NewModelInvocation(invocationId, run.spaceId(), run.id(), stepId,
+                route.connectionRecord().id(), route.profile().id(), route.route().id(), prompt.id(), providerIdentity,
+                sha256(prompt.template() + "\n" + request.message()), "{\"messageCount\":2}", null,
+                RunRepository.InvocationStatus.CANCELLED, RunRepository.ErrorClass.CANCELLED, "run_cancelled",
+                now, run.correlationId()));
+        emitStep(runs.findSteps(run.spaceId(), run.id()).stream()
+                .filter(step -> step.id().equals(stepId)).findFirst().orElseThrow());
     }
 
     private static final class ExecutionControl {
