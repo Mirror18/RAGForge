@@ -56,7 +56,7 @@ python scripts/phase6/recovery_verification.py `
 
 演练实际执行以下恢复链路，而不是只执行 `backup_smoke.py`：
 
-1. 启动隔离 PostgreSQL、MinIO 和 Qdrant，执行仓库 V1–V13 migration，并把合成 fixture 写入真实 schema。
+1. 启动隔离 PostgreSQL、MinIO 和 Qdrant，执行仓库 V1–V14 migration，并把合成 fixture 写入真实 schema。
 2. 创建 PostgreSQL `pg_dump`，恢复到 `recovery_full` 和 `recovery_pg_only` 两个独立数据库，比较 schema version、migration hash、关键表计数和 material hash。
 3. 在 MinIO 创建对象 manifest，保存对象 SHA-256；先删除对象验证 404 缺失检测，再恢复并重新校验 hash。
 4. 在 Qdrant 创建三维测试集合和 snapshot，模拟 collection 丢失，从恢复后的 PostgreSQL `child_chunks` 重建，校验向量维度、active index 版本和空间 payload。

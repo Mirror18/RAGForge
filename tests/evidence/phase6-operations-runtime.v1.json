@@ -1,0 +1,40 @@
+{
+  "evidence_version": "phase6-operations-runtime.v1",
+  "status": "PASSED",
+  "executed_at_utc": "2026-08-22T12:38:00Z",
+  "code_commit": "e2f2d63cff9cdb26406142176c664c0c5fad12fb",
+  "schema_version": "V14__phase6_space_scoped_retention.sql",
+  "config_version": "phase6-operations-config-v2-space-scoped",
+  "environment": {
+    "platform": "Windows 11",
+    "server_port": 18086,
+    "docker_compose_project": "ragforge-p6-online",
+    "postgres_container": "ragforge-p6-online-postgres-1",
+    "operations_enabled": true,
+    "cleanup_fixed_delay_ms": 1000
+  },
+  "fixture": {
+    "classification": "Public synthetic",
+    "production_data_connected": false,
+    "mutation_scope": "one synthetic rag_run_events row with an expired deadline",
+    "raw_payload_exported": false
+  },
+  "cleanup": {
+    "before_total_events": 1,
+    "expired_fixture_inserted": 1,
+    "wait_seconds": 4,
+    "expired_fixture_remaining": 0,
+    "after_total_events": 0,
+    "result": "scheduler deleted the expired fixture"
+  },
+  "unit_and_scope": {
+    "Phase6OperationsServiceTest": "5/5",
+    "audit_export": "space/time scoped; payload SHA-256 only",
+    "usage_cost": "space/time scoped; request and response bodies excluded",
+    "sse_cleanup": "space_id + expiration deadline; durable event rows only"
+  },
+  "limitations": [
+    "This run proves single-instance scheduled cleanup only.",
+    "Multi-instance live fan-out and production retention policy remain separate follow-up evidence."
+  ]
+}

@@ -57,7 +57,7 @@ P6-B、P6-C、P6-E 可在文件 ownership 不冲突时并行；P6-D 依赖 A 与
 | P6-D | partial | 23/23 Phase 6 安全回归通过，quality run `32570689145` 的 Syft/Grype/Maven/既有安全门禁全绿；人工/red-team review 仍待完成 |
 | P6-E | completed | 隔离恢复 5/5；完整、PG、Qdrant、对象、active index、tombstone/outbox 场景覆盖，RPO/RTO 达标 |
 | P6-F | partial | a2 重试已完成真实 768 维/1M/20 并发混合检索，Recall@10 `0.995`、p95 `119.8761ms`；认证在线 API/SSE harness 已完成，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`；本地 Ollama usage/cost 基线已记录为 1 call、293 tokens、估算 `0 USD`，但不代表云端商业成本或并发成本模型 |
-| P6-G | partial | retention、audit export、cost aggregation、SSE cleanup 实现和 4/4 定向测试通过；受控运行与多实例 live fan-out 仍待演练 |
+| P6-G | partial | V14 后 retention、audit export、cost aggregation、SSE cleanup 均显式按空间处理，`Phase6OperationsServiceTest` 5/5 通过；隔离 server scheduler 受控清理演练已通过，带 `space_id` 的过期事件从 1 条清理至 0 条；多实例 live fan-out 仍待演练 |
 | P6-H | pending | 等全部门槛与 CI 证据完成后执行 |
 
 ## 阶段结论

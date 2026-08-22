@@ -45,7 +45,7 @@ class RecoveryVerificationTest(unittest.TestCase):
     def test_migration_manifest_is_ordered_and_current(self) -> None:
         _, manifest = MODULE.migration_sql()
         self.assertEqual(manifest[-1]["file"], MODULE.SCHEMA_VERSION)
-        self.assertEqual(len(manifest), 13)
+        self.assertEqual(len(manifest), 14)
 
 
 if __name__ == "__main__":
