@@ -81,8 +81,8 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 ## 8. Phase 5 复审（2026-08-21）
 
-- 新增 `R-025`：生产 Phase 5 graph 尚无真实 embedding ProviderAdapter、版本化 evidence material resolver 和 session-to-space authorizer；当前 Spring 接线显式 fail-closed，避免无证据正文或无授权时生成看似成功的回答。P=4、I=5、Score=20，Answer / Retrieval，OPEN；Phase 6 必须先完成架构归属、实现和真实受控端到端证据。
+- `R-025` 复审：typed session-to-space authorizer、既有 provider connection 的 embedding ProviderAdapter 和版本化 evidence material resolver seam 已实现并通过本地测试；实际 material service bean、完整生产 port graph、受控 provider route/credential 数据和真实 RAG E2E 仍缺失。P=4、I=5、Score=20，Answer / Retrieval，OPEN；完成这些依赖及真实证据前继续 fail-closed。
 - 新增 `R-026`：答案历史与事件已落 PostgreSQL，但 `RunEventStore` 的 SSE replay 仍是进程内实现，进程重启后不能仅靠 V12 恢复事件游标。P=3、I=4、Score=12，Platform，OPEN；Phase 6 做重启恢复演练并将 durable answer_events 接入 replay source。
-- `R-003` 继续 OPEN，但 Phase 5 已用 `RAGAnswerServiceTest`、`AnswerApiControllerTest`、`AgentToolSecurityTest` 和安全证据验证回答/工具路径的空间边界；尚不能关闭全局空间隔离风险，直到真实 material resolver 与 session authorizer 接入。
+- `R-003` 继续 OPEN，但 Phase 5 已用 `RAGAnswerServiceTest`、`AnswerApiControllerTest`、`AgentToolSecurityTest`、`SessionSpaceAnswerAuthorizerTest` 和安全证据验证回答/工具路径的空间边界；尚不能关闭全局空间隔离风险，直到真实 material service 与完整生产 graph 接入。
 - `R-005` 继续 MITIGATING：合成 12 cases 的 candidate citation precision、faithfulness、abstention accuracy 均为 `1.0`，但样本规模和 judge 均为 deterministic fixture；Phase 6 扩展 120+ 样本、人工复核和 prompt-injection/red-team。
 - `R-012` 继续 OPEN：Phase 5 的性能文件只提供合成 E2E/TTFT 及 retrieval/generation 代理；生产 embedding 维度、并发、模型上下文和成本仍需真实环境复测。

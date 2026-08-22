@@ -1,8 +1,8 @@
 # Phase 5 Retrospective：带引用问答与只读 Agent
 
-- 日期：2026-08-21
-- 阶段状态：blocked（实现和本地门禁完成，生产回答接线待架构决策）
-- 当前验收 HEAD：`be8602a37ef0e5e0ef13abccd6703e3c6be39b29`
+- 日期：2026-08-22
+- 阶段状态：blocked（授权/provider/material seam 和本地门禁完成，生产回答 graph 组装与真实 E2E 待完成）
+- 当前验收 HEAD：以当前 `main` HEAD 为准；本轮 worker commit `75082bc` 已合并
 - 阶段执行计划：[`PHASE_5_EXECUTION_PLAN.md`](../phase-5/PHASE_5_EXECUTION_PLAN.md)
 - 阶段清单：[`PHASE_5_CHECKLIST.md`](../../03-delivery/PHASE_5_CHECKLIST.md)
 
@@ -14,6 +14,7 @@
 - 安全定向证据为 contract 10/10、AgentToolSecurity 9/9、answer/security 19/19；未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。见 [`phase5-security.json`](../../../tests/evidence/phase5-security.json)。
 - 合成性能证据 E2E p50/p95 为 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`、provider calls `12`。retrieval/generation 使用代理测量，见 [`phase5-performance.json`](../../../tests/evidence/phase5-performance.json)。
 - GitHub Actions quality Run [`32462939899`](https://github.com/Mirror18/RAGForge/actions/runs/32462939899) 对 `e88a654` 全绿；Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype 均成功。
+- 本轮 `mvn -f apps/server/pom.xml test`（JDK 21）通过 185/185；Testcontainers PostgreSQL/Valkey/Qdrant 与本地 Ollama acceptance 通过。新增授权上下文、provider embedding HTTP、revision/artifact material resolver 测试均通过。
 
 ## Keep
 
@@ -24,7 +25,7 @@
 
 ## Problem
 
-- 生产 Spring graph 目前安装 fail-closed ports。仓库没有真实 embedding ProviderAdapter；也没有从版本化 artifact/content store 读取 evidence material 的 resolver 或 session-to-space authorizer。因此本阶段不能声称真实生产回答已经可用。
+- 生产 Spring graph 目前安装 fail-closed ports。仓库已有 typed session-to-space authorizer、既有 provider connection 的 embedding adapter 和 revision/artifact material resolver contract，但尚无实际 material service bean、完整 retrieval/prompt/generation graph、受控 provider route/credential 数据。因此本阶段不能声称真实生产回答已经可用。
 - `RunEventStore` 的 Last-Event-ID replay 仍为进程内实现；答案历史已持久化，但进程重启恢复 SSE 事件尚无演练。
 - 质量与性能均基于小型 deterministic synthetic fixture；尚未达到 Phase 6 的 120+、人工评估、真实模型延迟/成本和 red-team 口径。
 
@@ -39,6 +40,6 @@
 
 - evidence material 是否从对象存储按 opaque `content_ref` 读取，还是由 server-side revision service 提供一次性授权读取？
 - embedding provider 是否复用 Ollama/OpenAI-compatible 的 provider route，还是引入独立 embedding capability/配置版本？
-- session-to-space authorizer 是否复用现有 Run controller 的 authorization context，还是在 answer API 建立独立 policy port？
+- ADR-0010 的方案 A 已由用户选择；仍需明确绑定接受、material service 的实际 bean/接口 owner、provider route/credential 数据和真实 E2E 环境。
 
 上述选择已整理为未接受的 [`ADR-0010`](../../02-architecture/adr/0010-phase5-provider-material-composition.md)；在人工接受前不执行架构绑定或生产迁移。

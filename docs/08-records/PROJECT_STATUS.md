@@ -1,7 +1,7 @@
 # 项目状态
 
-- Updated: 2026-08-21
-- Current stage: Phase 5 带引用问答与只读 Agent 已完成本地实现/安全/质量门禁，但因生产 provider/material/session 接线缺口保持 blocked；下一入口为 Phase 6 provider seam 与真实端到端验收
+- Updated: 2026-08-22
+- Current stage: Phase 5 带引用问答与只读 Agent 已完成本地实现/安全/质量门禁；typed authorization、既有 provider connection embedding 和 revision/artifact material seam 已合入，但生产 Spring graph 仍因实际依赖组装与真实 RAG E2E 证据缺失保持 blocked
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - External remote: `origin` configured；Phase 3 OCR runtime implementation 已推送至 `2ca3a75`；GitHub Actions quality Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 成功，Phase 3 JVM evidence artifact `9183633612`、Syft SBOM artifact `9183518984`、Grype SARIF artifact `9183542524` 已生成。
@@ -35,9 +35,10 @@
 - Phase 4 已完成阶段闭环（2026-08-21）：P4-D 父子分块、P4-E embedding cache/Qdrant candidate index、P4-F dense/BM25/RRF/rerank/parent expansion、P4-G Chunk Studio/Retrieval Playground 与 P4-H 评测/规模/证据已合入 main。阶段合并提交包括 `300569b`、`ab81ed1`、`1f6450e`、`fed0034`、`041bf34`、`e27ae75`、`ca6db93` 及其对应 worker commits。30 问 Recall@10 `0.965517`、MRR@10 `0.827586`；Qdrant 1M synthetic child points Recall@10 `1.0`、p95 `1101.3382 ms`；空间过滤/索引切换回滚/override 冲突 targeted Maven 17/17。证据见 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)、[`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json)、[`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json) 和 [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json)。技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段未升级 Java/Boot。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
+- 本轮 Phase 5 实现合并提交：worker `75082bc` 已通过 no-ff merge；授权上下文、embedding route/provider adapter、材料 service contract/resolver 及回归测试均已纳入。
 - 已配置 GitHub remote `Mirror18/RAGForge`；Phase 4 当前实现已推送至 `origin/main`，GitHub Actions quality Run [32450998792](https://github.com/Mirror18/RAGForge/actions/runs/32450998792) 对 `9d21b48` 全绿（4m19s），Phase 4 evidence artifact `9435734012`、SBOM artifact `9435662885`、Grype SARIF artifact `9435676463` 已生成；尚未创建 release。GitHub Actions Syft/Grype 仍是正式发布前的有效 SBOM/SCA 门禁。
 - Obsidian 仓库没有被写入项目进度。
-- Phase 0 实验发现的 provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态；Phase 4 已关闭 candidate index 半构建发布风险的阶段范围，并验证 chunk/Qdrant/cache 的空间边界；Phase 5 已完成 citation/agent 访问边界的本地验证，但生产回答仍由 fail-closed graph 拒绝，原因是缺少真实 embedding provider、evidence material resolver 与 session-to-space authorizer。OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
+- Phase 0 实验发现的 provenance、恶意文件、重复 basename 和重启风险仍为开放/缓解中状态；Phase 4 已关闭 candidate index 半构建发布风险的阶段范围，并验证 chunk/Qdrant/cache 的空间边界；Phase 5 已完成 citation/agent 访问边界的本地验证，并实现 typed session-to-space authorizer、真实 provider adapter embedding capability 与 revision/artifact material resolver seam；生产回答仍由 fail-closed graph 拒绝，原因是实际 material service bean、完整 retrieval/prompt/generation graph、受控 provider route/credential 数据和真实 RAG E2E 证据尚未具备。OCR runtime 可用性风险 R-022 已关闭，生产 quarantine/AV/sandbox 风险 R-006 仍开放。
 - 本机 Java 21 根 Maven Testcontainers 已通过，Worker 28/28、Phase 3 Python acceptance 2/2；格式、架构、secret、Markdown link、依赖清单、contract 32/32 均通过。测试日志中的 Testcontainers/Valkey 关闭后重连 warning 不影响测试结果，但保留为后续生命周期清理项。
 
 ## 3. Phase 4 闭环摘要
@@ -47,20 +48,21 @@
 - 根 Maven `BUILD SUCCESS`；Phase 4 targeted Maven 17/17；format、architecture、Markdown link、secret、dependency inventory、Compose、web format/build 通过。CI workflow 已加入 Phase 4 deterministic benchmark gate；Qdrant 1M 演练为本地 Docker 受控容量证据，不作为 CI 每次运行的负载测试。
 - 保留风险：BM25 当前为进程内确定性实现，durable lexical provider 需后续架构选择；1M Qdrant 证据为 8 维合成向量，生产 embedding 维度/并发/混合负载仍需容量复测；全量 120+ 评估与 citation/agent 安全门禁属于 Phase 5/6。
 
-## 3. Phase 5 当前闭环与证据（2026-08-21）
+## 3. Phase 5 当前闭环与证据（2026-08-22）
 
-- 当前 HEAD：`be8602a37ef0e5e0ef13abccd6703e3c6be39b29`（本地验收代码）；阶段合并提交包括 `8fb9e63`、`4245975`、`3c52e62`、`45682c7`、`273f4f5`、`43aa7c1`、`d12369a`、`e19d052`、`b001f5e` 及 `be8602a`。
+- 当前 HEAD：以当前 `main` HEAD 为准；本轮 worker commit `75082bc` 已通过 no-ff merge，保留既有 Phase 5 合并历史。
 - 合同：`python scripts/ci/contract_test.py` 检查 21 artifacts、52 tests；Phase 5 定向 contract 10/10。
 - 质量：[`phase5-generation-evaluation.json`](../../tests/evidence/phase5-generation-evaluation.json) 的合成 12 cases candidate citation precision/faithfulness/abstention accuracy 均为 `1.0`；Phase 6 仍需 120+ 和人工评估。
 - 安全：[`phase5-security.json`](../../tests/evidence/phase5-security.json) 的 AgentToolSecurity 9/9、回答/出境 19/19，未授权云调用、跨空间泄漏、Evidence 外引用、SSRF 绕过、Shell/SQL/外部写入、敏感审计字段均为 `0`。
 - 性能：[`phase5-performance.json`](../../tests/evidence/phase5-performance.json) 为版本化合成 fixture，E2E p50/p95 `79.7/88.8ms`、TTFT p50 `29.4ms`、input/output `1828/419`、估算成本 `0.008`；retrieval/generation 指标是代理测量，不是生产容量承诺。
 - 全量本地门禁：根 Maven Server+Worker `28/28`、Flyway V1–V12 成功；Web `tsc --noEmit` 与 `vite build` 成功；format/architecture/Markdown/secret/dependency/Compose/contract/Phase 2 security/Phase 4 evaluation 均通过。
 - CI：GitHub Actions quality Run [`32462939899`](https://github.com/Mirror18/RAGForge/actions/runs/32462939899) 对 `e88a654` 全绿，包含 Maven、Phase 5 生成/性能/安全、证据上传、Phase 3/4、Web、Syft SBOM 与 Grype。
-- 阶段结论：P5 功能和安全边界已落地，但生产回答路线保持 fail-closed，不能把合成 provider 测试当作真实可用回答；阶段状态为 blocked。生产接线方案已形成未接受的 [`ADR-0010`](../02-architecture/adr/0010-phase5-provider-material-composition.md)，等待人工决定后才能继续。
+- 本轮本地门禁：`mvn -f apps/server/pom.xml test`（JDK 21）`185/185` 通过；新增授权上下文 3/3、材料 resolver 2/2、provider HTTP 29/29；Testcontainers PostgreSQL/Valkey/Qdrant 和 `LocalOllamaRunAcceptanceTest` 均通过。
+- 阶段结论：P5 功能、安全边界、typed authorization、embedding/provider/material seam 已落地，但生产回答路线保持 fail-closed，不能把合成 provider/material 测试当作真实可用回答；阶段状态仍为 blocked。[`ADR-0010`](../02-architecture/adr/0010-phase5-provider-material-composition.md) 仍为 Proposed，用户已选择 A、复用既有 provider connection、由 revision/artifact service 提供材料，但尚未完成绑定接受与实际运行时组装。
 
 ## 4. 下一入口
 
-Phase 6 入口为 provider/material/session seam 的架构决定与真实受控端到端验收；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
+Phase 5 继续入口为 ADR-0010 绑定范围确认、实际 material service/provider route 配置与真实受控 RAG 端到端验收；随后进入 Phase 6 的 120+ 评估、SSE 重启恢复和容量/成本演练。必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 5 执行计划与 Checklist 见 [`PHASE_5_EXECUTION_PLAN.md`](phase-5/PHASE_5_EXECUTION_PLAN.md) 与 [`PHASE_5_CHECKLIST.md`](../03-delivery/PHASE_5_CHECKLIST.md)；Phase 5 阶段复盘见 [`PHASE_5_RETROSPECTIVE.md`](retrospectives/PHASE_5_RETROSPECTIVE.md)；既有 Phase 3/4 复盘继续保留。
 
 ## 5. 更新规则
 

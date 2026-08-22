@@ -11,7 +11,7 @@ Phase 5 的 `RAGAnswerService` 已有明确的 `QueryEmbeddingProvider`、`Retri
 
 ## Decision
 
-用户已明确倾向于复用现有 provider connection，并由 revision/artifact service 提供 evidence material；授权传入方式仍待选择。本 ADR 仍为 Proposed，不改变当前生产接线。
+用户已选择复用现有 provider connection、由 revision/artifact service 提供 evidence material，并选择授权方案 A（typed context）。本 ADR 仍为 Proposed，不改变当前生产接线；绑定接受和实际运行时组装仍需人工确认。
 
 本 ADR 提出以下组合方案：
 
@@ -71,7 +71,7 @@ controller 只把 `AnswerRequest` 传入 service，由 adapter 从 `SecurityCont
 
 - embedding capability 复用现有 provider connection，并新增 purpose/capability 约束；
 - evidence material 由 server-side revision/artifact service 提供；
-- 授权传入方式请在方案 A/B/C 中选择；当前推荐方案 A。
+- 授权传入方式已选择方案 A；在接受 ADR 前仍需确认绑定范围和生产启用条件。
 
 ## References
 
