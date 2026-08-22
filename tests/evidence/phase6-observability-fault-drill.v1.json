@@ -1,0 +1,47 @@
+{
+  "status": "PASSED",
+  "verification_scope": "runtime_profile_and_fault_drill",
+  "started_at": "2026-08-22T11:07:58.074095+00:00",
+  "completed_at": "2026-08-22T11:08:25.537261+00:00",
+  "project": "ragforge-p6-observability-a1",
+  "dashboard": {
+    "uid": "ragforge-phase6-oncall",
+    "runtime_verified": true
+  },
+  "endpoints": {
+    "prometheus_ready": true,
+    "grafana_health": true,
+    "loki_ready": true,
+    "tempo_ready": true,
+    "otel_http_metrics_ingest": true,
+    "otel_trace_ingest_and_redaction": true,
+    "otel_log_ingest_and_redaction": true
+  },
+  "fault": {
+    "type": "unauthorized_egress_attempt",
+    "injected_metric": "ragforge_egress_denied_total",
+    "synthetic_counter_value": 1,
+    "observed_prometheus_series": 1,
+    "observed_alert_series": 1,
+    "cloud_call_performed": false,
+    "raw_request_or_prompt_recorded": false,
+    "trace_sensitive_attributes_exported": false,
+    "log_sensitive_attributes_exported": false
+  },
+  "diagnosis_path": {
+    "dashboard": "RAGForge Phase 6 On-call",
+    "alert": "RAGForgeUnauthorizedEgress",
+    "runbook": "docs/05-operations/runbooks/unauthorized-egress.md",
+    "safe_fields": [
+      "trace_id",
+      "correlation_id",
+      "run_id",
+      "space_id",
+      "decision",
+      "route_class",
+      "error_code"
+    ]
+  },
+  "code_commit": "ad873d99d85f1609fab8633934660a6ed38ec92f",
+  "note": "The dashboard was read from a running Grafana API; this is not a static asset-only claim."
+}
