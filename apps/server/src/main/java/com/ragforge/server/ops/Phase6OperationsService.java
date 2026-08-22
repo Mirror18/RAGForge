@@ -5,6 +5,7 @@ import com.ragforge.server.run.JdbcRunEventStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.util.UUID;
  * never audit payload bodies or user prompts, and every query is space-scoped.
  */
 @Service
+@EnableScheduling
 @ConditionalOnProperty(name = "ragforge.phase6.operations.enabled", havingValue = "true")
 public class Phase6OperationsService {
     private final JdbcAnswerPersistence answers;
