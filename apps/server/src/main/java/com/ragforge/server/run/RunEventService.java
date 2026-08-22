@@ -70,25 +70,46 @@ public class RunEventService {
         requireRun(spaceId, runId);
         Object lock = cancellationLocks.computeIfAbsent(new RunKey(spaceId, runId), ignored -> new Object());
         synchronized (lock) {
-            RunRepository.RunRecord current = requireRun(spaceId, runId);
-            if (isTerminal(current.status())) {
-                return new RunEventStore.CancellationResult(false, latestStatusEvent(spaceId, runId));
-            }
-            if (current.status() != RunRepository.RunStatus.CANCELLED) {
+            IllegalStateException lastRace = null;
+            boolean cancellationConfirmed = false;
+            for (int attempt = 0; attempt < 3; attempt++) {
+                RunRepository.RunRecord current = requireRun(spaceId, runId);
+                if (isTerminal(current.status())) {
+                    return new RunEventStore.CancellationResult(false, latestStatusEvent(spaceId, runId));
+                }
+                if (current.status() == RunRepository.RunStatus.CANCELLED) {
+                    cancellationConfirmed = true;
+                    break;
+                }
                 try {
                     runRepository.transitionRun(spaceId, runId, RunRepository.RunStatus.CANCELLED,
                             RunRepository.ErrorClass.CANCELLED, "run_cancelled", java.time.Instant.now(),
                             current.version());
+                    cancellationConfirmed = true;
+                    break;
                 } catch (IllegalStateException exception) {
+                    lastRace = exception;
                     RunRepository.RunRecord afterRace = requireRun(spaceId, runId);
-                    if (afterRace.status() == RunRepository.RunStatus.SUCCEEDED
-                            || afterRace.status() == RunRepository.RunStatus.FAILED) {
+                    if (isTerminal(afterRace.status())) {
                         return new RunEventStore.CancellationResult(false, latestStatusEvent(spaceId, runId));
                     }
-                    if (afterRace.status() != RunRepository.RunStatus.CANCELLED) {
-                        throw exception;
+                    if (afterRace.status() == RunRepository.RunStatus.CANCELLED) {
+                        cancellationConfirmed = true;
+                        break;
                     }
                 }
+            }
+            if (!cancellationConfirmed) {
+                RunRepository.RunRecord afterAttempts = requireRun(spaceId, runId);
+                if (isTerminal(afterAttempts.status())) {
+                    return new RunEventStore.CancellationResult(false, latestStatusEvent(spaceId, runId));
+                }
+                cancellationConfirmed = afterAttempts.status() == RunRepository.RunStatus.CANCELLED;
+            }
+            if (!cancellationConfirmed) {
+                throw lastRace == null
+                        ? new IllegalStateException("Run cancellation did not reach a terminal state")
+                        : lastRace;
             }
             return eventStore.cancel(spaceId, runId, correlationId);
         }

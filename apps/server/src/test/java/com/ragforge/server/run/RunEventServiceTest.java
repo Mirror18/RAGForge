@@ -60,6 +60,36 @@ class RunEventServiceTest {
     }
 
     @Test
+    void cancellationRetriesWithLatestVersionWhenExecutionWinsFirstTransition() {
+        RunRepository repository = mock(RunRepository.class);
+        RunEventStore store = mock(RunEventStore.class);
+        RunRepository.RunRecord firstRunning = run(RunRepository.RunStatus.RUNNING, 3);
+        RunRepository.RunRecord afterExecutionStarted = run(RunRepository.RunStatus.RUNNING, 4);
+        RunRepository.RunRecord cancelled = run(RunRepository.RunStatus.CANCELLED, 5);
+        RunEvent event = new RunEvent(UUID.randomUUID(), 1, RUN_ID, SPACE_ID, CORRELATION_ID,
+                Instant.now(), "run.status", 1, "{\"status\":\"CANCELLED\"}");
+        when(repository.findRun(SPACE_ID, RUN_ID)).thenReturn(Optional.of(firstRunning),
+                Optional.of(afterExecutionStarted), Optional.of(afterExecutionStarted), Optional.of(cancelled),
+                Optional.of(cancelled));
+        when(repository.transitionRun(eq(SPACE_ID), eq(RUN_ID), eq(RunRepository.RunStatus.CANCELLED),
+                eq(RunRepository.ErrorClass.CANCELLED), eq("run_cancelled"), any(), eq(3L)))
+                .thenThrow(new IllegalStateException("Run version changed while transitioning"));
+        when(repository.transitionRun(eq(SPACE_ID), eq(RUN_ID), eq(RunRepository.RunStatus.CANCELLED),
+                eq(RunRepository.ErrorClass.CANCELLED), eq("run_cancelled"), any(), eq(4L)))
+                .thenReturn(cancelled);
+        when(store.cancel(eq(SPACE_ID), eq(RUN_ID), eq(CORRELATION_ID)))
+                .thenReturn(new RunEventStore.CancellationResult(true, event));
+        RunEventService service = new RunEventService(repository, store);
+
+        RunEventStore.CancellationResult result = service.cancel(SPACE_ID, RUN_ID, CORRELATION_ID);
+
+        assertThat(result.firstCancellation()).isTrue();
+        verify(repository).transitionRun(eq(SPACE_ID), eq(RUN_ID), eq(RunRepository.RunStatus.CANCELLED),
+                eq(RunRepository.ErrorClass.CANCELLED), eq("run_cancelled"), any(), eq(4L));
+        verify(store).cancel(SPACE_ID, RUN_ID, CORRELATION_ID);
+    }
+
+    @Test
     void noCursorOpensWithACompleteInitialSnapshotEvent() {
         RunRepository repository = mock(RunRepository.class);
         InMemoryRunEventStore store = new InMemoryRunEventStore();
