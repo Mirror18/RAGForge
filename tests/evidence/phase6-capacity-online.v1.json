@@ -1,0 +1,23 @@
+{
+  "evidence_version": "phase6-capacity-online.v1",
+  "status": "FAILED",
+  "thresholds": {
+    "non_ai_api_p95_ms_lt": 300,
+    "sse_first_event_p95_ms_lt": 500,
+    "ttft_excluded": true
+  },
+  "exact_command": "python scripts/phase6/online_latency_probe.py --server-url http://127.0.0.1:8080 --count 1 --timeout 1 --output tests/evidence/phase6-capacity-online.v1.json",
+  "non_ai_api": {
+    "url": "http://127.0.0.1:8080/actuator/health",
+    "count": 1,
+    "errors": 1,
+    "error_rate": 1.0,
+    "p50_ms": null,
+    "p95_ms": null,
+    "p99_ms": null
+  },
+  "sse_first_event": {
+    "status": "BLOCKED",
+    "reason": "sse_url_not_provided; a run must be created by an authenticated harness"
+  }
+}

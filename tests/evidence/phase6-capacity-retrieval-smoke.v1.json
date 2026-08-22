@@ -1,0 +1,72 @@
+{
+  "evidence_version": "phase6-capacity-retrieval.v1",
+  "status": "FAILED",
+  "started_at_utc": "2026-08-22T11:05:54Z",
+  "code_commit": "4d6437d1a0ff667a08e49eccec6d6d4a188c3b83",
+  "config_version": "phase6-capacity-config-v1",
+  "config_sha256": "e303d02aded9846d6b1d28b06f1e32a300315fdb7bdc48f1180e99965f08bc2f",
+  "script_sha256": "d2c926b5c942e518e964c44301ded408647ca57d96aea413d871b37eddc4ed31",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "python": "3.12.13",
+    "docker_compose_project": "ragforge-p6-capacity-a1",
+    "qdrant_image": "qdrant/qdrant:v1.11.5"
+  },
+  "dataset": {
+    "classification": "Public synthetic",
+    "seed": "phase6-capacity:<child_id>",
+    "child_count_requested": 10000,
+    "vector_source": "deterministic synthetic vectors at live Ollama embedding dimension; not production embedding values",
+    "space_count": 4
+  },
+  "thresholds": {
+    "retrieval_p95_ms_lt": 1500,
+    "non_ai_api_p95_ms_lt": 300,
+    "sse_first_event_p95_ms_lt": 500
+  },
+  "online": {
+    "status": "BLOCKED",
+    "threshold": {
+      "non_ai_api_p95_ms_lt": 300,
+      "sse_first_event_p95_ms_lt": 500,
+      "ttft_excluded": true
+    },
+    "reason": "server_url_not_provided",
+    "repro_command": "python scripts/phase6/online_latency_probe.py --server-url http://127.0.0.1:8080 --output tests/evidence/phase6-capacity-online.v1.json",
+    "server_url": null
+  },
+  "embedding_probe": {
+    "endpoint": "http://127.0.0.1:11434",
+    "model": "nomic-embed-text:latest",
+    "dimension": 768,
+    "embedding_count": 1,
+    "response_sha256": "1dffa6e10494d251ce8192e3fdeac823428a47a3324622b375e852ca96c3ccb2",
+    "measurement": "live /api/embed response"
+  },
+  "upload_seconds": 3.5036,
+  "retrieval": {
+    "query_count": 80,
+    "concurrency": 20,
+    "warmup_count": 40,
+    "duration_seconds": 0.0771,
+    "throughput_qps": 1037.0768,
+    "successful_requests": 80,
+    "error_count": 0,
+    "error_rate": 0.0,
+    "recall_at_10": 1.0,
+    "p50_ms": 12.6241,
+    "p95_ms": 20.5748,
+    "p99_ms": 28.7223,
+    "mixed_load": {
+      "filtered_spaces": [
+        "space-alpha",
+        "space-beta",
+        "space-gamma",
+        "space-delta"
+      ],
+      "payload_query_ratio": 0.25,
+      "filter": "space_id + index_version"
+    }
+  }
+}

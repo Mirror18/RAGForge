@@ -1,0 +1,53 @@
+{
+  "evidence_version": "phase6-capacity-retrieval.v1",
+  "status": "BLOCKED",
+  "started_at_utc": "2026-08-22T11:15:39Z",
+  "code_commit": "963bb6e314021f4db9cb84ee0cc59654968d8d4f",
+  "config_version": "phase6-capacity-config-v1",
+  "config_sha256": "e56353db902fbfcbc5c70ad7a7b88e95b5ab52e450bd50abc2aa8bf19fd2c657",
+  "script_sha256": "2a852d3ee558cdb854774d4d49c18855892f1c6f9d39781b00976e84aefea718",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "python": "3.12.13",
+    "docker_compose_project": "ragforge-p6-capacity-a1",
+    "qdrant_image": "qdrant/qdrant:v1.11.5"
+  },
+  "dataset": {
+    "classification": "Public synthetic",
+    "seed": "phase6-capacity:<child_id>",
+    "child_count_requested": 1000000,
+    "vector_source": "deterministic synthetic vectors at live Ollama embedding dimension; not production embedding values",
+    "space_count": 4
+  },
+  "thresholds": {
+    "retrieval_p95_ms_lt": 1500,
+    "retrieval_recall_at_10_gte": 0.9,
+    "non_ai_api_p95_ms_lt": 300,
+    "sse_first_event_p95_ms_lt": 500
+  },
+  "online": {
+    "status": "BLOCKED",
+    "threshold": {
+      "non_ai_api_p95_ms_lt": 300,
+      "sse_first_event_p95_ms_lt": 500,
+      "ttft_excluded": true
+    },
+    "reason": "server_url_not_provided",
+    "repro_command": "python scripts/phase6/online_latency_probe.py --server-url http://127.0.0.1:8080 --output tests/evidence/phase6-capacity-online.v1.json",
+    "server_url": null
+  },
+  "embedding_probe": {
+    "endpoint": "http://127.0.0.1:11434",
+    "model": "nomic-embed-text:latest",
+    "dimension": 768,
+    "embedding_count": 1,
+    "response_sha256": "6c06b5997c062c79162cd51161f73052f7cac1551156bf3e38bc9b48cfd8e953",
+    "measurement": "live /api/embed response"
+  },
+  "failure": {
+    "type": "URLError",
+    "message": "<urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。>"
+  },
+  "retry_command": "python scripts/phase6/capacity_benchmark.py --output tests/evidence/phase6-capacity-retrieval.v1.json"
+}
