@@ -1,14 +1,14 @@
 {
   "evidence_version": "phase6-security.v1",
   "synthetic_only": true,
-  "code_commit": "f20dc244b1bf84c0e009bf1c718c3bfa2e6bd464",
+  "code_commit": "2983a7e786d2ebd7f0fab86d8477351c5756106b",
   "tests": [
     {
       "name": "phase6-security-corpus",
       "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe -m unittest tests.security.test_phase6_security",
       "status": "passed",
       "exit_code": 0,
-      "output_sha256": "133449d6f429f0588126e0403937f271f33f90517460d5c4b39d69c2eeda0f25",
+      "output_sha256": "fc23540c8545d4075fe2f0420accd022e74e5566176c3bd4c597964ff02c2e14",
       "output_redacted": true,
       "raw_output_persisted": false
     },
@@ -17,7 +17,7 @@
       "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe -m unittest tests.security.test_phase2_egress_isolation",
       "status": "passed",
       "exit_code": 0,
-      "output_sha256": "1d314157571e3fde7ba8bc4135ef923eba134a38cb3e8ba070725b981cb02623",
+      "output_sha256": "3cdc2894dbdd6d88a647a642927f07b8763672c8767734a5dcbebb85a40372da",
       "output_redacted": true,
       "raw_output_persisted": false
     },
@@ -26,7 +26,7 @@
       "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe -m unittest tests.contract.test_phase5_contracts",
       "status": "passed",
       "exit_code": 0,
-      "output_sha256": "9d5cbf50af2b5d43b53292e22efa8ffa4ca03168aabba92fa0d3e90b2ff6a317",
+      "output_sha256": "2d407504d003cfe404f23be48347e686ae1f67393860d4067d9a0bf06b1ddd60",
       "output_redacted": true,
       "raw_output_persisted": false
     },
@@ -35,13 +35,13 @@
       "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl apps/server -am -Dtest=AgentToolSecurityTest -Dsurefire.failIfNoSpecifiedTests=false test",
       "status": "passed",
       "exit_code": 0,
-      "output_sha256": "a5c64976bfa1775fba4736abbcb71e317ff285dbdfc8e651bf127f8676f98794",
+      "output_sha256": "78e61cb2a0b84d02580f2fd0e992b1e411c32f8b550de3d2f51a20ae1e65fcf1",
       "output_redacted": true,
       "raw_output_persisted": false
     },
     {
       "name": "dependency-inventory-lockfiles",
-      "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe scripts/ci/dependency_inventory.py --require-lockfiles --output C:\\Users\\mirror\\AppData\\Local\\Temp\\ragforge-phase6-security-3utr1r6l\\dependency-inventory.json",
+      "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe scripts/ci/dependency_inventory.py --require-lockfiles --output C:\\Users\\mirror\\AppData\\Local\\Temp\\ragforge-phase6-security-61zxrlye\\dependency-inventory.json",
       "status": "passed",
       "exit_code": 0,
       "output_sha256": "5a241b05fce6691861664155ba163732212afca63bd469914ac8f46bf9db206c",
