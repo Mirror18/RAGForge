@@ -1,6 +1,6 @@
 # ADR-0010：Phase 5 Provider、Evidence Material 与会话授权组合边界
 
-- Status: Proposed（未接受，不得作为绑定架构执行）
+- Status: Accepted（2026-08-22，经用户明确接受）
 - Date: 2026-08-22
 
 ## Context
@@ -11,7 +11,7 @@ Phase 5 的 `RAGAnswerService` 已有明确的 `QueryEmbeddingProvider`、`Retri
 
 ## Decision
 
-用户已选择复用现有 provider connection、由 revision/artifact service 提供 evidence material，并选择授权方案 A（typed context）。本 ADR 仍为 Proposed，不改变当前生产接线；绑定接受和实际运行时组装仍需人工确认。
+用户已明确接受复用现有 provider connection、由 revision/artifact service 提供 evidence material，并采用授权方案 A（typed context）。本 ADR 现作为 Phase 5 的绑定架构决策；生产回答仍仅在显式 object-storage opt-in、空间级 route binding 和 capability 校验全部满足时组装，默认图继续 fail-closed。
 
 本 ADR 提出以下组合方案：
 
@@ -67,11 +67,11 @@ controller 只把 `AnswerRequest` 传入 service，由 adapter 从 `SecurityCont
 
 ## Required human decision
 
-接受本 ADR 前，已记录的方向与剩余选择为：
+本 ADR 的绑定范围已由用户明确接受：
 
 - embedding capability 复用现有 provider connection，并新增 purpose/capability 约束；
 - evidence material 由 server-side revision/artifact service 提供；
-- 授权传入方式已选择方案 A；在接受 ADR 前仍需确认绑定范围和生产启用条件。
+- 授权传入方式采用方案 A；生产启用条件仍需逐项通过真实 provider-backed RAG E2E、空间隔离、出境和质量门禁。本 ADR 接受不等于阶段验收完成。
 
 ## References
 
