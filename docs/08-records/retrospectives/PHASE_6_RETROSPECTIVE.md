@@ -2,7 +2,7 @@
 
 - 日期：2026-08-22
 - 状态：未闭环，保留在 `in-progress`
-- 基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`
+- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`9502a9e5beff439812302112f20ddf7e1d35c8e9`
 
 ## Done
 
@@ -33,8 +33,8 @@
 ## Next actions
 
 1. 由 Quality/Security 完成人工与 red-team review manifest，逐 case 记录 reviewer、decision、解释和退化处置。
-2. 由 Quality/Security 完成人工与 red-team review manifest，并记录逐 case 决策和退化处置。
-3. 明确多实例 live fan-out 的实现或延期决策；补齐人工/red-team 评审后再进行阶段闭环审计。
+2. 由用户决定是否接受 ADR-0011；若接受，按其边界实现并完成双实例/故障恢复演练。
+3. 补齐人工/red-team 评审和 ADR-0011 证据后，再进行阶段闭环审计。
 
 ## Closure rule
 
