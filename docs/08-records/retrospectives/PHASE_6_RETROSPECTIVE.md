@@ -10,7 +10,7 @@
 - 建立 128 个版本化公共合成评估用例和可复现 runner；安全、权限、冲突、无答案和注入切片已进入数据集。
 - 完成 OTel/Prometheus/Grafana/Loki/Tempo profile、告警、dashboard、脱敏验证和未授权出境 fault drill。
 - 完成 Phase 6 安全 corpus、出境/合同/AgentToolSecurity 回归；未发现跨空间、Evidence 外引用、未授权出境、SSRF 或工具越权。
-- 完成隔离恢复演练：RPO `0s`、RTO `12.416s`，覆盖 PostgreSQL、Qdrant、对象、active index、tombstone/delete ledger 和 outbox/job 幂等。
+- 完成隔离恢复演练：V14 后 RPO `0s`、RTO `11.885s`，覆盖 PostgreSQL、Qdrant、对象、active index、tombstone/delete ledger 和 outbox/job 幂等。
 - 实现 retention、space-scoped audit export、cost aggregation 和 SSE event cleanup。
 - 修复 Phase6OperationsService 的构造注入、scheduling 启用和空间限定问题，并完成 V14 隔离 scheduler 演练：带 `space_id` 的过期 synthetic event 1 → 0，目标 event 4 秒后不存在。
 - 在用户明确授权下完成真实本地 Ollama `LOCAL_ONLY` RAG E2E；复用 provider connection，由 revision/artifact service 提供 material，并保留 citation/provenance。
