@@ -67,7 +67,12 @@ def http_json(base_url: str, method: str, path: str, payload: dict[str, Any] | N
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         body = response.read().decode("utf-8")
-        return json.loads(body) if body.strip() else {}
+        if not body.strip():
+            return {}
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError:
+            return {"body": body}
 
 
 def live_embedding_probe(ollama_url: str, model: str) -> dict[str, Any]:
