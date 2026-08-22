@@ -34,7 +34,7 @@ QDRANT_PORT = 26337
 QDRANT_GRPC_PORT = 26338
 COLLECTION = "ragforge_phase6_capacity_1m"
 QDRANT_IMAGE = "qdrant/qdrant:v1.11.5"
-LOCAL_QDRANT_API_KEY = "phase6-capacity-local-only"
+LOCAL_QDRANT_AUTH_VALUE = "phase6-capacity-local-only"
 OLLAMA_URL = "http://127.0.0.1:11434"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
 CHILD_COUNT = 1_000_000
@@ -77,7 +77,7 @@ def http_json(base_url: str, method: str, path: str, payload: dict[str, Any] | N
 
 
 def qdrant_json(base_url: str, method: str, path: str, payload: dict[str, Any] | None = None, timeout: int = 120) -> dict[str, Any]:
-    return http_json(base_url, method, path, payload, timeout, {"api-key": LOCAL_QDRANT_API_KEY})
+    return http_json(base_url, method, path, payload, timeout, {"api-key": LOCAL_QDRANT_AUTH_VALUE})
 
 
 def live_embedding_probe(ollama_url: str, model: str) -> dict[str, Any]:
@@ -120,7 +120,7 @@ def compose_env() -> dict[str, str]:
         "COMPOSE_PROJECT_NAME": COMPOSE_PROJECT,
         "QDRANT_PORT": str(QDRANT_PORT),
         "QDRANT_GRPC_PORT": str(QDRANT_GRPC_PORT),
-        "QDRANT_API_KEY": LOCAL_QDRANT_API_KEY,
+        "QDRANT_API_KEY": LOCAL_QDRANT_AUTH_VALUE,
         "RAGFORGE_VOLUME_PREFIX": COMPOSE_PROJECT,
         "RAGFORGE_NETWORK_NAME": f"{COMPOSE_PROJECT}-core",
     })
