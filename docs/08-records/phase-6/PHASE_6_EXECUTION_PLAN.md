@@ -3,7 +3,7 @@
 - 目标阶段：Phase 6 评估、观测、安全与恢复
 - 记录日期：2026-08-22
 - 统一 base SHA：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`
-- 当前主线验证 SHA：`9502a9e5beff439812302112f20ddf7e1d35c8e9`
+- 当前主线验证 SHA：`e63e2da97c4ef98b66a95da293ec707bd813c4f3`
 - 主分支：`main`
 - 主 Agent：Orchestrator
 - 技术基线：Java 21 + Spring Boot 3.5.x；模块化单体 + 独立 ingestion worker
@@ -57,10 +57,10 @@ P6-B、P6-C、P6-E 可在文件 ownership 不冲突时并行；P6-D 依赖 A 与
 | P6-C | completed | OTel/Prometheus/Grafana/Loki/Tempo profile、脱敏、dashboard、告警与 fault drill 已有真实证据 |
 | P6-D | partial | 23/23 Phase 6 安全回归通过，quality run `32575757466` 的 Syft/Grype/Maven/Phase 3–5 质量门禁全绿；人工/red-team review 仍待完成 |
 | P6-E | completed | 隔离恢复 5/5；完整、PG、Qdrant、对象、active index、tombstone/outbox 场景覆盖，V14 后 RPO `0s`、RTO `11.885s`，均达标 |
-| P6-F | partial | a2 重试已完成真实 768 维/1M/20 并发混合检索，Recall@10 `0.995`、p95 `119.8761ms`；认证在线 API/SSE harness 已完成，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`；本地 Ollama usage/cost 基线已记录为 1 call、293 tokens、估算 `0 USD`，但不代表云端商业成本或并发成本模型 |
+| P6-F | partial | a2 重试已完成真实 768 维/1M/20 并发混合检索，Recall@10 `0.995`、p95 `119.8761ms`；认证在线 API/SSE harness 已完成，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`；本地 Ollama usage/cost 基线为 1 call、293 tokens、估算 `0 USD`，另有 loopback streaming probe 测得 standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall `11475.2584ms`、`19.6176 tokens/s`、usage `35/46/81`；不代表同步 RAG graph 集成 TTFT、云端商业成本或并发成本模型 |
 | P6-G | partial | V14 后 retention、audit export、cost aggregation、SSE cleanup 均显式按空间处理，`Phase6OperationsServiceTest` 5/5 通过；隔离 server scheduler 受控清理演练已通过，带 `space_id` 的过期事件从 1 条清理至 0 条；多实例 live fan-out 仍待演练 |
 | P6-H | pending | 等全部门槛与 CI 证据完成后执行 |
 
 ## 阶段结论
 
-Phase 6 已建立验收基线但尚未满足退出条件。当前最重要的证据缺口是 >=120 评估集、真实 embedding 维度容量、隔离恢复 RPO/RTO、可运行观测/告警/Runbook、专项安全/red-team 和 retention/deletion 闭环；不得用 Phase 5 单 fixture 或合成容量数据替代。
+Phase 6 已建立验收基线但尚未满足退出条件。当前最重要的证据缺口是人工/red-team 质量签名、ADR-0011 接受后的多实例 fan-out（若用户接受）、同步 RAG graph 集成 TTFT、真实并发成本模型和 retention/deletion 全链路闭环；不得用 standalone 流式探针、Phase 5 单 fixture 或合成容量数据替代。

@@ -4,7 +4,7 @@
 - Current stage: Phase 6 评估、观测、安全与恢复进行中；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
-- External remote: `origin` configured；当前 `main`/`origin/main` 为 `9502a9e`；GitHub Actions quality Run [32575757466](https://github.com/Mirror18/RAGForge/actions/runs/32575757466) 对该提交全绿。历史 Phase 3 OCR、SBOM 和 Grype artifact 仍按各自阶段记录保留；尚未创建 release。
+- External remote: `origin` configured；当前 `main` 为 `e63e2da97c4ef98b66a95da293ec707bd813c4f3`，推送后等待该提交的 GitHub Actions quality 结果；最近已完成提交 `2ff1f3b` 的 quality Run [32576478915](https://github.com/Mirror18/RAGForge/actions/runs/32576478915) 全绿。历史 Phase 3 OCR、SBOM 和 Grype artifact 仍按各自阶段记录保留；尚未创建 release。
 
 ## 1. 已完成
 
@@ -64,18 +64,18 @@
 
 ## 4. Phase 6 当前进度与证据（2026-08-22）
 
-- 基线与治理：Phase 6 checklist/执行计划已冻结，统一基线为 `0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；ADR-0010 已由用户接受，方案 A、既有 provider connection、revision/artifact material service 和本地 Ollama `LOCAL_ONLY` 授权均已落实。
+- 基线与治理：Phase 6 checklist/执行计划已冻结，统一基线为 `0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线为 `e63e2da97c4ef98b66a95da293ec707bd813c4f3`。ADR-0010 已由用户接受，方案 A、既有 provider connection、revision/artifact material service 和本地 Ollama `LOCAL_ONLY` 授权均已落实。
 - 评估：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json) 有 128 个版本化公共合成用例，runner 校验与 7/7 单元测试通过；candidate report 的确定性指标为 1.0，但人工/red-team review manifest 仍为 `PENDING`，不能关闭 P6-EVAL-04，也不能把 synthetic candidate 当作真实模型质量结论。
 - 观测：[`phase6-observability-assets.v1.json`](../../tests/evidence/phase6-observability-assets.v1.json) 与 [`phase6-observability-fault-drill.v1.json`](../../tests/evidence/phase6-observability-fault-drill.v1.json) 已验证 OTel/Prometheus/Grafana/Loki/Tempo profile、dashboard provisioning、trace/log 脱敏和未授权出境告警演练；观测资源测试 3/3 通过。浏览器视觉验收仍未宣称完成。
 - 安全与供应链：[`phase6-security.v1.json`](../../tests/evidence/phase6-security.v1.json) 的 Phase 6 corpus、出境回归、Phase 5 合同安全和 AgentToolSecurity 合计 23/23；本轮 [`phase6-redteam-agent-pre-review.v1.json`](../../tests/evidence/phase6-redteam-agent-pre-review.v1.json) 又执行 32 个安全/合同/工具边界测试并全部通过。cross-space、Evidence 外引用、unauthorized cloud、SSRF、Shell/SQL/任意网络/外部写入、解析/OCR 绕过、prompt injection 越权和 raw prompt/provider body 持久化均为 0。最新 GitHub Actions quality workflow [`32575757466`](https://github.com/Mirror18/RAGForge/actions/runs/32575757466) 全绿；该 run 重新执行了 SBOM/Grype、Maven、Phase 3–5、Web 和 Phase 4 门禁。阶段 SBOM artifact `9476272419`、Grype SARIF artifact `9476280585` 仍可追溯。Agent-assisted pre-review 明确不替代人工签名。
 - 恢复与运维：[`phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json) 记录隔离完整恢复、PG 单点、Qdrant 重建、对象缺失/hash、active index 回滚、tombstone/delete ledger 和 outbox/job 幂等；V14 后 RPO `0s`、RTO `11.885s`。retention、space-scoped audit export、cost aggregation 和 SSE event cleanup 已实现，`Phase6OperationsServiceTest` 5/5 通过，且 [`phase6-operations-runtime.v1.json`](../../tests/evidence/phase6-operations-runtime.v1.json) 证明带 `space_id` 的过期 synthetic event 可在隔离 scheduler 中 4 秒内从 1 条清理至 0 条；多实例 live fan-out 仍待演练。
-- 容量与在线性能：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json) 已真实测得 Ollama `nomic-embed-text:latest` 为 768 维；1,000,000 synthetic child chunks、4 spaces、20 并发混合过滤检索通过，Recall@10 `0.995`、p95 `119.8761ms`、错误率 `0`，满足 P6-OBS-03。该证据仍明确标注向量值为 live dimension 下的公共合成向量，不外推生产语义质量。新的 [`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json) 在隔离 server 和正式 session 认证 run 上完成 100 次 health API 与 SSE first-event 测量：non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`、错误率均为 `0`，满足 P6-OBS-02；TTFT 仍单独标记为未测量。
+- 容量与在线性能：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json) 已真实测得 Ollama `nomic-embed-text:latest` 为 768 维；1,000,000 synthetic child chunks、4 spaces、20 并发混合过滤检索通过，Recall@10 `0.995`、p95 `119.8761ms`、错误率 `0`，满足 P6-OBS-03。该证据仍明确标注向量值为 live dimension 下的公共合成向量，不外推生产语义质量。新的 [`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json) 在隔离 server 和正式 session 认证 run 上完成 100 次 health API 与 SSE first-event 测量：non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`、错误率均为 `0`，满足 P6-OBS-02。另有 [`phase6-real-ollama-stream-metrics.v1.json`](../../tests/evidence/phase6-real-ollama-stream-metrics.v1.json) 通过 loopback `LOCAL_ONLY` 流式探针测得 standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall time `11475.2584ms`、吞吐 `19.6176 tokens/s`、usage `35/46/81`；该证据不冒充同步 RAG graph TTFT，也不代表并发成本模型。
 - 真实 RAG 与成本基线：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json) 已记录真实本地 Ollama RAG、768 维 embedding、revision/artifact material、citation/provenance、usage 和 `LOCAL_ONLY` 出境约束；[`phase6-cost-local-ollama.v1.json`](../../tests/evidence/phase6-cost-local-ollama.v1.json) 固化了 1 次 provider call、293 tokens、provider-reported usage 和本地估算成本 `0 USD`。该证据满足本轮用户授权的真实 E2E 和本地成本基线，但不替代 Phase 6 人工评估、并发成本模型或云端商业定价。
-- 当前阶段结论：P6-C、P6-D、P6-E、P6-OBS-02、P6-OBS-03、P6-G 的实现/专项证据已具备；P6-EVAL-04 人工/red-team、P6-G 多实例 live fan-out，以及真实并发/云端成本边界仍未完全闭环，P6-H 不得关闭。阶段状态保持 `in-progress`。
+- 当前阶段结论：P6-C、P6-D、P6-E、P6-OBS-02、P6-OBS-03、standalone 本地流式 TTFT 探针和 P6-G 单实例实现/专项证据已具备；P6-EVAL-04 人工/red-team、P6-G 多实例 live fan-out，以及真实并发/云端成本边界仍未完全闭环，现有同步 RAG graph 的集成 TTFT 仍未测量，P6-H 不得关闭。阶段状态保持 `in-progress`。
 
 ## 5. 下一入口
 
-Phase 6 当前入口为 120+ 数据集与人工/red-team 评估、真实模型成本证据、retention/audit/cost/SSE cleanup 受控演练及多实例事件清理。在线 API/SSE 性能门槛已有真实认证证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
+Phase 6 当前入口为 120+ 数据集与人工/red-team 评估、真实 RAG graph 流式/并发成本证据、retention/audit/cost/SSE cleanup 受控演练及多实例事件清理。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
 
 ## 6. 更新规则
 

@@ -2,7 +2,7 @@
 
 - 日期：2026-08-22
 - 状态：未闭环，保留在 `in-progress`
-- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`9502a9e5beff439812302112f20ddf7e1d35c8e9`
+- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`e63e2da97c4ef98b66a95da293ec707bd813c4f3`
 
 ## Done
 
@@ -15,13 +15,15 @@
 - 修复 Phase6OperationsService 的构造注入、scheduling 启用和空间限定问题，并完成 V14 隔离 scheduler 演练：带 `space_id` 的过期 synthetic event 1 → 0，目标 event 4 秒后不存在。
 - 在用户明确授权下完成真实本地 Ollama `LOCAL_ONLY` RAG E2E；复用 provider connection，由 revision/artifact service 提供 material，并保留 citation/provenance。
 - 在隔离 Compose server 上通过正式 register/login session 认证创建 synthetic LOCAL_ONLY run，完成 100 次 non-AI API 与 100 次 SSE first-event 测量；p95 分别为 `28.7487ms` 和 `35.9285ms`，cookie 未进入证据。
+- 增加 loopback `LOCAL_ONLY` Ollama streaming probe；真实 `qwen3.5:9b` standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall `11475.2584ms`、`19.6176 tokens/s`、usage `35/46/81`，输出仅保留 hash/长度。
 
 ## Evidence gaps
 
 - 评估 candidate 的确定性指标全部为 1.0，但人工/red-team review 尚未完成；不得把 runner 结果写成真实模型质量结论。
 - 已执行 Agent-assisted adversarial pre-review：Python 安全/合同 23 tests + AgentToolSecurity 9 tests 均通过；报告明确保留人工 review 状态，不能作为人工签名。
 - 真实 Ollama embedding 维度 768 和 1,000,000 点 Qdrant 混合检索已取得有效证据：Recall@10 `0.995`、p95 `119.8761ms`、20 并发错误率 `0`；向量值仍是 live dimension 下的公共合成值。
-- 在线 API/SSE 性能门槛已取得认证隔离运行证据；同步适配器 TTFT 仍 `NOT_MEASURED`，不将首事件 p95 解释为 TTFT。
+- 在线 API/SSE 性能门槛已取得认证隔离运行证据；standalone streaming TTFT 已测量，但同步 RAG graph 集成路径仍 `NOT_MEASURED`，不将 SSE 首事件或 standalone 探针冒充为集成 TTFT。
+- standalone 本地成本仍为单次 0 USD 观测；真实 RAG graph 并发成本与云端价格仍未授权/未测量。
 - retention/cleanup 的空间限定单实例受控定时运行已通过；多实例 live fan-out 尚未完成。
 
 ## Learnings
