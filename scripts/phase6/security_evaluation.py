@@ -40,6 +40,19 @@ def run(name: str, command: list[str], *, blocked_if_missing: bool = False) -> d
     if java_home.exists():
         environment["JAVA_HOME"] = str(java_home)
         environment["Path"] = str(java_home / "bin") + os.pathsep + environment.get("Path", "")
+    # Windows can expose PATH under either casing when a child process is
+    # launched from PowerShell.  Keep the installed SBOM scanner directory in
+    # both forms so the nested required scan sees the same tool availability
+    # as this runner.
+    scanner_dirs = {
+        str(Path(tool).resolve().parent)
+        for tool in (shutil.which("syft"), shutil.which("trivy"))
+        if tool
+    }
+    if scanner_dirs:
+        child_path = os.pathsep.join((*scanner_dirs, environment.get("Path", "")))
+        environment["Path"] = child_path
+        environment["PATH"] = child_path
     completed = subprocess.run(
         command,
         cwd=ROOT,
