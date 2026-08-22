@@ -1,0 +1,203 @@
+{
+  "evidence_version": "phase6-recovery.v1",
+  "run_id": "6466f1ec-9776-4070-9c6f-918e084dca0f",
+  "base_sha": "0fe22db5979aa5ae7892165c227a5c8a484bdfb9",
+  "code_commit": "c90a98b8c0b226fb925d08da7a78e951139b0e43",
+  "environment": {
+    "production_connection": false,
+    "compose_project": "ragforge-p6-recovery-a1post",
+    "compose_file": "deploy/compose/compose.yaml",
+    "postgres_host": "127.0.0.1",
+    "qdrant_host": "127.0.0.1",
+    "object_host": "127.0.0.1",
+    "synthetic_fixture": "phase6-recovery-fixture.v1",
+    "fixture_sha256": "d3b578cebece30f8811b3f80aa7b06d842de90050644b1d09b2c4962f5d9a207",
+    "java_or_model": "not used; recovery-only harness"
+  },
+  "verification": {
+    "command": "python scripts/phase6/recovery_verification.py --project-name ragforge-p6-recovery-a1post --output tests/evidence/phase6-recovery.v1.json",
+    "compose_services": [
+      "postgres",
+      "qdrant",
+      "minio"
+    ],
+    "safe_scope": "unique non-production project and volumes; no production endpoint accepted",
+    "assertions": [
+      "complete_restore",
+      "postgres_single_point",
+      "qdrant_loss_rebuild",
+      "object_missing_detection",
+      "active_index_rollback",
+      "tombstone_delete_ledger_replay",
+      "outbox_job_no_duplicate"
+    ]
+  },
+  "backup": {
+    "postgres": {
+      "backup_id": "pg-6466f1ec-9776-4070-9c6f-918e084dca0f",
+      "schema_version": "V13__phase5_durable_run_events.sql",
+      "migration_manifest": [
+        {
+          "file": "V1__initial_schema.sql",
+          "sha256": "980a67541741a164d7e6903204f32993160cc2f16c99b97ddc0a7f2f58768551"
+        },
+        {
+          "file": "V2__idempotency_records.sql",
+          "sha256": "df4802c63e5d4b101b3a71e1dbfa8ca5975d3f2f41d4250ffc30f24e3dea88be"
+        },
+        {
+          "file": "V3__phase2_provider_prompt_run.sql",
+          "sha256": "4fe5d2bf1c619f163e0b1cd754bd2c4d8f1a498fd3eab52464f0122f290ec057"
+        },
+        {
+          "file": "V4__phase2_prompt_publication.sql",
+          "sha256": "b23738f2018b94c81d3edb3e61bd50ee907323d75642d68949b105bef2fb7ab0"
+        },
+        {
+          "file": "V5__phase2_prompt_templates.sql",
+          "sha256": "1480f3a4007eee35b6f1e7c2e0c1681e9125c0ed1ccc467fb552c558ccc8b2ea"
+        },
+        {
+          "file": "V6__phase2_conversation_run_execution.sql",
+          "sha256": "a12582581ff6d26c0a46732f7f89ebaf6721c86705ca6cb28804bb9f3b362efb"
+        },
+        {
+          "file": "V7__phase2_space_bindings.sql",
+          "sha256": "7bc479fae2fd1de7db338c67176adaaa456da69e77d68ba1cba6519d51581bb8"
+        },
+        {
+          "file": "V8__phase3_versioned_ingestion.sql",
+          "sha256": "cd3c9904490c451139d2753219e92027deed98f5390018683f6314a22c390a24"
+        },
+        {
+          "file": "V9__phase4_chunk_index_profile.sql",
+          "sha256": "9039ec3121ad2dcf4f69ea6e830670b19d01387d8062f3767261615fe18fb34e"
+        },
+        {
+          "file": "V10__phase4_override_content_ref.sql",
+          "sha256": "1b3e2de6b5644e80ab03a2a08d6c0969c3503cc5adbd866c8f0e4e570942ce13"
+        },
+        {
+          "file": "V11__phase5_rag_provenance.sql",
+          "sha256": "713c00a398f27674adf71978b7e4fe69eb0e03014cf0177bd64860161b8173ac"
+        },
+        {
+          "file": "V12__phase5_answer_history.sql",
+          "sha256": "3d2111e01f6363d159b05194ba5ea24351c723ad929cdcf2e9d7ada57648efd6"
+        },
+        {
+          "file": "V13__phase5_durable_run_events.sql",
+          "sha256": "ad2d4c66b69d1c1f07094a32230915780ed703d55bc92d7b867e5b02a0e64ee4"
+        }
+      ],
+      "bytes": 182115,
+      "sha256": "6ce91ab2e49e6defe303baf0ef5d4930a911cfe50ff63fbba782983c23e900e0"
+    },
+    "object": {
+      "manifest_id": "object-6466f1ec-9776-4070-9c6f-918e084dca0f",
+      "bucket": "ragforge",
+      "objects": [
+        {
+          "key": "phase6/recovery/synthetic-material.md",
+          "sha256": "a5976eb8ae2c9b0ac285374ed289bffdaa8b69fe9736fe134ae1adc30edac685",
+          "bytes": 122
+        }
+      ],
+      "manifest_sha256": "d9acf92e84598af36b275a2dfa176862669d6b207f39b09461299553b9fff6ee"
+    },
+    "qdrant": {
+      "snapshot_id": "recovery_6466f1ec977640709c6f-8228201050473802-2026-08-22-10-53-04.snapshot",
+      "collection": "recovery_6466f1ec977640709c6f",
+      "vector_dimension": 3,
+      "source_points_after_delete": 1,
+      "index_version": "8aa98dbd-7bd2-5fdd-ac89-f1b215cf7cab"
+    }
+  },
+  "scenarios": {
+    "object_missing_detection": {
+      "passed": true,
+      "missing_status": 404,
+      "restored_sha256": "a5976eb8ae2c9b0ac285374ed289bffdaa8b69fe9736fe134ae1adc30edac685",
+      "hash_match": true
+    },
+    "complete_restore": {
+      "passed": true,
+      "schema_version": "V13__phase5_durable_run_events.sql",
+      "schema_table_counts_match": true,
+      "key_counts": {
+        "users": 1,
+        "knowledge_spaces": 1,
+        "artifacts": 1,
+        "document_revisions": 1,
+        "child_chunks": 2,
+        "outbox_events": 1,
+        "ingestion_jobs": 1
+      }
+    },
+    "postgres_single_point": {
+      "passed": true,
+      "target_database": "recovery_pg_only",
+      "schema_version": "V13__phase5_durable_run_events.sql",
+      "key_counts_match": true
+    },
+    "active_index_rollback": {
+      "passed": true,
+      "from": "8aa98dbd-7bd2-5fdd-ac89-f1b215cf7cab",
+      "to": "3f44e0f7-4beb-58a8-abc7-80452528a3b0",
+      "pointer_verified": true
+    },
+    "qdrant_loss_rebuild": {
+      "passed": true,
+      "snapshot_id": "recovery_6466f1ec977640709c6f-8228201050473802-2026-08-22-10-53-04.snapshot",
+      "collection_deleted": true,
+      "rebuild_source": "recovered PostgreSQL child_chunks",
+      "index_version": "3f44e0f7-4beb-58a8-abc7-80452528a3b0",
+      "pre_tombstone_count": 2,
+      "post_tombstone_count": 1,
+      "vector_dimension": 3
+    },
+    "tombstone_delete_ledger_replay": {
+      "passed": true,
+      "ledger_entries": 1,
+      "first_replay_count": 1,
+      "second_replay_count": 1,
+      "idempotent": true
+    },
+    "outbox_job_no_duplicate": {
+      "passed": true,
+      "outbox_rows": 1,
+      "outbox_distinct_ids": 1,
+      "job_rows": 1,
+      "job_distinct_idempotency_keys": 1,
+      "replay_conflict_handling": "ON CONFLICT DO NOTHING"
+    }
+  },
+  "rpo_rto": {
+    "backup_started_at": "2026-08-22T10:53:04.296753Z",
+    "backup_completed_at": "2026-08-22T10:53:12.162960Z",
+    "rpo_seconds": 0,
+    "rto_seconds": 12.416,
+    "rpo_threshold_seconds": 86400,
+    "rto_threshold_seconds": 14400,
+    "rpo_passed": true,
+    "rto_passed": true,
+    "data_difference": {
+      "missing_rows": 0,
+      "unexpected_rows": 0,
+      "object_hash_mismatches": 0,
+      "qdrant_points_after_replay_difference": 0
+    }
+  },
+  "manual_steps": [
+    "确认恢复窗口并冻结写入/摄取；本次演练通过 synthetic fixture 模拟冻结。",
+    "在隔离 Compose project 中恢复 PostgreSQL，再校验 migration/schema 和关键计数。",
+    "恢复对象并对 manifest 中每个对象执行 SHA-256 校验。",
+    "确认 Qdrant 丢失后从 PostgreSQL child_chunks 重建，并重放 delete ledger。",
+    "确认 active index 指针回滚到前一版本，再恢复摄取和 outbox/job 消费。"
+  ],
+  "owners": {
+    "recovery_owner": "platform-oncall",
+    "improvement_owner": "platform-data"
+  },
+  "passed": true
+}
