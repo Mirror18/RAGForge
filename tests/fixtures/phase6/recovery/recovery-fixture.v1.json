@@ -1,0 +1,10 @@
+{
+  "fixture_version": "phase6-recovery-fixture.v1",
+  "synthetic_only": true,
+  "space_name": "Phase 6 recovery synthetic space",
+  "document_path": "phase6/recovery/synthetic-material.md",
+  "material": "RAGForge recovery rehearsal fixture. The recovery code is RCV-6. This sentence is synthetic and contains no customer data.",
+  "tombstone_entity": "synthetic-tombstone-child",
+  "outbox_event_type": "RECOVERY_FIXTURE_READY",
+  "ingestion_idempotency_key": "phase6-recovery-fixture-v1"
+}
