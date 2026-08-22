@@ -62,4 +62,5 @@
 - P6-OBS-03：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json)；768 维、1M points、4-space filter、20 concurrency、Recall@10 `0.995`、p95 `119.8761ms`、error rate `0`，满足检索容量阈值；向量值为 live dimension 下的公共合成值。
 - 用户授权的真实 E2E：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json)；仅证明本地 `LOCAL_ONLY` 真实 RAG 链路，不替代 Phase 6 质量和容量门槛。
 - 人工/red-team 评审 manifest：[`phase6-human-redteam-review.manifest.v1.json`](../../tests/evidence/phase6-human-redteam-review.manifest.v1.json)；当前为 `PENDING_HUMAN_REVIEW`，不得用自动化结果代签。
+- Agent-assisted red-team 前置报告：[`phase6-redteam-agent-pre-review.v1.json`](../../tests/evidence/phase6-redteam-agent-pre-review.v1.json)；4 组可重跑安全/合同/工具测试共 32 tests 通过，但明确不替代人工签名。
 - 多实例 live fan-out：[`ADR-0011`](../../docs/02-architecture/adr/0011-multi-instance-run-event-fanout.md) 为 `Proposed`；在用户明确接受前不得实现为绑定架构决策或宣称门槛已满足。
