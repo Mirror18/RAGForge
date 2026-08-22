@@ -1,0 +1,120 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch:
+    send_batch_size: 512
+    timeout: 5s
+  attributes/safe_metrics:
+    actions:
+      - key: user.id
+        action: delete
+      - key: user_id
+        action: delete
+      - key: document.id
+        action: delete
+      - key: document_id
+        action: delete
+      - key: prompt
+        action: delete
+      - key: response
+        action: delete
+      - key: authorization
+        action: delete
+      - key: cookie
+        action: delete
+  transform/safe_traces:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - set(attributes["trace_id"], trace_id.string)
+          - set(attributes["correlation_id"], attributes["correlation.id"]) where attributes["correlation.id"] != nil
+          - set(attributes["run_id"], attributes["run.id"]) where attributes["run.id"] != nil
+          - set(attributes["space_id"], attributes["space.id"]) where attributes["space.id"] != nil
+          - delete_key(attributes, "authorization")
+          - delete_key(attributes, "cookie")
+          - delete_key(attributes, "http.request.header.authorization")
+          - delete_key(attributes, "http.request.header.cookie")
+          - delete_key(attributes, "http.request.body")
+          - delete_key(attributes, "http.response.body")
+          - delete_key(attributes, "db.statement")
+          - delete_key(attributes, "gen_ai.prompt")
+          - delete_key(attributes, "gen_ai.completion")
+          - delete_key(attributes, "llm.input")
+          - delete_key(attributes, "llm.output")
+          - delete_key(attributes, "exception.message")
+          - delete_key(attributes, "document.content")
+  transform/safe_logs:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["trace_id"], trace_id.string) where trace_id != nil
+          - set(attributes["correlation_id"], attributes["correlation.id"]) where attributes["correlation.id"] != nil
+          - set(attributes["run_id"], attributes["run.id"]) where attributes["run.id"] != nil
+          - set(attributes["space_id"], attributes["space.id"]) where attributes["space.id"] != nil
+          - delete_key(attributes, "authorization")
+          - delete_key(attributes, "cookie")
+          - delete_key(attributes, "http.request.header.authorization")
+          - delete_key(attributes, "http.request.header.cookie")
+          - delete_key(attributes, "prompt")
+          - delete_key(attributes, "document.content")
+          - set(body, "")
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+
+service:
+  extensions:
+    - health_check
+  pipelines:
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - attributes/safe_metrics
+        - batch
+      exporters:
+        - prometheus
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - transform/safe_traces
+        - batch
+      exporters:
+        - otlp/tempo
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - transform/safe_logs
+        - batch
+      exporters:
+        - otlphttp/loki

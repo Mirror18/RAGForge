@@ -52,3 +52,48 @@ python scripts/dev/core.py --project-name ragforge-p1-orch-check --env-file depl
   健康检查、network/volume/host-port 隔离和 `gs-*` 禁止引用。
 
 `env.example` 只有开发占位值，不得作为共享环境或生产凭据使用。
+
+## Observability profile（Phase 6）
+
+`observability.yaml` 是与 core Compose 叠加使用的独立 profile，提供
+OpenTelemetry Collector、Prometheus、Grafana、Loki 和 Tempo。它不修改 core
+服务，也不启用 Langfuse；Langfuse 仍是可选的独立 `llmops` 方案。
+
+启动前必须在进程环境中提供 Grafana 管理员密码；密码不写入仓库、Compose
+文件或命令行参数：
+
+```powershell
+$env:GRAFANA_ADMIN_PASSWORD = "<从本机 Secret Store 读取>"
+docker compose --project-name ragforge-p6-observability `
+  --file deploy/compose/compose.yaml `
+  --file deploy/compose/observability.yaml `
+  --profile observability up -d
+```
+
+验证配置和服务清单：
+
+```text
+docker compose --project-name ragforge-p6-observability \
+  --file deploy/compose/compose.yaml \
+  --file deploy/compose/observability.yaml \
+  --profile observability config --quiet
+docker compose --project-name ragforge-p6-observability \
+  --file deploy/compose/compose.yaml \
+  --file deploy/compose/observability.yaml \
+  --profile observability ps
+```
+
+默认入口为 Grafana `http://localhost:23000`、Prometheus
+`http://localhost:29090`、Loki `http://localhost:23100`、Tempo
+`http://localhost:23200`。端口和 volume 前缀都可通过环境变量隔离；不能把
+这些端口直接暴露到不受控网络。
+
+Collector 接收 OTLP gRPC `24317`、OTLP HTTP `24318`，并在 `28889` 暴露
+Prometheus exporter。`observability/otel-collector.yaml` 在导出前删除
+Authorization/Cookie、prompt/document body、数据库语句和 LLM 输入输出；仅
+保留受控的 `trace_id`、`correlation_id`、`run_id`、`space_id` 及状态/耗时等
+投影字段。Grafana 日志面板因此只能用于关联诊断，不能用于读取正文。
+
+这套 profile 的 runtime 验收命令、指标契约和故障演练记录见
+[`docs/05-operations/observability-profile.md`](../../docs/05-operations/observability-profile.md)
+与 [`scripts/phase6/observability_drill.py`](../../scripts/phase6/observability_drill.py)。

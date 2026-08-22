@@ -1,0 +1,140 @@
+groups:
+  - name: ragforge.phase6.user-impact
+    rules:
+      - alert: RAGForgeLoginErrorRateHigh
+        expr: sum(rate(http_server_requests_seconds_count{uri=~"/api/v1/auth/.*",status=~"5.."}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{uri=~"/api/v1/auth/.*"}[5m])), 1) > 0.05
+        for: 5m
+        labels:
+          severity: P1
+          owner: on-call-platform
+        annotations:
+          summary: 登录接口 5xx 错误率超过 5%
+          user_impact: 用户无法登录或建立会话
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/provider-outage.md
+
+      - alert: RAGForgeAnswerErrorRateHigh
+        expr: sum(rate(ragforge_answer_requests_total{status="error"}[5m])) / clamp_min(sum(rate(ragforge_answer_requests_total[5m])), 1) > 0.05
+        for: 5m
+        labels:
+          severity: P1
+          owner: on-call-rag
+        annotations:
+          summary: 问答错误率超过 5%
+          user_impact: 用户无法得到答案或 SSE 提前结束
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/provider-outage.md
+
+      - alert: RAGForgeActiveIndexUnavailable
+        expr: min(ragforge_active_index_healthy) == 0
+        for: 2m
+        labels:
+          severity: P1
+          owner: on-call-retrieval
+        annotations:
+          summary: active index 不可用
+          user_impact: 检索和问答会拒答或返回 degraded 状态
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+
+      - alert: RAGForgeUnauthorizedEgress
+        expr: increase(ragforge_egress_denied_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: P1
+          owner: on-call-security
+        annotations:
+          summary: 检测到被拒绝的未授权云端出境尝试
+          user_impact: 当前请求被 fail-closed 拒绝；需确认是否存在攻击或错误配置
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/unauthorized-egress.md
+
+  - name: ragforge.phase6.latency
+    rules:
+      - alert: RAGForgeRetrievalLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(ragforge_retrieval_duration_seconds_bucket[10m]))) > 1.5
+        for: 10m
+        labels:
+          severity: P2
+          owner: on-call-retrieval
+        annotations:
+          summary: retrieval p95 超过 1.5 秒
+          user_impact: 问答首事件和完整答案变慢
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+
+      - alert: RAGForgeSSEFirstEventLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(ragforge_sse_first_event_seconds_bucket[10m]))) > 0.5
+        for: 10m
+        labels:
+          severity: P2
+          owner: on-call-rag
+        annotations:
+          summary: SSE first event p95 超过 500ms
+          user_impact: 用户等待问答开始的时间变长
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/provider-outage.md
+
+      - alert: RAGForgeProviderTimeoutRateHigh
+        expr: sum(rate(ragforge_provider_timeouts_total[5m])) / clamp_min(sum(rate(ragforge_provider_calls_total[5m])), 1) > 0.05
+        for: 5m
+        labels:
+          severity: P1
+          owner: on-call-provider
+        annotations:
+          summary: provider timeout 比例超过 5%
+          user_impact: 生成失败、降级或问答拒答
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/provider-outage.md
+
+  - name: ragforge.phase6.ingestion
+    rules:
+      - alert: RAGForgeQueueAgeHigh
+        expr: max(ragforge_queue_oldest_age_seconds) > 900
+        for: 10m
+        labels:
+          severity: P1
+          owner: on-call-ingestion
+        annotations:
+          summary: ingestion 队列最老消息超过 15 分钟
+          user_impact: 新内容不能及时检索
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+
+      - alert: RAGForgeDeadLetterQueueNotEmpty
+        expr: sum(ragforge_dlq_messages) > 0
+        for: 5m
+        labels:
+          severity: P1
+          owner: on-call-ingestion
+        annotations:
+          summary: DLQ 存在未处理消息
+          user_impact: 部分文档可能没有完成摄取
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+
+  - name: ragforge.phase6.capacity-and-recovery
+    rules:
+      - alert: RAGForgeDatabaseCapacityHigh
+        expr: max(ragforge_db_connections_used / clamp_min(ragforge_db_connections_max, 1)) > 0.8
+        for: 10m
+        labels:
+          severity: P1
+          owner: on-call-platform
+        annotations:
+          summary: 数据库连接池使用率超过 80%
+          user_impact: API 请求可能排队或失败
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/database-capacity.md
+
+      - alert: RAGForgeRecoveryPointStale
+        expr: time() - ragforge_backup_last_success_timestamp_seconds > 86400
+        for: 15m
+        labels:
+          severity: P1
+          owner: on-call-platform
+        annotations:
+          summary: 最近成功备份超过 24 小时
+          user_impact: 发生故障时可能无法满足 RPO 24 小时
+          dashboard: RAGForge Phase 6 On-call
+          runbook: docs/05-operations/runbooks/database-capacity.md
