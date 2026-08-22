@@ -133,7 +133,9 @@ class Phase5PersistenceIntegrationTest {
         assertThat(answers.replayEvents(spaceA, run, -1)).containsExactly(event);
         assertThatThrownBy(() -> jdbc.update("UPDATE rag_answers SET answer_text = 'tampered' WHERE id = ?",
                 answer.answerId())).isInstanceOf(DataAccessException.class);
-        assertThat(answers.purgeExpired(NOW.plus(Duration.ofDays(31)))).isEqualTo(1);
+        assertThat(answers.purgeExpired(spaceB, NOW.plus(Duration.ofDays(31)))).isZero();
+        assertThat(answers.findAnswer(spaceA, answer.answerId())).isPresent();
+        assertThat(answers.purgeExpired(spaceA, NOW.plus(Duration.ofDays(31)))).isEqualTo(1);
         assertThat(answers.findAnswer(spaceA, answer.answerId())).isEmpty();
     }
 
