@@ -10,6 +10,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -94,6 +96,27 @@ public class PromptRepository {
         } catch (EmptyResultDataAccessException ignored) {
             return Optional.empty();
         }
+    }
+
+    /**
+     * Resolves a published template by its immutable content hash and space.
+     * The opaque ref remains an audit identity; the hash is the binding to the
+     * actual prompt body and prevents a cross-space or mutable lookup.
+     */
+    public Optional<String> findPublishedTemplateByHash(UUID spaceId, String promptHash) {
+        if (spaceId == null || promptHash == null || !promptHash.matches("[0-9a-fA-F]{64}")) {
+            return Optional.empty();
+        }
+        List<String> templates = jdbc.query("""
+                SELECT template
+                FROM prompt_versions
+                WHERE space_id = ? AND lower(template_hash) = lower(?) AND status = 'PUBLISHED'
+                ORDER BY version_no DESC, id DESC
+                """, (rs, rowNum) -> rs.getString("template"), spaceId, promptHash);
+        if (templates.isEmpty() || new HashSet<>(templates).size() != 1) {
+            return Optional.empty();
+        }
+        return Optional.of(templates.get(0));
     }
 
     @Transactional
