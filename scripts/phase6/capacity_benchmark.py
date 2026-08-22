@@ -165,7 +165,17 @@ def upload(base_url: str, dimension: int, child_count: int, batch_size: int) -> 
             "vector": vector_for(child_id, dimension),
             "payload": {"space_id": SPACES[child_id % len(SPACES)], "index_version": INDEX_VERSION},
         } for child_id in range(start, min(start + batch_size, child_count))]
-        qdrant_json(base_url, "PUT", f"/collections/{COLLECTION}/points?wait=true", {"points": points}, timeout=300)
+        for attempt in range(3):
+            try:
+                # Point IDs make retrying a timed-out request idempotent. A
+                # server may have accepted the batch before the client timed
+                # out, so the same payload is deliberately retried as-is.
+                qdrant_json(base_url, "PUT", f"/collections/{COLLECTION}/points?wait=true", {"points": points}, timeout=900)
+                break
+            except (OSError, urllib.error.URLError, urllib.error.HTTPError):
+                if attempt == 2:
+                    raise
+                time.sleep(2 ** attempt)
     return time.perf_counter() - started
 
 
@@ -269,18 +279,24 @@ def main() -> int:
         "online": blocked_online_result(args.server_url),
     }
     base_url = f"http://127.0.0.1:{QDRANT_PORT}"
+    phase = "embedding_probe"
     try:
         report["embedding_probe"] = live_embedding_probe(args.ollama_url, args.embedding_model)
+        phase = "compose_start"
         compose("up", "-d", "qdrant")
+        phase = "qdrant_ready"
         wait_ready(base_url)
+        phase = "collection_create"
         create_collection(base_url, report["embedding_probe"]["dimension"])
+        phase = "point_upload"
         report["upload_seconds"] = round(upload(base_url, report["embedding_probe"]["dimension"], args.child_count, args.batch_size), 4)
+        phase = "mixed_retrieval"
         report["retrieval"] = run_queries(base_url, report["embedding_probe"]["dimension"], args.child_count, args.query_count, args.concurrency)
         retrieval = report["retrieval"]
         report["status"] = "PASSED" if args.child_count == CHILD_COUNT and retrieval["error_rate"] == 0 and retrieval["recall_at_10"] >= 0.90 and retrieval["p95_ms"] < 1500 else "FAILED"
     except Exception as exc:  # noqa: BLE001 - evidence must preserve blocked/failed cause
         report["status"] = "BLOCKED" if isinstance(exc, (OSError, TimeoutError, urllib.error.URLError, subprocess.CalledProcessError)) else "FAILED"
-        report["failure"] = {"type": type(exc).__name__, "message": str(exc)}
+        report["failure"] = {"phase": phase, "type": type(exc).__name__, "message": str(exc)}
         report["retry_command"] = "python scripts/phase6/capacity_benchmark.py --output tests/evidence/phase6-capacity-retrieval.v1.json"
     finally:
         try:
