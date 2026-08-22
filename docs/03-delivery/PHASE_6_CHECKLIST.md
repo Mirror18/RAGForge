@@ -58,5 +58,6 @@
 - P6-OBS-01/04：[`phase6-observability-assets.v1.json`](../../tests/evidence/phase6-observability-assets.v1.json)、[`phase6-observability-fault-drill.v1.json`](../../tests/evidence/phase6-observability-fault-drill.v1.json)；profile、dashboard、脱敏和告警演练已通过。
 - P6-REC-01/02：[`phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json)；RPO `0s`、RTO `12.416s`，恢复场景已覆盖。
 - P6-OPS-01：[`PHASE_6_RETENTION_AUDIT_COST.md`](../../docs/05-operations/PHASE_6_RETENTION_AUDIT_COST.md)；实现和 4/4 定向测试通过，真实定时运行/多实例 live fan-out 仍待演练。
-- P6-OBS-02/03：[`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json)、[`phase6-capacity-retrieval.v1.json`](../../tests/evidence/phase6-capacity-retrieval.v1.json)；当前分别 `FAILED/BLOCKED`，以及 1M 写入 WinError 10060，未满足阈值。
+- P6-OBS-02：[`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json)；server 未运行且 SSE 无认证 run URL，证据为 `FAILED/BLOCKED`，未满足阈值。
+- P6-OBS-03：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json)；768 维、1M points、4-space filter、20 concurrency、Recall@10 `0.995`、p95 `119.8761ms`、error rate `0`，满足检索容量阈值；向量值为 live dimension 下的公共合成值。
 - 用户授权的真实 E2E：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json)；仅证明本地 `LOCAL_ONLY` 真实 RAG 链路，不替代 Phase 6 质量和容量门槛。

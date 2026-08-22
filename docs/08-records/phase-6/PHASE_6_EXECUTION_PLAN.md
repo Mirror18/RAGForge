@@ -56,7 +56,7 @@ P6-B、P6-C、P6-E 可在文件 ownership 不冲突时并行；P6-D 依赖 A 与
 | P6-C | completed | OTel/Prometheus/Grafana/Loki/Tempo profile、脱敏、dashboard、告警与 fault drill 已有真实证据 |
 | P6-D | partial | 23/23 Phase 6 安全回归通过，quality run `32570689145` 的 Syft/Grype/Maven/既有安全门禁全绿；人工/red-team review 仍待完成 |
 | P6-E | completed | 隔离恢复 5/5；完整、PG、Qdrant、对象、active index、tombstone/outbox 场景覆盖，RPO/RTO 达标 |
-| P6-F | blocked | 768 维探针成功；1M Qdrant 写入 WinError 10060，在线 API/SSE harness 也未提供，证据保留为 BLOCKED/FAILED |
+| P6-F | partial | a2 重试已完成真实 768 维/1M/20 并发混合检索，Recall@10 `0.995`、p95 `119.8761ms`；在线 API/SSE harness 仍未提供，成本证据也未单独完成 |
 | P6-G | partial | retention、audit export、cost aggregation、SSE cleanup 实现和 4/4 定向测试通过；受控运行与多实例 live fan-out 仍待演练 |
 | P6-H | pending | 等全部门槛与 CI 证据完成后执行 |
 

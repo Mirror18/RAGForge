@@ -17,7 +17,7 @@
 ## Evidence gaps
 
 - 评估 candidate 的确定性指标全部为 1.0，但人工/red-team review 尚未完成；不得把 runner 结果写成真实模型质量结论。
-- 真实 Ollama embedding 维度 768 已取得；1,000,000 点 Qdrant 批量写入出现 WinError 10060，尚未取得有效 retrieval p95/Recall@10。
+- 真实 Ollama embedding 维度 768 和 1,000,000 点 Qdrant 混合检索已取得有效证据：Recall@10 `0.995`、p95 `119.8761ms`、20 并发错误率 `0`；向量值仍是 live dimension 下的公共合成值。
 - non-AI API p95 和 SSE first event p95 缺少运行中的隔离 server 与认证 harness；同步适配器 TTFT 仍 `NOT_MEASURED`。
 - retention/cleanup 已有实现与单元证据，但真实受控定时运行和多实例 live fan-out 尚未完成。
 
@@ -31,9 +31,8 @@
 ## Next actions
 
 1. 由 Quality/Security 完成人工与 red-team review manifest，逐 case 记录 reviewer、decision、解释和退化处置。
-2. 修复隔离 Qdrant 1M 批量写入超时，先保留 768 维和 4-space filter 约束，再重跑 1M/20 并发混合负载。
-3. 启动隔离 server，准备不含真实凭据的认证 run harness，分别重跑 non-AI API p95 和 SSE first event p95；TTFT 单独标记。
-4. 执行 retention/audit/cost/SSE cleanup 的受控定时演练，并明确多实例 live fan-out 的实现或延期决策。
+2. 启动隔离 server，准备不含真实凭据的认证 run harness，分别重跑 non-AI API p95 和 SSE first event p95；TTFT 单独标记。
+3. 执行 retention/audit/cost/SSE cleanup 的受控定时演练，并明确多实例 live fan-out 的实现或延期决策。
 
 ## Closure rule
 
