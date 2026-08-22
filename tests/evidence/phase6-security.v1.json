@@ -1,0 +1,90 @@
+{
+  "evidence_version": "phase6-security.v1",
+  "synthetic_only": true,
+  "code_commit": "f3d229c7cdab69b24f60c017a53bb194203df828",
+  "tests": [
+    {
+      "name": "phase6-security-corpus",
+      "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe -m unittest tests.security.test_phase6_security",
+      "status": "passed",
+      "exit_code": 0,
+      "output_sha256": "133449d6f429f0588126e0403937f271f33f90517460d5c4b39d69c2eeda0f25",
+      "output_redacted": true,
+      "raw_output_persisted": false
+    },
+    {
+      "name": "phase2-egress-regression",
+      "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe -m unittest tests.security.test_phase2_egress_isolation",
+      "status": "passed",
+      "exit_code": 0,
+      "output_sha256": "cd46fbfce51b86766f3db2ae4073f31911ad7a81ca241e1c727e7863ce066df8",
+      "output_redacted": true,
+      "raw_output_persisted": false
+    },
+    {
+      "name": "phase5-contract-security",
+      "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe -m unittest tests.contract.test_phase5_contracts",
+      "status": "passed",
+      "exit_code": 0,
+      "output_sha256": "ceea5e339bfb84b2653af263ee2fe0a0e2de2bfaed2f3efd00a6d42b42fde502",
+      "output_redacted": true,
+      "raw_output_persisted": false
+    },
+    {
+      "name": "agent-tool-security",
+      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl apps/server -am -Dtest=AgentToolSecurityTest -Dsurefire.failIfNoSpecifiedTests=false test",
+      "status": "passed",
+      "exit_code": 0,
+      "output_sha256": "f0cf7a8d40c55316065d6ef6e63a55517ef200c72f5d12905dc78cfa939b06c2",
+      "output_redacted": true,
+      "raw_output_persisted": false
+    },
+    {
+      "name": "dependency-inventory-lockfiles",
+      "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe scripts/ci/dependency_inventory.py --require-lockfiles --output C:\\Users\\mirror\\AppData\\Local\\Temp\\ragforge-phase6-security-udf19gu_\\dependency-inventory.json",
+      "status": "passed",
+      "exit_code": 0,
+      "output_sha256": "5a241b05fce6691861664155ba163732212afca63bd469914ac8f46bf9db206c",
+      "output_redacted": true,
+      "raw_output_persisted": false
+    },
+    {
+      "name": "sbom-vulnerability-image-scan",
+      "command": "C:\\Users\\mirror\\AppData\\Roaming\\uv\\python\\cpython-3.12-windows-x86_64-none\\python.exe scripts/ci/sbom_dependency_scan.py --mode required",
+      "status": "blocked",
+      "exit_code": 2,
+      "output_sha256": "192e8b71ee8c52d0374ff7c069312bda6214fb036c1c077420397895b33f082c",
+      "output_redacted": true,
+      "raw_output_persisted": false,
+      "reason": "syft or trivy is not installed; install in CI and rerun this exact command"
+    },
+    {
+      "name": "license-traceability-policy",
+      "command": "read docs/07-research/UPSTREAM_REUSE_REGISTER.md and THIRD_PARTY_NOTICES.md",
+      "status": "passed",
+      "exit_code": 0,
+      "raw_output_persisted": false
+    }
+  ],
+  "invariants": {
+    "cross_space_leaks": 0,
+    "evidence_external_citations": 0,
+    "unauthorized_cloud_calls": 0,
+    "shell_sql_arbitrary_network_external_write": 0,
+    "ssrf_bypass": 0,
+    "path_traversal_zip_bomb_xxe_parser_ocr_bypass": 0,
+    "prompt_injection_tool_escalation": 0,
+    "raw_prompt_or_provider_body_persisted": 0,
+    "dependency_image_scan_unaccepted_critical_high": null
+  },
+  "supply_chain": {
+    "dependency_inventory": "passed",
+    "sbom_vulnerability_image_scan": "blocked",
+    "license_policy": "passed",
+    "license_policy_evidence": [
+      "docs/07-research/UPSTREAM_REUSE_REGISTER.md",
+      "THIRD_PARTY_NOTICES.md"
+    ]
+  },
+  "passed": false
+}
