@@ -74,6 +74,9 @@ class Phase5PersistenceIntegrationTest {
     @Autowired
     JdbcAnswerPersistence answers;
 
+    @Autowired
+    JdbcRunEventStore eventStore;
+
     @BeforeEach
     void cleanDatabase() {
         jdbc.execute("TRUNCATE rag_answer_events, rag_answer_abstentions, rag_answer_citations, "
@@ -224,6 +227,46 @@ class Phase5PersistenceIntegrationTest {
                 UUID.randomUUID(), spaceA, "redaction", 2, "RAG_ANSWER", "opaque://raw_prompt/1",
                 HASH_A, "{}", "{}", null, NOW, UUID.randomUUID())))
                 .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void durableRunEventsReplayAfterStoreRestartAndRemainSpaceScoped() {
+        UUID spaceA = createSpace("phase5-run-events-a");
+        UUID spaceB = createSpace("phase5-run-events-b");
+        UUID runId = runs.createRun(new RunRepository.NewRun(UUID.randomUUID(), spaceA, null,
+                UUID.randomUUID(), RunRepository.RequestKind.CHAT, RunRepository.RunStatus.RUNNING,
+                null, null, null, null, null, null, null, null, NOW)).id();
+        UUID correlationId = UUID.randomUUID();
+
+        RunEvent first = eventStore.append(new RunEventDraft(runId, spaceA, correlationId,
+                "run.status", 1, "{\"status\":\"RUNNING\"}"));
+        RunEvent second = eventStore.append(new RunEventDraft(runId, spaceA, correlationId,
+                "answer.delta", 1, "{\"text\":\"durable\"}"));
+
+        JdbcRunEventStore restartedStore = new JdbcRunEventStore(jdbc, Duration.ofMinutes(15));
+        RunEventStore.ReplayResult replay = restartedStore.replay(spaceA, runId, first.eventId().toString());
+        assertThat(replay.cursorStatus()).isEqualTo(RunEventStore.CursorStatus.AVAILABLE);
+        assertThat(replay.events()).singleElement().satisfies(replayed -> {
+            assertThat(replayed.eventId()).isEqualTo(second.eventId());
+            assertThat(replayed.sequence()).isEqualTo(second.sequence());
+            assertThat(replayed.runId()).isEqualTo(runId);
+            assertThat(replayed.spaceId()).isEqualTo(spaceA);
+            assertThat(replayed.type()).isEqualTo("answer.delta");
+            assertThat(replayed.payloadJson()).contains("\"text\"", "durable");
+        });
+        assertThat(restartedStore.replay(spaceB, runId, null).events()).isEmpty();
+        assertThat(restartedStore.find(spaceB, runId, second.eventId())).isEmpty();
+
+        RunEventStore.CancellationResult cancelled = restartedStore.cancel(spaceA, runId, correlationId);
+        assertThat(cancelled.firstCancellation()).isTrue();
+        assertThat(eventStore.cancel(spaceA, runId, UUID.randomUUID())).satisfies(duplicate -> {
+            assertThat(duplicate.firstCancellation()).isFalse();
+            assertThat(duplicate.event().eventId()).isEqualTo(cancelled.event().eventId());
+            assertThat(duplicate.event().sequence()).isEqualTo(cancelled.event().sequence());
+        });
+        assertThatThrownBy(() -> restartedStore.append(new RunEventDraft(runId, spaceA, correlationId,
+                "answer.delta", 1, "{\"text\":\"late\"}")))
+                .isInstanceOf(RunCancelledException.class);
     }
 
     private RunRepository.NewRagRunProvenance ragRun(UUID space, UUID run, UUID prompt, UUID index,

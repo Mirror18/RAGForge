@@ -1,7 +1,6 @@
 package com.ragforge.server.run;
 
 import com.ragforge.server.common.UuidV7;
-import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -23,7 +22,6 @@ import java.util.function.Consumer;
  * Process-local event store used by the vertical slice. The port keeps the service independent from this
  * retention mechanism so a durable or shared implementation can replace it later.
  */
-@Component
 public class InMemoryRunEventStore implements RunEventStore {
     public static final int DEFAULT_MAX_EVENTS_PER_RUN = 256;
     public static final Duration DEFAULT_RETENTION = Duration.ofMinutes(15);
