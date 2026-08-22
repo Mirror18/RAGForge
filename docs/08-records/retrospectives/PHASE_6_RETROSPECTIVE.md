@@ -2,7 +2,7 @@
 
 - 日期：2026-08-22
 - 状态：未闭环，保留在 `in-progress`
-- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`e63e2da97c4ef98b66a95da293ec707bd813c4f3`
+- 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线验证 SHA：`a99c53989fe3db5a5419654b94844933ef70d87a`
 
 ## Done
 

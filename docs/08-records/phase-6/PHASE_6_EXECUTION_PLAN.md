@@ -55,7 +55,7 @@ P6-B、P6-C、P6-E 可在文件 ownership 不冲突时并行；P6-D 依赖 A 与
 | P6-A | completed | Checklist、执行计划和验收门槛已冻结，基线 `0fe22db` |
 | P6-B | partial | 128 cases、runner、candidate report 和 7/7 unit 已完成；人工/red-team review `PENDING` |
 | P6-C | completed | OTel/Prometheus/Grafana/Loki/Tempo profile、脱敏、dashboard、告警与 fault drill 已有真实证据 |
-| P6-D | partial | 23/23 Phase 6 安全回归通过，quality run `32575757466` 的 Syft/Grype/Maven/Phase 3–5 质量门禁全绿；人工/red-team review 仍待完成 |
+| P6-D | partial | 23/23 Phase 6 安全回归通过，quality run `32577294291` 的 Syft/Grype/Maven/Phase 3–5 质量门禁全绿；人工/red-team review 仍待完成 |
 | P6-E | completed | 隔离恢复 5/5；完整、PG、Qdrant、对象、active index、tombstone/outbox 场景覆盖，V14 后 RPO `0s`、RTO `11.885s`，均达标 |
 | P6-F | partial | a2 重试已完成真实 768 维/1M/20 并发混合检索，Recall@10 `0.995`、p95 `119.8761ms`；认证在线 API/SSE harness 已完成，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`；本地 Ollama usage/cost 基线为 1 call、293 tokens、估算 `0 USD`，另有 loopback streaming probe 测得 standalone TTFT `9130.6742ms`、provider total `11456.3744ms`、wall `11475.2584ms`、`19.6176 tokens/s`、usage `35/46/81`；不代表同步 RAG graph 集成 TTFT、云端商业成本或并发成本模型 |
 | P6-G | partial | V14 后 retention、audit export、cost aggregation、SSE cleanup 均显式按空间处理，`Phase6OperationsServiceTest` 5/5 通过；隔离 server scheduler 受控清理演练已通过，带 `space_id` 的过期事件从 1 条清理至 0 条；多实例 live fan-out 仍待演练 |
