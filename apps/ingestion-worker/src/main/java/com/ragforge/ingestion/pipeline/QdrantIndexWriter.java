@@ -42,6 +42,46 @@ public final class QdrantIndexWriter {
         if (actual != dimension) throw new IllegalStateException("candidate index dimension validation failed");
     }
 
+    /**
+     * Runs the same filtered search contract used by retrieval before an index
+     * can be marked READY.  A collection that only accepts writes is not a
+     * usable candidate index, and a search that ignores the space filter must
+     * fail closed.
+     */
+    public Validation validateCandidate(String collection, UUID spaceId, UUID indexId, Point point) {
+        JsonNode scoped = search(collection, spaceId, indexId, point.vector());
+        boolean sampleRetrievalPassed = containsPoint(scoped, point, spaceId, indexId);
+
+        UUID foreignSpaceId = UUID.nameUUIDFromBytes(
+                ("ragforge-forbidden-space:" + spaceId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        JsonNode foreign = search(collection, foreignSpaceId, indexId, point.vector());
+        boolean spaceFilterPassed = sampleRetrievalPassed && foreign.path("result").isArray()
+                && foreign.path("result").isEmpty();
+        return new Validation(sampleRetrievalPassed, spaceFilterPassed);
+    }
+
+    private JsonNode search(String collection, UUID spaceId, UUID indexId, List<Double> vector) {
+        Map<String, Object> filter = Map.of("must", List.of(
+                Map.of("key", "space_id", "match", Map.of("value", spaceId.toString())),
+                Map.of("key", "index_version_id", "match", Map.of("value", indexId.toString()))));
+        return request("POST", "/collections/" + collection + "/points/search",
+                Map.of("vector", vector, "limit", 1, "with_payload", true, "filter", filter), false);
+    }
+
+    private boolean containsPoint(JsonNode response, Point expected, UUID spaceId, UUID indexId) {
+        JsonNode results = response.path("result");
+        if (!results.isArray()) return false;
+        for (JsonNode hit : results) {
+            if (!expected.id().toString().equals(hit.path("id").asText())) continue;
+            JsonNode payload = hit.path("payload");
+            if (spaceId.toString().equals(payload.path("space_id").asText())
+                    && indexId.toString().equals(payload.path("index_version_id").asText())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private JsonNode request(String method, String path, Object body, boolean allowConflict) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(endpoint + path)).timeout(Duration.ofSeconds(90));
@@ -62,4 +102,6 @@ public final class QdrantIndexWriter {
     }
 
     public record Point(UUID id, UUID revisionId, UUID parentId, String contentRef, String textHash, List<Double> vector) { }
+
+    public record Validation(boolean sampleRetrievalPassed, boolean spaceFilterPassed) { }
 }

@@ -12,6 +12,7 @@ import com.ragforge.ingestion.parser.NativeDocumentParser;
 import com.ragforge.ingestion.parser.ParseRequest;
 import com.ragforge.ingestion.parser.ParseStatus;
 import com.ragforge.ingestion.parser.ParsedDocument;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -36,16 +35,20 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     private final ContentAddressedObjectStore store;
     private final OllamaEmbeddingClient embedding;
     private final QdrantIndexWriter qdrant;
+    private final String embeddingProfileVersion;
     private final NativeDocumentParser parser = new NativeDocumentParser();
 
     public BusinessIngestionSideEffectHandler(JdbcTemplate jdbc, ObjectMapper mapper,
                                               ContentAddressedObjectStore store,
-                                              OllamaEmbeddingClient embedding, QdrantIndexWriter qdrant) {
+                                              OllamaEmbeddingClient embedding, QdrantIndexWriter qdrant,
+                                              @Value("${ragforge.ollama.embedding-model:nomic-embed-text:latest}")
+                                              String embeddingProfileVersion) {
         this.jdbc = jdbc;
         this.mapper = mapper;
         this.store = store;
         this.embedding = embedding;
         this.qdrant = qdrant;
+        this.embeddingProfileVersion = embeddingProfileVersion;
     }
 
     @Override
@@ -58,12 +61,12 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         UUID jobId = payload.jobId();
         UUID attemptId = payload.attemptId();
         Instant now = Instant.now();
+        ObjectKey key = validateArtifactReference(spaceId, payload);
         DocumentContext context = loadContext(spaceId, sourceId, jobId);
         step(spaceId, jobId, attemptId, "DISCOVER", "SUCCEEDED", null, null, null, now);
         step(spaceId, jobId, attemptId, "FETCH", "RUNNING", null, null, null, now);
-        ObjectKey key = ObjectKey.parse(spaceId, payload.artifactRef().storageUri());
         StoredObject source = store.get(key);
-        if (!source.sha256().equalsIgnoreCase(payload.artifactRef().sha256())) throw new IllegalStateException("source hash validation failed");
+        validateStoredArtifact(source, payload);
         step(spaceId, jobId, attemptId, "FETCH", "SUCCEEDED", null, null, null, Instant.now());
         step(spaceId, jobId, attemptId, "PARSE", "RUNNING", null, null, null, Instant.now());
         ParsedDocument parsed = parser.parse(new ParseRequest(spaceId, revisionId, artifactId,
@@ -89,17 +92,24 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
                 INSERT INTO index_versions (id, space_id, version_no, index_state, candidate_collection,
                     embedding_profile_version, chunking_strategy_version, document_revision_count, child_chunk_count, created_at)
                 VALUES (?, ?, ?, 'BUILDING', ?, ?, 'markdown-simple-v1', 1, 1, ?)
-                """, indexId, spaceId, indexVersion, collection, "nomic-embed-text:latest", Timestamp.from(now));
-        qdrant.createAndUpsert(collection, vector.size(), spaceId, indexId,
-                List.of(new QdrantIndexWriter.Point(chunk.childId(), revisionId, chunk.parentId(), chunk.contentRef(), chunk.textHash(), vector)));
+                """, indexId, spaceId, indexVersion, collection, embeddingProfileVersion, Timestamp.from(now));
+        QdrantIndexWriter.Point point = new QdrantIndexWriter.Point(
+                chunk.childId(), revisionId, chunk.parentId(), chunk.contentRef(), chunk.textHash(), vector);
+        qdrant.createAndUpsert(collection, vector.size(), spaceId, indexId, List.of(point));
+        QdrantIndexWriter.Validation validation = qdrant.validateCandidate(collection, spaceId, indexId, point);
+        if (!validation.sampleRetrievalPassed() || !validation.spaceFilterPassed()) {
+            throw new IllegalStateException("candidate index validation failed");
+        }
         jdbc.update("""
                 UPDATE index_versions SET index_state = 'VALIDATING', validation_document_count = 1,
                     validation_child_chunk_count = 1, validation_vector_dimension = ?, validation_orphan_child_count = 0,
-                    validation_sample_retrieval_passed = TRUE, validation_space_filter_passed = TRUE,
+                    validation_sample_retrieval_passed = ?, validation_space_filter_passed = ?,
                     validation_checked_at = ?
                 WHERE space_id = ? AND id = ?
-                """, vector.size(), Timestamp.from(now), spaceId, indexId);
-        jdbc.update("UPDATE index_versions SET index_state = 'READY' WHERE space_id = ? AND id = ?", spaceId, indexId);
+                """, vector.size(), validation.sampleRetrievalPassed(), validation.spaceFilterPassed(),
+                Timestamp.from(now), spaceId, indexId);
+        requireSingleRow(jdbc.update("UPDATE index_versions SET index_state = 'READY' WHERE space_id = ? AND id = ?",
+                spaceId, indexId), "candidate index READY transition");
         ensureRetrievalProfile(spaceId, now);
         jdbc.update("UPDATE source_documents SET active_revision_id = ?, version_no = ?, current_state = 'ACTIVE', updated_at = ? WHERE space_id = ? AND id = ?",
                 revisionId, context.revisionNo(), Timestamp.from(now), spaceId, context.sourceDocumentId());
@@ -114,8 +124,33 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         jdbc.update("UPDATE ingestion_job_attempts SET status = 'SUCCEEDED', finished_at = ? WHERE space_id = ? AND id = ?",
                 Timestamp.from(now), spaceId, attemptId);
         step(spaceId, jobId, attemptId, "PUBLISH", "SUCCEEDED", null, null, parsed.report().parseReportId(), now);
-        jdbc.update("UPDATE source_checkpoints SET source_version_id = (SELECT id FROM source_versions WHERE space_id = ? AND source_id = ? ORDER BY version_no DESC LIMIT 1), version_no = version_no + 1, cursor_type = 'FILESYSTEM_SCAN', cursor_value = ?, last_successful_changeset_id = ?, updated_at = ? WHERE space_id = ? AND source_id = ?",
-                spaceId, sourceId, payload.artifactRef().sha256(), envelope.eventId(), Timestamp.from(now), spaceId, sourceId);
+        requireSingleRow(jdbc.update("UPDATE source_checkpoints SET source_version_id = (SELECT id FROM source_versions WHERE space_id = ? AND source_id = ? ORDER BY version_no DESC LIMIT 1), version_no = version_no + 1, cursor_type = 'FILESYSTEM_SCAN', cursor_value = ?, last_successful_changeset_id = ?, updated_at = ? WHERE space_id = ? AND source_id = ?",
+                spaceId, sourceId, payload.artifactRef().sha256(), envelope.eventId(), Timestamp.from(now), spaceId, sourceId),
+                "source checkpoint advancement");
+    }
+
+    private ObjectKey validateArtifactReference(UUID spaceId, IngestionJobRequestedPayload payload) {
+        ObjectKey key = ObjectKey.parse(spaceId, payload.artifactRef().storageUri());
+        if (!payload.sourceId().equals(key.sourceId())
+                || !payload.documentRevisionId().equals(key.documentRevisionId())
+                || !payload.artifactRef().artifactId().equals(key.artifactId())
+                || !payload.artifactRef().sha256().equalsIgnoreCase(key.contentHash())) {
+            throw new IllegalStateException("artifact reference identity validation failed");
+        }
+        return key;
+    }
+
+    private void validateStoredArtifact(StoredObject source, IngestionJobRequestedPayload payload) {
+        IngestionJobRequestedPayload.ArtifactReference reference = payload.artifactRef();
+        if (!source.sha256().equalsIgnoreCase(reference.sha256())
+                || source.byteLength() != reference.byteLength()
+                || !source.mediaType().equalsIgnoreCase(reference.mediaType())) {
+            throw new IllegalStateException("stored artifact metadata validation failed");
+        }
+    }
+
+    private static void requireSingleRow(int updated, String operation) {
+        if (updated != 1) throw new IllegalStateException(operation + " affected an unexpected number of rows");
     }
 
     private DocumentContext loadContext(UUID spaceId, UUID sourceId, UUID jobId) {
