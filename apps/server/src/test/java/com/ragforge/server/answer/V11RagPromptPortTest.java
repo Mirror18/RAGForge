@@ -65,4 +65,22 @@ class V11RagPromptPortTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("crosses the requested space");
     }
+
+    @Test
+    void loadsPublishedModernPromptVersionUsedByWebBusinessFlow() {
+        PromptRepository prompts = mock(PromptRepository.class);
+        when(prompts.findRagVersion(SPACE, VERSION)).thenReturn(Optional.empty());
+        when(prompts.findVersion(SPACE, VERSION)).thenReturn(Optional.of(new PromptRepository.PromptVersion(
+                VERSION, SPACE, "Local RAG Answer", 2, "Return JSON", "a".repeat(64), "{}", "{}",
+                "test", UUID.randomUUID(), PromptRepository.PromptStatus.PUBLISHED,
+                Instant.now(), Instant.now(), CORRELATION)));
+        when(prompts.ensureRagVersion(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(CORRELATION)))
+                .thenReturn(new PromptRepository.RagPromptVersion(VERSION, SPACE, "Local RAG Answer", 2,
+                        "RAG_ANSWER", "prompt-version:" + VERSION, "a".repeat(64), "{}", "{}",
+                        UUID.randomUUID(), Instant.now(), CORRELATION));
+
+        V11RagPromptPort port = new V11RagPromptPort(prompts, (space, ref, hash) -> "must not be reached");
+
+        assertThat(port.load(SPACE, VERSION, CORRELATION).template()).isEqualTo("Return JSON");
+    }
 }

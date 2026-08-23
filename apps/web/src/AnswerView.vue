@@ -5,6 +5,7 @@ import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswer, 
 import { type RunProjection } from "./answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null }>();
+const emit = defineEmits<{ "run-created": [runId: string] }>();
 
 type UiStatus = "empty" | "loading" | "reconnecting" | "completed" | "abstained" | "failed" | "cancelled" | "degraded" | "timeout" | "cancelling";
 
@@ -53,7 +54,8 @@ const promptVersionId = ref("");
 const model = ref("");
 const datasetHash = ref("");
 const configHash = ref("");
-const timeoutSeconds = ref(30);
+const allowCloudEgress = ref(false);
+const timeoutSeconds = ref(120);
 const status = ref<UiStatus>("empty");
 const answerText = ref("");
 const citations = ref<AnswerCitation[]>([]);
@@ -70,7 +72,6 @@ const formError = ref("");
 const cancelError = ref("");
 const previewNotice = ref("");
 const previewingEvidenceId = ref<string | null>(null);
-const feedbackNotice = ref("");
 const cancelRequested = ref(false);
 const streamAttempts = ref(0);
 
@@ -83,6 +84,8 @@ watch(() => props.defaults, (defaults) => {
   model.value = defaults.model;
   datasetHash.value = defaults.datasetHash;
   configHash.value = defaults.configHash;
+  allowCloudEgress.value = defaults.allowCloudEgress;
+  timeoutSeconds.value = defaults.allowCloudEgress ? 60 : 120;
 }, { immediate: true });
 
 let abortController: AbortController | null = null;
@@ -94,6 +97,7 @@ const seenEventIds = new Set<string>();
 const isActive = computed(() => status.value === "loading" || status.value === "reconnecting" || status.value === "degraded" || status.value === "cancelling");
 const statusLabel = computed(() => ({ empty: "等待提问", loading: "回答生成中", reconnecting: "连接恢复中", completed: "已完成", abstained: "安全拒答", failed: "回答失败", cancelled: "已取消", degraded: "服务降级", timeout: "请求超时", cancelling: "正在取消" })[status.value]);
 const contextLabel = computed(() => runContext.value ? `space ${runContext.value.spaceId} · run ${runContext.value.runId} · correlation ${runContext.value.correlationId}` : "尚未创建 run");
+const hasRuntimeDefaults = computed(() => Boolean(routeVersionId.value && profileVersionId.value && providerConnectionId.value && promptVersionId.value && model.value && datasetHash.value && configHash.value));
 
 function createKey(prefix: string): string {
   return `${prefix}-${crypto.randomUUID().replaceAll("-", "")}`;
@@ -219,7 +223,6 @@ function resetAnswer(): void {
   formError.value = "";
   cancelError.value = "";
   previewNotice.value = "";
-  feedbackNotice.value = "";
   cancelRequested.value = false;
   streamAttempts.value = 0;
 }
@@ -228,7 +231,7 @@ function validateStart(): string | null {
   if (!props.selectedSpaceId) return "请先在页面顶部选择当前空间。";
   if (!question.value.trim()) return "请输入问题。";
   if (!routeVersionId.value.trim() || !profileVersionId.value.trim() || !providerConnectionId.value.trim() || !promptVersionId.value.trim() || !model.value.trim()) return "需要填写 route、profile、provider connection、prompt 和 model。";
-  if (!/^[0-9a-f]{64}$/i.test(datasetHash.value) || !/^[0-9a-f]{64}$/i.test(configHash.value)) return "需要填写 64 位 dataset/config hash，避免使用未版本化的运行配置。";
+  if (!/^[0-9a-f]{64}$/i.test(datasetHash.value) || !/^[0-9a-f]{64}$/i.test(configHash.value)) return "业务闭环尚未返回有效的 dataset/config hash，请回到业务闭环刷新真实状态。";
   if (!Number.isInteger(timeoutSeconds.value) || timeoutSeconds.value < 1 || timeoutSeconds.value > 120) return "timeoutSeconds 必须是 1–120 的整数。";
   return null;
 }
@@ -245,7 +248,6 @@ async function startAnswer(): Promise<void> {
   formError.value = "";
   cancelError.value = "";
   notice.value = "";
-  feedbackNotice.value = "";
   if (isActive.value) return;
   const validationError = validateStart();
   if (validationError) { formError.value = validationError; return; }
@@ -261,15 +263,22 @@ async function startAnswer(): Promise<void> {
     }
     if (!activeConversationId) throw new Error("conversation unavailable");
     if (props.selectedSpaceId !== spaceIdAtStart) throw new Error("space changed during answer start");
-    const request = { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), model: model.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, datasetHash: datasetHash.value.trim(), configHash: configHash.value.trim(), maxContextTokens: 4000 };
+    const request = { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), model: model.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, datasetHash: datasetHash.value.trim(), configHash: configHash.value.trim(), maxContextTokens: 4000, allowCloudEgress: allowCloudEgress.value };
     const run = await createAnswerRun(spaceIdAtStart, activeConversationId, request, runIdempotencyKey);
     const runId = runIdentifier(run);
     if (!runId || run.spaceId !== spaceIdAtStart || props.selectedSpaceId !== spaceIdAtStart || !run.correlationId) throw new Error("run context unavailable");
+    emit("run-created", runId);
     runContext.value = { spaceId: spaceIdAtStart, runId, correlationId: run.correlationId };
     cancelIdempotencyKey = createKey(`answer-cancel-${runId}`);
-    await createAnswer(spaceIdAtStart, { ...request, runId }, createKey(`answer-create-${runId}`));
-    await streamRun(runContext.value, timeoutSeconds.value);
+    // Open SSE before the synchronous answer projection is created. The
+    // server may publish terminal answer events during createAnswer; opening
+    // first preserves those events for the live subscriber and avoids a
+    // late-stream snapshot hiding the completed result.
+    const stream = streamRun(runContext.value, timeoutSeconds.value);
+    await createAnswer(spaceIdAtStart, { ...request, runId, correlationId: run.correlationId }, createKey(`answer-create-${runId}`));
+    await stream;
   } catch (error) {
+    abortController?.abort();
     if (abortController?.signal.aborted && isTerminal()) return;
     status.value = "failed";
     formError.value = safeApiError(error, "回答启动失败；未显示服务端原始响应。请检查配置后重试。");
@@ -353,10 +362,6 @@ async function openCitation(citation: AnswerCitation): Promise<void> {
   }
 }
 
-function requestFeedback(category: "INCORRECT" | "MISSING_EVIDENCE" | "UNSAFE"): void {
-  feedbackNotice.value = `反馈入口占位：${category}。仅记录安全分类，不保存问题、回答或原文。`;
-}
-
 watch(() => props.selectedSpaceId, (next, previous) => {
   if (next !== previous && (runContext.value || isActive.value)) resetAnswer();
 });
@@ -368,8 +373,8 @@ onBeforeUnmount(() => abortController?.abort());
     <div class="section-heading"><div><p class="eyebrow">03 · Verifiable answer</p><h2 id="answer-heading">带引用问答</h2><p>回答增量、结构化 Citation 和运行状态来自当前空间的 SSE；模型提供的文件名、URL 和正文不会被当作引用。</p></div><div class="read-only-note" :class="{ warning: status === 'degraded' || status === 'timeout' }">{{ statusLabel }}</div></div>
     <form class="card answer-form" @submit.prevent="startAnswer">
       <div class="field wide"><label for="answer-question">问题</label><textarea id="answer-question" v-model="question" rows="4" maxlength="32000" placeholder="输入问题；不会写入 URL 或浏览器存储"></textarea></div>
-      <details class="answer-config"><summary>运行版本配置</summary><p class="field-hint">当前服务器运行契约需要显式绑定不可变 route/profile/provider/prompt/model 版本与 dataset/config hash；请求路径始终使用页面顶部的当前空间。云端出境在本入口固定关闭。</p><div class="form-grid"><div class="field"><label for="answer-conversation">已有 conversationId（可选）</label><input id="answer-conversation" v-model="conversationId" autocomplete="off" placeholder="留空则创建新会话" /></div><div class="field"><label for="answer-route">routeVersionId</label><input id="answer-route" v-model="routeVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-profile">profileVersionId</label><input id="answer-profile" v-model="profileVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-provider">providerConnectionId</label><input id="answer-provider" v-model="providerConnectionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-prompt">promptVersionId</label><input id="answer-prompt" v-model="promptVersionId" autocomplete="off" required placeholder="UUIDv7" /></div><div class="field"><label for="answer-model">model</label><input id="answer-model" v-model="model" autocomplete="off" required placeholder="已发布模型名" /></div><div class="field"><label for="answer-dataset-hash">datasetHash</label><input id="answer-dataset-hash" v-model="datasetHash" autocomplete="off" required placeholder="64 位 SHA-256" /></div><div class="field"><label for="answer-config-hash">configHash</label><input id="answer-config-hash" v-model="configHash" autocomplete="off" required placeholder="64 位 SHA-256" /></div><div class="field"><label for="answer-timeout">timeoutSeconds</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div></div></details>
-      <div class="form-actions"><button type="submit" :disabled="isActive || !selectedSpaceId">{{ isActive ? "回答进行中…" : "开始回答" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }} · 仅本地出境策略</span></div>
+      <details class="answer-config"><summary>服务端运行配置</summary><p class="field-hint">配置由业务闭环向导从当前空间服务端状态自动带入；普通用户无需输入任何 UUID 或 hash。云端出境仅在明确选择 MiMo 并通过空间绑定授权后启用，不会自动回退。</p><div v-if="hasRuntimeDefaults" class="runtime-summary"><div><span>Model Route</span><code>{{ routeVersionId }}</code></div><div><span>Model Profile</span><code>{{ profileVersionId }}</code></div><div><span>Provider connection</span><code>{{ providerConnectionId }}</code></div><div><span>Prompt version</span><code>{{ promptVersionId }}</code></div><div><span>model</span><code>{{ model }}</code></div><div><span>dataset/config hash</span><code>{{ datasetHash }} / {{ configHash }}</code></div></div><p v-else class="field-hint">请返回业务闭环完成模型、Prompt 和 active index 发布。</p><div class="field timeout-field"><label for="answer-timeout">等待时间（秒）</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div></details>
+      <div class="form-actions"><button type="submit" :disabled="isActive || !selectedSpaceId">{{ isActive ? "回答进行中…" : "开始回答" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }} · {{ allowCloudEgress ? "MiMo 云端 Chat（已显式授权）" : "本地 Ollama（LOCAL_ONLY）" }}</span></div>
     </form>
     <p v-if="formError" class="alert error" role="alert">{{ formError }}</p><p v-if="cancelError" class="alert error" role="alert">{{ cancelError }}</p><p v-if="notice" class="alert" :class="status === 'failed' || status === 'timeout' ? 'error' : 'success'" role="status">{{ notice }}</p>
 
@@ -385,7 +390,6 @@ onBeforeUnmount(() => abortController?.abort());
 
     <div v-if="tools.length || usage || errorState || eventLog.length" class="answer-observability two-column"><article class="card"><div class="card-title"><h3>事件状态</h3><span class="muted">sequence 单调、event_id 去重</span></div><div class="event-list"><div v-for="event in eventLog" :key="event.eventId" class="event-row"><span class="state-pill">{{ eventLabel(event.eventType) }}</span><span>#{{ event.sequence }}</span><code>{{ event.eventId }}</code></div></div></article><article class="card"><div class="card-title"><h3>工具与用量</h3><span class="muted">服务端结构化记录</span></div><div v-for="tool in tools" :key="tool.payload.toolCallId" class="tool-row"><span>{{ tool.payload.toolName }}</span><strong>{{ tool.payload.status }}</strong></div><dl v-if="usage" class="details usage-details"><dt>tokens</dt><dd>{{ usage.payload.inputTokens }} in · {{ usage.payload.outputTokens }} out · {{ usage.payload.totalTokens }} total</dd><dt>tools</dt><dd>{{ usage.payload.toolCallCount }}</dd><dt>provider reported</dt><dd>{{ usage.payload.providerReported ? "是" : "否" }}</dd></dl><p v-if="errorState" class="permission-hint">{{ safeErrorLabel(errorState.code) }} · {{ errorState.retryable ? "可重试" : "请检查配置或权限" }}</p><p v-if="!tools.length && !usage && !errorState" class="muted">尚无工具或用量事件。</p></article></div>
 
-    <div class="feedback-row"><span class="muted">反馈入口（占位）</span><button type="button" class="secondary-button" @click="requestFeedback('INCORRECT')">回答不准确</button><button type="button" class="secondary-button" @click="requestFeedback('MISSING_EVIDENCE')">缺少证据</button><button type="button" class="secondary-button" @click="requestFeedback('UNSAFE')">安全问题</button></div><p v-if="feedbackNotice" class="field-hint">{{ feedbackNotice }}</p>
     <div v-if="status === 'empty'" class="empty-state card"><strong>尚未开始回答</strong><span>选择当前空间，填写问题与不可变运行版本后开始。SSE 重连会携带 Last-Event-ID。</span></div>
   </section>
 </template>
@@ -397,6 +401,11 @@ onBeforeUnmount(() => abortController?.abort());
 .answer-config summary { color: #345582; cursor: pointer; font-weight: 700; }
 .answer-config .field-hint { margin: 10px 0 14px; }
 .answer-config .form-grid { margin-top: 12px; }
+.runtime-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.runtime-summary > div { min-width: 0; padding: 9px 10px; border-radius: 8px; background: #f1f6fd; }
+.runtime-summary span { display: block; margin-bottom: 4px; color: #71809a; font-size: .76rem; }
+.runtime-summary code { display: block; overflow-wrap: anywhere; color: #274f91; font-size: .73rem; }
+.timeout-field { max-width: 220px; margin-top: 12px; }
 .answer-context { display: flex; flex-direction: column; gap: 7px; margin-top: 15px; }
 .answer-context code { overflow-wrap: anywhere; color: #274f91; font-family: "Cascadia Code", Consolas, monospace; font-size: .8rem; }
 .answer-result { margin-top: 15px; }
@@ -422,8 +431,5 @@ onBeforeUnmount(() => abortController?.abort());
 .tool-row { justify-content: space-between; margin-top: 8px; }
 .tool-row strong { color: #284c87; }
 .usage-details { margin-top: 15px; }
-.feedback-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.feedback-row .secondary-button { padding: 8px 10px; font-size: .78rem; }
-.feedback-row + .field-hint { margin: 8px 0 0; }
-@media (max-width: 850px) { .citation-grid { grid-template-columns: 1fr; } }
+@media (max-width: 850px) { .citation-grid, .runtime-summary { grid-template-columns: 1fr; } }
 </style>

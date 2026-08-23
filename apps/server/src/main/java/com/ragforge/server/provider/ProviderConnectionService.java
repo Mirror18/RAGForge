@@ -132,7 +132,7 @@ public class ProviderConnectionService {
             @jakarta.validation.constraints.Size(min = 1, max = 160)
             String displayName,
             @jakarta.validation.constraints.NotBlank
-            @jakarta.validation.constraints.Pattern(regexp = "OLLAMA|OPENAI_COMPATIBLE|AI_RUNTIME")
+            @jakarta.validation.constraints.Pattern(regexp = "OLLAMA|OPENAI_COMPATIBLE|MIMO|AI_RUNTIME")
             String providerType,
             @jakarta.validation.constraints.Pattern(regexp = "LOCAL|CLOUD")
             String egressClass,
@@ -141,7 +141,7 @@ public class ProviderConnectionService {
             String endpoint,
             @jakarta.validation.constraints.NotBlank
             @jakarta.validation.constraints.Size(min = 2, max = 128)
-            @jakarta.validation.constraints.Pattern(regexp = "^[a-z][a-z0-9._:-]{1,127}$")
+            @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z][A-Za-z0-9._:-]{1,127}$")
             String credentialRef,
             @jakarta.validation.constraints.NotBlank
             @jakarta.validation.constraints.Pattern(regexp = "DRAFT|ACTIVE|DISABLED")

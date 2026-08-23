@@ -11,7 +11,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class OpenAiCompatibleProviderAdapter extends AbstractHttpProviderAdapter {
+public class OpenAiCompatibleProviderAdapter extends AbstractHttpProviderAdapter {
     public OpenAiCompatibleProviderAdapter(ObjectMapper objectMapper, CredentialResolver credentialResolver) {
         this(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build(), objectMapper, credentialResolver);
     }

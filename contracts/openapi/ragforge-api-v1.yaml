@@ -790,6 +790,57 @@
           "500": {"$ref": "#/components/responses/InternalError"}
         }
       }
+    },
+    "/api/v1/spaces/{spaceId}/sources/uploads": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "post": {
+        "tags": ["ingestion"],
+        "operationId": "uploadMarkdownSource",
+        "summary": "Upload a Markdown source and enqueue real ingestion",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"multipart/form-data": {"schema": {"type": "object", "required": ["file"], "properties": {"file": {"type": "string", "format": "binary", "description": "UTF-8 Markdown, maximum 10 MiB."}}}}}},
+        "responses": {
+          "200": {"description": "Upload accepted and represented by a persisted ingestion job", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessUploadResponse"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/source-documents": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "get": {"tags": ["ingestion"], "operationId": "listBusinessSourceDocuments", "summary": "List source documents in the authorized space", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}], "responses": {"200": {"description": "Source documents", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/BusinessSourceDocument"}}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+    },
+    "/api/v1/spaces/{spaceId}/ingestion-jobs": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "get": {"tags": ["ingestion"], "operationId": "listBusinessIngestionJobs", "summary": "List ingestion jobs, attempts and pipeline steps", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}], "responses": {"200": {"description": "Ingestion jobs", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/BusinessJobView"}}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+    },
+    "/api/v1/spaces/{spaceId}/ingestion-jobs/{jobId}": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/JobId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "get": {"tags": ["ingestion"], "operationId": "getBusinessIngestionJob", "summary": "Get one ingestion job with attempt and step evidence", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}], "responses": {"200": {"description": "Ingestion job", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessJobView"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}}
+    },
+    "/api/v1/spaces/{spaceId}/document-revisions/{revisionId}/parse-report": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RevisionId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "get": {"tags": ["ingestion"], "operationId": "getBusinessParseReport", "summary": "Get the persisted parse report for a revision", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}], "responses": {"200": {"description": "Parse report", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessParseReport"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}}
+    },
+    "/api/v1/spaces/{spaceId}/indexes": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "get": {"tags": ["indexing"], "operationId": "listBusinessIndexes", "summary": "List real index versions", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}], "responses": {"200": {"description": "Index versions", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/BusinessIndex"}}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+    },
+    "/api/v1/spaces/{spaceId}/indexes/active": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "get": {"tags": ["indexing"], "operationId": "getBusinessActiveIndex", "summary": "Get the active index pointer and server-derived dataset hash", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}], "responses": {"200": {"description": "Active index", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessActiveIndex"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+    },
+    "/api/v1/spaces/{spaceId}/indexes/{indexVersionId}/publish": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/IndexVersionId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "post": {"tags": ["indexing"], "operationId": "publishBusinessIndex", "summary": "Publish a READY candidate index", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}], "responses": {"200": {"description": "Active pointer", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ActiveIndexPointer"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}}}
     }
   },
   "components": {
@@ -836,6 +887,9 @@
         "required": true,
         "schema": {"$ref": "#/components/schemas/UuidV7"}
       },
+      "JobId": {"name": "jobId", "in": "path", "required": true, "schema": {"$ref": "#/components/schemas/UuidV7"}},
+      "RevisionId": {"name": "revisionId", "in": "path", "required": true, "schema": {"$ref": "#/components/schemas/UuidV7"}},
+      "IndexVersionId": {"name": "indexVersionId", "in": "path", "required": true, "schema": {"$ref": "#/components/schemas/UuidV7"}},
       "UserId": {
         "name": "userId",
         "in": "path",
@@ -1093,7 +1147,7 @@
           "version": {"type": "integer", "minimum": 0}
         }
       },
-      "ProviderType": {"type": "string", "enum": ["OLLAMA", "OPENAI_COMPATIBLE", "AI_RUNTIME"]},
+      "ProviderType": {"type": "string", "enum": ["OLLAMA", "OPENAI_COMPATIBLE", "MIMO", "AI_RUNTIME"]},
       "EgressClass": {"type": "string", "enum": ["LOCAL", "CLOUD"]},
       "ProviderConnectionStatus": {"type": "string", "enum": ["DRAFT", "ACTIVE", "DISABLED"]},
       "ModelPurpose": {"type": "string", "enum": ["CHAT", "EMBEDDING", "RERANK"]},
@@ -1113,7 +1167,7 @@
           "providerType": {"$ref": "#/components/schemas/ProviderType"},
           "egressClass": {"$ref": "#/components/schemas/EgressClass"},
           "endpoint": {"type": "string", "format": "uri", "minLength": 1, "maxLength": 2048},
-          "credentialRef": {"type": "string", "minLength": 2, "maxLength": 128, "pattern": "^[a-z][a-z0-9._:-]{1,127}$", "description": "Opaque reference only; never an API key, password, token, or secret value."},
+          "credentialRef": {"type": "string", "minLength": 2, "maxLength": 128, "pattern": "^[A-Za-z][A-Za-z0-9._:-]{1,127}$", "description": "Opaque reference only; never an API key, password, token, or secret value."},
           "status": {"$ref": "#/components/schemas/ProviderConnectionStatus"}
         }
       },
@@ -1123,7 +1177,7 @@
       "ProviderConnection": {
         "type": "object", "additionalProperties": false, "required": ["providerConnectionId", "spaceId", "version", "providerType", "egressClass", "endpoint", "credentialRef", "status", "createdAt", "updatedAt"],
         "properties": {
-          "providerConnectionId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "providerType": {"$ref": "#/components/schemas/ProviderType"}, "egressClass": {"$ref": "#/components/schemas/EgressClass"}, "endpoint": {"type": "string", "format": "uri", "maxLength": 2048}, "credentialRef": {"type": "string", "minLength": 2, "maxLength": 128, "pattern": "^[a-z][a-z0-9._:-]{1,127}$"}, "status": {"$ref": "#/components/schemas/ProviderConnectionStatus"}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}
+          "providerConnectionId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "providerType": {"$ref": "#/components/schemas/ProviderType"}, "egressClass": {"$ref": "#/components/schemas/EgressClass"}, "endpoint": {"type": "string", "format": "uri", "maxLength": 2048}, "credentialRef": {"type": "string", "minLength": 2, "maxLength": 128, "pattern": "^[A-Za-z][A-Za-z0-9._:-]{1,127}$"}, "status": {"$ref": "#/components/schemas/ProviderConnectionStatus"}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}
         }
       },
       "ProviderConnectionPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/ProviderConnection"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
@@ -1131,11 +1185,11 @@
       "ConnectionTestResult": {"type": "object", "additionalProperties": false, "required": ["providerConnectionId", "spaceId", "status", "correlationId", "testedAt"], "properties": {"providerConnectionId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "status": {"type": "string", "enum": ["PASSED", "FAILED"]}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "testedAt": {"type": "string", "format": "date-time"}, "errorClass": {"type": ["string", "null"], "enum": ["AUTHENTICATION", "RATE_LIMIT", "QUOTA", "MODEL_NOT_FOUND", "CONTEXT_OVERFLOW", "CONTENT_POLICY", "TIMEOUT", "UNAVAILABLE", "UNSUPPORTED_CAPABILITY", "INVALID_RESPONSE", null]}}},
       "ModelProfileRequest": {
         "type": "object", "additionalProperties": false, "required": ["providerConnectionId", "purpose", "modelName", "capabilities", "contextWindow", "maxOutputTokens", "usageReporting", "status"],
-        "properties": {"providerConnectionId": {"$ref": "#/components/schemas/UuidV7"}, "purpose": {"$ref": "#/components/schemas/ModelPurpose"}, "modelName": {"type": "string", "minLength": 1, "maxLength": 200}, "capabilities": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/components/schemas/ModelCapability"}}, "contextWindow": {"type": "integer", "minimum": 1, "maximum": 2000000}, "maxOutputTokens": {"type": "integer", "minimum": 1, "maximum": 200000}, "usageReporting": {"$ref": "#/components/schemas/UsageSource"}, "status": {"type": "string", "enum": ["DRAFT", "PUBLISHED", "DISABLED"]}}
+        "properties": {"providerConnectionId": {"$ref": "#/components/schemas/UuidV7"}, "purpose": {"$ref": "#/components/schemas/ModelPurpose"}, "modelName": {"type": "string", "minLength": 1, "maxLength": 200}, "capabilities": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/components/schemas/ModelCapability"}}, "contextWindow": {"type": "integer", "minimum": 1, "maximum": 2000000}, "maxOutputTokens": {"type": "integer", "minimum": 1, "maximum": 200000}, "embeddingDimension": {"type": ["integer", "null"], "minimum": 1, "maximum": 4096}, "usageReporting": {"$ref": "#/components/schemas/UsageSource"}, "status": {"type": "string", "enum": ["DRAFT", "PUBLISHED", "DISABLED"]}}
       },
       "ModelProfile": {
         "type": "object", "additionalProperties": false, "required": ["modelProfileId", "spaceId", "version", "providerConnectionId", "purpose", "modelName", "capabilities", "contextWindow", "maxOutputTokens", "usageReporting", "status", "createdAt", "updatedAt"],
-        "properties": {"modelProfileId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "providerConnectionId": {"$ref": "#/components/schemas/UuidV7"}, "purpose": {"$ref": "#/components/schemas/ModelPurpose"}, "modelName": {"type": "string", "minLength": 1, "maxLength": 200}, "capabilities": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/components/schemas/ModelCapability"}}, "contextWindow": {"type": "integer", "minimum": 1}, "maxOutputTokens": {"type": "integer", "minimum": 1}, "usageReporting": {"$ref": "#/components/schemas/UsageSource"}, "status": {"type": "string", "enum": ["DRAFT", "PUBLISHED", "DISABLED"]}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}}
+        "properties": {"modelProfileId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "providerConnectionId": {"$ref": "#/components/schemas/UuidV7"}, "purpose": {"$ref": "#/components/schemas/ModelPurpose"}, "modelName": {"type": "string", "minLength": 1, "maxLength": 200}, "capabilities": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"$ref": "#/components/schemas/ModelCapability"}}, "contextWindow": {"type": "integer", "minimum": 1}, "maxOutputTokens": {"type": "integer", "minimum": 1}, "embeddingDimension": {"type": ["integer", "null"], "minimum": 1, "maximum": 4096}, "usageReporting": {"$ref": "#/components/schemas/UsageSource"}, "status": {"type": "string", "enum": ["DRAFT", "PUBLISHED", "DISABLED"]}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}}
       },
       "ModelProfilePage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/ModelProfile"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
       "RouteCandidate": {"type": "object", "additionalProperties": false, "required": ["modelProfileId", "priority", "egressClass"], "properties": {"modelProfileId": {"$ref": "#/components/schemas/UuidV7"}, "priority": {"type": "integer", "minimum": 1, "maximum": 100}, "egressClass": {"$ref": "#/components/schemas/EgressClass"}}},
@@ -1174,6 +1228,13 @@
       "ModelInvocation": {"type": "object", "additionalProperties": false, "required": ["modelInvocationId", "spaceId", "runId", "stepId", "version", "correlationId", "modelProfileId", "modelProfileVersion", "status", "attempt", "usageLedgerId", "createdAt"], "properties": {"modelInvocationId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "stepId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileVersion": {"type": "integer", "minimum": 1}, "status": {"$ref": "#/components/schemas/RunStatus"}, "attempt": {"type": "integer", "minimum": 1, "maximum": 5}, "usageLedgerId": {"$ref": "#/components/schemas/UuidV7"}, "error": {"oneOf": [{"$ref": "#/components/schemas/RunError"}, {"type": "null"}]}, "createdAt": {"type": "string", "format": "date-time"}, "finishedAt": {"type": ["string", "null"], "format": "date-time"}}},
       "UsageLedger": {"type": "object", "additionalProperties": false, "required": ["usageLedgerId", "spaceId", "runId", "modelInvocationId", "version", "correlationId", "source", "dedupeKey", "inputTokens", "outputTokens", "totalTokens", "isFinal", "recordedAt"], "properties": {"usageLedgerId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "modelInvocationId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "source": {"$ref": "#/components/schemas/UsageSource"}, "dedupeKey": {"type": "string", "minLength": 10, "maxLength": 512, "pattern": "^[A-Za-z0-9._:-]+$"}, "inputTokens": {"type": "integer", "minimum": 0}, "outputTokens": {"type": "integer", "minimum": 0}, "totalTokens": {"type": "integer", "minimum": 0}, "isFinal": {"type": "boolean"}, "recordedAt": {"type": "string", "format": "date-time"}}, "description": "Usage is upserted by (spaceId, modelInvocationId, source, dedupeKey); duplicate provider reports do not create a second ledger row.", "x-ragforge-uniqueness": ["spaceId", "modelInvocationId", "source", "dedupeKey"], "x-ragforge-on-duplicate": "upsert-same-ledger-row"},
       "Source": {"$ref": "../ingestion/ingestion-domain.v1.schema.json#/$defs/source"},
+      "BusinessUploadResponse": {"type": "object", "additionalProperties": false, "required": ["spaceId", "sourceId", "sourceDocumentId", "documentRevisionId", "jobId", "attemptId", "displayName", "status"], "properties": {"spaceId": {"$ref": "#/components/schemas/UuidV7"}, "sourceId": {"$ref": "#/components/schemas/UuidV7"}, "sourceDocumentId": {"$ref": "#/components/schemas/UuidV7"}, "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"}, "jobId": {"$ref": "#/components/schemas/UuidV7"}, "attemptId": {"$ref": "#/components/schemas/UuidV7"}, "displayName": {"type": "string"}, "status": {"type": "string", "enum": ["REQUESTED", "RUNNING", "SUCCEEDED", "FAILED", "RETRY_SCHEDULED", "DLQ"]}}},
+      "BusinessSourceDocument": {"type": "object", "additionalProperties": false, "required": ["id", "spaceId", "sourceId", "stableSourceObjectId", "canonicalSourcePath", "basename", "versionNo", "state"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "sourceId": {"$ref": "#/components/schemas/UuidV7"}, "stableSourceObjectId": {"type": "string"}, "canonicalSourcePath": {"type": "string"}, "basename": {"type": "string"}, "versionNo": {"type": "integer", "minimum": 1}, "state": {"type": "string"}, "activeRevisionId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]}}},
+      "BusinessJobView": {"type": "object", "additionalProperties": false, "required": ["job", "attempts", "steps"], "properties": {"job": {"type": "object"}, "attempts": {"type": "array", "items": {"type": "object"}}, "steps": {"type": "array", "items": {"type": "object"}}}},
+      "BusinessParseReport": {"type": "object", "additionalProperties": false, "required": ["parseReportId", "documentRevisionId", "status", "mediaType", "pageCount", "characterCount", "tokenCount", "parserName", "parserVersion", "durationMs", "createdAt"], "properties": {"parseReportId": {"$ref": "#/components/schemas/UuidV7"}, "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"}, "status": {"type": "string"}, "mediaType": {"type": "string"}, "pageCount": {"type": "integer"}, "characterCount": {"type": "integer"}, "tokenCount": {"type": "integer"}, "parserName": {"type": "string"}, "parserVersion": {"type": "string"}, "durationMs": {"type": "integer"}, "warnings": {"type": "string"}, "errors": {"type": "string"}, "extractedTextArtifactId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]}, "ocrStatus": {"type": "string"}, "ocrEngine": {"type": ["string", "null"]}, "ocrEngineVersion": {"type": ["string", "null"]}, "createdAt": {"type": "string", "format": "date-time"}}},
+      "BusinessIndex": {"type": "object", "additionalProperties": false, "required": ["indexVersionId", "spaceId", "versionNo", "state", "candidateCollection", "embeddingProfileVersion", "chunkingStrategyVersion", "documentRevisionCount", "childChunkCount", "createdAt"], "properties": {"indexVersionId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "versionNo": {"type": "integer"}, "state": {"type": "string"}, "candidateCollection": {"type": "string"}, "embeddingProfileVersion": {"type": "string"}, "chunkingStrategyVersion": {"type": "string"}, "documentRevisionCount": {"type": "integer"}, "childChunkCount": {"type": "integer"}, "validationVectorDimension": {"type": ["integer", "null"]}, "sampleRetrievalPassed": {"type": ["boolean", "null"]}, "spaceFilterPassed": {"type": ["boolean", "null"]}, "activatedAt": {"type": ["string", "null"], "format": "date-time"}, "createdAt": {"type": "string", "format": "date-time"}}},
+      "BusinessActiveIndex": {"type": "object", "additionalProperties": false, "required": ["pointer", "index", "datasetHash"], "properties": {"pointer": {"$ref": "#/components/schemas/ActiveIndexPointer"}, "index": {"oneOf": [{"$ref": "#/components/schemas/BusinessIndex"}, {"type": "null"}]}, "datasetHash": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{64}$"}, {"type": "null"}]}}},
+      "ActiveIndexPointer": {"type": "object", "additionalProperties": false, "required": ["id", "spaceId", "activeIndexVersionId", "versionNo", "updatedAt"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "activeIndexVersionId": {"$ref": "#/components/schemas/UuidV7"}, "previousIndexVersionId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]}, "versionNo": {"type": "integer"}, "updatedAt": {"type": "string", "format": "date-time"}}},
       "SourceCreateRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -1604,6 +1665,7 @@
       "UnprocessableEntity": {"description": "Request failed field validation", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/ProblemDetails"}}}},
       "TooManyRequests": {"description": "Rate limit exceeded", "headers": {"Retry-After": {"schema": {"type": "integer", "minimum": 1}}}, "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/ProblemDetails"}}}},
       "InternalError": {"description": "Unexpected server error", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/ProblemDetails"}}}}
+      ,"ServiceUnavailable": {"description": "Required local infrastructure is unavailable", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/ProblemDetails"}}}}
     }
   }
 }

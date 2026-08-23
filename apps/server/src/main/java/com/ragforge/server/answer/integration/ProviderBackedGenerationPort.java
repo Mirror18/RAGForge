@@ -23,6 +23,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Explicit bridge from the answer generation port to the existing provider
@@ -31,6 +33,7 @@ import java.util.concurrent.CompletionStage;
  */
 public final class ProviderBackedGenerationPort implements GenerationPort {
     private static final int MAX_PROVIDER_OUTPUT_BYTES = 1_000_000;
+    private static final Logger log = LoggerFactory.getLogger(ProviderBackedGenerationPort.class);
 
     private final ProviderRouteResolver routes;
     private final ProviderAdapterRegistry adapters;
@@ -90,7 +93,9 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
                     new RequestIdentity(request.runId(), request.correlationId(), request.idempotencyKey()),
                     route.model(), List.of(new ChatMessage("system", request.renderedPrompt()),
                             new ChatMessage("user", request.query())), timeout, null,
-                    java.util.Set.of(ModelCapability.CHAT), false);
+                    java.util.Set.of(ModelCapability.CHAT), false,
+                    request.evidenceBundle().bundle().evidence().stream()
+                            .map(item -> item.evidenceId().toString()).collect(java.util.stream.Collectors.toSet()));
         } catch (RuntimeException failure) {
             return CompletableFuture.failedFuture(new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE,
                     "Generation request could not be prepared", request.correlationId(), 0, false));
@@ -145,7 +150,7 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
             if (root == null || !root.isObject() || !root.path("answer_text").isTextual()
                     || root.path("answer_text").textValue().isBlank()
                     || !root.path("claims").isArray() || root.path("claims").isEmpty()) {
-                throw invalid(request);
+                throw invalid(request, "ROOT_OR_REQUIRED_FIELDS");
             }
             List<GeneratedClaim> claims = new ArrayList<>();
             for (JsonNode claim : root.path("claims")) {
@@ -153,18 +158,26 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
                         || claim.path("claim_text").textValue().isBlank()
                         || !claim.path("citation_tokens").isArray()
                         || claim.path("citation_tokens").isEmpty()) {
-                    throw invalid(request);
+                    throw invalid(request, "CLAIM_OR_CITATION_FIELDS");
                 }
                 List<String> tokens = new ArrayList<>();
                 for (JsonNode token : claim.path("citation_tokens")) {
                     if (!token.isTextual() || !token.textValue().matches(
                             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[7][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")) {
-                        throw invalid(request);
+                        throw invalid(request, "CITATION_TOKEN_FORMAT");
                     }
                     tokens.add(token.textValue());
                 }
                 Integer start = optionalInt(claim, "answer_char_start", request);
                 Integer end = optionalInt(claim, "answer_char_end", request);
+                if (!rangeMatches(root.path("answer_text").textValue(), claim.path("claim_text").textValue(), start, end)) {
+                    // Character offsets are optional projection metadata, not
+                    // citation authority. Derive them from the exact claim
+                    // text below when a provider emits stale offsets; the
+                    // evidence UUID allow-list remains mandatory.
+                    start = null;
+                    end = null;
+                }
                 claims.add(new GeneratedClaim(claim.path("claim_text").textValue(), tokens, start, end));
             }
             return new GenerationResult(root.path("answer_text").textValue(), claims,
@@ -172,7 +185,7 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
         } catch (ProviderAdapterException failure) {
             throw failure;
         } catch (Exception failure) {
-            throw invalid(request);
+            throw invalid(request, "JSON_PARSE");
         }
     }
 
@@ -182,13 +195,26 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
         }
         JsonNode value = node.get(field);
         if (!value.isIntegralNumber() || !value.canConvertToInt() || value.intValue() < 0) {
-            throw invalid(request);
+            throw invalid(request, "OPTIONAL_CHAR_RANGE");
         }
         return value.intValue();
     }
 
-    private static ProviderAdapterException invalid(GenerationRequest request) {
+    private static boolean rangeMatches(String answerText, String claimText, Integer start, Integer end) {
+        if (start == null && end == null) {
+            return true;
+        }
+        if (start == null || end == null || start < 0 || end < start || end > answerText.length()) {
+            return false;
+        }
+        return answerText.substring(start, end).equals(claimText);
+    }
+
+    private static ProviderAdapterException invalid(GenerationRequest request, String reason) {
+        log.warn("Provider structured answer rejected: runId={}, correlationId={}, reason={}",
+                request.runId(), request.correlationId(), reason);
         return new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE,
-                "Provider response did not match the versioned answer schema", request.correlationId(), 0, false);
+                "Provider response did not match the versioned answer schema: " + reason,
+                request.correlationId(), 0, false);
     }
 }

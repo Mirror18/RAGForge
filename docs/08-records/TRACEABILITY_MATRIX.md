@@ -28,6 +28,15 @@
 | RF-OPS-002 | RPO24h/RTO4h | Charter 4 | [Backup](../05-operations/BACKUP_RESTORE.md) | isolated restore drill | 6–7 |
 | RF-OSS-001 | 第三方许可证可追溯 | Charter 7 | ADR-0009 | SBOM/license/notice CI | 0–7 |
 
+## 本轮业务闭环增量追溯（2026-08-23）
+
+| 需求 ID | 需求 | 实现与证据 | 结果 | 后续边界 |
+|---|---|---|---|---|
+| RF-PRV-003 | MiMo Chat provider 与成熟本地模型切换 | `MiMoProviderAdapter`、V15 migration、`ProviderAdapterHttpTest`、浏览器真实 MiMo Run `1e58f763-10a6-4665-a9c2-1445f921b5d2` | MiMo `/v1/chat/completions`、`api-key` header、显式 cloud authorization 和 1 条结构化 citation 通过 | 凭据仅本地 ignored env；生产需 Secret 管理与轮换 |
+| RF-EGR-002 | 云 Chat 与本地 Embedding/Rerank 分离 | `RepositoryProviderRouteResolver`、`ProviderBackedQueryEmbeddingProvider`、MiMo/LOCAL_ONLY 浏览器 E2E | MiMo Chat 显式出境；Embedding/Rerank 保持本地；切回 Ollama 后前端显示 `LOCAL_ONLY` | 不允许静默 cloud fallback |
+| RF-SRC-003 | 常用本地 notes 文件夹可从前端接入 | `BusinessFlowView.vue` folder picker、`api.ts` relative path、`BusinessIngestionService.safeName`、`BusinessIngestionPathPolicyTest` | Markdown 多文件入口、相对路径保留、绝对路径/遍历/`.obsidian` 过滤 | 真实个人目录选择待用户手势完成；个人内容不进入 Git/CI/evidence |
+| RF-ANS-002 | 结构化 citation 可安全投影 | prompt v3 exact-substring contract、`V11RagPromptPortTest`、`ProviderBackedGenerationPort` range fallback、qwen9b 与 MiMo E2E | UUID allow-list 保持严格；过期范围安全回退；两条真实链路各 1 条 citation | 小模型质量风险见 R-035 |
+
 ## Phase 0 验收证据与 Phase 1 入口
 
 | 证据 ID | 验收内容 | 证据文件/命令 | 后续测试 ID | Phase |
@@ -117,3 +126,5 @@
 | P6-ONLINE-001 | non-AI API p95 与 SSE first event p95 | [`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json)、[`online_latency_probe.py`](../../scripts/phase6/online_latency_probe.py)、[`test_online_latency_probe.py`](../../scripts/phase6/test_online_latency_probe.py) | 隔离 server + register/login session 认证 synthetic LOCAL_ONLY run；100/100 成功，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`、错误率 `0` | TTFT 仍独立测量；认证 cookie 只从环境变量注入 |
 | P6-E2E-001 | 用户授权的真实本地 Ollama RAG E2E | [`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json)、[`Phase5RealOllamaRagE2ETest.java`](../../apps/server/src/test/java/com/ragforge/server/answer/integration/Phase5RealOllamaRagE2ETest.java) | LOCAL_ONLY、revision/artifact material、citation/provenance、usage、space isolation 通过 | 仅作为真实单 fixture，不替代 Phase 6 质量/容量门槛 |
 | P6-E2E-002 | 真实 RAG graph 到 provider stream 边界首 token | [`phase6-real-ollama-rag-graph-stream.v1.json`](../../tests/evidence/phase6-real-ollama-rag-graph-stream.v1.json)、[`Phase5RealOllamaRagE2ETest.java`](../../apps/server/src/test/java/com/ragforge/server/answer/integration/Phase5RealOllamaRagE2ETest.java) | `LOCAL_ONLY`、active RetrievalPort + revision/artifact material、space isolation、graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`、raw persistence `false` | 证据不宣称生产同步 `GenerationPort` 已提供 streaming；人工质量和云 route 仍未闭环 |
+| P6-BIZ-001 | 前端配置→上传→异步摄取→active index→引用问答入口 | [`2026-08-23-business-loop-e2e.md`](2026-08-23-business-loop-e2e.md)、`BusinessFlowView.vue`、`ControlCenterView.vue`、`IngestionJobConsumerTest`、Server/Worker/Web/contract tests | Server 210/0/0/1 skipped；Worker 28/28；contract 52/52；Web format/build 通过；真实本地任务已完成 Parse Report、chunk、embedding、Qdrant index publish | 该条是 API/static baseline，浏览器登录后的全流程由 P6-BIZ-002 补充并取代未决项；不外推云端/生产质量 |
+| P6-BIZ-002 | Web-only 业务闭环与增量同步 | [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)、`BusinessFlowView.vue`、`AnswerView.vue`、`ControlCenterView.vue`、`AnswerEventPublisher`、`RunRepository.findUsageByRun` | 真实浏览器完成注册/登录、空间、LOCAL_ONLY 配置发布、两次摄取/Parse Report/active index、两次带引用回答；最新回答序列 11 含 `ANSWER_USAGE`，Run/Step 展示真实 correlationId；第二空间读取第一空间 Run 返回 404 | 仅使用公共 synthetic Markdown；个人 notes 未读取；云端仍需显式授权 |

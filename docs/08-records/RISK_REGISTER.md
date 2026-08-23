@@ -103,5 +103,15 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-028` 已关闭（本提交范围）：本地 Syft/跟踪内容 Grype 已通过，最新 GitHub Actions quality [`32577917976`](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿；阶段 SBOM artifact `9477027172`、Grype SARIF artifact `9477036384` 可追溯。发布前仍需按目标镜像/digest 重跑发布级扫描。
 - 观测 profile、fault drill、隔离恢复和 23/23 安全专项均已取得证据，但 `R-003` 全局风险仍 OPEN，需容量压力与人工安全复核完成后再评审关闭。
 - `R-031` 已关闭（多实例 run-event fan-out）：ADR-0011 已于 2026-08-22 由用户接受；两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 的跨实例、同/跨空间隔离、提交后发布、回滚不泄漏、重复/乱序补洞、Last-Event-ID durable replay 和 listener shutdown 均通过，证据见 [`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json)。该结论不外推生产容量、云端部署或跨区域语义。
+- `R-032` 新增：前端业务闭环代码与真实 Server/Worker API 已通过构建、契约和本地运行证据，但浏览器登录后的视觉/交互验收尚未完成。P=2、I=3、Score=6，Product / Web，MITIGATING；完成本地测试账号登录、配置初始化、上传轮询和带引用回答的浏览器验收后再关闭。
 - 2026-08-23 复审：取消执行竞态与 rollback-only 事务失败已在独立 worker 分支修复并合并，server `210`、根工程 `238` 测试均为 0 failures/0 errors/1 skipped；quality run `32586867110`（功能基线）和记录提交后的 `32587259456` 均全绿。该复审当时仍保留 `R-005`、`R-012` 和 `P6-EVAL-04` 的人工/red-team 评审缺口，不得以自动化结果代签；后续治理例外见下一条记录。
 - 2026-08-23 治理复审：项目用户明确批准豁免 P6-EVAL-04 的至少 2 名人审 + 1 名红队评审签名门槛。R-005、R-012 转为 `ACCEPTED` 而非 `CLOSED`；manifest 记录 `PASS_WITH_EXPLICIT_WAIVER`，保留空签名和未执行人工复核事实。后续模型、prompt、retrieval 或安全策略变更必须重新开启独立人工/red-team 复核。
+
+## 10. MiMo 与本地 notes 增量复审（2026-08-23）
+
+- 新增 `R-033`：MiMo 凭据已按用户要求写入本地 ignored `.env.local`，但密钥曾在对话中暴露，存在凭据泄露风险。P=4、I=5、Score=20，Security / Operations，MITIGATING；不进入 Git、日志、证据或 CI，使用后应尽快在 MiMo 控制台轮换/撤销；生产环境改用正式 Secret 管理。
+- 新增 `R-034`：浏览器安全模型要求用户显式选择本地 `notes` 文件夹，当前自动化浏览器工具未执行真实文件选择和个人 notes 摄取。P=3、I=4、Score=12，Product / Web，MITIGATING；保留文件夹入口、`.obsidian` 过滤、相对路径安全校验，待用户选择一次真实脱敏目录后补充 ingestion E2E 证据。
+- 新增 `R-035`：Ollama `qwen3.5:0.8b` 在真实回答中产生不满足 citation range 投影的结构化结果。P=3、I=4、Score=12，RAG / Platform，MITIGATING；默认使用已通过真实 RAG E2E 的 `qwen3.5:9b`，服务端保留严格 citation 校验和安全范围回退，不把小模型作为默认验收基线。
+
+- `R-032` 已关闭（本轮业务闭环范围）：真实浏览器完成注册/登录、建空间、配置发布、摄取、索引、引用问答、引用预览、Run/Step/usage 和增量同步；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。这不代表 Phase 7 发布验收或观测 Dashboard 视觉验收完成。
+- `R-034` 保持 MITIGATING：`D:\\project\\learning\\notes` 已作为本地配置约定，浏览器入口、Markdown/.obsidian 过滤和相对路径安全已验证；本轮为避免读取个人内容，未执行真实个人 notes 摄取。用户显式选择脱敏目录后再补 corpus 证据。

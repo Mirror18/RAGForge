@@ -41,9 +41,15 @@ public final class OllamaProviderAdapter extends AbstractHttpProviderAdapter {
             item.put("role", message.role());
             item.put("content", message.content());
         });
-        // Phase 5 generation is a typed JSON contract; Ollama's native JSON mode
-        // makes the provider honor that contract instead of relying on prompt-only prose.
-        root.put("format", "json");
+        // Phase 5 generation is a typed JSON contract.  Send the contract to
+        // Ollama as a JSON schema so small local models do not have to infer
+        // the object shape from prompt prose alone.  The server still parses
+        // and allow-lists every citation UUID after the provider response.
+        if (request.citationTokenAllowList().isEmpty()) {
+            root.put("format", "json");
+        } else {
+            root.set("format", answerContractSchema(request.citationTokenAllowList()));
+        }
         // qwen3.5 exposes reasoning in a separate field; disable it for this
         // synchronous adapter so the typed answer is returned in message.content.
         root.put("think", false);
@@ -55,6 +61,30 @@ public final class OllamaProviderAdapter extends AbstractHttpProviderAdapter {
             options.put("num_predict", request.maxOutputTokens());
         }
         return root;
+    }
+
+    private ObjectNode answerContractSchema(java.util.Set<String> citationTokenAllowList) {
+        ObjectNode schema = objectMapper().createObjectNode();
+        schema.put("type", "object");
+        ObjectNode properties = schema.putObject("properties");
+        properties.putObject("answer_text").put("type", "string").put("minLength", 1);
+        ObjectNode claims = properties.putObject("claims");
+        claims.put("type", "array").put("minItems", 1);
+        ObjectNode claim = claims.putObject("items");
+        claim.put("type", "object");
+        ObjectNode claimProperties = claim.putObject("properties");
+        claimProperties.putObject("claim_text").put("type", "string").put("minLength", 1);
+        ObjectNode tokens = claimProperties.putObject("citation_tokens");
+        tokens.put("type", "array").put("minItems", 1);
+        ObjectNode tokenSchema = tokens.putObject("items").put("type", "string")
+                .put("pattern", "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$");
+        tokenSchema.putArray("enum").addAll(citationTokenAllowList.stream()
+                .sorted().map(token -> objectMapper().getNodeFactory().textNode(token)).toList());
+        claim.putArray("required").add("claim_text").add("citation_tokens");
+        claim.put("additionalProperties", false);
+        schema.putArray("required").add("answer_text").add("claims");
+        schema.put("additionalProperties", false);
+        return schema;
     }
 
     @Override

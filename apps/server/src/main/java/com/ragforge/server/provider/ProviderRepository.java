@@ -303,7 +303,7 @@ public class ProviderRepository {
         return value == null || value.isBlank() ? "[]" : value;
     }
 
-    public enum ProviderType { OLLAMA, OPENAI_COMPATIBLE, AI_RUNTIME }
+    public enum ProviderType { OLLAMA, OPENAI_COMPATIBLE, MIMO, AI_RUNTIME }
 
     public enum ProviderStatus { DRAFT, ACTIVE, DISABLED, UNHEALTHY }
 

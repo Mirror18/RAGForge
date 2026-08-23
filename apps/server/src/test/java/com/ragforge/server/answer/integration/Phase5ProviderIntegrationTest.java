@@ -83,6 +83,20 @@ class Phase5ProviderIntegrationTest {
     }
 
     @Test
+    void staleOptionalProviderCharacterRangeIsDerivedFromClaimText() {
+        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OLLAMA,
+                CompletableFuture.completedFuture(response("local-model", structuredAnswerWithStaleRange())));
+        ProviderBackedGenerationPort port = port(EgressClass.LOCAL, EgressDecision.LOCAL_ONLY, adapter,
+                (space, route, profile, model, decision, correlation) -> route(EgressClass.LOCAL, decision));
+
+        GenerationPort.GeneratedClaim claim = port.generate(request(EgressDecision.LOCAL_ONLY), new CancellationToken())
+                .toCompletableFuture().join().claims().getFirst();
+
+        assertThat(claim.answerCharStart()).isNull();
+        assertThat(claim.answerCharEnd()).isNull();
+    }
+
+    @Test
     void providerFailureTimeoutAndCancellationRemainObservableAndDoNotFallback() {
         RecordingAdapter failure = new RecordingAdapter(ProviderType.OLLAMA,
                 CompletableFuture.failedFuture(new ProviderAdapterException(ProviderErrorClass.UNAVAILABLE,
@@ -168,6 +182,11 @@ class Phase5ProviderIntegrationTest {
     private static String structuredAnswer() {
         return "{\"answer_text\":\"Verified.\",\"claims\":[{\"claim_text\":\"Verified.\",\"citation_tokens\":[\""
                 + TOKEN + "\"]}]}";
+    }
+
+    private static String structuredAnswerWithStaleRange() {
+        return "{\"answer_text\":\"Verified.\",\"claims\":[{\"claim_text\":\"Verified.\","
+                + "\"citation_tokens\":[\"" + TOKEN + "\"],\"answer_char_start\":99,\"answer_char_end\":108}]}";
     }
 
     private static ProviderChatResponse response(String model, String content) {

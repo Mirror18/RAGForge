@@ -1,6 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-23
+- 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
 - Current stage: Phase 6 评估、观测、安全与恢复已完成（`completed-with-explicit-waiver`）；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
@@ -96,3 +97,20 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 ## 6. 更新规则
 
 阶段状态、阻塞、退出证据和下一动作先更新本文件；阶段复盘保存在 `retrospectives/`。项目进入稳定开发后，再决定将何种摘要同步到 Obsidian。
+
+## 7. 业务闭环真实浏览器复核（2026-08-23）
+
+- 真实 Web 路径已闭环：注册/登录 → 创建并切换空间 → Provider/Model Profile/Model Route/Prompt 发布 → Markdown 文件选择与异步摄取 → Parse Report → candidate index 验证并发布 active → LOCAL_ONLY Ollama 引用回答 → citation preview → Run/Step/usage → 同一文档增量同步 → 新 Revision/Index → 第二次引用回答。
+- 首次旧前端 30 秒默认超时产生了一次可复现失败，随后服务端成功完成 Run；前端已将本地 Ollama 等待窗口改为 120 秒，重试和最终增量回答均为 `COMPLETED`，失败未被隐藏，详见证据中的 `transient_retry`。
+- `answer.usage` 已由服务端从当前空间、当前 Run 的 RAG invocation usage ledger 投影，前端展示 provider-reported input/output/total tokens；成功 Run 的 Run 追踪页展示真实 `correlationId`、sequence 和 Step。
+- 浏览器切换到第二空间后读取第一空间 Run 返回 `404 RUN_NOT_FOUND`；未执行任何跨空间 DB seed、手填资源创建或绕过 UI 的状态变更。
+- 本节为当前业务闭环验收的权威更正；Phase 6 阶段状态仍为 `completed-with-explicit-waiver`，下一入口仍为 Phase 7。个人 notes 真实文件选择继续保持显式用户手势和不上传云端的安全边界。
+
+## 8. 业务闭环增量（2026-08-23）
+
+- MiMo 已接入现有 Provider Registry：使用 `MIMO` provider type、OpenAI-compatible `/v1/chat/completions` 协议和 `api-key` header；凭据只通过本地 ignored `.env.local` 的 `XIAOMI_API_KEY` 注入，未进入 Git、测试证据、日志或版本化配置。云端仅在前端显式切换到 MiMo Chat 时使用 typed authorization context，Embedding/Rerank 仍保持本地。
+- 真实 MiMo RAG E2E 已通过：Run `1e58f763-10a6-4665-a9c2-1445f921b5d2`，correlation `01a02f10-0d9b-73e7-8ce3-74a2ab95d049`，完成 SSE 序列 10、1 条结构化 citation，回答内容与 `space_id` 隔离证据一致；运行未产生服务端 WARN/ERROR。
+- 本地成熟模型默认已切换为 Ollama `qwen3.5:9b`，真实 LOCAL_ONLY RAG E2E 已通过：Run `9aa79e04-f5ff-4a35-b055-fc4471ed52de`，correlation `01a02f13-0b19-7636-bb87-ba447596280e`，完成序列 9、1 条结构化 citation，前端显示 `本地 Ollama（LOCAL_ONLY）`。此前 `qwen3.5:0.8b` 的 citation range 不满足投影约束，已保留为风险证据并不再作为默认验收模型。
+- RAG prompt 初始化与校验已强化为 `claim_text` 必须是 `answer_text` 的精确连续子串；无效可选字符范围由服务端安全回退为文本定位，伪造 citation UUID 仍严格拒绝。
+- 常用本地知识库入口已加入业务流：前端可选择本地 `notes` 文件夹，仅提交 Markdown，并以文件夹相对路径进入当前空间；`.obsidian` 目录、附件和非 Markdown 文件被过滤，服务端继续执行路径遍历、绝对路径和控制字符拒绝。`.env.local` 已配置本机 notes 根路径供本地开发约定使用，但浏览器仍要求用户显式选择文件夹，避免服务端任意读取本机文件。
+- 本轮证据和限制见 [`2026-08-23-mimo-notes-business-loop.md`](2026-08-23-mimo-notes-business-loop.md)。实际个人 notes 文件选择/摄取未在自动化浏览器工具中伪造完成，待用户在浏览器文件选择器中执行一次后再补充真实 corpus 摄取证据；个人 notes 不进入 Git、CI、长期 evidence 或云端调用。

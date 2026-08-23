@@ -59,6 +59,27 @@ public class PromptRepository {
         return findRagVersion(input.spaceId(), input.id()).orElseThrow();
     }
 
+    /** Materializes the immutable modern prompt identity for V11 provenance FKs. */
+    @Transactional
+    public RagPromptVersion ensureRagVersion(PromptVersion current, UUID correlationId) {
+        if (current == null || current.id() == null || current.spaceId() == null
+                || current.templateHash() == null || !current.templateHash().matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Modern prompt identity is incomplete");
+        }
+        jdbc.update("""
+                        INSERT INTO rag_prompt_versions
+                            (id, space_id, prompt_key, version_no, purpose, prompt_opaque_ref, prompt_hash,
+                             variables_schema, output_contract, created_by_user_id, created_at, correlation_id)
+                        VALUES (?, ?, ?, ?, 'RAG_ANSWER', ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, ?)
+                        ON CONFLICT (id) DO NOTHING
+                        """, current.id(), current.spaceId(), current.promptKey(), current.versionNo(),
+                "prompt-version:" + current.id(), current.templateHash(), jsonOrEmpty(current.variablesSchemaJson()),
+                jsonOrEmpty(current.outputContractJson()), current.createdByUserId(), timestamp(current.createdAt()),
+                correlationId == null ? current.correlationId() : correlationId);
+        return findRagVersion(current.spaceId(), current.id())
+                .orElseThrow(() -> new IllegalArgumentException("Modern prompt identity could not be projected"));
+    }
+
     public Optional<RagPromptVersion> findRagVersion(UUID spaceId, UUID id) {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""

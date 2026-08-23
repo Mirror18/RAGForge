@@ -8,6 +8,7 @@ import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerStatus;
 import com.ragforge.server.answer.Citation;
 import com.ragforge.server.run.RunEventService;
+import com.ragforge.server.run.RunRepository;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -17,6 +18,7 @@ public final class AnswerEventPublisher {
     private final RunEventService events;
     private final ObjectMapper objectMapper;
     private final AnswerPersistencePort persistence;
+    private final RunRepository runs;
 
     public AnswerEventPublisher(RunEventService events, ObjectMapper objectMapper) {
         this(events, objectMapper, null);
@@ -24,9 +26,15 @@ public final class AnswerEventPublisher {
 
     public AnswerEventPublisher(RunEventService events, ObjectMapper objectMapper,
                                 AnswerPersistencePort persistence) {
+        this(events, objectMapper, persistence, null);
+    }
+
+    public AnswerEventPublisher(RunEventService events, ObjectMapper objectMapper,
+                                AnswerPersistencePort persistence, RunRepository runs) {
         this.events = Objects.requireNonNull(events, "events");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
         this.persistence = persistence;
+        this.runs = runs;
     }
 
     public void publish(Answer answer) {
@@ -42,6 +50,7 @@ public final class AnswerEventPublisher {
                 citationPayload.set("citation", citationNode(citation));
                 append(answer, "answer.citation", citationPayload);
             }
+            publishUsage(answer);
         } else if (answer.abstention() != null) {
             Abstention refusal = answer.abstention();
             ObjectNode payload = base(answer);
@@ -70,6 +79,25 @@ public final class AnswerEventPublisher {
         done.put("answer_id", answer.answerId().toString());
         done.put("status", answer.status() == AnswerStatus.COMPLETED ? "COMPLETED" : answer.status().name());
         append(answer, "answer.done", done);
+    }
+
+    private void publishUsage(Answer answer) {
+        if (runs == null) return;
+        runs.findUsageByRun(answer.spaceId(), answer.runId()).stream()
+                .findFirst()
+                .ifPresent(usage -> {
+                    ObjectNode payload = base(answer);
+                    payload.put("answer_id", answer.answerId().toString());
+                    payload.put("inputTokens", usage.inputTokens() == null ? 0 : usage.inputTokens());
+                    payload.put("outputTokens", usage.outputTokens() == null ? 0 : usage.outputTokens());
+                    payload.put("totalTokens", usage.totalTokens() == null ? 0 : usage.totalTokens());
+                    payload.put("toolCallCount", answer.toolCallIds().size());
+                    if (usage.estimatedCost() == null) payload.putNull("estimatedCostMicros");
+                    else payload.put("estimatedCostMicros", usage.estimatedCost()
+                            .movePointRight(6).longValue());
+                    payload.put("providerReported", usage.source() == RunRepository.UsageSource.PROVIDER_REPORTED);
+                    append(answer, "answer.usage", payload);
+                });
     }
 
     /** Publishes the answer-terminal pair after the run store has accepted cancellation. */

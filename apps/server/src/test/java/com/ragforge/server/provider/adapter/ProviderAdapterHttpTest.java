@@ -47,6 +47,7 @@ class ProviderAdapterHttpTest {
     private final AtomicReference<HandlerBehavior> behavior = new AtomicReference<>();
     private final AtomicReference<String> observedPath = new AtomicReference<>();
     private final AtomicReference<String> observedAuthorization = new AtomicReference<>();
+    private final AtomicReference<String> observedApiKey = new AtomicReference<>();
     private final AtomicReference<String> observedRequestId = new AtomicReference<>();
     private final AtomicReference<String> observedBody = new AtomicReference<>();
     private final AtomicInteger requestCount = new AtomicInteger();
@@ -79,7 +80,7 @@ class ProviderAdapterHttpTest {
                 "{\"model\":\"llama3\",\"created_at\":\"2026-08-13T00:00:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"ollama answer\"},\"done\":true,\"prompt_eval_count\":7,\"eval_count\":11}"));
         RequestIdentity identity = identity("ollama");
         ProviderChatResponse response = ollama().chat(connection(ProviderType.OLLAMA), EgressDecision.LOCAL_ONLY,
-                request(identity), new CancellationToken()).toCompletableFuture().get(3, TimeUnit.SECONDS);
+                answerRequest(identity), new CancellationToken()).toCompletableFuture().get(3, TimeUnit.SECONDS);
 
         assertThat(observedPath.get()).isEqualTo("/api/chat");
         assertThat(observedAuthorization.get()).isEqualTo(FAKE_AUTHORIZATION);
@@ -87,7 +88,19 @@ class ProviderAdapterHttpTest {
         assertThat(response.content()).isEqualTo("ollama answer");
         assertThat(response.identity()).isEqualTo(identity);
         assertThat(response.usage()).isEqualTo(new ProviderUsage(7L, 11L, 18L, UsageSource.PROVIDER_REPORTED));
+        JsonNode requestBody = MAPPER.readTree(observedBody.get());
+        assertThat(requestBody.path("format").path("type").asText()).isEqualTo("object");
+        assertThat(requestBody.path("format").path("properties").path("claims").path("items")
+                .path("properties").path("citation_tokens").path("items").path("pattern").asText())
+                .contains("-7");
         assertThat(observedBody.get()).contains(PROMPT).contains("\"stream\":false");
+    }
+
+    private ProviderChatRequest answerRequest(RequestIdentity identity) {
+        return new ProviderChatRequest(SPACE_ID, identity, "test-model",
+                List.of(new ChatMessage("user", PROMPT)), Duration.ofSeconds(2), null,
+                Set.of(ModelCapability.CHAT), false,
+                Set.of("018f0f70-8e10-7b14-8f1a-111111111111"));
     }
 
     @Test
@@ -195,6 +208,31 @@ class ProviderAdapterHttpTest {
         assertThat(response.model()).isEqualTo("gpt-test");
         assertThat(response.providerResponseId()).isEqualTo("chatcmpl-test");
         assertThat(response.usage().totalTokens()).isEqualTo(10L);
+    }
+
+    @Test
+    void mimoUsesOfficialEndpointHeaderAndCompletionTokenField() throws Exception {
+        behavior.set((exchange, body) -> respond(exchange, 200,
+                "{\"id\":\"mimo-test\",\"model\":\"mimo-v2.5\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"mimo answer\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":6,\"total_tokens\":10}}"));
+        RequestIdentity identity = identity("mimo");
+        MiMoProviderAdapter adapter = new MiMoProviderAdapter(HttpClient.newHttpClient(), MAPPER,
+                (spaceId, credentialRef) -> "mimo-test-key");
+        ProviderChatResponse response = adapter.chat(
+                connection(ProviderType.MIMO, endpoint.resolve("/v1"), SPACE_ID, EgressClass.CLOUD,
+                        "env:XIAOMI_API_KEY", "API_KEY"),
+                EgressDecision.CLOUD_ALLOWED, new ProviderChatRequest(SPACE_ID, identity, "test-model",
+                        List.of(new ChatMessage("user", PROMPT)), Duration.ofSeconds(2), 256,
+                        Set.of(ModelCapability.CHAT), false), new CancellationToken())
+                .toCompletableFuture().get(3, TimeUnit.SECONDS);
+
+        assertThat(observedPath.get()).isEqualTo("/v1/chat/completions");
+        assertThat(observedApiKey.get()).isEqualTo("mimo-test-key");
+        assertThat(observedAuthorization.get()).isNull();
+        assertThat(response.content()).isEqualTo("mimo answer");
+        JsonNode requestBody = MAPPER.readTree(observedBody.get());
+        assertThat(requestBody.path("max_completion_tokens").asInt()).isEqualTo(256);
+        assertThat(requestBody.path("thinking").path("type").asText()).isEqualTo("disabled");
+        assertThat(requestBody.path("response_format").path("type").asText()).isEqualTo("json_object");
     }
 
     @Test
@@ -406,6 +444,7 @@ class ProviderAdapterHttpTest {
         requestCount.incrementAndGet();
         observedPath.set(exchange.getRequestURI().getPath());
         observedAuthorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+        observedApiKey.set(exchange.getRequestHeaders().getFirst("api-key"));
         observedRequestId.set(exchange.getRequestHeaders().getFirst("X-RAGForge-Request-Id"));
         try {
             String body = new String(exchange.getRequestBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);

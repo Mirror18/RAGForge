@@ -18,6 +18,7 @@ import com.ragforge.server.provider.adapter.EgressDecision;
 import com.ragforge.server.run.RunEvent;
 import com.ragforge.server.run.RunEventService;
 import com.ragforge.server.run.RunEventStore;
+import com.ragforge.server.run.RunRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -67,9 +68,10 @@ public class AnswerApiController {
     @Autowired
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerPersistencePort persistence,
-                        AnswerAuthorizationContextFactory authorizationContexts) {
+                        AnswerAuthorizationContextFactory authorizationContexts,
+                        RunRepository runs) {
         this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore(persistence),
-                authorizationContexts);
+                authorizationContexts, runs);
     }
 
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
@@ -80,12 +82,18 @@ public class AnswerApiController {
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerApiProjectionStore projections,
                         AnswerAuthorizationContextFactory authorizationContexts) {
+        this(answers, events, authorization, objectMapper, projections, authorizationContexts, null);
+    }
+
+    AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
+                        ObjectMapper objectMapper, AnswerApiProjectionStore projections,
+                        AnswerAuthorizationContextFactory authorizationContexts, RunRepository runs) {
         this.answers = answers;
         this.events = events;
         this.authorization = authorization;
         this.objectMapper = objectMapper;
         this.projections = projections;
-        this.publisher = new AnswerEventPublisher(events, objectMapper, projections.persistence());
+        this.publisher = new AnswerEventPublisher(events, objectMapper, projections.persistence(), runs);
         this.sseAdapter = new AnswerSseEventAdapter(objectMapper);
         this.authorizationContexts = authorizationContexts;
     }

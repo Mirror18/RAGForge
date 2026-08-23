@@ -211,6 +211,22 @@ public class RunRepository {
         }
     }
 
+    /** Returns redacted usage rows for one explicitly space-scoped run. */
+    public List<UsageLedgerRecord> findUsageByRun(UUID spaceId, UUID runId) {
+        return jdbc.query("""
+                        SELECT u.id, u.space_id, u.model_invocation_id, u.provider_request_identity,
+                               u.usage_source, u.dedupe_key, u.input_tokens, u.output_tokens, u.total_tokens,
+                               u.estimated_cost, u.currency, u.metadata, u.created_at, u.updated_at,
+                               u.correlation_id
+                        FROM usage_ledger u
+                        JOIN model_invocations i
+                          ON i.id = u.model_invocation_id AND i.space_id = u.space_id
+                        WHERE u.space_id = ? AND i.run_id = ? AND i.space_id = ?
+                          AND i.provider_request_identity LIKE 'rag-%'
+                        ORDER BY u.created_at, u.id
+                        """, (rs, rowNum) -> mapUsage(rs), spaceId, runId, spaceId);
+    }
+
     /** Stores the immutable RAG run projection without changing the no-RAG run row. */
     @Transactional
     public RagRunProvenance createRagRunProvenance(NewRagRunProvenance input) {

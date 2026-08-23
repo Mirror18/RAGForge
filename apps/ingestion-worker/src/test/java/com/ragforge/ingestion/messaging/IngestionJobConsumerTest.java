@@ -111,7 +111,10 @@ class IngestionJobConsumerTest {
                         "artifactId", UUID.randomUUID(),
                         "mediaType", "text/markdown",
                         "byteLength", 128,
-                        "sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+                        "sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "storageUri", "spaces/" + spaceId + "/sources/" + UUID.randomUUID()
+                                + "/revisions/" + UUID.randomUUID() + "/artifacts/" + UUID.randomUUID()
+                                + "/sha256/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
         if (forbidden) {
             payload = new java.util.LinkedHashMap<>(payload);
             payload.put("fullText", "must never cross the message boundary");

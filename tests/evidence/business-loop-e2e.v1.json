@@ -1,0 +1,147 @@
+{
+  "schema_version": "v1",
+  "evidence_id": "business-loop-e2e-2026-08-23",
+  "captured_at": "2026-08-23T23:20:00+08:00",
+  "base_sha": "049a3e36e892cca62d84ce4773b90a0c4843441c",
+  "implementation_head": "e26c982a9f246f74d05618076b9e84ec51f1e4c3",
+  "contract_version": "v1",
+  "environment": {
+    "browser": "in-app browser",
+    "server": "http://127.0.0.1:18092",
+    "web": "http://127.0.0.1:18095",
+    "compose_project": "ragforge-business-loop",
+    "ollama_route": "LOCAL_ONLY",
+    "chat_model": "qwen3.5:9b",
+    "embedding_model": "nomic-embed-text:latest",
+    "embedding_dimension": 768
+  },
+  "fixture": {
+    "kind": "public_synthetic_markdown",
+    "relative_path": "ragforge-business-loop-e2e.md",
+    "notes_root_configured": "D:\\project\\learning\\notes",
+    "personal_notes_uploaded": false,
+    "private_content_persisted": false
+  },
+  "space": {
+    "space_id": "01a02f1c-3c5e-7448-97c1-95a73aa81ca6",
+    "role": "SPACE_ADMIN",
+    "provider_connection_id": "01a02f1c-71a9-75a2-be3d-b51da2e682b6",
+    "provider_status": "ACTIVE",
+    "provider_egress": "LOCAL"
+  },
+  "published_configuration": {
+    "profiles": [
+      { "purpose": "CHAT", "profile_version_id": "01a02f1d-4688-7c11-8226-891f74add793", "status": "PUBLISHED", "model": "qwen3.5:9b" },
+      { "purpose": "EMBEDDING", "profile_version_id": "01a02f1d-46b7-7434-8dcf-a734a97be4b7", "status": "PUBLISHED", "model": "nomic-embed-text:latest", "dimension": 768 },
+      { "purpose": "RERANK", "profile_version_id": "01a02f1d-46da-76ea-9be8-a44ff0e33ad7", "status": "PUBLISHED", "model": "qwen3.5:9b" }
+    ],
+    "routes": [
+      { "purpose": "CHAT", "route_version_id": "01a02f1d-472f-76aa-9443-b460ab239fae", "status": "ACTIVE", "egress_policy": "LOCAL_ONLY" },
+      { "purpose": "EMBEDDING", "route_version_id": "01a02f1d-4760-7120-99ae-5ba11cadf896", "status": "ACTIVE", "egress_policy": "LOCAL_ONLY" },
+      { "purpose": "RERANK", "route_version_id": "01a02f1d-4783-7916-85ee-45397a6a54ca", "status": "ACTIVE", "egress_policy": "LOCAL_ONLY" }
+    ],
+    "prompt": {
+      "template_name": "Local RAG Answer",
+      "prompt_version_id": "01a02f1d-4813-71ef-bb50-1cd1faede7cb",
+      "version": 1,
+      "status": "PUBLISHED",
+      "prompt_hash": "0c63ff1e78f261713a4377dc0f4039ec8f4cef94e19cef98c801a324afc"
+    }
+  },
+  "ingestion": {
+    "source_id": "01a02f1e-4d1e-7930-93a2-9b8d8468bfda",
+    "source_document_id": "01a02f1e-4d35-7347-bb99-050116717387",
+    "first_sync": {
+      "job_id": "01a02f1e-4d40-7c07-9d3c-d6dbfc9c10d9",
+      "attempt_id": "01a02f1e-4d40-78ac-806a-b1b79279e03f",
+      "correlation_id": "01a02f1e-4caa-7192-96a5-0336c26a88ac",
+      "revision_id": "01a02f1e-4d40-732a-80b4-ebbfb2158646",
+      "revision_no": 2,
+      "parse_report_id": "01a02f1e-50f7-7334-b4dd-44b1e4e18927",
+      "parse_report": { "status": "SUCCEEDED", "parser": "ragforge-native-parser@1.0.0", "characters": 135, "tokens": 16 },
+      "steps": ["DISCOVER:SUCCEEDED", "FETCH:SUCCEEDED", "PUBLISH:SUCCEEDED", "PARSE:SUCCEEDED", "PERSIST:SUCCEEDED"]
+    },
+    "incremental_sync": {
+      "job_id": "01a02f29-3f92-75f8-9da3-76e5be654471",
+      "attempt_id": "01a02f29-3f92-733e-94bc-c68b2ae8089a",
+      "correlation_id": "01a02f29-3f60-75b8-9eed-cfaf523e9191",
+      "revision_id": "01a02f29-3f92-7060-a98d-6fb5cdb777cb",
+      "revision_no": 4,
+      "parse_report_id": "01a02f29-4607-774f-9e01-fb48419dd505",
+      "parse_report": { "status": "SUCCEEDED", "parser": "ragforge-native-parser@1.0.0", "characters": 187, "tokens": 21 },
+      "steps": ["DISCOVER:SUCCEEDED", "FETCH:SUCCEEDED", "PUBLISH:SUCCEEDED", "PARSE:SUCCEEDED", "PERSIST:SUCCEEDED"]
+    }
+  },
+  "index": {
+    "first": { "index_version_id": "50fb524f-16ad-3d41-8c33-9a9abeb506d0", "version": 1, "state": "ACTIVE", "child_chunks": 1, "validation_vector_dimension": 768, "sample_retrieval": true, "space_filter": true },
+    "incremental": { "index_version_id": "9a595de4-f9b5-37fb-9623-1a85a05e1a56", "version": 2, "state": "ACTIVE", "child_chunks": 1, "validation_vector_dimension": 768, "sample_retrieval": true, "space_filter": true },
+    "active_after_incremental": "9a595de4-f9b5-37fb-9623-1a85a05e1a56",
+    "old_revision_retained": true
+  },
+  "answers": {
+    "transient_retry": {
+      "run_id": "26b21c57-b11d-4767-839f-a4fc5a0b123a",
+      "correlation_id": "01a02f1e-b7d0-7784-a918-04066a6c02c0",
+      "outcome": "FAILED_PROVIDER_TIMEOUT",
+      "note": "旧前端默认 30 秒超时；服务端 run 完成但 answer 首次请求失败，随后以 120 秒配置重试。"
+    },
+    "first_revision": {
+      "run_id": "46a7c781-f6e3-4b2a-aeff-6978f20aa8a7",
+      "correlation_id": "01a02f28-720b-7768-9353-8529b6b96b81",
+      "status": "COMPLETED",
+      "last_sequence": 10,
+      "citation_count": 1,
+      "evidence_id": "645e650a-7d70-7fd3-9649-e49030f7e92d",
+      "revision_id": "01a02f1e-4d40-732a-80b4-ebbfb2158646",
+      "index_version_id": "50fb524f-16ad-3d41-8c33-9a9abeb506d0"
+    },
+    "incremental_revision": {
+      "run_id": "3711bbb8-a6b7-436a-b7bf-3ca0aa033249",
+      "correlation_id": "01a02f34-5c43-7509-b78e-aeef0cd5f8c9",
+      "answer_id": "01a02f34-800b-7510-bf30-a3d1e5dd196a",
+      "status": "COMPLETED",
+      "last_sequence": 11,
+      "event_types": ["ANSWER_DELTA", "ANSWER_CITATION", "ANSWER_USAGE", "ANSWER_DONE"],
+      "event_ids": ["01a02f34-8034-71a2-8af9-cdeace3fe8b1", "01a02f34-804d-721e-919c-013cef287614", "01a02f34-8065-7149-8b40-0b88fe6a51af", "01a02f34-8077-7513-bb47-f88656b61f4e"],
+      "citation": {
+        "evidence_id": "4a6496ef-a40b-7f3b-8059-5be08e5bd411",
+        "document_revision_id": "01a02f29-3f92-7060-a98d-6fb5cdb777cb",
+        "parent_chunk_id": "01a02f29-464a-737d-9619-44a8bce04211",
+        "child_chunk_id": "01a02f29-464a-7ea8-808e-bfa11e7ed6fb",
+        "index_version_id": "9a595de4-f9b5-37fb-9623-1a85a05e1a56",
+        "content_ref": "spaces/01a02f1c-3c5e-7448-97c1-95a73aa81ca6/revisions/01a02f29-3f92-7060-a98d-6fb5cdb777cb/chunks/child/01a02f29-464a-7ea8-808e-bfa11e7ed6fb",
+        "text_hash": "83c7aa1e624735bf937e5e7d595bb73effcc34ad89d720df9bcc7272bd374bc4",
+        "anchor": "RAGForge 业务闭环验收 · 行 1–7"
+      },
+      "usage": { "input_tokens": 384, "output_tokens": 79, "total_tokens": 463, "source": "PROVIDER_REPORTED", "tool_calls": 0 },
+      "citation_preview": "SERVER_REAUTHORIZED; BODY_NOT_RENDERED_IN_CLIENT"
+    }
+  },
+  "authorization_negative_tests": {
+    "second_space_id": "01a02f32-001b-7f12-bd0c-885d07ff969c",
+    "original_run_lookup_from_second_space": { "run_id": "3711bbb8-a6b7-436a-b7bf-3ca0aa033249", "http_status": 404, "code": "RUN_NOT_FOUND", "passed": true },
+    "cloud_egress": "NOT_REQUESTED"
+  },
+  "browser_assertions": [
+    "registration and login completed through UI",
+    "space created and selected through UI",
+    "provider/profile/route/prompt published through real API workflow",
+    "file upload used browser file chooser; no manual DB seed or pasted resource UUID",
+    "first and incremental ingestion jobs reached SUCCEEDED",
+    "candidate index v1 and v2 were server-validated before active publication",
+    "LOCAL_ONLY answer completed with one server citation",
+    "citation preview was re-authorized by server",
+    "answer.usage rendered input/output/total/provider source",
+    "Run/Step page rendered run, correlationId, sequence, and step status",
+    "cross-space Run lookup was denied"
+  ],
+  "commands": [
+    "mvn -pl apps/server '-Dproject.build.sourceEncoding=UTF-8' -DskipTests compile",
+    "mvn -pl apps/ingestion-worker '-Dproject.build.sourceEncoding=UTF-8' test",
+    "npm --prefix apps/web run format:check",
+    "npm --prefix apps/web run build",
+    "python scripts/ci/contract_test.py",
+    "git diff --check"
+  ],
+  "redactions": ["password", "session_cookie", "csrf_token", "api_key", "raw_private_notes", "raw_prompt", "provider_body"]
+}

@@ -40,3 +40,7 @@
 ## 6. Obsidian 特别规则
 
 个人 Obsidian 仓库属于 Private local：默认不允许云出境，不进入 GitHub、CI fixtures 或长期调试 artifacts。若以后批准某个脱敏空间使用云模型，必须以空间级清单和评估数据记录范围。
+
+## 7. 本地 notes 文件夹接入（2026-08-23）
+
+本地 notes 根路径只作为开发环境约定保存于 ignored `.env.local`；Web 文件选择仍要求用户手势。上传入口仅接收 Markdown，拒绝 `.obsidian` 路径并将文件夹相对路径交给服务端的安全路径策略。个人 notes 不写入 Git、CI、长期 evidence 或日志；只有在空间级显式授权且 route 通过 Data Egress Policy 时，Chat 内容才允许发送到 MiMo 等云端 Provider。Embedding/Rerank 不因 Chat 云授权自动出境。

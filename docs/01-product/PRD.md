@@ -119,6 +119,13 @@ RAGForge 是供企业内部团队部署的通用知识助手。它把分散文�
 - 可写 Agent、工作流编排市场、插件市场。
 - 音视频知识处理、实时协作编辑和跨语言自动翻译。
 
+## 7. 本地 notes 与 MiMo 使用边界（2026-08-23）
+
+- 开发环境可将常用本地 notes 根路径写入 ignored `.env.local`；浏览器必须由用户显式选择文件夹，系统仅接收 Markdown 文件并保留相对路径，不自动读取用户本机任意目录。
+- `.obsidian` 目录、附件和非 Markdown 文件不进入摄取请求；服务端拒绝绝对路径、路径遍历和控制字符，所有内容仍按当前 `space_id` 隔离。
+- MiMo 作为成熟云端 Chat provider 接入现有 Provider Registry。云端 Chat 仅在空间和本次 Run 明确授权时启用；Embedding/Rerank 可继续绑定本地 Ollama；不得从本地路由静默降级到云端。
+- MiMo 凭据只允许通过本地 ignored 配置或生产 Secret 管理注入，不得提交到 Git、CI、证据、日志或前端 bundle。
+
 ## 7. 外部参考
 
 - [RAGFlow：数据摄取与 Retrieval Test 产品参考](https://github.com/infiniflow/ragflow)

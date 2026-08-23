@@ -73,7 +73,7 @@ export interface ProviderConnection {
   providerConnectionId: string;
   spaceId: string;
   version: number;
-  providerType: "OLLAMA" | "OPENAI_COMPATIBLE" | "AI_RUNTIME";
+  providerType: "OLLAMA" | "OPENAI_COMPATIBLE" | "MIMO" | "AI_RUNTIME";
   egressClass: "LOCAL" | "CLOUD";
   endpoint: string;
   status: "DRAFT" | "ACTIVE" | "DISABLED" | "UNHEALTHY";
@@ -87,9 +87,11 @@ export interface ModelProfile {
   version: number;
   providerConnectionId: string;
   purpose: "CHAT" | "EMBEDDING" | "RERANK";
+  modelName: string;
   capabilities: string[];
   contextWindow: number;
   maxOutputTokens: number;
+  embeddingDimension: number | null;
   usageReporting: "PROVIDER_REPORTED" | "LOCAL_ESTIMATE";
   status: "DRAFT" | "PUBLISHED" | "DISABLED";
   createdAt: string;
@@ -142,7 +144,83 @@ export interface AnswerDefaults {
   model: string;
   datasetHash: string;
   configHash: string;
+  allowCloudEgress: boolean;
 }
+
+export interface SpaceBinding {
+  spaceBindingId: string;
+  spaceId: string;
+  version: number;
+  chatRouteId: string;
+  embeddingRouteId: string;
+  rerankRouteId: string;
+  promptVersionId: string;
+  cloudEgressEnabled: boolean;
+  cloudEgressAuthorization?: {
+    approvalId: string;
+    approvedBy: string;
+    approvedAt: string;
+    expiresAt: string;
+    scope: "CHAT" | "EMBEDDING" | "RERANK" | "ALL";
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SourceDocument {
+  id: string;
+  spaceId: string;
+  sourceId: string;
+  stableSourceObjectId: string;
+  canonicalSourcePath: string;
+  basename: string;
+  versionNo: number;
+  state: string;
+  activeRevisionId: string | null;
+}
+
+export interface IngestionJobView {
+  job: { id: string; spaceId: string; sourceId: string; sourceDocumentId: string | null; documentRevisionId: string | null; status: string; createdAt: string; updatedAt: string };
+  attempts: Array<{ id: string; attemptNo: number; status: string; startedAt: string; finishedAt: string | null }>;
+  steps: Array<{ id: string; stepName: string; status: string; errorCode: string | null; startedAt: string; finishedAt: string | null }>;
+}
+
+export interface ParseReportView {
+  parseReportId: string;
+  documentRevisionId: string;
+  status: string;
+  mediaType: string;
+  pageCount: number;
+  characterCount: number;
+  tokenCount: number;
+  parserName: string;
+  parserVersion: string;
+  durationMs: number;
+  warnings: string;
+  errors: string;
+  extractedTextArtifactId: string | null;
+  createdAt: string;
+}
+
+export interface IndexView {
+  indexVersionId: string;
+  spaceId: string;
+  versionNo: number;
+  state: string;
+  candidateCollection: string;
+  embeddingProfileVersion: string;
+  chunkingStrategyVersion: string;
+  documentRevisionCount: number;
+  childChunkCount: number;
+  validationVectorDimension: number | null;
+  sampleRetrievalPassed: boolean | null;
+  spaceFilterPassed: boolean | null;
+  activatedAt: string | null;
+  createdAt: string;
+  datasetHash?: string;
+}
+
+export interface ActiveIndexView { pointer: { activeIndexVersionId: string }; index: IndexView | null; datasetHash: string | null }
 
 export interface RunSnapshot {
   runId: string;
@@ -306,6 +384,7 @@ type ApiFetchOptions = Omit<RequestInit, "body" | "headers" | "method"> & {
   body?: unknown;
   headers?: HeadersInit;
   idempotencyKey?: string;
+  correlationId?: string;
 };
 
 let csrfToken: string | null = null;
@@ -391,7 +470,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
-  headers.set("X-Correlation-Id", uuidV7());
+  headers.set("X-Correlation-Id", options.correlationId ?? uuidV7());
   if (mutating) {
     headers.set("X-CSRF-Token", csrfToken ?? "");
     headers.set("Idempotency-Key", options.idempotencyKey ?? idempotencyKey());
@@ -434,4 +513,43 @@ export async function getCurrentSession(): Promise<CurrentSession> {
 
 export function clearCsrfToken(): void {
   csrfToken = null;
+}
+
+export async function uploadMarkdown(spaceId: string, file: File, relativePath?: string): Promise<{ jobId: string; documentRevisionId: string; sourceId: string }> {
+  if (!csrfToken) await fetchCurrentSession();
+  const form = new FormData();
+  form.append("file", file, relativePath || file.name);
+  const response = await fetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources/uploads`, {
+    method: "POST", credentials: "include", body: form,
+    headers: { Accept: "application/json", "X-Correlation-Id": uuidV7(), "X-CSRF-Token": csrfToken ?? "", "Idempotency-Key": idempotencyKey() },
+  });
+  if (!response.ok) {
+    const problem = await readProblem(response);
+    throw new ApiError(problem?.detail ?? `上传失败（HTTP ${response.status}）`, response.status, problem, problem?.correlationId ?? null);
+  }
+  return (await parseResponse(response)) as { jobId: string; documentRevisionId: string; sourceId: string };
+}
+
+export function listIngestionJobs(spaceId: string): Promise<IngestionJobView[]> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs`);
+}
+
+export function getIngestionJob(spaceId: string, jobId: string): Promise<IngestionJobView> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs/${encodeURIComponent(jobId)}`);
+}
+
+export function getParseReport(spaceId: string, revisionId: string): Promise<ParseReportView> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/document-revisions/${encodeURIComponent(revisionId)}/parse-report`);
+}
+
+export function listIndexes(spaceId: string): Promise<IndexView[]> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes`);
+}
+
+export function getActiveIndex(spaceId: string): Promise<ActiveIndexView | null> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/active`);
+}
+
+export function publishIndex(spaceId: string, indexVersionId: string): Promise<{ activeIndexVersionId: string }> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/${encodeURIComponent(indexVersionId)}/publish`, { method: "POST" });
 }

@@ -100,16 +100,8 @@ public final class RepositoryProviderRouteResolver implements ProviderRouteResol
                         profile.providerConnectionId())
                 .filter(item -> item.status() == ProviderRepository.ProviderStatus.ACTIVE)
                 .orElseThrow(() -> denied(spaceId, correlationId, decision, "PROVIDER_NOT_ACTIVE_IN_SPACE"));
-        if (decision == EgressDecision.LOCAL_ONLY) {
-            if (route.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY
-                    || connection.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY) {
-                throw denied(spaceId, correlationId, decision, "LOCAL_ONLY_REJECTED_CLOUD_ROUTE");
-            }
-        } else if (route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
-                || !route.allowCloudEgress() || connection.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
-                || !binding.cloudEgressEnabled() || !validCloudAuthorization(binding.authorization(), "EMBEDDING")) {
-            throw denied(spaceId, correlationId, decision, "CLOUD_EGRESS_NOT_AUTHORIZED");
-        }
+        EgressDecision routeDecision = resolveEmbeddingDecision(spaceId, correlationId, decision,
+                route, connection, binding);
         ProviderType providerType;
         ProviderConnection adapterConnection;
         try {
@@ -121,14 +113,43 @@ public final class RepositoryProviderRouteResolver implements ProviderRouteResol
                     URI.create(connection.endpointUri()),
                     connection.credentialRef() == null ? "missing-ref" : connection.credentialRef(),
                     connection.authScheme());
-            EgressPolicy.validateConnection(spaceId, decision, adapterConnection);
+            EgressPolicy.validateConnection(spaceId, routeDecision, adapterConnection);
         } catch (RuntimeException failure) {
             throw denied(spaceId, correlationId, decision, "PROVIDER_CONNECTION_INVALID");
         }
         observer.record(new Phase5IntegrationObserver.Decision(spaceId, correlationId, correlationId,
-                "embedding-route", "AUTHORIZED", "EXACT_ROUTE", decision));
+                "embedding-route", "AUTHORIZED", "EXACT_ROUTE", routeDecision));
         return new ResolvedRoute(spaceId, route.id(), profile.id(), profile.modelName(), adapterConnection,
-                providerType, decision);
+                providerType, routeDecision);
+    }
+
+    /**
+     * A cloud Chat request may intentionally use a local embedding route. The
+     * generation decision authorizes cloud egress for the selected Chat route;
+     * it must not force local supporting routes to become cloud routes or
+     * require an unrelated EMBEDDING cloud authorization.
+     */
+    private EgressDecision resolveEmbeddingDecision(UUID spaceId, UUID correlationId,
+                                                    EgressDecision requestedDecision,
+                                                    ProviderRepository.ModelRouteVersion route,
+                                                    ProviderRepository.ProviderConnection connection,
+                                                    SpaceBindingRepository.SpaceBindingRecord binding) {
+        boolean localRoute = route.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY
+                && connection.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY;
+        if (localRoute) {
+            return EgressDecision.LOCAL_ONLY;
+        }
+        if (requestedDecision == EgressDecision.LOCAL_ONLY) {
+            throw denied(spaceId, correlationId, requestedDecision, "LOCAL_ONLY_REJECTED_CLOUD_ROUTE");
+        }
+        if (route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
+                || !route.allowCloudEgress()
+                || connection.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
+                || !binding.cloudEgressEnabled()
+                || !validCloudAuthorization(binding.authorization(), "EMBEDDING")) {
+            throw denied(spaceId, correlationId, requestedDecision, "CLOUD_EGRESS_NOT_AUTHORIZED");
+        }
+        return EgressDecision.CLOUD_ALLOWED;
     }
 
     private void validateEgress(UUID spaceId, UUID correlationId, EgressDecision decision,

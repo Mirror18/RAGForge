@@ -64,7 +64,7 @@ public class ModelProfileRouteService {
                         id, spaceId, request.providerConnectionId(), profileKey, 1, request.modelName().trim(),
                         json(request.capabilities()), json(Map.of(
                         "purpose", purpose.name(), "usageReporting", usageReporting(request.usageReporting()).name())),
-                        "{}", request.contextWindow(), request.maxOutputTokens(), null, null,
+                        "{}", request.contextWindow(), request.maxOutputTokens(), request.embeddingDimension(), null,
                         "{}", null, "{}", status, now, correlationId(servletRequest)));
         return toProfileView(profile);
     }
@@ -173,8 +173,8 @@ public class ModelProfileRouteService {
         String purpose = text(metadata, "purpose", "CHAT");
         String usageReporting = text(metadata, "usageReporting", "LOCAL_ESTIMATE");
         return new ModelProfileView(profile.id(), profile.spaceId(), profile.versionNo(),
-                profile.providerConnectionId(), purpose, strings(profile.capabilitiesJson()),
-                profile.contextWindow(), profile.maxOutputTokens(), usageReporting,
+                profile.providerConnectionId(), purpose, profile.modelName(), strings(profile.capabilitiesJson()),
+                profile.contextWindow(), profile.maxOutputTokens(), profile.embeddingDimension(), usageReporting,
                 profile.status() == ProviderRepository.ModelProfileStatus.RETIRED ? "DISABLED" : profile.status().name(),
                 profile.createdAt(), profile.updatedAt());
     }
@@ -332,13 +332,14 @@ public class ModelProfileRouteService {
             @NotEmpty @Size(max = 20) List<@NotBlank String> capabilities,
             @NotNull @Min(1) @Max(2_000_000) Integer contextWindow,
             @NotNull @Min(1) @Max(200_000) Integer maxOutputTokens,
+            @Min(1) @Max(4096) Integer embeddingDimension,
             @NotBlank @Pattern(regexp = "PROVIDER_REPORTED|LOCAL_ESTIMATE") String usageReporting,
             @NotBlank @Pattern(regexp = "DRAFT|PUBLISHED|DISABLED") String status) {
     }
 
     public record ModelProfileView(UUID modelProfileId, UUID spaceId, int version, UUID providerConnectionId,
-                                   String purpose, List<String> capabilities, Integer contextWindow,
-                                   Integer maxOutputTokens, String usageReporting, String status,
+                                   String purpose, String modelName, List<String> capabilities, Integer contextWindow,
+                                   Integer maxOutputTokens, Integer embeddingDimension, String usageReporting, String status,
                                    Instant createdAt, Instant updatedAt) {
     }
 
