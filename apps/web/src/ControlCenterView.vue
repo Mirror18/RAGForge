@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { ApiError, type ModelProfile, type ModelRoute, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type RunSnapshot, type SpaceRole, apiFetch } from "./api";
+import { formatDateTime } from "./format";
 
 type ControlSection = "spaces" | "providers" | "models" | "prompts" | "runs";
 
@@ -20,13 +21,14 @@ const providerConnections = ref<ProviderConnection[]>([]);
 const modelProfiles = ref<ModelProfile[]>([]);
 const modelRoutes = ref<ModelRoute[]>([]);
 const promptTemplates = ref<PromptTemplate[]>([]);
+const selectedPromptTemplateId = ref("");
 const promptVersionDetails = ref<PromptVersion | null>(null);
 const runId = ref(props.initialRunId ?? "");
 const runSnapshot = ref<RunSnapshot | null>(null);
 
-const providerForm = ref({ displayName: "本地 Ollama", providerType: "OLLAMA", egressClass: "LOCAL", endpoint: "http://127.0.0.1:11434", credentialRef: "local-ollama", status: "ACTIVE" });
-const profileForm = ref({ providerConnectionId: "", purpose: "CHAT", modelName: "qwen3.5:9b", capabilities: "CHAT,STREAMING,TOOLS,USAGE_REPORTING", contextWindow: 8192, maxOutputTokens: 1024, embeddingDimension: null as number | null, usageReporting: "PROVIDER_REPORTED", status: "PUBLISHED" });
-const routeForm = ref({ purpose: "CHAT", egressClass: "LOCAL", failoverPolicy: "NONE", modelProfileId: "", status: "ACTIVE" });
+const providerForm = ref({ displayName: "Xiaomi MiMo 云端", providerType: "MIMO", egressClass: "CLOUD", endpoint: "https://api.xiaomimimo.com", credentialRef: "env:XIAOMI_API_KEY", status: "ACTIVE" });
+const profileForm = ref({ providerConnectionId: "", purpose: "CHAT", modelName: "mimo-v2.5", capabilities: "CHAT,STREAMING,TOOLS,USAGE_REPORTING", contextWindow: 32768, maxOutputTokens: 2048, embeddingDimension: null as number | null, usageReporting: "PROVIDER_REPORTED", status: "PUBLISHED" });
+const routeForm = ref({ purpose: "CHAT", egressClass: "CLOUD", failoverPolicy: "NONE", modelProfileId: "", status: "ACTIVE" });
 const promptForm = ref({ name: "RAG Chat Prompt", purpose: "CHAT" });
 const promptVersionForm = ref({
   messages: JSON.stringify([
@@ -55,11 +57,7 @@ function selectSection(value: string): void {
 }
 
 function path(suffix: string): string { return `/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}${suffix}`; }
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
+const formatDate = formatDateTime;
 function describeError(value: unknown, fallback: string): string {
   if (value instanceof Error && !(value instanceof ApiError)) return value.message;
   if (!(value instanceof ApiError)) return fallback;

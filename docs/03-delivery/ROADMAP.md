@@ -157,6 +157,8 @@ Editor 可检查/修订 chunk；用户可检索；高级用户可 A/B 对比 ret
 
 本轮业务闭环增量（2026-08-23）：Phase 2 的 Provider 切换能力扩展了 MiMo Chat，Phase 3 的数据源入口扩展了前端本地 notes 文件夹选择；两项复用既有 Provider、revision/artifact、摄取和索引边界，不改变 Phase 6 已完成状态。MiMo 真实云 Chat 与本地 `qwen3.5:9b` RAG E2E 已有证据；真实个人 notes 文件选择需用户手势，完成后再补充实际 corpus 摄取证据。
 
+本轮管理与前端闭环增量（2026-08-24）：新增平台管理员用户生命周期管理、空间编辑/归档、成员查询/角色调整/移除及最后管理员保护；前端补齐对应入口，统一按浏览器 IANA 时区显示，并修复 Prompt 选择变量未声明导致的运行时错误。Chat 大模型默认优先云端 MiMo，但仍受空间显式授权和 fail-closed 出境策略约束；Embedding/Rerank 不因 Chat 选择而自动出境。该增量不改变 Phase 6 已完成状态，也不宣称 Phase 7 的 Linux 交付、视觉验收或生产发布条件已完成。
+
 ## Phase 7：Linux 交付与可公开准备
 
 ### 用户结果

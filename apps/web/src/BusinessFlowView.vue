@@ -24,7 +24,7 @@ const promptVersion = ref<PromptVersion | null>(null);
 const selectedRouteId = ref("");
 const selectedProfileId = ref("");
 const selectedPromptTemplateId = ref("");
-const model = ref("qwen3.5:9b");
+const model = ref("mimo-v2.5");
 const indexVersionId = ref("");
 const datasetHash = ref("");
 const selectedFiles = ref<File[]>([]);
@@ -41,7 +41,7 @@ const selectedProfile = computed(() => modelProfiles.value.find((item) => item.m
 const selectedProvider = computed(() => providerConnections.value.find((item) => item.providerConnectionId === selectedProfile.value?.providerConnectionId) ?? null);
 const selectedTemplate = computed(() => promptTemplates.value.find((item) => item.promptTemplateId === selectedPromptTemplateId.value) ?? null);
 const chatRoutes = computed(() => modelRoutes.value.filter((item) => item.purpose === "CHAT" && item.status === "ACTIVE"));
-const runtimeMode = ref<"LOCAL" | "MIMO">("LOCAL");
+const runtimeMode = ref<"LOCAL" | "MIMO">("MIMO");
 const selectedRouteCandidate = computed(() => selectedRoute.value?.candidates.find((candidate) => candidate.modelProfileId === selectedProfileId.value) ?? null);
 const hasPublishedModel = computed(() => selectedRoute.value?.purpose === "CHAT"
   && selectedRoute.value.status === "ACTIVE"
@@ -174,11 +174,12 @@ async function loadFlow(): Promise<void> {
     indexes.value = indexPage;
     indexVersionId.value = active?.pointer.activeIndexVersionId ?? "";
     datasetHash.value = active?.datasetHash ?? "";
-    if (!selectedRouteId.value || !routes.items.some((item) => item.modelRouteId === selectedRouteId.value)) selectedRouteId.value = routes.items.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE")?.modelRouteId ?? routes.items[0]?.modelRouteId ?? "";
+    if (!selectedRouteId.value || !routes.items.some((item) => item.modelRouteId === selectedRouteId.value)) selectedRouteId.value = routes.items.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE" && item.egressClass === "CLOUD")?.modelRouteId ?? routes.items.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE")?.modelRouteId ?? routes.items[0]?.modelRouteId ?? "";
     const route = routes.items.find((item) => item.modelRouteId === selectedRouteId.value);
-    if (!selectedProfileId.value || !profiles.items.some((item) => item.modelProfileId === selectedProfileId.value)) selectedProfileId.value = route?.candidates[0]?.modelProfileId ?? profiles.items.find((item) => item.purpose === "CHAT" && item.status === "PUBLISHED")?.modelProfileId ?? "";
+    runtimeMode.value = route?.egressClass === "CLOUD" ? "MIMO" : "LOCAL";
+    if (!selectedProfileId.value || !route?.candidates.some((candidate) => candidate.modelProfileId === selectedProfileId.value)) selectedProfileId.value = route?.candidates[0]?.modelProfileId ?? profiles.items.find((item) => item.purpose === "CHAT" && item.status === "PUBLISHED")?.modelProfileId ?? "";
     if (!selectedPromptTemplateId.value || !prompts.items.some((item) => item.promptTemplateId === selectedPromptTemplateId.value)) selectedPromptTemplateId.value = prompts.items.find((item) => item.purpose === "CHAT" && item.currentVersion !== null)?.promptTemplateId ?? prompts.items[0]?.promptTemplateId ?? "";
-    model.value = model.value || "qwen3.5:9b";
+    model.value = profiles.items.find((item) => item.modelProfileId === selectedProfileId.value)?.modelName ?? "mimo-v2.5";
     void loadPromptVersion(prompts.items.find((item) => item.promptTemplateId === selectedPromptTemplateId.value)).catch((value) => {
       error.value = describeError(value);
     });

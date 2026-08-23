@@ -65,8 +65,42 @@ public class SpaceRepository {
     }
 
     public boolean userExists(UUID userId) {
-        Boolean exists = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", Boolean.class, userId);
+        Boolean exists = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM users WHERE id = ? AND status = 'ACTIVE')", Boolean.class, userId);
         return Boolean.TRUE.equals(exists);
+    }
+
+    public List<SpaceMemberView> findMembers(UUID spaceId) {
+        return jdbc.query("""
+                        SELECT m.space_id, m.user_id, u.email, u.display_name, m.role, m.version
+                        FROM space_memberships m JOIN users u ON u.id = m.user_id
+                        WHERE m.space_id = ? ORDER BY m.created_at, m.user_id
+                        """, (rs, rowNum) -> new SpaceMemberView(rs.getObject("space_id", UUID.class),
+                rs.getObject("user_id", UUID.class), rs.getString("email"), rs.getString("display_name"),
+                SpaceRole.parse(rs.getString("role")), rs.getLong("version")), spaceId);
+    }
+
+    public int countAdmins(UUID spaceId) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM space_memberships WHERE space_id = ? AND role = 'SPACE_ADMIN'",
+                Integer.class, spaceId);
+    }
+
+    public boolean updateSpace(UUID spaceId, String name, String description, long expectedVersion, Instant now) {
+        return jdbc.update("""
+                        UPDATE knowledge_spaces
+                        SET name = ?, description = ?, updated_at = ?, version = version + 1
+                        WHERE id = ? AND status = 'ACTIVE' AND version = ?
+                        """, name, description, Timestamp.from(now), spaceId, expectedVersion) == 1;
+    }
+
+    public boolean archive(UUID spaceId, long expectedVersion, Instant now) {
+        return jdbc.update("""
+                        UPDATE knowledge_spaces SET status = 'ARCHIVED', updated_at = ?, version = version + 1
+                        WHERE id = ? AND status = 'ACTIVE' AND version = ?
+                        """, Timestamp.from(now), spaceId, expectedVersion) == 1;
+    }
+
+    public boolean deleteMembership(UUID spaceId, UUID userId) {
+        return jdbc.update("DELETE FROM space_memberships WHERE space_id = ? AND user_id = ?", spaceId, userId) == 1;
     }
 
     public long upsertMembership(UUID spaceId, UUID userId, SpaceRole role, Instant now) {

@@ -252,6 +252,71 @@
         }
       }
     },
+    "/api/v1/users": {
+      "get": {
+        "tags": ["auth"],
+        "operationId": "listUsers",
+        "summary": "List users for a platform administrator",
+        "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Limit"}],
+        "responses": {
+          "200": {"description": "Users", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UserPage"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"}
+        }
+      },
+      "post": {
+        "tags": ["auth"],
+        "operationId": "createManagedUser",
+        "summary": "Create a local user account",
+        "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateManagedUserRequest"}}}},
+        "responses": {
+          "201": {"description": "User created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ManagedUser"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "409": {"$ref": "#/components/responses/Conflict"}
+        }
+      }
+    },
+    "/api/v1/users/{userId}": {
+      "parameters": [{"$ref": "#/components/parameters/UserId"}],
+      "put": {
+        "tags": ["auth"], "operationId": "updateManagedUser", "summary": "Update a local user account", "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateManagedUserRequest"}}}},
+        "responses": {"200": {"description": "User updated", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ManagedUser"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}
+      },
+      "delete": {
+        "tags": ["auth"], "operationId": "disableManagedUser", "summary": "Disable a user account without deleting audit history", "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "responses": {"200": {"description": "User disabled", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ManagedUser"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}": {
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "put": {
+        "tags": ["spaces"], "operationId": "updateSpace", "summary": "Update a knowledge space", "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateSpaceRequest"}}}},
+        "responses": {"200": {"description": "Space updated", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Space"}}}}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}}
+      },
+      "delete": {
+        "tags": ["spaces"], "operationId": "archiveSpace", "summary": "Archive a knowledge space", "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ArchiveSpaceRequest"}}}},
+        "responses": {"204": {"description": "Space archived"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/members": {
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["spaces"], "operationId": "listSpaceMembers", "summary": "List members of a space", "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Space members", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MemberPage"}}}}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}
+      }
+    },
     "/api/v1/spaces/{spaceId}/members/{userId}": {
       "parameters": [
         {"$ref": "#/components/parameters/SpaceId"},
@@ -291,6 +356,11 @@
           "422": {"$ref": "#/components/responses/UnprocessableEntity"},
           "500": {"$ref": "#/components/responses/InternalError"}
         }
+      },
+      "delete": {
+        "tags": ["spaces"], "operationId": "removeSpaceMember", "summary": "Remove a member from a space", "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "responses": {"204": {"description": "Member removed"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}}
       }
     },
     "/api/v1/spaces/{spaceId}/provider-connections": {
@@ -1037,6 +1107,27 @@
           "platformRole": {"type": "string", "enum": ["PLATFORM_ADMIN", "USER"]}
         }
       },
+      "ManagedUser": {
+        "type": "object", "additionalProperties": false,
+        "required": ["userId", "email", "displayName", "platformRole", "status", "createdAt", "updatedAt"],
+        "properties": {
+          "userId": {"$ref": "#/components/schemas/UuidV7"}, "email": {"type": "string", "format": "idn-email", "maxLength": 320},
+          "displayName": {"type": "string", "minLength": 1, "maxLength": 120}, "platformRole": {"type": "string", "enum": ["PLATFORM_ADMIN", "USER"]},
+          "status": {"type": "string", "enum": ["ACTIVE", "DISABLED"]}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}
+        }
+      },
+      "UserPage": {
+        "type": "object", "additionalProperties": false, "required": ["items", "nextCursor"],
+        "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/ManagedUser"}}, "nextCursor": {"type": ["string", "null"]}}
+      },
+      "CreateManagedUserRequest": {
+        "type": "object", "additionalProperties": false, "required": ["email", "displayName", "password"],
+        "properties": {"email": {"type": "string", "format": "idn-email"}, "displayName": {"type": "string", "minLength": 1, "maxLength": 120}, "password": {"type": "string", "format": "password", "minLength": 12, "maxLength": 128, "writeOnly": true}}
+      },
+      "UpdateManagedUserRequest": {
+        "type": "object", "additionalProperties": false, "required": ["displayName", "platformRole", "status"],
+        "properties": {"displayName": {"type": "string", "minLength": 1, "maxLength": 120}, "platformRole": {"type": "string", "enum": ["PLATFORM_ADMIN", "USER"]}, "status": {"type": "string", "enum": ["ACTIVE", "DISABLED"]}, "password": {"type": "string", "format": "password", "minLength": 12, "maxLength": 128, "writeOnly": true}}
+      },
       "RegisterRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -1122,6 +1213,21 @@
           "items": {"type": "array", "items": {"$ref": "#/components/schemas/Space"}},
           "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._~-]+$"}
         }
+      },
+      "UpdateSpaceRequest": {
+        "type": "object", "additionalProperties": false, "required": ["name", "version"],
+        "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 120}, "description": {"type": "string", "maxLength": 2000}, "version": {"type": "integer", "minimum": 0}}
+      },
+      "ArchiveSpaceRequest": {
+        "type": "object", "additionalProperties": false, "properties": {"version": {"type": "integer", "minimum": 0}}
+      },
+      "MemberPage": {
+        "type": "object", "additionalProperties": false, "required": ["items"],
+        "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/SpaceMemberView"}}}
+      },
+      "SpaceMemberView": {
+        "type": "object", "additionalProperties": false, "required": ["spaceId", "userId", "email", "displayName", "role", "version"],
+        "properties": {"spaceId": {"$ref": "#/components/schemas/UuidV7"}, "userId": {"$ref": "#/components/schemas/UuidV7"}, "email": {"type": "string", "format": "idn-email"}, "displayName": {"type": "string"}, "role": {"$ref": "#/components/schemas/MemberRole"}, "version": {"type": "integer", "minimum": 0}}
       },
       "MemberRole": {
         "type": "string",

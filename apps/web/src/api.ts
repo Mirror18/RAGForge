@@ -69,6 +69,25 @@ export interface SpacePage {
   nextCursor: string | null;
 }
 
+export interface ManagedUser {
+  userId: string;
+  email: string;
+  displayName: string;
+  platformRole: PlatformRole;
+  status: "ACTIVE" | "DISABLED";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SpaceMember {
+  spaceId: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  role: SpaceRole;
+  version: number;
+}
+
 export interface ProviderConnection {
   providerConnectionId: string;
   spaceId: string;
@@ -509,6 +528,42 @@ async function fetchCurrentSession(): Promise<CurrentSession> {
 
 export async function getCurrentSession(): Promise<CurrentSession> {
   return fetchCurrentSession();
+}
+
+export function listUsers(): Promise<{ items: ManagedUser[]; nextCursor: string | null }> {
+  return apiFetch("/api/v1/users?limit=100");
+}
+
+export function createManagedUser(payload: { email: string; displayName: string; password: string }): Promise<ManagedUser> {
+  return apiFetch("/api/v1/users", { method: "POST", body: payload });
+}
+
+export function updateManagedUser(userId: string, payload: { displayName: string; platformRole: PlatformRole; status: ManagedUser["status"]; password?: string }): Promise<ManagedUser> {
+  return apiFetch(`/api/v1/users/${encodeURIComponent(userId)}`, { method: "PUT", body: payload });
+}
+
+export function disableManagedUser(userId: string): Promise<ManagedUser> {
+  return apiFetch(`/api/v1/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+}
+
+export function listSpaceMembers(spaceId: string): Promise<{ items: SpaceMember[] }> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/members`);
+}
+
+export function updateSpace(spaceId: string, payload: { name: string; description: string; version: number }): Promise<Space> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}`, { method: "PUT", body: payload });
+}
+
+export function archiveSpace(spaceId: string, version: number): Promise<void> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}`, { method: "DELETE", body: { version } });
+}
+
+export function updateSpaceMember(spaceId: string, userId: string, role: SpaceRole): Promise<unknown> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/members/${encodeURIComponent(userId)}`, { method: "PUT", body: { role } });
+}
+
+export function removeSpaceMember(spaceId: string, userId: string): Promise<void> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/members/${encodeURIComponent(userId)}`, { method: "DELETE" });
 }
 
 export function clearCsrfToken(): void {
