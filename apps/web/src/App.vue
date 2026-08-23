@@ -3,12 +3,14 @@ import { computed, onMounted, ref } from "vue";
 import { ApiError, type Anchor, type ChunkOverrideResponse, type ChunkOverrideTargetState, type CreateChunkOverrideRequest, type ChunkStudioProjection, type CurrentSession, type RetrievalExperiment, type Space, type TransitionChunkOverrideRequest, apiFetch, getCurrentSession, loginUser, logoutCurrentSession, registerUser } from "./api";
 import AnswerView from "./AnswerView.vue";
 import ControlCenterView from "./ControlCenterView.vue";
+import AuthView from "./AuthView.vue";
+import PersonalSpaceView from "./PersonalSpaceView.vue";
 
-type View = "home" | "studio" | "playground" | "answer" | "control";
+type View = "home" | "studio" | "playground" | "answer" | "control" | "profile";
 type ControlSection = "spaces" | "providers" | "models" | "prompts" | "runs";
 const view = ref<View>("home");
 const controlSection = ref<ControlSection>("providers");
-const apiStatus = ref<"checking" | "ready" | "unavailable">("checking");
+const apiStatus = ref<"checking" | "ready" | "unavailable" | "unauthenticated">("checking");
 const checkedAt = ref("");
 const session = ref<CurrentSession | null>(null);
 const spaces = ref<Space[]>([]);
@@ -19,8 +21,6 @@ const authEmail = ref("");
 const authPassword = ref("");
 const authDisplayName = ref("");
 const authLoading = ref(false);
-const spaceName = ref("我的知识空间");
-const spaceDescription = ref("本地 RAGForge 演示空间");
 const spaceCreating = ref(false);
 
 const childChunkId = ref("");
@@ -49,7 +49,7 @@ const selectedSpace = computed(() => spaces.value.find((space) => space.spaceId 
 const currentRole = computed(() => selectedSpace.value?.role ?? (session.value?.user.platformRole === "PLATFORM_ADMIN" ? "PLATFORM_ADMIN" : "未加载"));
 const isViewer = computed(() => selectedSpace.value?.role === "VIEWER");
 const canEdit = computed(() => !isViewer.value && Boolean(selectedSpaceId.value));
-const statusText = computed(() => apiStatus.value === "ready" ? "会话与 API 可用" : apiStatus.value === "unavailable" ? "API 不可用" : "正在检查会话");
+const statusText = computed(() => apiStatus.value === "ready" ? "会话与 API 可用" : apiStatus.value === "unauthenticated" ? "请登录后继续" : apiStatus.value === "unavailable" ? "API 不可用" : "正在检查会话");
 const traceStages = [
   { key: "dense" as const, title: "Dense" },
   { key: "bm25" as const, title: "BM25" },
@@ -106,6 +106,14 @@ async function checkApiHealth(): Promise<void> {
     if (!selectedSpaceId.value || !spaces.value.some((space) => space.spaceId === selectedSpaceId.value)) selectedSpaceId.value = spaces.value[0]?.spaceId ?? "";
     apiStatus.value = "ready";
   } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      session.value = null;
+      spaces.value = [];
+      selectedSpaceId.value = "";
+      apiStatus.value = "unauthenticated";
+      workspaceError.value = "";
+      return;
+    }
     apiStatus.value = "unavailable";
     workspaceError.value = describeError(error, "无法读取当前会话或可见空间。请确认服务已启动并已登录。");
   } finally {
@@ -142,18 +150,21 @@ async function logout(): Promise<void> {
   workspaceError.value = "";
   try { await logoutCurrentSession(); }
   catch (error) { workspaceError.value = describeError(error, "退出失败。"); return; }
-  session.value = null; spaces.value = []; selectedSpaceId.value = ""; apiStatus.value = "unavailable";
+  session.value = null; spaces.value = []; selectedSpaceId.value = ""; apiStatus.value = "unauthenticated";
 }
 
-async function createFirstSpace(): Promise<void> {
+async function createSpace(payload: { name: string; description: string }): Promise<void> {
   workspaceError.value = "";
-  if (!spaceName.value.trim()) { workspaceError.value = "知识空间名称不能为空。"; return; }
   spaceCreating.value = true;
   try {
-    const created = await apiFetch<Space>("/api/v1/spaces", { method: "POST", body: { name: spaceName.value.trim(), description: spaceDescription.value.trim() } });
-    spaces.value = [created]; selectedSpaceId.value = created.spaceId;
+    const created = await apiFetch<Space>("/api/v1/spaces", { method: "POST", body: payload });
+    spaces.value = [...spaces.value, created]; selectedSpaceId.value = created.spaceId; view.value = "profile";
   } catch (error) { workspaceError.value = describeError(error, "知识空间创建失败。"); }
   finally { spaceCreating.value = false; }
+}
+function openPersonalAction(action: "home" | "providers" | "models" | "prompts" | "runs"): void {
+  if (action === "home") { view.value = "home"; return; }
+  openControl(action);
 }
 
 async function loadChunk(): Promise<void> {
@@ -228,11 +239,11 @@ onMounted(checkApiHealth);
 <template>
   <main class="shell">
     <header class="app-header"><div><p class="eyebrow">RAGForge · Phase 4-G</p><h1>知识空间工程控制台</h1><p class="intro">面向编辑与检索实验的薄客户端。空间隔离、权限校验和审计最终由 API 强制执行。</p></div><div class="status-chip" :class="apiStatus" aria-live="polite"><span class="status-dot" aria-hidden="true"></span>{{ statusText }}</div></header>
-    <section class="workspace-bar" aria-label="当前工作空间上下文"><div class="context-field"><label for="space-select">当前空间</label><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready'"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }} · {{ space.spaceId }}</option></select></div><div><span class="context-label">空间版本</span><strong>{{ selectedSpace?.version ?? "—" }}</strong></div><div><span class="context-label">当前角色</span><strong>{{ currentRole }}</strong></div><div><span class="context-label">会话用户</span><strong>{{ session?.user.displayName ?? "未登录" }}</strong></div><div class="button-row"><button type="button" class="quiet-button" :disabled="apiStatus === 'checking'" @click="checkApiHealth">{{ apiStatus === "checking" ? "检查中…" : "刷新上下文" }}</button><button v-if="session" type="button" class="secondary-button" @click="logout">退出</button></div></section>
-    <p v-if="workspaceError" class="alert error" role="alert">{{ workspaceError }}</p>
-    <section v-if="!session" class="card onboarding-card" aria-labelledby="auth-title"><div><p class="eyebrow">本地账号</p><h2 id="auth-title">{{ authMode === 'login' ? '登录控制台' : '创建账号并登录' }}</h2><p class="muted">Session 使用 HttpOnly Cookie；密码不会写入 URL、日志或浏览器存储。</p></div><form class="auth-form" @submit.prevent="submitAuth"><div v-if="authMode === 'register'" class="field"><label for="auth-display-name">显示名称</label><input id="auth-display-name" v-model="authDisplayName" autocomplete="name" maxlength="120" /></div><div class="field"><label for="auth-email">邮箱</label><input id="auth-email" v-model="authEmail" type="email" autocomplete="username" required /></div><div class="field"><label for="auth-password">密码</label><input id="auth-password" v-model="authPassword" type="password" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" minlength="12" maxlength="128" required /></div><div class="button-row"><button type="submit" :disabled="authLoading">{{ authLoading ? '处理中…' : (authMode === 'login' ? '登录' : '注册并登录') }}</button><button type="button" class="secondary-button" @click="authMode = authMode === 'login' ? 'register' : 'login'">{{ authMode === 'login' ? '没有账号？注册' : '已有账号？登录' }}</button></div></form></section>
-    <section v-else-if="spaces.length === 0" class="card onboarding-card" aria-labelledby="space-title"><div><p class="eyebrow">首次使用</p><h2 id="space-title">创建知识空间</h2><p class="muted">空间是内容隔离与权限控制边界，后续请求都会显式携带 spaceId。</p></div><form class="auth-form" @submit.prevent="createFirstSpace"><div class="field"><label for="space-name">名称</label><input id="space-name" v-model="spaceName" maxlength="120" required /></div><div class="field"><label for="space-description">描述</label><textarea id="space-description" v-model="spaceDescription" rows="2" maxlength="2000"></textarea></div><button type="submit" :disabled="spaceCreating">{{ spaceCreating ? '创建中…' : '创建空间' }}</button></form></section>
-    <nav v-if="session && spaces.length > 0" class="main-nav" aria-label="主要导航" role="tablist"><button id="home-tab" type="button" role="tab" :aria-selected="view === 'home'" :class="{ active: view === 'home' }" @click="view = 'home'">功能入口</button><button id="chunk-studio-tab" type="button" role="tab" :aria-selected="view === 'studio'" :class="{ active: view === 'studio' }" @click="view = 'studio'">Chunk Studio</button><button id="retrieval-playground-tab" type="button" role="tab" :aria-selected="view === 'playground'" :class="{ active: view === 'playground' }" @click="view = 'playground'">Retrieval Playground</button><button id="answer-tab" type="button" role="tab" :aria-selected="view === 'answer'" :class="{ active: view === 'answer' }" @click="view = 'answer'">带引用问答</button><button id="control-center-tab" type="button" role="tab" :aria-selected="view === 'control'" :class="{ active: view === 'control' }" @click="openControl('providers')">配置与运维</button></nav>
+    <section v-if="session" class="workspace-bar" aria-label="当前工作空间上下文"><div class="context-field"><label for="space-select">当前空间</label><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }} · {{ space.spaceId }}</option></select></div><div><span class="context-label">空间版本</span><strong>{{ selectedSpace?.version ?? "—" }}</strong></div><div><span class="context-label">当前角色</span><strong>{{ currentRole }}</strong></div><div><span class="context-label">会话用户</span><strong>{{ session.user.displayName }}</strong></div><div class="button-row"><button type="button" class="quiet-button" :disabled="apiStatus === 'checking'" @click="checkApiHealth">{{ apiStatus === "checking" ? "检查中…" : "刷新上下文" }}</button><button type="button" class="secondary-button" @click="view = 'profile'">个人空间</button></div></section>
+    <p v-if="workspaceError && session" class="alert error" role="alert">{{ workspaceError }}</p>
+    <AuthView v-if="!session" v-model:mode="authMode" v-model:email="authEmail" v-model:password="authPassword" v-model:display-name="authDisplayName" :loading="authLoading" :error="workspaceError" @submit="submitAuth" />
+    <PersonalSpaceView v-if="session && (spaces.length === 0 || view === 'profile')" :session="session" :spaces="spaces" :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-creating="spaceCreating" @select-space="(spaceId) => { selectedSpaceId = spaceId; view = 'home'; }" @create-space="createSpace" @open-action="openPersonalAction" @logout="logout" @refresh="checkApiHealth" />
+    <nav v-if="session && spaces.length > 0" class="main-nav" aria-label="主要导航" role="tablist"><button id="home-tab" type="button" role="tab" :aria-selected="view === 'home'" :class="{ active: view === 'home' }" @click="view = 'home'">功能入口</button><button id="personal-space-tab" type="button" role="tab" :aria-selected="view === 'profile'" :class="{ active: view === 'profile' }" @click="view = 'profile'">个人空间</button><button id="chunk-studio-tab" type="button" role="tab" :aria-selected="view === 'studio'" :class="{ active: view === 'studio' }" @click="view = 'studio'">Chunk Studio</button><button id="retrieval-playground-tab" type="button" role="tab" :aria-selected="view === 'playground'" :class="{ active: view === 'playground' }" @click="view = 'playground'">Retrieval Playground</button><button id="answer-tab" type="button" role="tab" :aria-selected="view === 'answer'" :class="{ active: view === 'answer' }" @click="view = 'answer'">带引用问答</button><button id="control-center-tab" type="button" role="tab" :aria-selected="view === 'control'" :class="{ active: view === 'control' }" @click="openControl('providers')">配置与运维</button></nav>
 
     <section v-if="session && spaces.length > 0 && view === 'home'" class="view-section entry-home" aria-labelledby="entry-home-heading">
       <div class="section-heading"><div><p class="eyebrow">00 · Workspace map</p><h2 id="entry-home-heading">功能入口</h2><p>从当前空间进入内容编辑、检索实验、引用问答和平台配置。每个入口都使用当前 spaceId，服务端继续执行权限与隔离校验。</p></div><div class="read-only-note">当前角色：{{ currentRole }}</div></div>
