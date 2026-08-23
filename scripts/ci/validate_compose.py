@@ -16,6 +16,16 @@ from compose_isolation import PORT_MAX, PORT_MIN, isolated_environment, port_off
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.yaml"
 REQUIRED_SERVICES = {"postgres", "qdrant", "rabbitmq", "valkey", "minio"}
+CORE_PORT_NAMES = {
+    "POSTGRES_PORT",
+    "QDRANT_PORT",
+    "QDRANT_GRPC_PORT",
+    "RABBITMQ_PORT",
+    "RABBITMQ_MANAGEMENT_PORT",
+    "VALKEY_PORT",
+    "S3_PORT",
+    "S3_CONSOLE_PORT",
+}
 
 
 def compose_base(project_name: str, env_file: Path | None = None, profile: str | None = None) -> list[str]:
@@ -73,6 +83,14 @@ def main() -> int:
         print(with_ollama.stderr.strip(), file=sys.stderr)
         return 1
 
+    with_app = run(compose_base(args.project_name, args.env_file, "app") + ["config", "--services"], environment)
+    app_services = {line.strip() for line in with_app.stdout.splitlines() if line.strip()}
+    missing_app = {"server", "worker", "web"} - app_services
+    if with_app.returncode != 0 or missing_app:
+        print(f"Compose 校验失败：app profile 缺少服务：{', '.join(sorted(missing_app))}", file=sys.stderr)
+        print(with_app.stderr.strip(), file=sys.stderr)
+        return 1
+
     source = COMPOSE_FILE.read_text(encoding="utf-8")
     if "gs-" in source or "gs_" in source:
         print("Compose 校验失败：core Compose 不得引用 gs-* 项目或资源。", file=sys.stderr)
@@ -111,7 +129,7 @@ def main() -> int:
         if "published" in port
     }
     actual_ports = {int(port) for port in service_ports}
-    expected_port_values = {port for name, port in expected_ports.items() if name != "OLLAMA_PORT"}
+    expected_port_values = {expected_ports[name] for name in CORE_PORT_NAMES}
     if actual_ports != expected_port_values or any(port < PORT_MIN or port >= PORT_MAX for port in actual_ports):
         print(
             "Compose 校验失败：host port isolation mismatch; "
@@ -139,10 +157,39 @@ def main() -> int:
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"Compose 校验失败：无法解析 ollama profile 端口清单：{exc}", file=sys.stderr)
         return 1
-    if profile_ports != set(expected_ports.values()):
+    if profile_ports != {expected_ports[name] for name in CORE_PORT_NAMES | {"OLLAMA_PORT"}}:
         print(
             "Compose 校验失败：ollama profile host port mismatch; "
-            f"expected={sorted(expected_ports.values())!r}, actual={sorted(profile_ports)!r}",
+            f"expected={sorted(expected_ports[name] for name in CORE_PORT_NAMES | {'OLLAMA_PORT'})!r}, "
+            f"actual={sorted(profile_ports)!r}",
+            file=sys.stderr,
+        )
+        return 1
+
+    app_rendered = run(
+        compose_base(args.project_name, args.env_file, "app") + ["config", "--format", "json"],
+        environment,
+    )
+    if app_rendered.returncode != 0:
+        print("Compose 校验失败：无法读取 app profile 端口清单。", file=sys.stderr)
+        print(app_rendered.stderr.strip(), file=sys.stderr)
+        return app_rendered.returncode or 1
+    try:
+        app_model = json.loads(app_rendered.stdout)
+        app_ports = {
+            int(port["published"])
+            for service in app_model["services"].values()
+            for port in service.get("ports", [])
+            if "published" in port
+        }
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Compose 校验失败：无法解析 app profile 端口清单：{exc}", file=sys.stderr)
+        return 1
+    expected_app_ports = {expected_ports["APP_SERVER_PORT"], expected_ports["WEB_PORT"]}
+    if app_ports != expected_port_values | expected_app_ports:
+        print(
+            "Compose 校验失败：app profile host port mismatch; "
+            f"expected={sorted(expected_port_values | expected_app_ports)!r}, actual={sorted(app_ports)!r}",
             file=sys.stderr,
         )
         return 1

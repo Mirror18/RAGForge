@@ -1,8 +1,12 @@
 # Docker Compose Core
 
-`compose.yaml` 提供 Phase 1 基础设施骨架：PostgreSQL、Qdrant、RabbitMQ、Valkey、MinIO
+`compose.yaml` 提供 RAGForge 的 core 基础设施：PostgreSQL、Qdrant、RabbitMQ、Valkey、MinIO
 （S3-compatible storage），以及可选的容器化 Ollama profile。默认 Ollama 连接宿主机
 `http://host.docker.internal:11434`，不会静默切换到云端 provider。
+
+应用镜像统一由 [`deploy/docker/Dockerfile`](../../deploy/docker/Dockerfile) 的三个 target
+生成：`server`、`worker`、`web`。它们不默认启动，只有显式启用 `app` profile 才会进入
+Compose；这样 core 数据服务和应用运行时的生命周期可以分别管理。
 
 ## 使用
 
@@ -15,6 +19,20 @@ python scripts/dev/core.py health
 python scripts/dev/core.py ps
 python scripts/dev/core.py down
 ```
+
+启动完整的容器化应用闭环：
+
+```text
+python scripts/dev/core.py --profile app build
+python scripts/dev/core.py --profile app up --build
+python scripts/dev/core.py --profile app ps
+python scripts/dev/core.py --profile app down
+```
+
+默认 app profile 入口为 Web `http://localhost:25174`、Server
+`http://localhost:25082`。项目名、端口、网络和卷前缀仍由统一入口派生；切换
+`--project-name` 时必须在同一组命令中保持一致。应用容器内部只通过 Compose 服务名
+访问 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO。
 
 `--project-name` 会同步派生独立资源和稳定端口 block：默认 `ragforge-p1` 保留基准端口；
 其他 project 使用 SHA-256 派生的固定偏移（20 的倍数），并限制在 `[20000, 50000)`。
