@@ -100,19 +100,6 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
                 WHERE space_id = ? AND id = ?
                 """, vector.size(), Timestamp.from(now), spaceId, indexId);
         jdbc.update("UPDATE index_versions SET index_state = 'READY' WHERE space_id = ? AND id = ?", spaceId, indexId);
-        jdbc.update("""
-                UPDATE index_versions SET index_state = 'ACTIVE', activated_at = ?, retention_deadline = ?
-                WHERE space_id = ? AND id = ? AND index_state = 'READY'
-                """, Timestamp.from(now), Timestamp.from(now.plusSeconds(86400)), spaceId, indexId);
-        UUID previousIndex = jdbc.query("SELECT active_index_version_id FROM active_index_pointers WHERE space_id = ?", (rs, row) -> rs.getObject(1, UUID.class), spaceId).stream().findFirst().orElse(null);
-        if (previousIndex != null) jdbc.update("UPDATE index_versions SET index_state = 'RETIRED', retired_at = ? WHERE space_id = ? AND id = ? AND index_state = 'ACTIVE'", Timestamp.from(now), spaceId, previousIndex);
-        jdbc.update("""
-                INSERT INTO active_index_pointers (id, space_id, active_index_version_id, previous_index_version_id, version_no, updated_at)
-                VALUES (?, ?, ?, ?, 1, ?)
-                ON CONFLICT (space_id) DO UPDATE SET active_index_version_id = EXCLUDED.active_index_version_id,
-                    previous_index_version_id = EXCLUDED.previous_index_version_id,
-                    version_no = active_index_pointers.version_no + 1, updated_at = EXCLUDED.updated_at
-                """, UuidV7.random(), spaceId, indexId, previousIndex, Timestamp.from(now));
         ensureRetrievalProfile(spaceId, now);
         jdbc.update("UPDATE source_documents SET active_revision_id = ?, version_no = ?, current_state = 'ACTIVE', updated_at = ? WHERE space_id = ? AND id = ?",
                 revisionId, context.revisionNo(), Timestamp.from(now), spaceId, context.sourceDocumentId());

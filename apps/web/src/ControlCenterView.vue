@@ -18,6 +18,7 @@ const providerConnections = ref<ProviderConnection[]>([]);
 const modelProfiles = ref<ModelProfile[]>([]);
 const modelRoutes = ref<ModelRoute[]>([]);
 const promptTemplates = ref<PromptTemplate[]>([]);
+const promptVersionDetails = ref<PromptVersion | null>(null);
 const runId = ref("");
 const runSnapshot = ref<RunSnapshot | null>(null);
 
@@ -83,6 +84,7 @@ async function loadSection(): Promise<void> {
     } else if (section.value === "prompts") {
       const response = await apiFetch<{ items: PromptTemplate[] }>(path("/prompt-templates"));
       promptTemplates.value = response.items;
+      promptVersionDetails.value = null;
     }
   } catch (value) {
     error.value = describeError(value, "功能中心数据加载失败。");
@@ -135,6 +137,23 @@ async function createPrompt(): Promise<void> {
     await loadSection();
   } catch (value) { error.value = describeError(value, "Prompt template 创建失败。"); }
   finally { loading.value = false; }
+}
+
+async function viewPromptVersion(template: PromptTemplate): Promise<void> {
+  if (!template.currentVersion) {
+    promptVersionDetails.value = null;
+    error.value = "当前模板还没有可查看的已发布版本。";
+    return;
+  }
+  loading.value = true;
+  error.value = "";
+  try {
+    promptVersionDetails.value = await apiFetch<PromptVersion>(path(`/prompt-templates/${encodeURIComponent(template.promptTemplateId)}/versions/${template.currentVersion}`));
+  } catch (value) {
+    error.value = describeError(value, "Prompt version 加载失败。");
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function initializeLocalRag(): Promise<void> {
@@ -245,7 +264,7 @@ watch(() => [props.selectedSpaceId, section.value], () => { void loadSection(); 
       <article class="card entry-card"><span class="card-label">当前空间</span><strong>{{ selectedSpaceId || "未选择" }}</strong><p>空间切换在页面顶部完成；所有内容 API 都必须使用当前 spaceId。</p><button type="button" class="secondary-button" @click="section = 'runs'">查看 Run 追踪</button></article>
       <article class="card entry-card"><span class="card-label">服务健康</span><strong>Server / API</strong><p>本地开发可通过健康端点检查 server 与基础设施状态。</p><a class="link-button" href="/actuator/health" target="_blank" rel="noreferrer">打开健康检查</a></article>
       <article class="card entry-card"><span class="card-label">本地 RAG 初始化</span><strong>一键准备 Ollama 闭环</strong><p>通过当前空间 API 创建或复用本地 Provider、三类模型路由、已发布 Prompt，并写入空间绑定；云端出境保持关闭。</p><button type="button" :disabled="loading || !canManage" @click="initializeLocalRag">{{ loading ? "初始化中…" : "初始化本地 Ollama RAG" }}</button></article>
-      <article class="card entry-card disabled-entry"><span class="card-label">审计导出</span><strong>待接入 Web API</strong><p>审计与 retention 已有后端运维能力，但尚未形成面向控制台的导出 API。</p></article>
+      <article class="card entry-card"><span class="card-label">审计与保留</span><strong>Run / Step 可追踪</strong><p>业务闭环的执行状态、步骤、错误 correlationId 和重试入口均通过当前空间的 Run 追踪页查看。</p><button type="button" class="secondary-button" @click="section = 'runs'">打开 Run 追踪</button></article>
     </div>
 
     <div v-else-if="section === 'providers'" class="control-layout">
@@ -258,7 +277,7 @@ watch(() => [props.selectedSpaceId, section.value], () => { void loadSection(); 
       <div class="stack"><form class="card form-card" @submit.prevent="createProfile"><h3>创建 Model Profile</h3><div class="form-grid"><div class="field wide"><label for="profile-provider">Provider connection</label><select id="profile-provider" v-model="profileForm.providerConnectionId" required><option value="">选择连接</option><option v-for="item in providerConnections" :key="item.providerConnectionId" :value="item.providerConnectionId">{{ item.providerType }} · {{ item.endpoint }}</option></select></div><div class="field"><label for="profile-purpose">用途</label><select id="profile-purpose" v-model="profileForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><div class="field"><label for="profile-model">模型名</label><input id="profile-model" v-model="profileForm.modelName" required /></div></div><div class="form-grid"><div class="field wide"><label for="profile-capabilities">能力（逗号分隔）</label><input id="profile-capabilities" v-model="profileForm.capabilities" required /></div><div class="field"><label for="profile-context">Context window</label><input id="profile-context" v-model.number="profileForm.contextWindow" type="number" min="1" required /></div><div class="field"><label for="profile-output">Max output</label><input id="profile-output" v-model.number="profileForm.maxOutputTokens" type="number" min="1" required /></div></div><button type="submit" :disabled="loading || !canManage">创建 Profile</button></form><form class="card form-card" @submit.prevent="createRoute"><h3>创建 Model Route</h3><div class="form-grid"><div class="field"><label for="route-purpose">用途</label><select id="route-purpose" v-model="routeForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><div class="field"><label for="route-egress">出境等级</label><select id="route-egress" v-model="routeForm.egressClass"><option>LOCAL</option><option>CLOUD</option></select></div><div class="field"><label for="route-failover">Failover</label><select id="route-failover" v-model="routeForm.failoverPolicy"><option>NONE</option><option>SAME_EGRESS_ONLY</option></select></div></div><div class="field"><label for="route-profile">Candidate Profile</label><select id="route-profile" v-model="routeForm.modelProfileId" required><option value="">选择 profile</option><option v-for="item in modelProfiles" :key="item.modelProfileId" :value="item.modelProfileId">{{ item.purpose }} · {{ item.modelProfileId }}</option></select></div><button type="submit" :disabled="loading || !canManage">创建 Route</button></form></div>
     </div>
 
-    <div v-else-if="section === 'prompts'" class="control-layout"><div class="card list-card"><div class="card-title"><h3>Prompt Templates</h3><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><p v-if="!promptTemplates.length" class="empty-state">当前空间还没有 Prompt 模板。</p><article v-for="item in promptTemplates" :key="item.promptTemplateId" class="list-row"><div><strong>{{ item.name }} · {{ item.purpose }}</strong><span>{{ item.promptTemplateId }} · 当前版本 {{ item.currentVersion ?? "未创建" }}</span></div><span class="tag">版本化</span></article></div><form class="card form-card" @submit.prevent="createPrompt"><h3>创建 Prompt Template</h3><p class="muted">模板创建后仍需通过版本 API 创建消息、变量 schema 和 output contract；发布后的版本不可变。</p><div class="field"><label for="prompt-name">名称</label><input id="prompt-name" v-model="promptForm.name" required /></div><div class="field"><label for="prompt-purpose">用途</label><select id="prompt-purpose" v-model="promptForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><button type="submit" :disabled="loading || !canManage">创建模板</button></form></div>
+    <div v-else-if="section === 'prompts'" class="control-layout"><div class="card list-card"><div class="card-title"><h3>Prompt Templates</h3><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><p v-if="!promptTemplates.length" class="empty-state">当前空间还没有 Prompt 模板。</p><article v-for="item in promptTemplates" :key="item.promptTemplateId" class="list-row"><div><strong>{{ item.name }} · {{ item.purpose }}</strong><span>{{ item.promptTemplateId }} · 当前版本 {{ item.currentVersion ?? "未创建" }}</span></div><div class="list-row-actions"><span class="tag">版本化</span><button v-if="item.currentVersion" type="button" class="quiet-button" @click="viewPromptVersion(item)">查看版本</button></div></article><article v-if="promptVersionDetails" class="prompt-version-card"><div class="card-title"><h3>Prompt version v{{ promptVersionDetails.version }}</h3><span class="state-pill">{{ promptVersionDetails.state }}</span></div><p>contentHash：<code>{{ promptVersionDetails.contentHash }}</code></p><p>messages：{{ promptVersionDetails.messages.map((message) => `${message.role}: ${message.content}`).join(" · ") }}</p><p>variableSchema：<code>{{ JSON.stringify(promptVersionDetails.variableSchema) }}</code></p><p>outputContract：<code>{{ JSON.stringify(promptVersionDetails.outputContract) }}</code></p></article></div><form class="card form-card" @submit.prevent="createPrompt"><h3>创建 Prompt Template</h3><p class="muted">模板创建后仍需通过版本 API 创建消息、变量 schema 和 output contract；发布后的版本不可变。</p><div class="field"><label for="prompt-name">名称</label><input id="prompt-name" v-model="promptForm.name" required /></div><div class="field"><label for="prompt-purpose">用途</label><select id="prompt-purpose" v-model="promptForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><button type="submit" :disabled="loading || !canManage">创建模板</button></form></div>
 
     <div v-else class="run-center"><form class="card lookup-form" @submit.prevent="loadRun"><div class="field"><label for="run-id">Run ID</label><input id="run-id" v-model="runId" autocomplete="off" placeholder="UUIDv7" required /></div><button type="submit" :disabled="loading">{{ loading ? "读取中…" : "读取 Run" }}</button></form><article v-if="runSnapshot" class="card run-card"><div class="card-title"><div><span class="card-label">Run</span><code>{{ runSnapshot.runId }}</code></div><span class="state-pill">{{ runSnapshot.status }}</span></div><dl class="details"><dt>correlationId</dt><dd><code>{{ runSnapshot.error?.correlationId ?? "—" }}</code></dd><dt>modelRouteId</dt><dd><code>{{ runSnapshot.modelRouteId }}</code></dd><dt>promptVersionId</dt><dd><code>{{ runSnapshot.promptVersionId }}</code></dd><dt>created / finished</dt><dd>{{ formatDate(runSnapshot.createdAt) }} / {{ formatDate(runSnapshot.finishedAt) }}</dd><dt>last sequence</dt><dd>{{ runSnapshot.lastSequence }}</dd></dl><p v-if="runSnapshot.error" class="alert error">{{ runSnapshot.error.message }}</p><div class="button-row"><button type="button" :disabled="loading || !runSnapshot.error?.retryable || !canManage" @click="retryRun">重试 Run</button><span class="muted">重试仍由服务端权限、状态和幂等规则裁决。</span></div><h3 class="steps-heading">Steps</h3><div v-for="step in runSnapshot.steps" :key="step.stepId" class="list-row"><div><strong>#{{ step.sequence }} · {{ step.type }}</strong><span>{{ step.stepId }} · attempt {{ step.attempt }} · {{ formatDate(step.createdAt) }}</span></div><span class="state-pill">{{ step.status }}</span></div></article><div v-else class="empty-state card"><strong>尚未读取 Run</strong><span>输入当前空间内的 Run ID；不会跨空间查找。</span></div></div>
   </section>
@@ -275,6 +294,9 @@ watch(() => [props.selectedSpaceId, section.value], () => { void loadSection(); 
 .list-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 10px; padding: 12px; border: 1px solid #e3eaf4; border-radius: 10px; background: #f8fbff; }
 .list-row strong, .list-row span { display: block; overflow-wrap: anywhere; }
 .list-row span { margin-top: 4px; color: #71809a; font-size: .78rem; }
+.list-row-actions { display: flex; align-items: center; gap: 8px; }
+.prompt-version-card { margin-top: 14px; padding: 14px; border: 1px solid #c8d8ef; border-radius: 10px; background: #f5f9ff; }
+.prompt-version-card p { margin: 8px 0 0; color: #536988; font-size: .8rem; line-height: 1.5; overflow-wrap: anywhere; }
 .entry-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .entry-card { min-height: 180px; }
 .entry-card strong { display: block; margin: 7px 0 10px; color: #213d6c; overflow-wrap: anywhere; }

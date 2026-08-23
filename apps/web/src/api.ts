@@ -522,3 +522,7 @@ export function listIndexes(spaceId: string): Promise<IndexView[]> {
 export function getActiveIndex(spaceId: string): Promise<ActiveIndexView | null> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/active`);
 }
+
+export function publishIndex(spaceId: string, indexVersionId: string): Promise<{ activeIndexVersionId: string }> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/${encodeURIComponent(indexVersionId)}/publish`, { method: "POST" });
+}
