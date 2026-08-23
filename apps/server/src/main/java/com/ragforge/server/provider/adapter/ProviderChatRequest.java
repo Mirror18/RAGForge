@@ -14,7 +14,8 @@ public record ProviderChatRequest(
         Duration timeout,
         Integer maxOutputTokens,
         Set<ModelCapability> requiredCapabilities,
-        boolean stream) {
+        boolean stream,
+        Set<String> citationTokenAllowList) {
 
     public ProviderChatRequest {
         Objects.requireNonNull(spaceId, "spaceId");
@@ -23,6 +24,7 @@ public record ProviderChatRequest(
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(timeout, "timeout");
         Objects.requireNonNull(requiredCapabilities, "requiredCapabilities");
+        Objects.requireNonNull(citationTokenAllowList, "citationTokenAllowList");
         if (model.isBlank() || model.length() > 200) {
             throw new IllegalArgumentException("Provider model is invalid");
         }
@@ -31,6 +33,7 @@ public record ProviderChatRequest(
         }
         messages = List.copyOf(messages);
         requiredCapabilities = Set.copyOf(requiredCapabilities);
+        citationTokenAllowList = Set.copyOf(citationTokenAllowList);
         if (timeout.isZero() || timeout.isNegative()) {
             throw new IllegalArgumentException("Provider timeout must be positive");
         }
@@ -41,12 +44,19 @@ public record ProviderChatRequest(
 
     public ProviderChatRequest(UUID spaceId, RequestIdentity identity, String model,
                                List<ChatMessage> messages, Duration timeout) {
-        this(spaceId, identity, model, messages, timeout, null, Set.of(ModelCapability.CHAT), false);
+        this(spaceId, identity, model, messages, timeout, null, Set.of(ModelCapability.CHAT), false, Set.of());
+    }
+
+    public ProviderChatRequest(UUID spaceId, RequestIdentity identity, String model,
+                               List<ChatMessage> messages, Duration timeout, Integer maxOutputTokens,
+                               Set<ModelCapability> requiredCapabilities, boolean stream) {
+        this(spaceId, identity, model, messages, timeout, maxOutputTokens, requiredCapabilities, stream, Set.of());
     }
 
     @Override
     public String toString() {
-        return "ProviderChatRequest[spaceId=%s, identity=%s, model=%s, messageCount=%d, timeout=%s, maxOutputTokens=%s, stream=%s]"
-                .formatted(spaceId, identity, model, messages.size(), timeout, maxOutputTokens, stream);
+        return "ProviderChatRequest[spaceId=%s, identity=%s, model=%s, messageCount=%d, timeout=%s, maxOutputTokens=%s, stream=%s, citationTokenAllowListSize=%d]"
+                .formatted(spaceId, identity, model, messages.size(), timeout, maxOutputTokens, stream,
+                        citationTokenAllowList.size());
     }
 }

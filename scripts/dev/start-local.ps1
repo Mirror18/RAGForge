@@ -9,6 +9,27 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+
+function Import-LocalEnv([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith("#")) { continue }
+        if ($trimmed -notmatch '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') { continue }
+        $name = $Matches[1]
+        $value = $Matches[2].Trim()
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        [Environment]::SetEnvironmentVariable($name, $value, "Process")
+    }
+}
+
+Import-LocalEnv (Join-Path $repoRoot ".env.local")
+# Qdrant treats an explicitly empty API-key environment variable as an
+# authentication configuration. Keep the local Compose service and clients
+# aligned on the documented development placeholder unless overridden locally.
+if (-not $env:QDRANT_API_KEY) { $env:QDRANT_API_KEY = "change-me" }
 $python = (Get-Command python -ErrorAction Stop).Source
 $maven = (Get-Command mvn.cmd -ErrorAction Stop).Source
 $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
@@ -95,7 +116,6 @@ try {
     $env:S3_BUCKET = "ragforge"
     $env:S3_PREFIX = "phase3"
     $env:QDRANT_URL = "http://127.0.0.1:$($ports.QDRANT_PORT)"
-    $env:QDRANT_API_KEY = "change-me"
     $env:OLLAMA_ENDPOINT = "http://127.0.0.1:11434"
     $server = Start-Process -FilePath $maven -ArgumentList "-pl", "apps/server", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health"

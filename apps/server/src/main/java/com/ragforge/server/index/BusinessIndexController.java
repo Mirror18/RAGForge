@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.ResponseEntity;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -47,12 +48,12 @@ public class BusinessIndexController {
     }
 
     @GetMapping("/active")
-    public ActiveIndexView active(@PathVariable UUID spaceId, @AuthenticationPrincipal SessionPrincipal principal) {
+    public ResponseEntity<ActiveIndexView> active(@PathVariable UUID spaceId, @AuthenticationPrincipal SessionPrincipal principal) {
         authorization.requireMember(spaceId, principal);
         return indexes.findActivePointer(spaceId).map(pointer -> {
             IndexRepository.IndexVersion index = indexes.findVersion(spaceId, pointer.activeIndexVersionId()).orElse(null);
-            return new ActiveIndexView(pointer, index, index == null ? null : datasetHash(spaceId, index));
-        }).orElse(null);
+            return ResponseEntity.ok(new ActiveIndexView(pointer, index, index == null ? null : datasetHash(spaceId, index)));
+        }).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/{indexVersionId}/publish")

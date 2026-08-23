@@ -155,6 +155,8 @@ Editor 可检查/修订 chunk；用户可检索；高级用户可 A/B 对比 ret
 
 阶段治理例外：质量/安全人工复核门槛仅可在用户明确批准后豁免；此时必须保留未执行复核的事实、残余风险和可重新开启复核的条件，不得将豁免描述为人工复核通过。
 
+本轮业务闭环增量（2026-08-23）：Phase 2 的 Provider 切换能力扩展了 MiMo Chat，Phase 3 的数据源入口扩展了前端本地 notes 文件夹选择；两项复用既有 Provider、revision/artifact、摄取和索引边界，不改变 Phase 6 已完成状态。MiMo 真实云 Chat 与本地 `qwen3.5:9b` RAG E2E 已有证据；真实个人 notes 文件选择需用户手势，完成后再补充实际 corpus 摄取证据。
+
 ## Phase 7：Linux 交付与可公开准备
 
 ### 用户结果

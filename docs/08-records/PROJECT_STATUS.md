@@ -97,3 +97,12 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 ## 6. 更新规则
 
 阶段状态、阻塞、退出证据和下一动作先更新本文件；阶段复盘保存在 `retrospectives/`。项目进入稳定开发后，再决定将何种摘要同步到 Obsidian。
+
+## 7. 业务闭环增量（2026-08-23）
+
+- MiMo 已接入现有 Provider Registry：使用 `MIMO` provider type、OpenAI-compatible `/v1/chat/completions` 协议和 `api-key` header；凭据只通过本地 ignored `.env.local` 的 `XIAOMI_API_KEY` 注入，未进入 Git、测试证据、日志或版本化配置。云端仅在前端显式切换到 MiMo Chat 时使用 typed authorization context，Embedding/Rerank 仍保持本地。
+- 真实 MiMo RAG E2E 已通过：Run `1e58f763-10a6-4665-a9c2-1445f921b5d2`，correlation `01a02f10-0d9b-73e7-8ce3-74a2ab95d049`，完成 SSE 序列 10、1 条结构化 citation，回答内容与 `space_id` 隔离证据一致；运行未产生服务端 WARN/ERROR。
+- 本地成熟模型默认已切换为 Ollama `qwen3.5:9b`，真实 LOCAL_ONLY RAG E2E 已通过：Run `9aa79e04-f5ff-4a35-b055-fc4471ed52de`，correlation `01a02f13-0b19-7636-bb87-ba447596280e`，完成序列 9、1 条结构化 citation，前端显示 `本地 Ollama（LOCAL_ONLY）`。此前 `qwen3.5:0.8b` 的 citation range 不满足投影约束，已保留为风险证据并不再作为默认验收模型。
+- RAG prompt 初始化与校验已强化为 `claim_text` 必须是 `answer_text` 的精确连续子串；无效可选字符范围由服务端安全回退为文本定位，伪造 citation UUID 仍严格拒绝。
+- 常用本地知识库入口已加入业务流：前端可选择本地 `notes` 文件夹，仅提交 Markdown，并以文件夹相对路径进入当前空间；`.obsidian` 目录、附件和非 Markdown 文件被过滤，服务端继续执行路径遍历、绝对路径和控制字符拒绝。`.env.local` 已配置本机 notes 根路径供本地开发约定使用，但浏览器仍要求用户显式选择文件夹，避免服务端任意读取本机文件。
+- 本轮证据和限制见 [`2026-08-23-mimo-notes-business-loop.md`](2026-08-23-mimo-notes-business-loop.md)。实际个人 notes 文件选择/摄取未在自动化浏览器工具中伪造完成，待用户在浏览器文件选择器中执行一次后再补充真实 corpus 摄取证据；个人 notes 不进入 Git、CI、长期 evidence 或云端调用。

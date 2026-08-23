@@ -53,6 +53,7 @@ const promptVersionId = ref("");
 const model = ref("");
 const datasetHash = ref("");
 const configHash = ref("");
+const allowCloudEgress = ref(false);
 const timeoutSeconds = ref(30);
 const status = ref<UiStatus>("empty");
 const answerText = ref("");
@@ -82,6 +83,8 @@ watch(() => props.defaults, (defaults) => {
   model.value = defaults.model;
   datasetHash.value = defaults.datasetHash;
   configHash.value = defaults.configHash;
+  allowCloudEgress.value = defaults.allowCloudEgress;
+  timeoutSeconds.value = defaults.allowCloudEgress ? 60 : 30;
 }, { immediate: true });
 
 let abortController: AbortController | null = null;
@@ -259,15 +262,21 @@ async function startAnswer(): Promise<void> {
     }
     if (!activeConversationId) throw new Error("conversation unavailable");
     if (props.selectedSpaceId !== spaceIdAtStart) throw new Error("space changed during answer start");
-    const request = { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), model: model.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, datasetHash: datasetHash.value.trim(), configHash: configHash.value.trim(), maxContextTokens: 4000 };
+    const request = { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), model: model.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, datasetHash: datasetHash.value.trim(), configHash: configHash.value.trim(), maxContextTokens: 4000, allowCloudEgress: allowCloudEgress.value };
     const run = await createAnswerRun(spaceIdAtStart, activeConversationId, request, runIdempotencyKey);
     const runId = runIdentifier(run);
     if (!runId || run.spaceId !== spaceIdAtStart || props.selectedSpaceId !== spaceIdAtStart || !run.correlationId) throw new Error("run context unavailable");
     runContext.value = { spaceId: spaceIdAtStart, runId, correlationId: run.correlationId };
     cancelIdempotencyKey = createKey(`answer-cancel-${runId}`);
+    // Open SSE before the synchronous answer projection is created. The
+    // server may publish terminal answer events during createAnswer; opening
+    // first preserves those events for the live subscriber and avoids a
+    // late-stream snapshot hiding the completed result.
+    const stream = streamRun(runContext.value, timeoutSeconds.value);
     await createAnswer(spaceIdAtStart, { ...request, runId, correlationId: run.correlationId }, createKey(`answer-create-${runId}`));
-    await streamRun(runContext.value, timeoutSeconds.value);
+    await stream;
   } catch (error) {
+    abortController?.abort();
     if (abortController?.signal.aborted && isTerminal()) return;
     status.value = "failed";
     formError.value = safeApiError(error, "回答启动失败；未显示服务端原始响应。请检查配置后重试。");
@@ -362,8 +371,8 @@ onBeforeUnmount(() => abortController?.abort());
     <div class="section-heading"><div><p class="eyebrow">03 · Verifiable answer</p><h2 id="answer-heading">带引用问答</h2><p>回答增量、结构化 Citation 和运行状态来自当前空间的 SSE；模型提供的文件名、URL 和正文不会被当作引用。</p></div><div class="read-only-note" :class="{ warning: status === 'degraded' || status === 'timeout' }">{{ statusLabel }}</div></div>
     <form class="card answer-form" @submit.prevent="startAnswer">
       <div class="field wide"><label for="answer-question">问题</label><textarea id="answer-question" v-model="question" rows="4" maxlength="32000" placeholder="输入问题；不会写入 URL 或浏览器存储"></textarea></div>
-      <details class="answer-config"><summary>服务端运行配置</summary><p class="field-hint">配置由业务闭环向导从当前空间服务端状态自动带入；普通用户无需输入任何 UUID 或 hash。云端出境在本入口固定关闭。</p><div v-if="hasRuntimeDefaults" class="runtime-summary"><div><span>Model Route</span><code>{{ routeVersionId }}</code></div><div><span>Model Profile</span><code>{{ profileVersionId }}</code></div><div><span>Provider connection</span><code>{{ providerConnectionId }}</code></div><div><span>Prompt version</span><code>{{ promptVersionId }}</code></div><div><span>model</span><code>{{ model }}</code></div><div><span>dataset/config hash</span><code>{{ datasetHash }} / {{ configHash }}</code></div></div><p v-else class="field-hint">请返回业务闭环完成模型、Prompt 和 active index 发布。</p><div class="field timeout-field"><label for="answer-timeout">等待时间（秒）</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div></details>
-      <div class="form-actions"><button type="submit" :disabled="isActive || !selectedSpaceId">{{ isActive ? "回答进行中…" : "开始回答" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }} · 仅本地出境策略</span></div>
+      <details class="answer-config"><summary>服务端运行配置</summary><p class="field-hint">配置由业务闭环向导从当前空间服务端状态自动带入；普通用户无需输入任何 UUID 或 hash。云端出境仅在明确选择 MiMo 并通过空间绑定授权后启用，不会自动回退。</p><div v-if="hasRuntimeDefaults" class="runtime-summary"><div><span>Model Route</span><code>{{ routeVersionId }}</code></div><div><span>Model Profile</span><code>{{ profileVersionId }}</code></div><div><span>Provider connection</span><code>{{ providerConnectionId }}</code></div><div><span>Prompt version</span><code>{{ promptVersionId }}</code></div><div><span>model</span><code>{{ model }}</code></div><div><span>dataset/config hash</span><code>{{ datasetHash }} / {{ configHash }}</code></div></div><p v-else class="field-hint">请返回业务闭环完成模型、Prompt 和 active index 发布。</p><div class="field timeout-field"><label for="answer-timeout">等待时间（秒）</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div></details>
+      <div class="form-actions"><button type="submit" :disabled="isActive || !selectedSpaceId">{{ isActive ? "回答进行中…" : "开始回答" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }} · {{ allowCloudEgress ? "MiMo 云端 Chat（已显式授权）" : "本地 Ollama（LOCAL_ONLY）" }}</span></div>
     </form>
     <p v-if="formError" class="alert error" role="alert">{{ formError }}</p><p v-if="cancelError" class="alert error" role="alert">{{ cancelError }}</p><p v-if="notice" class="alert" :class="status === 'failed' || status === 'timeout' ? 'error' : 'success'" role="status">{{ notice }}</p>
 

@@ -47,7 +47,7 @@ public record ProviderConnection(
                 || endpoint.getRawFragment() != null) {
             throw new IllegalArgumentException("Provider endpoint contains unsupported address components");
         }
-        if (!credentialRef.matches("^[a-z][a-z0-9._:-]{1,127}$")) {
+        if (!credentialRef.matches("^[A-Za-z][A-Za-z0-9._:-]{1,127}$")) {
             throw new IllegalArgumentException("Provider credential reference is invalid");
         }
         if (!authScheme.matches("^[A-Za-z][A-Za-z0-9_-]{0,39}$")) {

@@ -43,7 +43,11 @@ public final class ProviderBackedQueryEmbeddingProvider implements QueryEmbeddin
         }
         ProviderRouteResolver.ResolvedRoute route = routes.resolveEmbedding(request.spaceId(), decision,
                 request.correlationId());
-        if (route.egressDecision() != decision || !request.spaceId().equals(route.spaceId())) {
+        if ((decision == EgressDecision.LOCAL_ONLY && route.egressDecision() != EgressDecision.LOCAL_ONLY)
+                || (decision == EgressDecision.CLOUD_ALLOWED
+                && route.egressDecision() != EgressDecision.LOCAL_ONLY
+                && route.egressDecision() != EgressDecision.CLOUD_ALLOWED)
+                || !request.spaceId().equals(route.spaceId())) {
             throw new ProviderAdapterException(ProviderErrorClass.SPACE_EGRESS_DENIED,
                     "Embedding route crossed a space boundary", request.correlationId(), 0, false);
         }
@@ -53,7 +57,7 @@ public final class ProviderBackedQueryEmbeddingProvider implements QueryEmbeddin
                 java.util.Set.of(ModelCapability.EMBEDDING));
         ProviderEmbeddingResponse response;
         try {
-            response = adapter.embed(route.connection(), decision, providerRequest, cancellationToken)
+            response = adapter.embed(route.connection(), route.egressDecision(), providerRequest, cancellationToken)
                     .toCompletableFuture().orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS).join();
         } catch (CompletionException failure) {
             Throwable cause = failure.getCause() == null ? failure : failure.getCause();
@@ -79,7 +83,7 @@ public final class ProviderBackedQueryEmbeddingProvider implements QueryEmbeddin
                     "Provider embedding response identity is invalid", request.correlationId(), 0, false);
         }
         observer.record(new Phase5IntegrationObserver.Decision(request.spaceId(), request.runId(),
-                request.correlationId(), "embedding", "SUCCEEDED", "EXACT_EMBEDDING_ROUTE", decision));
+                request.correlationId(), "embedding", "SUCCEEDED", "EXACT_EMBEDDING_ROUTE", route.egressDecision()));
         return response.embedding();
     }
 }

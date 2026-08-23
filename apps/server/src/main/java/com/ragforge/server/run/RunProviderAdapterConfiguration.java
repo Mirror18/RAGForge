@@ -5,6 +5,7 @@ import com.ragforge.server.provider.adapter.CredentialResolver;
 import com.ragforge.server.provider.ProviderRepository;
 import com.ragforge.server.provider.adapter.EgressClass;
 import com.ragforge.server.provider.adapter.OllamaProviderAdapter;
+import com.ragforge.server.provider.adapter.MiMoProviderAdapter;
 import com.ragforge.server.provider.adapter.OpenAiCompatibleProviderAdapter;
 import com.ragforge.server.provider.adapter.ProviderAdapterException;
 import com.ragforge.server.provider.adapter.ProviderConnection;
@@ -15,10 +16,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /** Production adapter wiring. Credential resolution remains an explicit deployment seam. */
 @Configuration
 public class RunProviderAdapterConfiguration {
+    private static final Pattern ENV_REFERENCE = Pattern.compile("env:([A-Z][A-Z0-9_]{1,127})");
+
     @Bean
     @ConditionalOnMissingBean
     CredentialResolver credentialResolver(ProviderRepository providers) {
@@ -33,9 +37,26 @@ public class RunProviderAdapterConfiguration {
                 if (isPersistedLocalOllamaWithoutAuth(connection, providers)) {
                     return null;
                 }
+                if (connection.providerType() == ProviderType.MIMO) {
+                    return resolveEnvironmentCredential(connection.credentialRef());
+                }
                 throw notConfigured();
             }
         };
+    }
+
+    private static String resolveEnvironmentCredential(String credentialRef) {
+        var match = credentialRef == null ? null : ENV_REFERENCE.matcher(credentialRef.trim());
+        if (match == null || !match.matches()) {
+            throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
+                    "MiMo credentialRef must use an env:NAME reference");
+        }
+        String value = System.getenv(match.group(1));
+        if (value == null || value.isBlank()) {
+            throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
+                    "MiMo credential environment variable is not configured");
+        }
+        return value;
     }
 
     private static boolean isPersistedLocalOllamaWithoutAuth(ProviderConnection connection,
@@ -69,5 +90,10 @@ public class RunProviderAdapterConfiguration {
     OpenAiCompatibleProviderAdapter openAiCompatibleProviderAdapter(ObjectMapper objectMapper,
                                                                      CredentialResolver credentials) {
         return new OpenAiCompatibleProviderAdapter(objectMapper, credentials);
+    }
+
+    @Bean
+    MiMoProviderAdapter miMoProviderAdapter(ObjectMapper objectMapper, CredentialResolver credentials) {
+        return new MiMoProviderAdapter(objectMapper, credentials);
     }
 }

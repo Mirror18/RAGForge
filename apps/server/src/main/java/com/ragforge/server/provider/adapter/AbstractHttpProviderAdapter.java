@@ -54,6 +54,11 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
         return Set.of(ModelCapability.CHAT, ModelCapability.EMBEDDING, ModelCapability.USAGE_REPORTING);
     }
 
+    /** Header used for the resolved opaque credential value. */
+    protected String credentialHeaderName() {
+        return "Authorization";
+    }
+
     @Override
     public final java.util.concurrent.CompletionStage<ProviderChatResponse> chat(
             ProviderConnection connection,
@@ -80,7 +85,7 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
                     throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
                             "Resolved authorization header is invalid", request.identity().requestId(), 0);
                 }
-                builder.header("Authorization", authorization);
+                builder.header(credentialHeaderName(), authorization);
             }
             return send(builder.build(), request, cancellationToken);
         } catch (ProviderAdapterException exception) {
@@ -111,7 +116,7 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
                     throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
                             "Resolved authorization header is invalid", request.identity().requestId(), 0);
                 }
-                builder.header("Authorization", authorization);
+                builder.header(credentialHeaderName(), authorization);
             }
             return sendEmbedding(builder.build(), request, cancellationToken);
         } catch (ProviderAdapterException exception) {

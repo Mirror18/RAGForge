@@ -218,10 +218,19 @@ public class BusinessIngestionService {
 
     private int next(String sql, Object... args) { return jdbc.queryForObject(sql, Integer.class, args); }
 
-    private static String safeName(String value) {
-        if (value == null || value.isBlank() || value.length() > 255 || value.contains("/") || value.contains("\\")
-                || value.contains("..") || value.chars().anyMatch(c -> c < 0x20 || c == 0x7f)) throw invalid("file", "File name is invalid");
-        return value;
+    static String safeName(String value) {
+        if (value == null || value.isBlank() || value.length() > 2048
+                || value.startsWith("/") || value.matches("^[A-Za-z]:.*")
+                || value.chars().anyMatch(c -> c < 0x20 || c == 0x7f)) {
+            throw invalid("file", "File path is invalid");
+        }
+        String normalized = value.replace('\\', '/');
+        String[] segments = normalized.split("/", -1);
+        if (java.util.Arrays.stream(segments)
+                .anyMatch(segment -> segment.isBlank() || segment.equals(".") || segment.equals(".."))) {
+            throw invalid("file", "File path is invalid");
+        }
+        return String.join("/", segments);
     }
     private static boolean isUtf8(byte[] value) { try { StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(value)); return true; } catch (Exception e) { return false; } }
     private static String sha256(byte[] value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); } catch (Exception e) { throw new IllegalStateException(e); } }

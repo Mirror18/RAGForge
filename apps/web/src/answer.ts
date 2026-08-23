@@ -158,6 +158,7 @@ export interface StartAnswerRequest {
   datasetHash: string;
   configHash: string;
   maxContextTokens: number;
+  allowCloudEgress: boolean;
   correlationId?: string;
 }
 
@@ -330,7 +331,7 @@ export async function createAnswerConversation(spaceId: string, idempotencyKey: 
 }
 
 export async function createAnswerRun(spaceId: string, conversationId: string, request: StartAnswerRequest, idempotencyKey: string): Promise<RunProjection> {
-  return apiFetch<RunProjection>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/conversations/${encodeURIComponent(conversationId)}/runs`, { method: "POST", body: { ...request, allowCloudEgress: false }, idempotencyKey });
+  return apiFetch<RunProjection>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/conversations/${encodeURIComponent(conversationId)}/runs`, { method: "POST", body: { ...request, allowCloudEgress: request.allowCloudEgress }, idempotencyKey });
 }
 
 export async function createAnswer(spaceId: string, request: StartAnswerRequest & { runId: string }, idempotencyKey: string): Promise<unknown> {
@@ -347,7 +348,7 @@ export async function createAnswer(spaceId: string, request: StartAnswerRequest 
       timeoutSeconds: request.timeoutSeconds,
       datasetHash: request.datasetHash,
       configHash: request.configHash,
-      allowCloudEgress: false,
+      allowCloudEgress: request.allowCloudEgress,
     },
     idempotencyKey,
     correlationId: request.correlationId,

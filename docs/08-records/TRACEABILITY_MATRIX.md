@@ -28,6 +28,15 @@
 | RF-OPS-002 | RPO24h/RTO4h | Charter 4 | [Backup](../05-operations/BACKUP_RESTORE.md) | isolated restore drill | 6–7 |
 | RF-OSS-001 | 第三方许可证可追溯 | Charter 7 | ADR-0009 | SBOM/license/notice CI | 0–7 |
 
+## 本轮业务闭环增量追溯（2026-08-23）
+
+| 需求 ID | 需求 | 实现与证据 | 结果 | 后续边界 |
+|---|---|---|---|---|
+| RF-PRV-003 | MiMo Chat provider 与成熟本地模型切换 | `MiMoProviderAdapter`、V15 migration、`ProviderAdapterHttpTest`、浏览器真实 MiMo Run `1e58f763-10a6-4665-a9c2-1445f921b5d2` | MiMo `/v1/chat/completions`、`api-key` header、显式 cloud authorization 和 1 条结构化 citation 通过 | 凭据仅本地 ignored env；生产需 Secret 管理与轮换 |
+| RF-EGR-002 | 云 Chat 与本地 Embedding/Rerank 分离 | `RepositoryProviderRouteResolver`、`ProviderBackedQueryEmbeddingProvider`、MiMo/LOCAL_ONLY 浏览器 E2E | MiMo Chat 显式出境；Embedding/Rerank 保持本地；切回 Ollama 后前端显示 `LOCAL_ONLY` | 不允许静默 cloud fallback |
+| RF-SRC-003 | 常用本地 notes 文件夹可从前端接入 | `BusinessFlowView.vue` folder picker、`api.ts` relative path、`BusinessIngestionService.safeName`、`BusinessIngestionPathPolicyTest` | Markdown 多文件入口、相对路径保留、绝对路径/遍历/`.obsidian` 过滤 | 真实个人目录选择待用户手势完成；个人内容不进入 Git/CI/evidence |
+| RF-ANS-002 | 结构化 citation 可安全投影 | prompt v3 exact-substring contract、`V11RagPromptPortTest`、`ProviderBackedGenerationPort` range fallback、qwen9b 与 MiMo E2E | UUID allow-list 保持严格；过期范围安全回退；两条真实链路各 1 条 citation | 小模型质量风险见 R-035 |
+
 ## Phase 0 验收证据与 Phase 1 入口
 
 | 证据 ID | 验收内容 | 证据文件/命令 | 后续测试 ID | Phase |

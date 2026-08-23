@@ -19,6 +19,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -26,6 +28,7 @@ import java.util.concurrent.TimeoutException;
  * generate once, then validate and project citations from the current Evidence Bundle.
  */
 public final class RAGAnswerService {
+    private static final Logger log = LoggerFactory.getLogger(RAGAnswerService.class);
     private final SpaceAuthorizer authorizer;
     private final QueryEmbeddingProvider embeddingProvider;
     private final RetrievalPort retrievalPort;
@@ -200,6 +203,11 @@ public final class RAGAnswerService {
                     return refusal(request, AnswerStatus.CANCELLED, AbstentionReason.CANCELLED,
                             "The answer request was cancelled during generation.", List.of(), provenance);
                 }
+                Throwable cause = failed.getCause();
+                log.warn("Answer generation failed: runId={}, correlationId={}, cause={}, message={}",
+                        request.runId(), request.correlationId(),
+                        cause == null ? "unknown" : cause.getClass().getSimpleName(),
+                        cause == null ? "unknown" : cause.getMessage());
                 return refusal(request, AnswerStatus.FAILED, AbstentionReason.PROVIDER_UNAVAILABLE,
                         "The answer provider was unavailable.", List.of(), provenance);
             }
@@ -215,9 +223,13 @@ public final class RAGAnswerService {
             try {
                 return complete(request, bounded, generated, provenance);
             } catch (CitationTokenParser.CitationTokenException invalidCitation) {
+                log.warn("Answer citation projection rejected: runId={}, correlationId={}, reason={}",
+                        request.runId(), request.correlationId(), invalidCitation.getMessage());
                 return refusal(request, AnswerStatus.FAILED, AbstentionReason.POLICY_BLOCKED,
                         "The generated citation token was not valid for this Evidence Bundle.", List.of(), provenance);
             } catch (IllegalArgumentException invalidProjection) {
+                log.warn("Answer projection rejected: runId={}, correlationId={}, reason={}",
+                        request.runId(), request.correlationId(), invalidProjection.getMessage());
                 return refusal(request, AnswerStatus.FAILED, AbstentionReason.POLICY_BLOCKED,
                         "The generated answer could not be projected into the answer contract.", List.of(), provenance);
             }
@@ -230,6 +242,8 @@ public final class RAGAnswerService {
                     "The requested knowledge space is not available to this request.", List.of(),
                     unavailableProvenance(request));
         } catch (RuntimeException failed) {
+            log.warn("Answer pipeline failed: runId={}, correlationId={}, cause={}, message={}",
+                    request.runId(), request.correlationId(), failed.getClass().getSimpleName(), failed.getMessage());
             return refusal(request, AnswerStatus.FAILED, AbstentionReason.PROVIDER_UNAVAILABLE,
                     "The answer pipeline could not produce a verified result.", List.of(),
                     unavailableProvenance(request));
@@ -281,9 +295,11 @@ public final class RAGAnswerService {
                 request.idempotencyKey(), reason, evidenceIds, message);
         Answer answer = Answer.refusal(request.spaceId(), request.correlationId(), request.runId(),
                 request.idempotencyKey(), status, abstention, provenance);
-        answerPersistence.saveIfAbsent(new AnswerPersistencePort.PersistedAnswer(answer.answerId(),
-                request.spaceId(), request.runId(), request.idempotencyKey(), status, sha256(status.name()),
-                sha256(""), provenance));
+        // Persist the full refusal projection, including its structured abstention.
+        // A summary-only row cannot be reconstructed into a valid Answer on the
+        // controller's idempotent replay path because FAILED/ABSTAINED outcomes
+        // must retain their reason and evidence boundary.
+        answerPersistence.saveIfAbsent(answer);
         return answer;
     }
 
@@ -321,7 +337,13 @@ public final class RAGAnswerService {
                     .append(material.getOrDefault(evidence.evidenceId(), "[opaque evidence material unavailable]"))
                     .append("\n</evidence>\n");
         }
-        return rendered.append("</ragforge_evidence>").toString();
+        rendered.append("</ragforge_evidence>\n")
+                .append("<ragforge_citation_token_allow_list>\n")
+                .append("Use only these exact UUIDv7 values in citation_tokens: ")
+                .append(snapshot.bundle().evidence().stream().map(EvidenceBundle.Evidence::evidenceId)
+                        .map(UUID::toString).collect(java.util.stream.Collectors.joining(", ")))
+                .append("\n</ragforge_citation_token_allow_list>");
+        return rendered.toString();
     }
 
     private static void validateBundleScope(AnswerRequest request, EvidenceBundleSnapshot snapshot) {

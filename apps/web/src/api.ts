@@ -73,7 +73,7 @@ export interface ProviderConnection {
   providerConnectionId: string;
   spaceId: string;
   version: number;
-  providerType: "OLLAMA" | "OPENAI_COMPATIBLE" | "AI_RUNTIME";
+  providerType: "OLLAMA" | "OPENAI_COMPATIBLE" | "MIMO" | "AI_RUNTIME";
   egressClass: "LOCAL" | "CLOUD";
   endpoint: string;
   status: "DRAFT" | "ACTIVE" | "DISABLED" | "UNHEALTHY";
@@ -87,9 +87,11 @@ export interface ModelProfile {
   version: number;
   providerConnectionId: string;
   purpose: "CHAT" | "EMBEDDING" | "RERANK";
+  modelName: string;
   capabilities: string[];
   contextWindow: number;
   maxOutputTokens: number;
+  embeddingDimension: number | null;
   usageReporting: "PROVIDER_REPORTED" | "LOCAL_ESTIMATE";
   status: "DRAFT" | "PUBLISHED" | "DISABLED";
   createdAt: string;
@@ -142,6 +144,27 @@ export interface AnswerDefaults {
   model: string;
   datasetHash: string;
   configHash: string;
+  allowCloudEgress: boolean;
+}
+
+export interface SpaceBinding {
+  spaceBindingId: string;
+  spaceId: string;
+  version: number;
+  chatRouteId: string;
+  embeddingRouteId: string;
+  rerankRouteId: string;
+  promptVersionId: string;
+  cloudEgressEnabled: boolean;
+  cloudEgressAuthorization?: {
+    approvalId: string;
+    approvedBy: string;
+    approvedAt: string;
+    expiresAt: string;
+    scope: "CHAT" | "EMBEDDING" | "RERANK" | "ALL";
+  } | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SourceDocument {
@@ -492,10 +515,10 @@ export function clearCsrfToken(): void {
   csrfToken = null;
 }
 
-export async function uploadMarkdown(spaceId: string, file: File): Promise<{ jobId: string; documentRevisionId: string; sourceId: string }> {
+export async function uploadMarkdown(spaceId: string, file: File, relativePath?: string): Promise<{ jobId: string; documentRevisionId: string; sourceId: string }> {
   if (!csrfToken) await fetchCurrentSession();
   const form = new FormData();
-  form.append("file", file, file.name);
+  form.append("file", file, relativePath || file.name);
   const response = await fetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources/uploads`, {
     method: "POST", credentials: "include", body: form,
     headers: { Accept: "application/json", "X-Correlation-Id": uuidV7(), "X-CSRF-Token": csrfToken ?? "", "Idempotency-Key": idempotencyKey() },
@@ -509,6 +532,10 @@ export async function uploadMarkdown(spaceId: string, file: File): Promise<{ job
 
 export function listIngestionJobs(spaceId: string): Promise<IngestionJobView[]> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs`);
+}
+
+export function getIngestionJob(spaceId: string, jobId: string): Promise<IngestionJobView> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs/${encodeURIComponent(jobId)}`);
 }
 
 export function getParseReport(spaceId: string, revisionId: string): Promise<ParseReportView> {
