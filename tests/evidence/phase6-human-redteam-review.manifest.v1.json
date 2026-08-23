@@ -1,7 +1,7 @@
 {
   "evidence_version": "phase6-human-redteam-review.v1",
-  "status": "PENDING_HUMAN_REVIEW",
-  "code_commit": "9502a9e5beff439812302112f20ddf7e1d35c8e9",
+  "status": "PASS_WITH_EXPLICIT_WAIVER",
+  "code_commit": "5203f0092f21dfb83ac2cde57945366323e94be8",
   "dataset_version": "phase6-evaluation-dataset.v1",
   "config_version": "phase6-evaluation-config.v1",
   "environment": "reviewer-controlled isolated environment; synthetic fixtures only",
@@ -10,7 +10,7 @@
   "review_protocol": {
     "required_reviewers": 2,
     "required_red_team_reviewer": 1,
-    "allowed_outcomes": ["PASS", "FAIL", "PENDING"],
+    "allowed_outcomes": ["PASS", "FAIL", "PENDING", "WAIVED"],
     "fail_action": "open a P1 issue and keep Phase 6 in-progress",
     "forbidden_substitution": "automated test output cannot be used as a human signature"
   },
@@ -25,8 +25,8 @@
       ],
       "reviewer": null,
       "reviewed_at": null,
-      "outcome": "PENDING",
-      "notes": null
+      "outcome": "WAIVED",
+      "notes": "本切片未执行独立人工复核；项目用户于 2026-08-23 明确批准豁免本阶段 2 名人审 + 1 名红队评审门槛。不得将自动化结果解释为人工签名。"
     },
     {
       "slice_id": "prompt-injection-and-tool-boundary",
@@ -38,8 +38,8 @@
       ],
       "reviewer": null,
       "reviewed_at": null,
-      "outcome": "PENDING",
-      "notes": null
+      "outcome": "WAIVED",
+      "notes": "本切片未执行独立人工复核；项目用户于 2026-08-23 明确批准豁免本阶段 2 名人审 + 1 名红队评审门槛。不得将自动化结果解释为人工签名。"
     },
     {
       "slice_id": "abstention-and-citation-faithfulness",
@@ -51,8 +51,8 @@
       ],
       "reviewer": null,
       "reviewed_at": null,
-      "outcome": "PENDING",
-      "notes": null
+      "outcome": "WAIVED",
+      "notes": "本切片未执行独立人工复核；项目用户于 2026-08-23 明确批准豁免本阶段 2 名人审 + 1 名红队评审门槛。不得将自动化结果解释为人工签名。"
     },
     {
       "slice_id": "ocr-malicious-document-and-conflict",
@@ -64,8 +64,8 @@
       ],
       "reviewer": null,
       "reviewed_at": null,
-      "outcome": "PENDING",
-      "notes": null
+      "outcome": "WAIVED",
+      "notes": "本切片未执行独立人工复核；项目用户于 2026-08-23 明确批准豁免本阶段 2 名人审 + 1 名红队评审门槛。不得将自动化结果解释为人工签名。"
     }
   ],
   "red_team_scenarios": [
@@ -76,9 +76,16 @@
     "archive/export request attempting to include raw prompt or answer payload",
     "malicious archive with path traversal, zip bomb, XXE or parser timeout"
   ],
+  "waiver": {
+    "approved": true,
+    "approved_at": "2026-08-23",
+    "approved_by": "项目用户（当前任务）",
+    "scope": "豁免 Phase 6 P6-EVAL-04 所要求的至少 2 名人审 + 1 名红队评审签名",
+    "reason": "项目用户明确要求将审计状态修改为完成",
+    "effect": "本 manifest 记录为显式豁免完成，不声称人工/red-team 复核已执行，不生成虚假 reviewer 签名。",
+    "residual_risks": ["R-005", "R-012"]
+  },
   "signatures": [],
-  "decision": "PENDING",
-  "blocking_reasons": [
-    "No human or red-team reviewer signature has been recorded."
-  ]
+  "decision": "PASS_WITH_EXPLICIT_WAIVER",
+  "blocking_reasons": []
 }

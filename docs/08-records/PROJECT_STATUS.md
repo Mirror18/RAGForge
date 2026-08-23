@@ -1,7 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-23
-- Current stage: Phase 6 评估、观测、安全与恢复进行中；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
+- Current stage: Phase 6 评估、观测、安全与恢复已完成（`completed-with-explicit-waiver`）；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - 当前权威状态（覆盖本文档中的历史基线行）：功能验证基线为 `bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`，其 GitHub Actions quality Run [`32586867110`](https://github.com/Mirror18/RAGForge/actions/runs/32586867110) 全绿；随后记录提交 `6ec5d9d` 的 quality Run [`32587259456`](https://github.com/Mirror18/RAGForge/actions/runs/32587259456) 亦全绿。两次运行均覆盖静态、契约、SBOM/Grype、Maven、Phase 3–5、评估、安全、性能、Web 门禁；旧 SHA/旧 CI 行仅保留为历史记录。
@@ -73,7 +73,7 @@
 - 本轮增量证据：真实 revision/artifact-backed RAG graph stream 已测得 graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`；本地 Ollama 2 并发成本 probe 4/4 成功，TTFT p50/p95 `1482.8559/2688.2120ms`、wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、估算成本 `0 USD`。两项均为 `LOCAL_ONLY`，不代表生产同步 streaming、云端商业定价或生产语义质量。
 
 - 基线与治理：Phase 6 checklist/执行计划已冻结，统一基线为 `0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；多实例任务已在主线合并提交 `0ff2d13`。ADR-0010 已由用户接受，方案 A、既有 provider connection、revision/artifact material service 和本地 Ollama `LOCAL_ONLY` 授权均已落实；ADR-0011 已于 2026-08-22 由用户接受并按 Valkey live hint + PostgreSQL durable replay 实施。
-- 评估：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json) 有 128 个版本化公共合成用例，runner 校验与 7/7 单元测试通过；candidate report 的确定性指标为 1.0，但人工/red-team review manifest 仍为 `PENDING`，不能关闭 P6-EVAL-04，也不能把 synthetic candidate 当作真实模型质量结论。
+- 评估：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json) 有 128 个版本化公共合成用例，runner 校验与 7/7 单元测试通过；candidate report 的确定性指标为 1.0。人工/red-team 门槛由项目用户于 2026-08-23 明确批准豁免，manifest 为 `PASS_WITH_EXPLICIT_WAIVER`，不将 synthetic candidate 当作真实模型质量结论。
 - 观测：[`phase6-observability-assets.v1.json`](../../tests/evidence/phase6-observability-assets.v1.json) 与 [`phase6-observability-fault-drill.v1.json`](../../tests/evidence/phase6-observability-fault-drill.v1.json) 已验证 OTel/Prometheus/Grafana/Loki/Tempo profile、dashboard provisioning、trace/log 脱敏和未授权出境告警演练；观测资源测试 3/3 通过。浏览器视觉验收仍未宣称完成。
 - 安全与供应链：[`phase6-security.v1.json`](../../tests/evidence/phase6-security.v1.json) 的 Phase 6 corpus、出境回归、Phase 5 合同安全和 AgentToolSecurity 合计 23/23；本轮 [`phase6-redteam-agent-pre-review.v1.json`](../../tests/evidence/phase6-redteam-agent-pre-review.v1.json) 又执行 32 个安全/合同/工具边界测试并全部通过。cross-space、Evidence 外引用、unauthorized cloud、SSRF、Shell/SQL/任意网络/外部写入、解析/OCR 绕过、prompt injection 越权和 raw prompt/provider body 持久化均为 0。最新 GitHub Actions quality workflow [`32577917976`](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿；该 run 重新执行了 SBOM/Grype、Maven、Phase 3–5、Web 和 Phase 4 门禁。阶段 SBOM artifact `9477027172`、Grype SARIF `9477036384`、Phase 3 JVM `9477081726`、Phase 4 retrieval `9477081302`、Phase 5 evidence `9477073334` 可追溯。Agent-assisted pre-review 明确不替代人工签名。
 - 恢复与运维：[`phase6-recovery.v1.json`](../../tests/evidence/phase6-recovery.v1.json) 记录隔离完整恢复、PG 单点、Qdrant 重建、对象缺失/hash、active index 回滚、tombstone/delete ledger 和 outbox/job 幂等；V14 后 RPO `0s`、RTO `11.885s`。retention、space-scoped audit export、cost aggregation 和 SSE event cleanup 已实现，`Phase6OperationsServiceTest` 5/5 通过，且 [`phase6-operations-runtime.v1.json`](../../tests/evidence/phase6-operations-runtime.v1.json) 证明带 `space_id` 的过期 synthetic event 可在隔离 scheduler 中 4 秒内从 1 条清理至 0 条。
@@ -83,13 +83,15 @@
 - 真实 RAG 与成本基线：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json) 已记录真实本地 Ollama RAG、768 维 embedding、revision/artifact material、citation/provenance、usage 和 `LOCAL_ONLY` 出境约束；[`phase6-cost-local-ollama.v1.json`](../../tests/evidence/phase6-cost-local-ollama.v1.json) 固化了 1 次 provider call、293 tokens、provider-reported usage 和本地估算成本 `0 USD`。该证据满足本轮用户授权的真实 E2E 和本地成本基线，但不替代 Phase 6 人工评估、并发成本模型或云端商业定价。
 - 当前阶段结论（历史记录）：P6-C、P6-D、P6-E、P6-OBS-02、P6-OBS-03、standalone 本地流式 TTFT 探针和 P6-G 单实例实现/专项证据已具备；此前 P6-G 多实例 live fan-out 尚未完成。该结论已由后续多实例实现与证据更新。
 
-权威更正：上一行“现有同步 RAG graph 的集成 TTFT 仍未测量”属于历史记录；当前证据已由 `phase6-real-ollama-rag-graph-stream.v1.json` 补齐 graph stream boundary。并发成本也已由 `phase6-cost-local-ollama-concurrent.v1.json` 补齐；ADR-0011 决策与多实例演练现已完成，当前未闭环项仅保留人工/red-team 签名。
+- 阶段闭环决定（2026-08-23）：自动化、契约、构建、SBOM/Grype、安全、评估、性能、恢复、运维和 Web 门禁均已有通过证据；项目用户明确批准豁免 P6-EVAL-04 的至少 2 名人审 + 1 名红队评审签名门槛。Phase 6 以 `completed-with-explicit-waiver` 关闭；manifest 保留空签名，不声称人工复核已执行；R-005/R-012 作为接受的残余风险保留。
+
+权威更正：上一行“现有同步 RAG graph 的集成 TTFT 仍未测量”属于历史记录；当前证据已由 `phase6-real-ollama-rag-graph-stream.v1.json` 补齐 graph stream boundary。并发成本也已由 `phase6-cost-local-ollama-concurrent.v1.json` 补齐；ADR-0011 决策与多实例演练现已完成。人工/red-team 签名门槛已按用户明确批准豁免，后续高风险 RAG 或安全策略变更必须重新开启复核。
 
 ## 5. 下一入口
 
-- 记录更正：本轮已补齐真实 RAG graph stream boundary、本地 2 并发成本证据和 ADR-0011 多实例 live fan-out 演练；下一入口仅为人工/red-team 签名。云端/生产级质量与成本仍是本阶段明确边界，不得由本地证据外推。
+- 记录更正：本轮已补齐真实 RAG graph stream boundary、本地 2 并发成本证据、ADR-0011 多实例 live fan-out 演练和阶段治理例外记录；下一阶段入口为 Phase 7 Linux 交付与可公开准备。云端/生产级质量与成本仍是本阶段明确边界，不得由本地证据外推。
 
-Phase 6 当前入口为 120+ 数据集与人工/red-team 评估及阶段闭环审计；真实 RAG graph 流式/并发成本、retention/audit/cost/SSE cleanup 和多实例事件扇出演练均已有证据，当前代码与 CI 质量门禁已闭环。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；Phase 5 记录继续保留。
+Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 RAG graph 流式/并发成本、retention/audit/cost/SSE cleanup 和多实例事件扇出演练均已有证据，代码与 CI 质量门禁已闭环。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；下一阶段为 Phase 7，R-005/R-012 需在相关高风险变更时重新开启复核。
 
 ## 6. 更新规则
 

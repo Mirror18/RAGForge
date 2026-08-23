@@ -53,14 +53,14 @@ P6-B、P6-C、P6-E 可在文件 ownership 不冲突时并行；P6-D 依赖 A 与
 | Task | 状态 | 证据/备注 |
 |---|---|---|
 | P6-A | completed | Checklist、执行计划和验收门槛已冻结，基线 `0fe22db` |
-| P6-B | partial | 128 cases、runner、candidate report 和 7/7 unit 已完成；人工/red-team review `PENDING` |
+| P6-B | completed-with-explicit-waiver | 128 cases、runner、candidate report 和 7/7 unit 已完成；人工/red-team review 门槛按用户明确批准豁免，manifest 为 `PASS_WITH_EXPLICIT_WAIVER`，不声称人工质量结论 |
 | P6-C | completed | OTel/Prometheus/Grafana/Loki/Tempo profile、脱敏、dashboard、告警与 fault drill 已有真实证据 |
-| P6-D | partial | 23/23 Phase 6 安全回归通过，quality run `32577917976` 的 Syft/Grype/Maven/Phase 3–5 质量门禁全绿；人工/red-team review 仍待完成 |
+| P6-D | completed-with-explicit-waiver | 23/23 Phase 6 安全回归通过，quality run `32577917976` 的 Syft/Grype/Maven/Phase 3–5 质量门禁全绿；人工/red-team 门槛按用户明确批准豁免，保留后续复核条件 |
 | P6-E | completed | 隔离恢复 5/5；完整、PG、Qdrant、对象、active index、tombstone/outbox 场景覆盖，V14 后 RPO `0s`、RTO `11.885s`，均达标 |
 | P6-F | partial | a2 重试已完成真实 768 维/1M/20 并发混合检索，Recall@10 `0.995`、p95 `119.8761ms`；认证在线 API/SSE harness 已完成，non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`；本地 Ollama 单次与 2 并发成本证据均为估算 `0 USD`，并完成真实 revision/artifact-backed graph stream：graph-to-first-token `1675.9884ms`、provider TTFT `1560.7450ms`、provider total `4847.3558ms`、wall `4854.6037ms`、usage `193/98/291`；不代表生产同步 `GenerationPort` streaming、云端商业成本或生产语义质量 |
 | P6-G | completed | V14 后 retention、audit export、cost aggregation、SSE cleanup 均显式按空间处理，`Phase6OperationsServiceTest` 5/5 通过；隔离 scheduler 清理演练 1 → 0；ADR-0011 已接受，多实例 live fan-out 在两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 中完成跨实例、同/跨空间隔离、回滚、重复/乱序补洞、durable replay 和 shutdown 验证，证据见 `phase6-multi-instance-run-event-fanout.v1.json` |
-| P6-H | pending | 等全部门槛与 CI 证据完成后执行 |
+| P6-H | completed-with-explicit-waiver | 自动化、质量、安全、供应链、恢复和阶段记录门禁已完成；P6-EVAL-04 以用户明确批准的治理例外关闭 |
 
 ## 阶段结论
 
-Phase 6 已建立验收基线但尚未满足退出条件。真实 RAG graph stream、本地 2 并发成本观测和 ADR-0011 接受后的多实例 fan-out 已补齐；当前唯一阻断阶段退出的证据缺口是人工/red-team 质量签名。云端商业成本、生产语义质量和生产容量仍是明确边界，不得用本地观测、Phase 5 单 fixture 或合成容量数据替代这些未授权结论。
+Phase 6 已完成阶段闭环，但记录为 `completed-with-explicit-waiver`。真实 RAG graph stream、本地 2 并发成本观测和 ADR-0011 接受后的多实例 fan-out 已补齐；人工/red-team 质量签名门槛由项目用户明确批准豁免，manifest 保留空签名并记录 R-005/R-012 残余风险。云端商业成本、生产语义质量和生产容量仍是明确边界，不得用本地观测、Phase 5 单 fixture 或合成容量数据替代这些未授权结论。

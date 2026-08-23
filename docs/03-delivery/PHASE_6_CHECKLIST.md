@@ -1,7 +1,7 @@
 # Phase 6 Checklist：评估、观测、安全与恢复
 
 - 阶段：Phase 6
-- 状态：in-progress
+- 状态：completed-with-explicit-waiver
 - 冻结日期：2026-08-22
 - 阶段基线：`0fe22db`
 - 已接受 ADR：11 项；Phase 5 已完成闭环
@@ -53,7 +53,7 @@
 
 ## 当前证据索引（2026-08-23）
 
-- P6-EVAL-01/02/03：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json)、[`phase6-evaluation-report.v1.json`](../../tests/evidence/phase6-evaluation-report.v1.json)；128 cases 和 deterministic candidate runner 已通过，人工/red-team review 仍 `PENDING`。
+- P6-EVAL-01/02/03：[`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json)、[`phase6-evaluation-report.v1.json`](../../tests/evidence/phase6-evaluation-report.v1.json)；128 cases 和 deterministic candidate runner 已通过，candidate 指标满足既定确定性门槛；不将 synthetic candidate 指标解释为真实模型质量。
 - P6-SEC-01/02/03/04：[`phase6-security.v1.json`](../../tests/evidence/phase6-security.v1.json)、[quality run 32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)；23/23 安全回归通过，Syft/Grype CI 通过，阶段 SBOM artifact `9477027172`、Grype SARIF `9477036384` 可追溯。
 - 本轮 CI 复核：quality Run [`32579989036`](https://github.com/Mirror18/RAGForge/actions/runs/32579989036) 对 `4481bef` 全绿，SBOM `9477533715`、Grype SARIF `9477541287` 可追溯；不改变人工/red-team 尚待签名的状态。
 - 当前头提交 CI：quality Run [`32580314959`](https://github.com/Mirror18/RAGForge/actions/runs/32580314959) 对 `e20548f` 全绿，SBOM `9477611776`、Grype SARIF `9477620481`、Phase 3/4/5 artifacts `9477664771`/`9477664518`/`9477656081` 可追溯。
@@ -67,6 +67,11 @@
 - P6-OBS-03：[`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json)；768 维、1M points、4-space filter、20 concurrency、Recall@10 `0.995`、p95 `119.8761ms`、error rate `0`，满足检索容量阈值；向量值为 live dimension 下的公共合成值。
 - 用户授权的真实 E2E：[`phase6-real-ollama-rag-e2e.v1.json`](../../tests/evidence/phase6-real-ollama-rag-e2e.v1.json) 与 [`phase6-real-ollama-rag-graph-stream.v1.json`](../../tests/evidence/phase6-real-ollama-rag-graph-stream.v1.json)；证明本地 `LOCAL_ONLY` 真实 RAG 链路、revision/artifact material 和 graph-to-provider stream 边界，不替代 Phase 6 质量和容量门槛。
 - 本地并发成本：[`phase6-cost-local-ollama-concurrent.v1.json`](../../tests/evidence/phase6-cost-local-ollama-concurrent.v1.json)；隔离 loopback Ollama、2 并发、4 个 measured requests 全部成功，TTFT p50/p95 `1482.8559/2688.2120ms`、stream wall p50/p95 `2762.1378/4013.6133ms`、usage `144/108/252`、retry/cancel/timeout `0`、估算成本 `0 USD`；仅为本地观测，不代表云端商业价格或生产容量。
-- 人工/red-team 评审 manifest：[`phase6-human-redteam-review.manifest.v1.json`](../../tests/evidence/phase6-human-redteam-review.manifest.v1.json)；当前为 `PENDING_HUMAN_REVIEW`，不得用自动化结果代签。
+- 人工/red-team 评审 manifest：[`phase6-human-redteam-review.manifest.v1.json`](../../tests/evidence/phase6-human-redteam-review.manifest.v1.json)；项目用户于 2026-08-23 明确批准豁免至少 2 名人审 + 1 名红队评审门槛，manifest 为 `PASS_WITH_EXPLICIT_WAIVER`。`signatures` 保持为空；这不是人工复核通过，也不是用自动化结果代签；残余风险为 R-005、R-012。
 - Agent-assisted red-team 前置报告：[`phase6-redteam-agent-pre-review.v1.json`](../../tests/evidence/phase6-redteam-agent-pre-review.v1.json)；4 组可重跑安全/合同/工具测试共 32 tests 通过，但明确不替代人工签名。
 - 多实例 live fan-out：[`ADR-0011`](../../docs/02-architecture/adr/0011-multi-instance-run-event-fanout.md) 已由用户于 2026-08-22 接受；[`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json) 与双 Spring context 集成测试通过。该证据仅覆盖隔离 PostgreSQL/Valkey 与合成数据，不外推生产容量或云端部署。
+
+## 阶段治理例外
+
+- 2026-08-23，项目用户明确批准豁免 P6-EVAL-04 的至少 2 名人审 + 1 名红队评审签名门槛。该决定仅作为本阶段的验收例外，不改变测试结果，不生成 reviewer 签名，也不把 Agent-assisted pre-review 解释为人工/red-team 复核。
+- 豁免后的阶段状态为 `completed-with-explicit-waiver`；R-005 与 R-012 作为已知残余风险转为用户接受，后续涉及模型、prompt、retrieval 或安全策略的重要变更必须重新开启人工/red-team 复核。

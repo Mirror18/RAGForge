@@ -10,14 +10,14 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-002 | Obsidian YAML/标题/wikilink/路径解析失真 | 4 | 4 | 16 | 自有 Connector/contract corpus；Chunk Studio；Windows/Linux 测试 | Ingestion | OPEN |
 | R-003 | 跨空间数据泄漏 | 3 | 5 | 15 | space_id 不变量、RBAC、Qdrant filter、零容忍安全测试 | Security | OPEN |
 | R-004 | 云端 fallback 未授权出境 | 3 | 5 | 15 | 默认 local-only；route policy；provider spy tests；审计 | Security | OPEN |
-| R-005 | 低质量引用导致“看似可信”答案 | 4 | 5 | 20 | server citation validation、evidence provenance、120-case eval | RAG | OPEN |
+| R-005 | 低质量引用导致“看似可信”答案 | 4 | 5 | 20 | server citation validation、evidence provenance、120-case eval；Phase 6 人工/red-team 门槛按用户明确决定豁免，后续 RAG 变更必须重新复核 | RAG | ACCEPTED |
 | R-006 | Parser/OCR 恶意文件造成 RCE/DoS | 3 | 5 | 15 | quarantine、AV、sandbox、limits、malicious corpus | Security | OPEN |
 | R-007 | 消息重投造成重复索引或成本 | 4 | 4 | 16 | Outbox、幂等 key、attempt/ledger dedupe、fault tests | Platform | OPEN |
 | R-008 | 半构建 Qdrant index 被发布 | 3 | 5 | 15 | candidate state、validation、atomic active pointer、rollback；Phase 4 evidence 已覆盖 | Retrieval | CLOSED |
 | R-009 | 过早微服务化拖慢学习和交付 | 3 | 4 | 12 | ADR-0001、架构测试、证据驱动拆分 | Architecture | MITIGATING |
 | R-010 | 第三方许可证影响未来公开/商业使用 | 3 | 5 | 15 | license gate、SBOM、reuse register、禁止限制源码复制 | Compliance | MITIGATING |
 | R-011 | 框架版本过新导致生态不兼容 | 3 | 3 | 9 | Boot 3.5/Spring AI 1.1 基线；编码前 compatibility spike | Platform | MITIGATING |
-| R-012 | 评估集过小或偏向个人笔记 | 4 | 4 | 16 | 多格式/无答案/冲突/安全 120 cases，独立人工复核 | Quality | OPEN |
+| R-012 | 评估集过小或偏向个人笔记 | 4 | 4 | 16 | 多格式/无答案/冲突/安全 120 cases；Phase 6 人工/red-team 门槛按用户明确决定豁免，后续评估扩展必须重新复核 | Quality | ACCEPTED |
 | R-013 | Langfuse 完整自建超出本机资源 | 4 | 2 | 8 | 独立 llmops profile；核心 OTel 不依赖它 | Operations | MITIGATING |
 | R-014 | 真实个人笔记误进 Git/CI/云模型 | 3 | 5 | 15 | private-local 分类、只读 mount、ignore/scan、默认禁出境 | Security | OPEN |
 | R-015 | 组件较多导致 Compose 运维复杂 | 4 | 3 | 12 | core/observability/llmops profiles、健康检查、Runbooks | Operations | OPEN |
@@ -103,4 +103,5 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-028` 已关闭（本提交范围）：本地 Syft/跟踪内容 Grype 已通过，最新 GitHub Actions quality [`32577917976`](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿；阶段 SBOM artifact `9477027172`、Grype SARIF artifact `9477036384` 可追溯。发布前仍需按目标镜像/digest 重跑发布级扫描。
 - 观测 profile、fault drill、隔离恢复和 23/23 安全专项均已取得证据，但 `R-003` 全局风险仍 OPEN，需容量压力与人工安全复核完成后再评审关闭。
 - `R-031` 已关闭（多实例 run-event fan-out）：ADR-0011 已于 2026-08-22 由用户接受；两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 的跨实例、同/跨空间隔离、提交后发布、回滚不泄漏、重复/乱序补洞、Last-Event-ID durable replay 和 listener shutdown 均通过，证据见 [`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json)。该结论不外推生产容量、云端部署或跨区域语义。
-- 2026-08-23 复审：取消执行竞态与 rollback-only 事务失败已在独立 worker 分支修复并合并，server `210`、根工程 `238` 测试均为 0 failures/0 errors/1 skipped；quality run `32586867110`（功能基线）和记录提交后的 `32587259456` 均全绿。未改变 `R-005`、`R-012` 和 `P6-EVAL-04` 的人工/red-team 评审缺口；不得以自动化结果代签。
+- 2026-08-23 复审：取消执行竞态与 rollback-only 事务失败已在独立 worker 分支修复并合并，server `210`、根工程 `238` 测试均为 0 failures/0 errors/1 skipped；quality run `32586867110`（功能基线）和记录提交后的 `32587259456` 均全绿。该复审当时仍保留 `R-005`、`R-012` 和 `P6-EVAL-04` 的人工/red-team 评审缺口，不得以自动化结果代签；后续治理例外见下一条记录。
+- 2026-08-23 治理复审：项目用户明确批准豁免 P6-EVAL-04 的至少 2 名人审 + 1 名红队评审签名门槛。R-005、R-012 转为 `ACCEPTED` 而非 `CLOSED`；manifest 记录 `PASS_WITH_EXPLICIT_WAIVER`，保留空签名和未执行人工复核事实。后续模型、prompt、retrieval 或安全策略变更必须重新开启独立人工/red-team 复核。

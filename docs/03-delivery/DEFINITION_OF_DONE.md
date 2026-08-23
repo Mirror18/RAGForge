@@ -48,3 +48,5 @@
 - 新 ADR 完成，旧 ADR 必要时标记 Superseded。
 - Retrospective 记录 Keep / Problem / Try、质量数据和下一阶段改进。
 - 没有未说明的 P0/P1 问题进入下一阶段。
+
+阶段退出门槛的例外必须由用户明确批准，并在 checklist、evidence、风险表、追溯矩阵和 retrospective 中记录范围、原因与残余风险。豁免只能改变验收决策，不能被描述为已执行的测试、人工复核或签名。

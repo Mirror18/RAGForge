@@ -1,7 +1,7 @@
 # Phase 6 Retrospective：评估、观测、安全与恢复
 
 - 日期：2026-08-23
-- 状态：未闭环，保留在 `in-progress`
+- 状态：`completed-with-explicit-waiver`
 - 阶段基线：`0fe22db5979aa5ae7892165c227a5c8a484bdfb9`；当前主线实现验证 SHA：`bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`
 
 ## Done
@@ -22,10 +22,11 @@
 - 本轮主线提交 `4481bef` 的 GitHub Actions quality Run `32579989036` 全绿，并生成 SBOM `9477533715`、Grype `9477541287`、Phase 3/4/5 evidence artifacts；本轮证据可追溯到 CI。
 - 处理了 CI 暴露的取消执行竞态：先提交 `CANCELLED` 再 signal provider，并以 `REQUIRES_NEW` 隔离乐观锁失败，避免外层事务被标记 rollback-only；worker commits `f02d14d`/`f086169`，main merges `08b3bfa`/`bde93eb`，本地 server/root 全量测试与 quality Run `32586867110` 全部通过。
 - 功能验证基线 `bde93eb` 及其记录提交 `6ec5d9d` 均已推送且工作区干净；quality Run `32586867110` 与记录提交后的 `32587259456` 均全绿，Phase 6 自动化/安全/供应链/评估门禁证据已更新。
+- 2026-08-23，项目用户明确批准豁免 P6-EVAL-04 的至少 2 名人审 + 1 名红队评审签名门槛。manifest 记录为 `PASS_WITH_EXPLICIT_WAIVER`，签名保持为空；该决定不伪造人工复核，不把 Agent-assisted pre-review 当作人工签名，并接受 R-005/R-012 的残余风险。
 
-## Evidence gaps
+## 豁免后的残余证据
 
-- 评估 candidate 的确定性指标全部为 1.0，但人工/red-team review 尚未完成；不得把 runner 结果写成真实模型质量结论。
+- 评估 candidate 的确定性指标全部为 1.0；人工/red-team review 未执行，已由项目用户明确批准豁免。不得把 runner 结果写成真实模型质量结论；R-005/R-012 保持为可重新开启的残余风险。
 - 已执行 Agent-assisted adversarial pre-review：Python 安全/合同 23 tests + AgentToolSecurity 9 tests 均通过；报告明确保留人工 review 状态，不能作为人工签名。
 - 真实 Ollama embedding 维度 768 和 1,000,000 点 Qdrant 混合检索已取得有效证据：Recall@10 `0.995`、p95 `119.8761ms`、20 并发错误率 `0`；向量值仍是 live dimension 下的公共合成值。
 - 在线 API/SSE 性能门槛已取得认证隔离运行证据；真实 RAG graph stream boundary 已测量，但生产同步 `GenerationPort` streaming 仍未实现，不将边界探针冒充为生产 API 能力。
@@ -41,10 +42,10 @@
 
 ## Next actions
 
-1. 由 Quality/Security 完成人工与 red-team review manifest，逐 case 记录 reviewer、decision、解释和退化处置。
-2. 完成人工/red-team review manifest：至少 2 名人类 reviewer 和 1 名 red-team reviewer，逐切片记录结论、解释和退化处置。
-3. 在人工签名完成后，重跑阶段退出条件审计并创建 Phase 6 closure commit；云端与生产质量/容量仍保持明确边界。
+1. 后续模型、prompt、retrieval、provider、parser 或安全策略变更时，重新开启独立人工/red-team review。
+2. 若重新开启复核，补齐四个切片、六类 red-team 场景、至少 2 名人审和 1 名红队签名，并重跑质量门禁。
+3. 云端与生产质量/容量仍保持明确边界，不得由本次豁免或本地证据外推。
 
 ## Closure rule
 
-在上述证据缺口关闭、P0/P1 风险为零、所有 CI/SBOM/Grype 结果固化后，才能更新 checklist、PROJECT_STATUS、RISK_REGISTER、TRACEABILITY_MATRIX 并创建 Phase 6 closure commit。当前不得创建阶段闭环提交。
+本次以用户明确批准的治理例外关闭阶段：自动化、质量、安全、供应链和恢复证据已固化；人工/red-team 门槛以 `PASS_WITH_EXPLICIT_WAIVER` 记录，R-005/R-012 作为已接受残余风险保留。阶段闭环不代表人工复核已执行；后续高风险 RAG 或安全变更必须重新开启复核。
