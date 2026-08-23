@@ -43,6 +43,17 @@ export interface CurrentSession {
   };
 }
 
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  displayName: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
 export interface Space {
   spaceId: string;
   name: string;
@@ -56,6 +67,74 @@ export interface Space {
 export interface SpacePage {
   items: Space[];
   nextCursor: string | null;
+}
+
+export interface ProviderConnection {
+  providerConnectionId: string;
+  spaceId: string;
+  version: number;
+  providerType: "OLLAMA" | "OPENAI_COMPATIBLE" | "AI_RUNTIME";
+  egressClass: "LOCAL" | "CLOUD";
+  endpoint: string;
+  status: "DRAFT" | "ACTIVE" | "DISABLED" | "UNHEALTHY";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModelProfile {
+  modelProfileId: string;
+  spaceId: string;
+  version: number;
+  providerConnectionId: string;
+  purpose: "CHAT" | "EMBEDDING" | "RERANK";
+  capabilities: string[];
+  contextWindow: number;
+  maxOutputTokens: number;
+  usageReporting: "PROVIDER_REPORTED" | "LOCAL_ESTIMATE";
+  status: "DRAFT" | "PUBLISHED" | "DISABLED";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModelRoute {
+  modelRouteId: string;
+  spaceId: string;
+  version: number;
+  purpose: "CHAT" | "EMBEDDING" | "RERANK";
+  egressClass: "LOCAL" | "CLOUD";
+  failoverPolicy: "NONE" | "SAME_EGRESS_ONLY";
+  candidates: Array<{ modelProfileId: string; priority: number; egressClass: "LOCAL" | "CLOUD" }>;
+  status: "DRAFT" | "PUBLISHED" | "DISABLED";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PromptTemplate {
+  promptTemplateId: string;
+  spaceId: string;
+  name: string;
+  purpose: "CHAT" | "EMBEDDING" | "RERANK";
+  currentVersion: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RunSnapshot {
+  runId: string;
+  spaceId: string;
+  conversationId: string;
+  version: number;
+  status: string;
+  modelRouteId: string;
+  promptVersionId: string;
+  usageLedgerId: string | null;
+  cancelRequested: boolean;
+  error: { errorClass: string; retryable: boolean; message: string; correlationId: string; retryAfterSeconds: number | null } | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  lastSequence: number;
+  steps: Array<{ stepId: string; type: string; status: string; sequence: number; attempt: number; createdAt: string; finishedAt: string | null; error: RunSnapshot["error"] }>;
 }
 
 export interface Anchor {
@@ -240,6 +319,41 @@ async function readProblem(response: Response): Promise<ProblemDetails | null> {
     // The caller still receives the HTTP status and a safe generic message.
   }
   return null;
+}
+
+async function authFetch<T>(path: string, body: RegisterRequest | LoginRequest): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Correlation-Id": uuidV7(),
+      "Idempotency-Key": idempotencyKey(),
+    },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const problem = await readProblem(response);
+    throw new ApiError(problem?.detail ?? `请求失败（HTTP ${response.status}）`, response.status, problem,
+      problem?.correlationId ?? response.headers.get("X-Correlation-Id"));
+  }
+  return (await parseResponse(response)) as T;
+}
+
+export async function registerUser(request: RegisterRequest): Promise<void> {
+  await authFetch("/api/v1/auth/register", request);
+}
+
+export async function loginUser(request: LoginRequest): Promise<CurrentSession> {
+  const current = await authFetch<CurrentSession>("/api/v1/auth/login", request);
+  csrfToken = current.session.csrfToken;
+  return current;
+}
+
+export async function logoutCurrentSession(): Promise<void> {
+  await apiFetch<void>("/api/v1/sessions/current", { method: "DELETE" });
+  csrfToken = null;
 }
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
