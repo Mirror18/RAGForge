@@ -534,7 +534,7 @@ public class IngestionRepository {
         return value == null || value.isBlank() ? "{}" : value;
     }
 
-    public enum ConnectorType { FILESYSTEM, LOCAL_DIRECTORY, GIT, OBSIDIAN_VAULT }
+    public enum ConnectorType { FILESYSTEM, LOCAL_DIRECTORY, GIT, OBSIDIAN_VAULT, WEB }
     public enum SourceState { ACTIVE, PAUSED, ERROR }
     public enum CursorType { NONE, FILESYSTEM_SCAN, GIT_COMMIT, REMOTE_ETAG, CONNECTOR_CURSOR }
     public enum DocumentState { ACTIVE, DELETED }

@@ -126,6 +126,13 @@ RAGForge 是供企业内部团队部署的通用知识助手。它把分散文�
 - MiMo 作为成熟云端 Chat provider 接入现有 Provider Registry。云端 Chat 仅在空间和本次 Run 明确授权时启用；Embedding/Rerank 可继续绑定本地 Ollama；不得从本地路由静默降级到云端。
 - MiMo 凭据只允许通过本地 ignored 配置或生产 Secret 管理注入，不得提交到 Git、CI、证据、日志或前端 bundle。
 
+## 7.1 核心业务闭环增量（2026-08-24）
+
+- 知识来源统一进入当前空间：浏览器可显式选择本地文件夹、上传单个受支持文档，或提交公开网页 URL；服务端统一创建 source version、document revision、artifact 和 ingestion job。
+- 网页 URL 必须通过空间云端出境授权、服务端域名白名单、DNS 公网地址、响应大小和媒体类型校验；禁止内网/本机地址，不允许静默切换网络路线。
+- 问答以 conversation 为单位保留历史，支持在同一 active conversation 中连续追问；conversation 归档为软状态，历史 run、answer、citation provenance 不删除，归档会话禁止继续写入。
+- 前端主流程固定为“选择空间 → 接入知识 → 等待索引 → 选择回答模型 → 提问/追问 → 查看历史 → 归档”，模型选择仍受空间绑定和显式云端授权裁决。
+
 ## 7. 外部参考
 
 - [RAGFlow：数据摄取与 Retrieval Test 产品参考](https://github.com/infiniflow/ragflow)

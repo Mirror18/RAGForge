@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ApiError, type AnswerDefaults } from "./api";
-import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, previewCitation, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult } from "./answer";
+import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "./answer";
 import { type RunProjection } from "./answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null }>();
-const emit = defineEmits<{ "run-created": [runId: string] }>();
+const emit = defineEmits<{ "run-created": [runId: string]; "conversation-created": [conversationId: string] }>();
 
 type UiStatus = "empty" | "loading" | "reconnecting" | "completed" | "abstained" | "failed" | "cancelled" | "degraded" | "timeout" | "cancelling";
 
@@ -74,6 +74,11 @@ const previewNotice = ref("");
 const previewingEvidenceId = ref<string | null>(null);
 const cancelRequested = ref(false);
 const streamAttempts = ref(0);
+const history = ref<ConversationHistoryItem[]>([]);
+const historyRuns = ref<ConversationRunItem[]>([]);
+const includeArchived = ref(false);
+const historyLoading = ref(false);
+const historyError = ref("");
 
 watch(() => props.defaults, (defaults) => {
   if (!defaults) return;
@@ -227,6 +232,43 @@ function resetAnswer(): void {
   streamAttempts.value = 0;
 }
 
+async function loadHistory(): Promise<void> {
+  if (!props.selectedSpaceId) return;
+  historyLoading.value = true; historyError.value = "";
+  try {
+    history.value = await listAnswerConversations(props.selectedSpaceId, includeArchived.value);
+    if (conversationId.value) historyRuns.value = await listConversationRuns(props.selectedSpaceId, conversationId.value);
+  } catch (error) { historyError.value = safeApiError(error, "问答历史加载失败。"); }
+  finally { historyLoading.value = false; }
+}
+
+async function selectHistory(item: ConversationHistoryItem): Promise<void> {
+  if (isActive.value) return;
+  resetAnswer(); conversationId.value = item.id; historyRuns.value = [];
+  try { historyRuns.value = await listConversationRuns(props.selectedSpaceId, item.id); }
+  catch (error) { historyError.value = safeApiError(error, "会话运行记录加载失败。"); }
+}
+
+async function loadHistoricalRun(run: ConversationRunItem): Promise<void> {
+  try {
+    const answer = await getAnswerProjection(props.selectedSpaceId, run.runId);
+    conversationId.value = run.conversationId;
+    runContext.value = { spaceId: answer.spaceId, runId: answer.runId, correlationId: answer.correlationId };
+    answerText.value = answer.answerText ?? "";
+    status.value = answer.status === "COMPLETED" ? "completed" : answer.status === "ABSTAINED" ? "abstained" : answer.status === "CANCELLED" ? "cancelled" : "failed";
+    notice.value = "已载入历史回答 · " + new Date(answer.createdAt).toLocaleString();
+  } catch (error) { historyError.value = safeApiError(error, "历史回答尚未生成或无法读取。"); }
+}
+
+async function archiveHistory(item: ConversationHistoryItem): Promise<void> {
+  if (item.status === "ARCHIVED") return;
+  try {
+    await archiveAnswerConversation(props.selectedSpaceId, item.id, createKey("archive-conversation"));
+    if (conversationId.value === item.id) { resetAnswer(); conversationId.value = ""; }
+    await loadHistory();
+  } catch (error) { historyError.value = safeApiError(error, "会话归档失败。"); }
+}
+
 function validateStart(): string | null {
   if (!props.selectedSpaceId) return "请先在页面顶部选择当前空间。";
   if (!question.value.trim()) return "请输入问题。";
@@ -262,6 +304,8 @@ async function startAnswer(): Promise<void> {
       activeConversationId = conversationIdentifier(conversation) ?? "";
     }
     if (!activeConversationId) throw new Error("conversation unavailable");
+    conversationId.value = activeConversationId;
+    emit("conversation-created", activeConversationId);
     if (props.selectedSpaceId !== spaceIdAtStart) throw new Error("space changed during answer start");
     const request = { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), model: model.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, datasetHash: datasetHash.value.trim(), configHash: configHash.value.trim(), maxContextTokens: 4000, allowCloudEgress: allowCloudEgress.value };
     const run = await createAnswerRun(spaceIdAtStart, activeConversationId, request, runIdempotencyKey);
@@ -277,6 +321,7 @@ async function startAnswer(): Promise<void> {
     const stream = streamRun(runContext.value, timeoutSeconds.value);
     await createAnswer(spaceIdAtStart, { ...request, runId, correlationId: run.correlationId }, createKey(`answer-create-${runId}`));
     await stream;
+    await loadHistory();
   } catch (error) {
     abortController?.abort();
     if (abortController?.signal.aborted && isTerminal()) return;
@@ -363,12 +408,15 @@ async function openCitation(citation: AnswerCitation): Promise<void> {
 }
 
 watch(() => props.selectedSpaceId, (next, previous) => {
-  if (next !== previous && (runContext.value || isActive.value)) resetAnswer();
+  if (next !== previous) { resetAnswer(); conversationId.value = ""; historyRuns.value = []; void loadHistory(); }
 });
+watch(includeArchived, () => { void loadHistory(); });
+onMounted(() => { void loadHistory(); });
 onBeforeUnmount(() => abortController?.abort());
 </script>
 
 <template>
+  <aside class="card answer-history" aria-label="问答历史"><div class="card-title"><div><span class="card-label">历史与归档</span><h3>继续已有会话</h3></div><label class="history-toggle"><input v-model="includeArchived" type="checkbox" />显示已归档</label></div><p v-if="historyError" class="alert error">{{ historyError }}</p><p v-if="historyLoading" class="muted">读取历史记录中…</p><div v-else-if="!history.length" class="muted">还没有问答历史。提交第一个问题后，会话会自动出现在这里。</div><div v-else class="history-list"><article v-for="item in history" :key="item.id" class="history-item" :class="{ selected: conversationId === item.id }"><button type="button" class="history-select" @click="selectHistory(item)"><strong>{{ item.title }}</strong><small>{{ item.status === "ARCHIVED" ? "已归档" : "进行中" }} · {{ new Date(item.updatedAt).toLocaleString() }}</small></button><div class="history-actions"><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="archiveHistory(item)">归档</button></div><div v-if="conversationId === item.id && historyRuns.length" class="history-runs"><button v-for="run in historyRuns" :key="run.runId" type="button" class="run-history-row" @click="loadHistoricalRun(run)"><span>{{ run.status }}</span><small>{{ run.createdAt ? new Date(run.createdAt).toLocaleString() : run.runId }}</small></button></div></article></div></aside>
   <section class="view-section answer-view" aria-labelledby="answer-heading">
     <div class="section-heading"><div><p class="eyebrow">03 · Verifiable answer</p><h2 id="answer-heading">带引用问答</h2><p>回答增量、结构化 Citation 和运行状态来自当前空间的 SSE；模型提供的文件名、URL 和正文不会被当作引用。</p></div><div class="read-only-note" :class="{ warning: status === 'degraded' || status === 'timeout' }">{{ statusLabel }}</div></div>
     <form class="card answer-form" @submit.prevent="startAnswer">
@@ -395,6 +443,7 @@ onBeforeUnmount(() => abortController?.abort());
 </template>
 
 <style scoped>
+.answer-history { margin-bottom: 15px; }.history-toggle { display: flex; align-items: center; gap: 6px; color: #687893; font-size: .76rem; }.history-list { display: grid; gap: 8px; margin-top: 12px; }.history-item { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 10px; border: 1px solid #e1e9f4; border-radius: 9px; background: #f8fbff; }.history-item.selected { border-color: #8eadd3; background: #f1f7ff; }.history-select { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; border: 0; background: transparent; color: #284c87; text-align: left; cursor: pointer; }.history-select small, .run-history-row small { color: #71809a; font-size: .72rem; }.history-actions { display: flex; align-items: start; }.history-runs { grid-column: 1 / -1; display: grid; gap: 5px; padding-top: 8px; border-top: 1px solid #e2eaf4; }.run-history-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border: 0; border-radius: 6px; background: #fff; color: #526b92; cursor: pointer; text-align: left; }.run-history-row:hover { background: #e9f2ff; }
 .answer-form { display: block; }
 .answer-form > .wide { margin-bottom: 14px; }
 .answer-config { margin-top: 14px; padding: 13px 15px; border: 1px solid #dce5f2; border-radius: 10px; background: #fafcff; }

@@ -46,6 +46,9 @@ app:
     ttl: ${SESSION_TTL:PT8H}
 
 ragforge:
+  web-source:
+    # Empty by default: web ingestion is fail-closed until an operator configures public hosts.
+    allowed-hosts: \${RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS:}
   object-storage:
     # Explicit opt-in: without this flag the Phase 5 answer graph stays fail-closed.
     enabled: ${RAGFORGE_OBJECT_STORAGE_ENABLED:false}

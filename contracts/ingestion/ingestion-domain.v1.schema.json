@@ -32,7 +32,7 @@
     },
     "connectorType": {
       "type": "string",
-      "enum": ["FILESYSTEM", "LOCAL_DIRECTORY", "GIT", "OBSIDIAN_VAULT"]
+      "enum": ["FILESYSTEM", "LOCAL_DIRECTORY", "GIT", "OBSIDIAN_VAULT", "WEB"]
     },
     "discoveryRules": {
       "type": "object",

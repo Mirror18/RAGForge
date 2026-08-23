@@ -109,6 +109,13 @@
 
 ## Phase 6 实施证据
 
+## Phase 7 核心业务闭环增量
+
+| 需求 ID | 需求 | 实现与验证 | 验收结果 | 残余边界 |
+|---|---|---|---|---|
+| RF-BIZ-004 | 本地文件/文件夹、受支持文档格式和网页 URL 进入当前知识空间 | BusinessIngestionService、WebSourceIngestionService、V17 相关摄取契约、BusinessFlowView.vue、WebSourceIngestionServiceTest | 文件复用 revision/artifact/job；网页入口有云端授权、域名白名单、DNS 公网地址、大小和媒体类型保护；服务端编译、契约和 Web 构建通过 | 真实网页白名单 smoke 待部署配置后执行；RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS 为空时 fail-closed |
+| RF-BIZ-005 | 模型选择、历史问答、连续追问和归档 | RunExecutionService、ConversationRepository、RunRepository、AnswerView.vue、answer.ts、V17 migration | active conversation 可连续创建 run；历史可按空间读取，回答 projection 可查看，归档保留历史并拒绝新 run | 尚未完成真实浏览器视觉验收；历史回答须已持久化 answer projection |
+
 | 证据 ID | 验收内容 | 实现与验证 | 结果 | 后续 |
 |---|---|---|---|---|
 | P6-EVAL-001 | 版本化 120+ 评估与确定性 candidate runner | [`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json)、[`evaluation_runner.py`](../../scripts/phase6/evaluation_runner.py)、[`phase6-evaluation-report.v1.json`](../../tests/evidence/phase6-evaluation-report.v1.json) | 128 cases；runner validation、7/7 unit；candidate 指标 1.0；人工/red-team 门槛按用户明确批准记录为 `PASS_WITH_EXPLICIT_WAIVER`，不声称真实模型人工质量结论 | 后续模型/prompt/retrieval 变更必须重新开启人工/red-team 复核 |

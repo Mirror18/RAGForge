@@ -135,6 +135,23 @@ export interface ConversationProjection {
   spaceId: string;
 }
 
+export interface ConversationHistoryItem {
+  id: string;
+  spaceId: string;
+  actorUserId: string | null;
+  title: string;
+  status: "ACTIVE" | "ARCHIVED" | string;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationRunItem extends RunProjection {
+  createdAt?: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+}
+
 export interface RunProjection {
   runId: string;
   spaceId: string;
@@ -328,6 +345,37 @@ export function parseAnswerEvent(raw: unknown, sseId?: string, sseType?: string)
 
 export async function createAnswerConversation(spaceId: string, idempotencyKey: string): Promise<ConversationProjection> {
   return apiFetch<ConversationProjection>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/conversations`, { method: "POST", body: { title: "RAGForge Answer" }, idempotencyKey });
+}
+
+export async function listAnswerConversations(spaceId: string, includeArchived = false): Promise<ConversationHistoryItem[]> {
+  const result = await apiFetch<{ items: ConversationHistoryItem[] }>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations?includeArchived=" + includeArchived);
+  return result.items ?? [];
+}
+
+export async function listConversationRuns(spaceId: string, conversationId: string): Promise<ConversationRunItem[]> {
+  const result = await apiFetch<{ items: ConversationRunItem[] }>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations/" + encodeURIComponent(conversationId) + "/runs");
+  return result.items ?? [];
+}
+
+export async function archiveAnswerConversation(spaceId: string, conversationId: string, idempotencyKey: string): Promise<ConversationHistoryItem> {
+  return apiFetch<ConversationHistoryItem>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations/" + encodeURIComponent(conversationId) + "/archive", {
+    method: "POST",
+    body: {},
+    idempotencyKey,
+  });
+}
+
+export interface AnswerHistoryProjection {
+  answerText: string | null;
+  status: string;
+  spaceId: string;
+  runId: string;
+  correlationId: string;
+  createdAt: string;
+}
+
+export function getAnswerProjection(spaceId: string, runId: string): Promise<AnswerHistoryProjection> {
+  return apiFetch("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/answers/" + encodeURIComponent(runId));
 }
 
 export async function createAnswerRun(spaceId: string, conversationId: string, request: StartAnswerRequest, idempotencyKey: string): Promise<RunProjection> {
