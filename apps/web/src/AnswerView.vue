@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { ApiError } from "./api";
+import { ApiError, type AnswerDefaults } from "./api";
 import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, previewCitation, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult } from "./answer";
 import { type RunProjection } from "./answer";
 
-const props = defineProps<{ selectedSpaceId: string }>();
+const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null }>();
 
 type UiStatus = "empty" | "loading" | "reconnecting" | "completed" | "abstained" | "failed" | "cancelled" | "degraded" | "timeout" | "cancelling";
 
@@ -73,6 +73,17 @@ const previewingEvidenceId = ref<string | null>(null);
 const feedbackNotice = ref("");
 const cancelRequested = ref(false);
 const streamAttempts = ref(0);
+
+watch(() => props.defaults, (defaults) => {
+  if (!defaults) return;
+  routeVersionId.value = defaults.routeVersionId;
+  profileVersionId.value = defaults.profileVersionId;
+  providerConnectionId.value = defaults.providerConnectionId;
+  promptVersionId.value = defaults.promptVersionId;
+  model.value = defaults.model;
+  datasetHash.value = defaults.datasetHash;
+  configHash.value = defaults.configHash;
+}, { immediate: true });
 
 let abortController: AbortController | null = null;
 let cancelPromise: Promise<void> | null = null;

@@ -119,6 +119,31 @@ export interface PromptTemplate {
   updatedAt: string;
 }
 
+export interface PromptVersion {
+  promptVersionId: string;
+  spaceId: string;
+  promptTemplateId: string;
+  version: number;
+  state: "DRAFT" | "PUBLISHED";
+  messages: Array<{ role: "SYSTEM" | "USER" | "ASSISTANT" | "TOOL"; content: string }>;
+  variableSchema: Record<string, unknown>;
+  outputContract: Record<string, unknown>;
+  contentHash: string;
+  immutableAfterPublish: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+}
+
+export interface AnswerDefaults {
+  routeVersionId: string;
+  profileVersionId: string;
+  providerConnectionId: string;
+  promptVersionId: string;
+  model: string;
+  datasetHash: string;
+  configHash: string;
+}
+
 export interface RunSnapshot {
   runId: string;
   spaceId: string;

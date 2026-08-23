@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ApiError, type Anchor, type ChunkOverrideResponse, type ChunkOverrideTargetState, type CreateChunkOverrideRequest, type ChunkStudioProjection, type CurrentSession, type RetrievalExperiment, type Space, type TransitionChunkOverrideRequest, apiFetch, getCurrentSession, loginUser, logoutCurrentSession, registerUser } from "./api";
+import { ApiError, type Anchor, type AnswerDefaults, type ChunkOverrideResponse, type ChunkOverrideTargetState, type CreateChunkOverrideRequest, type ChunkStudioProjection, type CurrentSession, type RetrievalExperiment, type Space, type TransitionChunkOverrideRequest, apiFetch, getCurrentSession, loginUser, logoutCurrentSession, registerUser } from "./api";
 import AnswerView from "./AnswerView.vue";
 import ControlCenterView from "./ControlCenterView.vue";
 import AuthView from "./AuthView.vue";
 import PersonalSpaceView from "./PersonalSpaceView.vue";
+import BusinessFlowView from "./BusinessFlowView.vue";
 
-type View = "home" | "studio" | "playground" | "answer" | "control" | "profile";
+type View = "home" | "flow" | "studio" | "playground" | "answer" | "control" | "profile";
 type ControlSection = "spaces" | "providers" | "models" | "prompts" | "runs";
-const view = ref<View>("home");
+const view = ref<View>("flow");
 const controlSection = ref<ControlSection>("providers");
+const answerDefaults = ref<AnswerDefaults | null>(null);
 const apiStatus = ref<"checking" | "ready" | "unavailable" | "unauthenticated">("checking");
 const checkedAt = ref("");
 const session = ref<CurrentSession | null>(null);
@@ -243,7 +245,9 @@ onMounted(checkApiHealth);
     <p v-if="workspaceError && session" class="alert error" role="alert">{{ workspaceError }}</p>
     <AuthView v-if="!session" v-model:mode="authMode" v-model:email="authEmail" v-model:password="authPassword" v-model:display-name="authDisplayName" :loading="authLoading" :error="workspaceError" @submit="submitAuth" />
     <PersonalSpaceView v-if="session && (spaces.length === 0 || view === 'profile')" :session="session" :spaces="spaces" :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-creating="spaceCreating" @select-space="(spaceId) => { selectedSpaceId = spaceId; view = 'home'; }" @create-space="createSpace" @open-action="openPersonalAction" @logout="logout" @refresh="checkApiHealth" />
-    <nav v-if="session && spaces.length > 0" class="main-nav" aria-label="主要导航" role="tablist"><button id="home-tab" type="button" role="tab" :aria-selected="view === 'home'" :class="{ active: view === 'home' }" @click="view = 'home'">功能入口</button><button id="personal-space-tab" type="button" role="tab" :aria-selected="view === 'profile'" :class="{ active: view === 'profile' }" @click="view = 'profile'">个人空间</button><button id="chunk-studio-tab" type="button" role="tab" :aria-selected="view === 'studio'" :class="{ active: view === 'studio' }" @click="view = 'studio'">Chunk Studio</button><button id="retrieval-playground-tab" type="button" role="tab" :aria-selected="view === 'playground'" :class="{ active: view === 'playground' }" @click="view = 'playground'">Retrieval Playground</button><button id="answer-tab" type="button" role="tab" :aria-selected="view === 'answer'" :class="{ active: view === 'answer' }" @click="view = 'answer'">带引用问答</button><button id="control-center-tab" type="button" role="tab" :aria-selected="view === 'control'" :class="{ active: view === 'control' }" @click="openControl('providers')">配置与运维</button></nav>
+    <nav v-if="session && spaces.length > 0" class="main-nav" aria-label="主要导航" role="tablist"><button id="flow-tab" type="button" role="tab" :aria-selected="view === 'flow'" :class="{ active: view === 'flow' }" @click="view = 'flow'">业务闭环</button><button id="home-tab" type="button" role="tab" :aria-selected="view === 'home'" :class="{ active: view === 'home' }" @click="view = 'home'">功能入口</button><button id="personal-space-tab" type="button" role="tab" :aria-selected="view === 'profile'" :class="{ active: view === 'profile' }" @click="view = 'profile'">个人空间</button><button id="chunk-studio-tab" type="button" role="tab" :aria-selected="view === 'studio'" :class="{ active: view === 'studio' }" @click="view = 'studio'">Chunk Studio</button><button id="retrieval-playground-tab" type="button" role="tab" :aria-selected="view === 'playground'" :class="{ active: view === 'playground' }" @click="view = 'playground'">Retrieval Playground</button><button id="answer-tab" type="button" role="tab" :aria-selected="view === 'answer'" :class="{ active: view === 'answer' }" @click="view = 'answer'">带引用问答</button><button id="control-center-tab" type="button" role="tab" :aria-selected="view === 'control'" :class="{ active: view === 'control' }" @click="openControl('providers')">配置与运维</button></nav>
+
+    <BusinessFlowView v-if="session && spaces.length > 0 && view === 'flow'" :selected-space-id="selectedSpaceId" :current-role="currentRole" @start-answer="(config) => { answerDefaults = config; view = 'answer'; }" @open-control="openControl" />
 
     <section v-if="session && spaces.length > 0 && view === 'home'" class="view-section entry-home" aria-labelledby="entry-home-heading">
       <div class="section-heading"><div><p class="eyebrow">00 · Workspace map</p><h2 id="entry-home-heading">功能入口</h2><p>从当前空间进入内容编辑、检索实验、引用问答和平台配置。每个入口都使用当前 spaceId，服务端继续执行权限与隔离校验。</p></div><div class="read-only-note">当前角色：{{ currentRole }}</div></div>
@@ -271,7 +275,7 @@ onMounted(checkApiHealth);
       <div v-else class="empty-state card"><strong>尚未运行实验</strong><span>填写 query、index/profile 版本后提交。结果只展示候选引用和 allow-listed evidence metadata。</span></div>
     </section>
     <ControlCenterView v-else-if="session && spaces.length > 0 && view === 'control'" role="tabpanel" aria-labelledby="control-center-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :initial-section="controlSection" />
-    <AnswerView v-else-if="session && spaces.length > 0 && view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" />
+    <AnswerView v-else-if="session && spaces.length > 0 && view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" :defaults="answerDefaults" />
   </main>
 </template>
 
