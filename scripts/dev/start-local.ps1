@@ -87,8 +87,25 @@ try {
     $env:SPRING_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:SPRING_RABBITMQ_USERNAME = "ragforge"
     $env:SPRING_RABBITMQ_PASSWORD = "change-me"
+    $env:RAGFORGE_OUTBOX_RELAY_ENABLED = "true"
+    $env:RAGFORGE_OBJECT_STORAGE_ENABLED = "true"
+    $env:S3_ENDPOINT = "http://127.0.0.1:$($ports.S3_PORT)"
+    $env:S3_ACCESS_KEY = "ragforge"
+    $env:S3_SECRET_KEY = "change-me-minio-secret"
+    $env:S3_BUCKET = "ragforge"
+    $env:S3_PREFIX = "phase3"
+    $env:QDRANT_URL = "http://127.0.0.1:$($ports.QDRANT_PORT)"
+    $env:QDRANT_API_KEY = "change-me"
+    $env:OLLAMA_ENDPOINT = "http://127.0.0.1:11434"
     $server = Start-Process -FilePath $maven -ArgumentList "-pl", "apps/server", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health"
+
+    $env:RAGFORGE_INGESTION_ENABLED = "true"
+    $env:RAGFORGE_RABBITMQ_HOST = "127.0.0.1"
+    $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
+    $env:RAGFORGE_RABBITMQ_USER = "ragforge"
+    $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
+    $worker = Start-Process -FilePath $maven -ArgumentList "-pl", "apps/ingestion-worker", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
 
     if (-not $SkipWeb) {
         $env:VITE_SERVER_TARGET = "http://127.0.0.1:$ServerPort"
@@ -99,6 +116,7 @@ try {
     Write-Host "RAGForge 已启动。"
     Write-Host "  Server: http://127.0.0.1:$ServerPort"
     Write-Host "  Health: http://127.0.0.1:$ServerPort/actuator/health"
+    Write-Host "  Worker: PID $($worker.Id)"
     if (-not $SkipWeb) { Write-Host "  Web:    http://127.0.0.1:$WebPort" }
     Write-Host "  Logs:   $runtimeDirectory"
 } finally {

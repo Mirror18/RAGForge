@@ -369,6 +369,7 @@ class Phase1EventContractTest(unittest.TestCase):
                     "mediaType": "text/markdown",
                     "byteLength": 1024,
                     "sha256": "a" * 64,
+                    "storageUri": f"spaces/{self.ids['space']}/sources/{self.ids['source']}/revisions/{self.ids['revision']}/artifacts/{self.ids['artifact']}/sha256/{'a' * 64}",
                 },
             },
         )

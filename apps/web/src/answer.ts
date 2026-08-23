@@ -158,6 +158,7 @@ export interface StartAnswerRequest {
   datasetHash: string;
   configHash: string;
   maxContextTokens: number;
+  correlationId?: string;
 }
 
 export interface CitationPreviewResult {
@@ -349,6 +350,7 @@ export async function createAnswer(spaceId: string, request: StartAnswerRequest 
       allowCloudEgress: false,
     },
     idempotencyKey,
+    correlationId: request.correlationId,
   });
 }
 

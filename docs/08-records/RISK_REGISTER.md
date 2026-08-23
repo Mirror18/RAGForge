@@ -103,5 +103,6 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-028` 已关闭（本提交范围）：本地 Syft/跟踪内容 Grype 已通过，最新 GitHub Actions quality [`32577917976`](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿；阶段 SBOM artifact `9477027172`、Grype SARIF artifact `9477036384` 可追溯。发布前仍需按目标镜像/digest 重跑发布级扫描。
 - 观测 profile、fault drill、隔离恢复和 23/23 安全专项均已取得证据，但 `R-003` 全局风险仍 OPEN，需容量压力与人工安全复核完成后再评审关闭。
 - `R-031` 已关闭（多实例 run-event fan-out）：ADR-0011 已于 2026-08-22 由用户接受；两个独立 Spring server context + 共享隔离 PostgreSQL/Valkey 的跨实例、同/跨空间隔离、提交后发布、回滚不泄漏、重复/乱序补洞、Last-Event-ID durable replay 和 listener shutdown 均通过，证据见 [`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json)。该结论不外推生产容量、云端部署或跨区域语义。
+- `R-032` 新增：前端业务闭环代码与真实 Server/Worker API 已通过构建、契约和本地运行证据，但浏览器登录后的视觉/交互验收尚未完成。P=2、I=3、Score=6，Product / Web，MITIGATING；完成本地测试账号登录、配置初始化、上传轮询和带引用回答的浏览器验收后再关闭。
 - 2026-08-23 复审：取消执行竞态与 rollback-only 事务失败已在独立 worker 分支修复并合并，server `210`、根工程 `238` 测试均为 0 failures/0 errors/1 skipped；quality run `32586867110`（功能基线）和记录提交后的 `32587259456` 均全绿。该复审当时仍保留 `R-005`、`R-012` 和 `P6-EVAL-04` 的人工/red-team 评审缺口，不得以自动化结果代签；后续治理例外见下一条记录。
 - 2026-08-23 治理复审：项目用户明确批准豁免 P6-EVAL-04 的至少 2 名人审 + 1 名红队评审签名门槛。R-005、R-012 转为 `ACCEPTED` 而非 `CLOSED`；manifest 记录 `PASS_WITH_EXPLICIT_WAIVER`，保留空签名和未执行人工复核事实。后续模型、prompt、retrieval 或安全策略变更必须重新开启独立人工/red-team 复核。

@@ -11,8 +11,10 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -31,22 +33,34 @@ public class IngestionJobConsumer {
     private final JdbcIngestionIdempotencyStore idempotencyStore;
     private final IngestionSideEffectHandler sideEffectHandler;
     private final RetryPolicy retryPolicy;
+    private final JdbcTemplate jdbc;
 
     public IngestionJobConsumer(ObjectMapper objectMapper,
                                 RabbitTemplate rabbitTemplate,
                                 RabbitMessagingProperties properties,
                                 JdbcIngestionIdempotencyStore idempotencyStore,
                                 IngestionSideEffectHandler sideEffectHandler) {
+        this(objectMapper, rabbitTemplate, properties, idempotencyStore, sideEffectHandler, null);
+    }
+
+    @Autowired
+    public IngestionJobConsumer(ObjectMapper objectMapper,
+                                RabbitTemplate rabbitTemplate,
+                                RabbitMessagingProperties properties,
+                                JdbcIngestionIdempotencyStore idempotencyStore,
+                                IngestionSideEffectHandler sideEffectHandler,
+                                JdbcTemplate jdbc) {
         this.objectMapper = objectMapper;
         this.rabbitTemplate = rabbitTemplate;
         this.properties = properties;
         this.idempotencyStore = idempotencyStore;
         this.sideEffectHandler = sideEffectHandler;
         this.retryPolicy = new RetryPolicy(properties.getMaxAttempts());
+        this.jdbc = jdbc;
     }
 
     @RabbitListener(
-            queues = "#{@rabbitMessagingProperties.requestedQueue}",
+            queues = "${ragforge.messaging.requested-queue}",
             ackMode = "MANUAL",
             autoStartup = "${ragforge.ingestion.enabled:false}")
     public void onMessage(Message message, Channel channel) throws Exception {
@@ -73,11 +87,12 @@ public class IngestionJobConsumer {
             if (decision.action() == RetryPolicy.Action.RETRY && envelope != null) {
                 try {
                     publishRetry(message, decision);
+                    updateDatabaseState(envelope.spaceId(), requestedPayloadOrNull(envelope), "RETRY_SCHEDULED");
                     publishStatus(envelope, requestedPayloadOrNull(envelope), "RETRY_SCHEDULED",
                             deliveryAttempt, failure, decision.delay());
                     channel.basicAck(deliveryTag, false);
                     log.warn("Ingestion message scheduled for retry eventId={} spaceId={} attempt={} failureClass={}",
-                            envelope.eventId(), envelope.spaceId(), deliveryAttempt, failure.failureClass());
+                            envelope.eventId(), envelope.spaceId(), deliveryAttempt, failure.failureClass(), exception);
                     return;
                 } catch (RuntimeException retryPublishFailure) {
                     channel.basicNack(deliveryTag, false, true);
@@ -89,6 +104,7 @@ public class IngestionJobConsumer {
             try {
                 publishDeadLetter(message, envelope, failure, deliveryAttempt);
                 if (envelope != null) {
+                    updateDatabaseState(envelope.spaceId(), requestedPayloadOrNull(envelope), "DLQ");
                     publishStatus(envelope, requestedPayloadOrNull(envelope), "DLQ",
                             deliveryAttempt, failure, null);
                 }
@@ -173,11 +189,12 @@ public class IngestionJobConsumer {
             retry.put("backoffSeconds", Math.max(1, delay.toSeconds()));
         }
         ObjectNode sideEffects = statusPayload.putObject("sideEffects");
-        sideEffects.put("revisionPersisted", false);
-        sideEffects.put("artifactPersisted", false);
-        sideEffects.put("parseReportPersisted", false);
-        sideEffects.put("activePointerUpdated", false);
-        sideEffects.put("checkpointAdvanced", false);
+        boolean completed = "COMPLETED".equals(status);
+        sideEffects.put("revisionPersisted", completed);
+        sideEffects.put("artifactPersisted", completed);
+        sideEffects.put("parseReportPersisted", completed);
+        sideEffects.put("activePointerUpdated", completed);
+        sideEffects.put("checkpointAdvanced", completed);
 
         IngestionEventEnvelope statusEnvelope = new IngestionEventEnvelope(
                 UuidV7.random(), "ingestion.job.status.changed.v1", Instant.now(),
@@ -200,6 +217,17 @@ public class IngestionJobConsumer {
         } catch (JsonProcessingException exception) {
             return null;
         }
+    }
+
+    private void updateDatabaseState(java.util.UUID spaceId, IngestionJobRequestedPayload payload, String status) {
+        if (jdbc == null || payload == null) {
+            return;
+        }
+        Instant now = Instant.now();
+        jdbc.update("UPDATE ingestion_jobs SET status = ?, version_no = version_no + 1, updated_at = ? WHERE space_id = ? AND id = ?",
+                status, java.sql.Timestamp.from(now), spaceId, payload.jobId());
+        jdbc.update("UPDATE ingestion_job_attempts SET status = ?, finished_at = ? WHERE space_id = ? AND id = ?",
+                status, java.sql.Timestamp.from(now), spaceId, payload.attemptId());
     }
 
     private int deliveryAttempt(Message message) {

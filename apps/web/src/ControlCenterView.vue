@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, type ModelProfile, type ModelRoute, type PlatformRole, type PromptTemplate, type ProviderConnection, type RunSnapshot, type SpaceRole, apiFetch } from "./api";
+import { ApiError, type ModelProfile, type ModelRoute, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type RunSnapshot, type SpaceRole, apiFetch } from "./api";
 
 type ControlSection = "spaces" | "providers" | "models" | "prompts" | "runs";
 
@@ -137,6 +137,77 @@ async function createPrompt(): Promise<void> {
   finally { loading.value = false; }
 }
 
+async function initializeLocalRag(): Promise<void> {
+  if (!ensureSpace() || !canManage.value) return;
+  loading.value = true; error.value = ""; notice.value = "";
+  try {
+    const providerPage = await apiFetch<{ items: ProviderConnection[] }>(path("/provider-connections?limit=100"));
+    let localProvider = providerPage.items.find((item) => item.providerType === "OLLAMA" && item.egressClass === "LOCAL" && item.status === "ACTIVE");
+    if (!localProvider) {
+      localProvider = await apiFetch<ProviderConnection>(path("/provider-connections"), { method: "POST", body: providerForm.value });
+    }
+
+    const profilePage = await apiFetch<{ items: ModelProfile[] }>(path("/model-profiles?limit=100"));
+    const profileDefinitions = [
+      { purpose: "CHAT", modelName: "qwen3.5:9b", capabilities: ["CHAT", "STREAMING", "TOOLS", "USAGE_REPORTING"] },
+      { purpose: "EMBEDDING", modelName: "nomic-embed-text:latest", capabilities: ["EMBEDDING"] },
+      { purpose: "RERANK", modelName: "qwen3.5:9b", capabilities: ["RERANK"] },
+    ] as const;
+    const profiles: Record<string, ModelProfile> = {};
+    for (const definition of profileDefinitions) {
+      const existing = profilePage.items.find((item) => item.providerConnectionId === localProvider.providerConnectionId && item.purpose === definition.purpose && item.status === "PUBLISHED");
+      profiles[definition.purpose] = existing ?? await apiFetch<ModelProfile>(path("/model-profiles"), {
+        method: "POST",
+        body: { providerConnectionId: localProvider.providerConnectionId, ...definition, contextWindow: 8192, maxOutputTokens: 1024, usageReporting: definition.purpose === "CHAT" ? "PROVIDER_REPORTED" : "LOCAL_ESTIMATE", status: "PUBLISHED" },
+      });
+    }
+
+    const routePage = await apiFetch<{ items: ModelRoute[] }>(path("/model-routes?limit=100"));
+    const routes: Record<string, ModelRoute> = {};
+    for (const purpose of ["CHAT", "EMBEDDING", "RERANK"] as const) {
+      const profile = profiles[purpose];
+      const existing = routePage.items.find((item) => item.purpose === purpose && item.status === "ACTIVE" && item.candidates.some((candidate) => candidate.modelProfileId === profile.modelProfileId));
+      routes[purpose] = existing ?? await apiFetch<ModelRoute>(path("/model-routes"), {
+        method: "POST",
+        body: { purpose, egressClass: "LOCAL", failoverPolicy: "NONE", candidates: [{ modelProfileId: profile.modelProfileId, priority: 1, egressClass: "LOCAL" }], status: "ACTIVE" },
+      });
+    }
+
+    const promptPage = await apiFetch<{ items: PromptTemplate[] }>(path("/prompt-templates"));
+    let prompt = promptPage.items.find((item) => item.purpose === "CHAT");
+    if (!prompt) prompt = await apiFetch<PromptTemplate>(path("/prompt-templates"), { method: "POST", body: { name: "Local RAG Answer", purpose: "CHAT" } });
+    let promptVersion: PromptVersion | null = prompt.currentVersion ? await apiFetch<PromptVersion>(path(`/prompt-templates/${prompt.promptTemplateId}/versions/${prompt.currentVersion}`)) : null;
+    if (!promptVersion || promptVersion.state !== "PUBLISHED") {
+      promptVersion = await apiFetch<PromptVersion>(path(`/prompt-templates/${prompt.promptTemplateId}/versions`), {
+        method: "POST",
+        body: {
+          messages: [
+            { role: "SYSTEM", content: "Answer only from the supplied context. Cite evidence tokens such as [evidence:<id>]. If unsupported, abstain." },
+            { role: "USER", content: "{{question}}" },
+          ],
+          variableSchema: { type: "object", required: ["context", "question"] },
+          outputContract: { type: "object", required: ["answer", "citations"] },
+          changeDescription: "初始化本地 Ollama RAG 闭环 Prompt",
+        },
+      });
+      promptVersion = await apiFetch<PromptVersion>(path(`/prompt-templates/${prompt.promptTemplateId}/versions/${promptVersion.version}/publish`), { method: "POST" });
+    }
+
+    let binding: { version: number } | null = null;
+    try { binding = await apiFetch<{ version: number }>(path("/space-bindings")); } catch (value) { if (!(value instanceof ApiError) || value.status !== 404) throw value; }
+    const version = binding?.version ?? 1;
+    await apiFetch(path("/space-bindings"), {
+      method: "PUT",
+      headers: { "If-Match": `"${binding?.version ?? 0}"` },
+      body: { version, chatRouteId: routes.CHAT.modelRouteId, embeddingRouteId: routes.EMBEDDING.modelRouteId, rerankRouteId: routes.RERANK.modelRouteId, promptVersionId: promptVersion.promptVersionId, cloudEgressEnabled: false, cloudEgressAuthorization: null },
+    });
+    notice.value = "本地 Ollama RAG 配置已通过服务端 API 完成：Provider、Profile、Route、Prompt 和空间绑定均已就绪。";
+    section.value = "providers";
+    await loadSection();
+  } catch (value) { error.value = describeError(value, "本地 Ollama RAG 初始化失败，请检查服务端错误并重试。"); }
+  finally { loading.value = false; }
+}
+
 async function loadRun(): Promise<void> {
   if (!ensureSpace() || !runId.value.trim()) { error.value = "请输入当前空间内的 Run ID。"; return; }
   loading.value = true; error.value = ""; notice.value = "";
@@ -173,7 +244,7 @@ watch(() => [props.selectedSpaceId, section.value], () => { void loadSection(); 
     <div v-if="section === 'spaces'" class="entry-grid">
       <article class="card entry-card"><span class="card-label">当前空间</span><strong>{{ selectedSpaceId || "未选择" }}</strong><p>空间切换在页面顶部完成；所有内容 API 都必须使用当前 spaceId。</p><button type="button" class="secondary-button" @click="section = 'runs'">查看 Run 追踪</button></article>
       <article class="card entry-card"><span class="card-label">服务健康</span><strong>Server / API</strong><p>本地开发可通过健康端点检查 server 与基础设施状态。</p><a class="link-button" href="/actuator/health" target="_blank" rel="noreferrer">打开健康检查</a></article>
-      <article class="card entry-card disabled-entry"><span class="card-label">数据源与同步</span><strong>待接入 Web API</strong><p>当前仓库尚未提供数据源管理 REST controller，因此这里不展示伪造的上传或同步按钮。</p></article>
+      <article class="card entry-card"><span class="card-label">本地 RAG 初始化</span><strong>一键准备 Ollama 闭环</strong><p>通过当前空间 API 创建或复用本地 Provider、三类模型路由、已发布 Prompt，并写入空间绑定；云端出境保持关闭。</p><button type="button" :disabled="loading || !canManage" @click="initializeLocalRag">{{ loading ? "初始化中…" : "初始化本地 Ollama RAG" }}</button></article>
       <article class="card entry-card disabled-entry"><span class="card-label">审计导出</span><strong>待接入 Web API</strong><p>审计与 retention 已有后端运维能力，但尚未形成面向控制台的导出 API。</p></article>
     </div>
 

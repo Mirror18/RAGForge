@@ -35,6 +35,13 @@
 
 ## Learnings
 
+### 业务闭环增量（2026-08-23）
+
+- 前端必须读取服务端 active index、任务和 Parse Report，而不是把手填的 UUID/hash 当作完成条件；上传后的轮询也只能观察状态，不能模拟状态变更。
+- 版本化 Prompt、Profile、Route 和空间绑定可以复用现有 API，但需要一个显式的本地 Ollama 初始化入口，否则新空间无法从控制台走到可问答状态。
+- Run 创建和 Answer 提交必须复用服务端返回的 correlation ID；仅在每次请求生成新的 correlation ID 会在真实问答流程中触发 `RUN_CORRELATION_MISMATCH`。
+- Worker 的对象存储依赖要和 `ragforge.ingestion.enabled` 同步启用；否则禁用摄取的集成测试上下文会被业务 handler 的强制依赖阻断。
+
 - “有 runner”不等于“有人工质量结论”；证据状态必须把 deterministic、synthetic、real、manual 分开记录。
 - 容量演练的真实维度探针、批量写入、混合查询和在线 API/SSE 探针应拆成可独立重试的阶段，避免一个 Qdrant 超时阻塞所有指标。
 - Windows 子进程的 PATH 大小写和本地工具安装位置会影响供应链门禁；runner 应把工具可见性作为可验证输入，而不是只依赖 shell 中的命令解析。

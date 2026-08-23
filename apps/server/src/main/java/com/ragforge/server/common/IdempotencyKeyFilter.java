@@ -50,11 +50,13 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
             return;
         }
 
-        byte[] body = request.getInputStream().readAllBytes();
+        boolean multipart = request.getContentType() != null
+                && request.getContentType().toLowerCase(java.util.Locale.ROOT).startsWith("multipart/");
+        byte[] body = multipart ? new byte[0] : request.getInputStream().readAllBytes();
         String principalScope = principalScope();
         String requestHash = requestHash(request, body);
         IdempotencyRepository.Record previous = repository.find(principalScope, key).orElse(null);
-        if (previous != null) {
+        if (previous != null && !multipart) {
             boolean sameRequest = previous.requestHash().equals(requestHash);
             ProblemResponseWriter.write(objectMapper, request, response, 409,
                     sameRequest ? "IDEMPOTENCY_KEY_REUSED" : "IDEMPOTENCY_KEY_CONFLICT",
@@ -72,7 +74,7 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
         }
 
         try {
-            filterChain.doFilter(new CachedBodyRequest(request, body), response);
+            filterChain.doFilter(multipart ? request : new CachedBodyRequest(request, body), response);
         } finally {
             repository.markCompleted(principalScope, key, response.getStatus(), Instant.now());
         }

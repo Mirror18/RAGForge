@@ -48,6 +48,11 @@ public class IdempotencyRepository {
                 """, statusCode, Timestamp.from(completedAt), principalScope, key);
     }
 
+    public void updateRequestHash(String principalScope, String key, String requestHash) {
+        jdbc.update("UPDATE idempotency_records SET request_hash = ? WHERE principal_scope = ? AND idempotency_key = ?",
+                requestHash, principalScope, key);
+    }
+
     public record Record(String requestHash, String method, String requestPath, Integer statusCode) {
     }
 }

@@ -267,7 +267,7 @@ async function startAnswer(): Promise<void> {
     if (!runId || run.spaceId !== spaceIdAtStart || props.selectedSpaceId !== spaceIdAtStart || !run.correlationId) throw new Error("run context unavailable");
     runContext.value = { spaceId: spaceIdAtStart, runId, correlationId: run.correlationId };
     cancelIdempotencyKey = createKey(`answer-cancel-${runId}`);
-    await createAnswer(spaceIdAtStart, { ...request, runId }, createKey(`answer-create-${runId}`));
+    await createAnswer(spaceIdAtStart, { ...request, runId, correlationId: run.correlationId }, createKey(`answer-create-${runId}`));
     await streamRun(runContext.value, timeoutSeconds.value);
   } catch (error) {
     if (abortController?.signal.aborted && isTerminal()) return;

@@ -133,6 +133,26 @@ public class IngestionRepository {
         }
     }
 
+    public Optional<SourceDocument> findSourceDocumentByPath(UUID spaceId, UUID sourceId, String path) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT id, space_id, source_id, stable_source_object_id, canonical_source_path,
+                           basename, version_no, current_state, active_revision_id, correlation_id,
+                           created_at, updated_at
+                    FROM source_documents
+                    WHERE space_id = ? AND source_id = ? AND stable_source_object_id = ?
+                    """, (rs, row) -> new SourceDocument(
+                    rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                    rs.getObject("source_id", UUID.class), rs.getString("stable_source_object_id"),
+                    rs.getString("canonical_source_path"), rs.getString("basename"),
+                    rs.getInt("version_no"), DocumentState.valueOf(rs.getString("current_state")),
+                    rs.getObject("active_revision_id", UUID.class), rs.getObject("correlation_id", UUID.class),
+                    instant(rs, "created_at"), instant(rs, "updated_at")), spaceId, sourceId, path));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     public List<SourceDocument> listSourceDocuments(UUID spaceId) {
         return jdbc.query("""
                 SELECT id, space_id, source_id, stable_source_object_id, canonical_source_path,
@@ -174,6 +194,20 @@ public class IngestionRepository {
         } catch (EmptyResultDataAccessException ignored) {
             return Optional.empty();
         }
+    }
+
+    /** Creates the immutable discovery anchor required before the asynchronous job exists. */
+    @Transactional
+    public void createDiscoveryRevision(NewDiscoveryRevision input) {
+        jdbc.update("""
+                INSERT INTO document_revisions
+                    (id, space_id, source_document_id, revision_no, source_version,
+                     canonical_source_path, content_hash, revision_state, immutable,
+                     discovered_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'DISCOVERED', TRUE, ?, ?)
+                """, input.revisionId(), input.spaceId(), input.sourceDocumentId(), input.revisionNo(),
+                input.sourceVersion(), input.canonicalSourcePath(), input.contentHash(),
+                timestamp(input.discoveredAt()), timestamp(input.discoveredAt()));
     }
 
     /** Persists the mutually-referencing immutable revision/artifact/report set in one transaction. */
@@ -332,6 +366,109 @@ public class IngestionRepository {
         }
     }
 
+    public Optional<ExistingUpload> findExistingUpload(UUID spaceId, UUID sourceId, String idempotencyKey, String contentHash) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT j.id, a.id AS attempt_id, j.document_revision_id, r.source_artifact_id,
+                           j.source_document_id, d.canonical_source_path, j.status
+                    FROM ingestion_jobs j
+                    JOIN source_documents d ON d.id = j.source_document_id AND d.space_id = j.space_id
+                    LEFT JOIN document_revisions r ON r.id = j.document_revision_id AND r.space_id = j.space_id
+                    LEFT JOIN ingestion_job_attempts a ON a.space_id = j.space_id AND a.job_id = j.id
+                    WHERE j.space_id = ? AND j.source_id = ?
+                      AND (j.idempotency_key = ? OR r.content_hash = ?)
+                    ORDER BY j.created_at DESC, a.attempt_no DESC LIMIT 1
+                    """, (rs, row) -> new ExistingUpload(rs.getObject("id", UUID.class),
+                    rs.getObject("attempt_id", UUID.class), rs.getObject("document_revision_id", UUID.class),
+                    rs.getObject("source_artifact_id", UUID.class), rs.getObject("source_document_id", UUID.class),
+                    rs.getString("canonical_source_path"), rs.getString("status")),
+                    spaceId, sourceId, idempotencyKey, contentHash));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public List<IngestionJob> listJobs(UUID spaceId) {
+        return jdbc.query("""
+                SELECT id, space_id, source_id, source_document_id, document_revision_id,
+                       pipeline_version_id, status, idempotency_key, correlation_id, causation_id,
+                       version_no, created_at, updated_at
+                FROM ingestion_jobs WHERE space_id = ? ORDER BY created_at DESC LIMIT 100
+                """, (rs, row) -> new IngestionJob(
+                rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("source_id", UUID.class), rs.getObject("source_document_id", UUID.class),
+                rs.getObject("document_revision_id", UUID.class), rs.getObject("pipeline_version_id", UUID.class),
+                JobStatus.valueOf(rs.getString("status")), rs.getString("idempotency_key"),
+                rs.getObject("correlation_id", UUID.class), rs.getObject("causation_id", UUID.class),
+                rs.getInt("version_no"), instant(rs, "created_at"), instant(rs, "updated_at")), spaceId);
+    }
+
+    public List<JobAttempt> listAttempts(UUID spaceId, UUID jobId) {
+        return jdbc.query("""
+                SELECT id, space_id, job_id, attempt_no, status, idempotency_key,
+                       correlation_id, started_at, finished_at
+                FROM ingestion_job_attempts WHERE space_id = ? AND job_id = ? ORDER BY attempt_no
+                """, (rs, row) -> new JobAttempt(
+                rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("job_id", UUID.class), rs.getInt("attempt_no"),
+                AttemptStatus.valueOf(rs.getString("status")), rs.getString("idempotency_key"),
+                rs.getObject("correlation_id", UUID.class), instant(rs, "started_at"),
+                rs.getTimestamp("finished_at") == null ? null : instant(rs, "finished_at")), spaceId, jobId);
+    }
+
+    public List<PipelineStepExecution> listSteps(UUID spaceId, UUID jobId) {
+        return jdbc.query("""
+                SELECT id, space_id, job_id, attempt_id, step_name, status, attempt_no,
+                       input_artifact_id, output_artifact_id, parse_report_id, retryable,
+                       error_code, started_at, finished_at
+                FROM pipeline_step_executions WHERE space_id = ? AND job_id = ?
+                ORDER BY started_at, id
+                """, (rs, row) -> new PipelineStepExecution(
+                rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("job_id", UUID.class), rs.getObject("attempt_id", UUID.class),
+                StepName.valueOf(rs.getString("step_name")), StepStatus.valueOf(rs.getString("status")),
+                rs.getInt("attempt_no"), rs.getObject("input_artifact_id", UUID.class),
+                rs.getObject("output_artifact_id", UUID.class), rs.getObject("parse_report_id", UUID.class),
+                rs.getBoolean("retryable"), rs.getString("error_code"), instant(rs, "started_at"),
+                rs.getTimestamp("finished_at") == null ? null : instant(rs, "finished_at")), spaceId, jobId);
+    }
+
+    @Transactional
+    public UploadedJob createUploadedJob(UploadedJobInput input) {
+        jdbc.update("""
+                INSERT INTO ingestion_jobs
+                    (id, space_id, source_id, source_document_id, document_revision_id,
+                     pipeline_version_id, status, idempotency_key, correlation_id, causation_id,
+                     version_no, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'REQUESTED', ?, ?, ?, 1, ?, ?)
+                """, input.jobId(), input.spaceId(), input.sourceId(), input.sourceDocumentId(), input.jobDocumentRevisionId(),
+                input.pipelineVersionId(), input.idempotencyKey(), input.correlationId(), input.causationId(),
+                timestamp(input.now()), timestamp(input.now()));
+        jdbc.update("""
+                INSERT INTO ingestion_job_attempts
+                    (id, space_id, job_id, attempt_no, status, idempotency_key, correlation_id, started_at)
+                VALUES (?, ?, ?, 1, 'RUNNING', ?, ?, ?)
+                """, input.attemptId(), input.spaceId(), input.jobId(), input.idempotencyKey(),
+                input.correlationId(), timestamp(input.now()));
+        return new UploadedJob(input.jobId(), input.attemptId(), input.revisionId(), input.artifactId());
+    }
+
+    public Optional<UploadedArtifact> findArtifact(UUID spaceId, UUID artifactId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT id, space_id, source_document_id, document_revision_id, media_type,
+                           byte_length, sha256, storage_uri
+                    FROM artifacts WHERE space_id = ? AND id = ? AND immutable = TRUE
+                    """, (rs, row) -> new UploadedArtifact(rs.getObject("id", UUID.class),
+                    rs.getObject("space_id", UUID.class), rs.getObject("source_document_id", UUID.class),
+                    rs.getObject("document_revision_id", UUID.class), rs.getString("media_type"),
+                    rs.getLong("byte_length"), rs.getString("sha256"), rs.getString("storage_uri")),
+                    spaceId, artifactId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     @Transactional
     public JobAttempt createAttempt(NewJobAttempt input) {
         jdbc.update("""
@@ -470,4 +607,18 @@ public class IngestionRepository {
                                    CursorType cursorType, String cursor, UUID changeSetId,
                                    boolean revisionsPersisted, boolean artifactsPersisted, boolean parseReportsPersisted,
                                    boolean activePointerUpdated, boolean outboxPersisted, Instant updatedAt) {}
+    public record UploadedJob(UUID jobId, UUID attemptId, UUID revisionId, UUID artifactId) {}
+    public record NewDiscoveryRevision(UUID revisionId, UUID spaceId, UUID sourceDocumentId, int revisionNo,
+                                       String sourceVersion, String canonicalSourcePath, String contentHash,
+                                       Instant discoveredAt) {}
+    public record ExistingUpload(UUID jobId, UUID attemptId, UUID revisionId, UUID artifactId,
+                                 UUID sourceDocumentId, String displayName, String status) {}
+    public record UploadedArtifact(UUID id, UUID spaceId, UUID sourceDocumentId, UUID revisionId,
+                                   String mediaType, long byteLength, String sha256, String storageUri) {}
+    public record UploadedJobInput(UUID spaceId, UUID sourceId, UUID sourceDocumentId, UUID jobDocumentRevisionId,
+                                   UUID revisionId,
+                                   UUID artifactId, UUID pipelineVersionId, UUID jobId, UUID attemptId,
+                                   int revisionNo, String sourceVersion, String canonicalPath, String contentHash,
+                                   String mediaType, long byteLength, String storageUri, String idempotencyKey,
+                                   UUID correlationId, UUID causationId, Instant now) {}
 }

@@ -25,12 +25,13 @@
             "artifactRef": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["artifactId", "mediaType", "byteLength", "sha256"],
+              "required": ["artifactId", "mediaType", "byteLength", "sha256", "storageUri"],
               "properties": {
                 "artifactId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
                 "mediaType": {"type": "string", "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"},
                 "byteLength": {"type": "integer", "minimum": 0, "maximum": 10737418240},
-                "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}
+                "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+                "storageUri": {"type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^spaces/[0-9a-fA-F-]{36}/sources/[0-9a-fA-F-]{36}/revisions/[0-9a-fA-F-]{36}/artifacts/[0-9a-fA-F-]{36}/sha256/[0-9a-fA-F]{64}$"}
               }
             }
           }

@@ -1,6 +1,7 @@
 # 项目状态
 
 - Updated: 2026-08-23
+- 本轮业务闭环增量：已在隔离 worktree 实现前端本地 Ollama 配置初始化、Markdown 上传/任务轮询/Parse Report/active index 入口，并修复 Answer correlation 关联；真实 Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 证据见 [`2026-08-23-business-loop-e2e.md`](2026-08-23-business-loop-e2e.md)。浏览器登录后的视觉/交互验收尚未宣称完成，待本地测试账号输入确认后补齐。
 - Current stage: Phase 6 评估、观测、安全与恢复已完成（`completed-with-explicit-waiver`）；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
