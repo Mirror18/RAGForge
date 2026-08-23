@@ -1,10 +1,13 @@
-# Docker Compose Core
+# Docker Compose 运行入口
 
 `compose.yaml` 提供 RAGForge 的 core 基础设施：PostgreSQL、Qdrant、RabbitMQ、Valkey、MinIO
 （S3-compatible storage），以及可选的容器化 Ollama profile。默认 Ollama 连接宿主机
 `http://host.docker.internal:11434`，不会静默切换到云端 provider。
 
-应用镜像统一由 [`deploy/docker/Dockerfile`](../../deploy/docker/Dockerfile) 的三个 target
+本目录是 [`deploy/README.md`](../README.md) 所列的 Compose 资产索引；应用镜像构建文件统一维护在
+[`deploy/docker/Dockerfile`](../docker/Dockerfile)，不在应用目录中维护 Dockerfile 副本。
+
+应用镜像统一由 [`deploy/docker/Dockerfile`](../docker/Dockerfile) 的三个 target
 生成：`server`、`worker`、`web`。它们不默认启动，只有显式启用 `app` profile 才会进入
 Compose；这样 core 数据服务和应用运行时的生命周期可以分别管理。
 

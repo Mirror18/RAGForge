@@ -9,6 +9,7 @@ python scripts/ci/format_check.py
 python scripts/ci/secret_scan.py
 python scripts/ci/validate_compose.py --project-name ragforge-p1-orch-check --env-file deploy/compose/env.example
 python scripts/ci/architecture_check.py
+python scripts/ci/path_index_check.py
 python scripts/ci/contract_test.py
 python -m unittest discover -s tests/contract -p "test_*.py" -v
 python scripts/ci/dependency_inventory.py --require-lockfiles

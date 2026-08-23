@@ -2,11 +2,41 @@
 
 ## 1. 首发拓扑
 
-Linux Docker Compose 是 MVP 正式交付形态，Ubuntu 24.04 WSL2 是本机验收环境。部署拆为三个 profile：
+Linux Docker Compose 是 MVP 正式交付形态，Ubuntu 24.04 WSL2 是本机验收环境。规范化部署入口位于 `deploy/`，应用镜像统一由 `deploy/docker/Dockerfile` 构建。部署拆为五个 profile/运行面：
 
-- `core`：proxy、web、server、worker、ai-runtime、PostgreSQL、Qdrant、RabbitMQ、Valkey、S3-compatible storage。
+- `core`：`deploy/compose/compose.yaml` 默认启用的 PostgreSQL、Qdrant、RabbitMQ、Valkey、MinIO 基础设施。
+- `app`：同一 Compose 文件中显式启用的 Server、ingestion Worker 和静态 Web 容器。
+- `ollama`：同一 Compose 文件中的可选 Ollama 容器；默认仍连接宿主机 Ollama，不静默切换。
 - `observability`：OpenTelemetry Collector、Prometheus、Grafana、Loki、Tempo。
 - `llmops`：可选 Langfuse 及其依赖；资源较重，不是日常开发必启项。
+
+目录与入口索引：
+
+| 路径 | 用途 |
+|---|---|
+| `deploy/compose/compose.yaml` | core/app/ollama Compose 服务定义 |
+| `deploy/compose/observability.yaml` | observability overlay |
+| `deploy/docker/Dockerfile` | server/worker/web 统一多目标构建 |
+| `deploy/docker/nginx.conf` | Web 容器代理与 SPA fallback |
+| `scripts/dev/core.py` | Compose 构建、启动、停止和健康入口 |
+| `scripts/dev/start-local.bat` | Windows 宿主机源码启动入口 |
+
+容器化开发命令：
+
+```text
+python scripts/dev/core.py --profile app build
+python scripts/dev/core.py --profile app up --build
+python scripts/dev/core.py --profile app ps
+python scripts/dev/core.py --profile app down
+```
+
+Windows 本地源码模式命令：
+
+```bat
+.\scripts\dev\start-local.bat
+```
+
+两种模式共享 core 数据服务但不应同时启动同一组 Server/Worker/Web；重复启动会触发端口占用或重复消费风险。
 
 Ollama 默认运行在宿主机，通过明确地址连接；生产可替换为局域网推理服务。Compose 只保存非敏感默认值，Secret 由环境或 secret files 注入。
 

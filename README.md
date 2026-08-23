@@ -44,6 +44,9 @@ RAGForge/
 ├─ contracts/               # OpenAPI、事件 Schema、跨语言契约
 ├─ config/                  # 非敏感配置样例、提示词和模型配置模板
 ├─ deploy/                  # Compose 首发部署；Kubernetes 仅预留
+│  ├─ compose/              # core/app/ollama/observability Compose 入口
+│  ├─ docker/               # 统一 server/worker/web 多目标 Dockerfile
+│  └─ kubernetes/           # 未来预留，不作为当前交付面
 ├─ docs/                    # 产品、架构、交付、质量、安全、研究和过程记录
 ├─ fixtures/                # 可公开的测试文档和评估样本
 ├─ scripts/                 # 开发、CI、运维脚本
@@ -73,9 +76,17 @@ RAGForge/
 - [Phase 1 实施与验收结果](docs/08-records/phase-1/PHASE_1_IMPLEMENTATION_RESULTS.md)
 - [Phase 3 执行计划与验收记录](docs/08-records/phase-3/PHASE_3_EXECUTION_PLAN.md)
 
+运行入口索引：
+
+- [部署资产索引](deploy/README.md)
+- [开发脚本索引](scripts/README.md)
+- [统一 Dockerfile](deploy/docker/Dockerfile)
+- [Compose 入口](deploy/compose/compose.yaml)
+- [Windows 本地启动脚本](scripts/dev/start-local.bat)
+
 ## 4. 本地启动（开发环境）
 
-前置条件：Docker Desktop、Java 21、Maven、Node.js，以及运行于 `http://127.0.0.1:11434` 的本机 Ollama（需有 `qwen3.5:9b`、`nomic-embed-text:latest`）。Windows 下推荐使用统一启动脚本；它会启动隔离的 Compose core、为 Server 启用当前已接线的本地 adapters，再启动 Web，并在 Server/Web 就绪后输出访问地址：
+前置条件：Docker Desktop、Java 21、Maven、Node.js，以及运行于 `http://127.0.0.1:11434` 的本机 Ollama（需有 `qwen3.5:9b`、`nomic-embed-text:latest`）。Windows 下推荐使用统一启动脚本；它会启动隔离的 Compose core、Server、Worker 和 Web，并在 Server/Web 就绪后输出访问地址：
 
 ```bat
 .\scripts\dev\start-local.bat
@@ -123,7 +134,7 @@ mvn -pl apps/server spring-boot:run
 npm --prefix apps/web run dev
 ```
 
-Docker core 包含 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO；Server/Web 与本机 Ollama 不在 Docker 中。可选的 OTel/Prometheus/Grafana/Loki/Tempo 观测栈不属于应用功能硬依赖。当前 ingestion worker 仍缺生产 `IngestionSideEffectHandler`，因此统一脚本不会启动一个不消费任务的伪可用 Worker。更多端口与能力边界见 [`scripts/dev/README.md`](scripts/dev/README.md)。
+Docker core 包含 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO；Windows 启动脚本以宿主机源码方式运行 Server、Worker 和 Web。Linux/容器化运行时使用 `deploy/compose/compose.yaml` 的 `app` profile，由 `deploy/docker/Dockerfile` 生成三个应用镜像。可选的 OTel/Prometheus/Grafana/Loki/Tempo 观测栈不属于应用功能硬依赖。更多端口与能力边界见 [`scripts/dev/README.md`](scripts/dev/README.md) 与 [`deploy/README.md`](deploy/README.md)。
 
 该流程仅用于本地开发；`.env.example` 中的值是开发占位值，不能用于共享环境或生产环境。
 

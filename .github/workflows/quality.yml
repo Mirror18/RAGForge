@@ -43,6 +43,9 @@ jobs:
       - name: Check modular architecture boundary
         run: python scripts/ci/architecture_check.py
 
+      - name: Check canonical path indexes
+        run: python scripts/ci/path_index_check.py
+
       - name: Check Markdown links
         run: python scripts/ci/check_markdown_links.py
 
