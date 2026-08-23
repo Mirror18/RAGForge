@@ -10,6 +10,7 @@ COPY apps/ingestion-worker/pom.xml apps/ingestion-worker/pom.xml
 COPY apps/server/src apps/server/src
 COPY apps/ingestion-worker/src apps/ingestion-worker/src
 RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests -pl apps/ingestion-worker package spring-boot:repackage
 
 FROM node:22-bookworm-slim AS web-build
 WORKDIR /workspace/apps/web
