@@ -11,15 +11,31 @@ python scripts/dev/core.py backup-smoke --dry-run
 python scripts/dev/core.py down
 ```
 
-Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server 与 Web。`.bat` 是默认入口，内部调用 `start-local.ps1`；脚本要求 Java 21，并将启动日志写入已忽略的 `tmp/local-run/`：
+Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server 与 Web。`.bat` 是默认入口，内部调用 `start-local.ps1`；脚本要求 Docker Desktop、Java 21、Maven、Node.js 和本机 Ollama，并将启动日志写入已忽略的 `tmp/local-run/`：
 
 ```bat
 .\scripts\dev\start-local.bat
 # 仅启动 core 和 Server
 .\scripts\dev\start-local.bat -SkipWeb
+# 启动完成后打开浏览器
+.\scripts\dev\start-local.bat -OpenBrowser
 ```
 
-默认 Server/Web 端口为 `18082` 和 `5174`，可通过 `-ServerPort`、`-WebPort` 调整；`-ProjectName` 保持 Compose 网络、卷和基础设施端口隔离。
+默认 Server/Web 端口为 `18082` 和 `5174`，可通过 `-ServerPort`、`-WebPort` 调整；`-ProjectName` 保持 Compose 网络、卷和基础设施端口隔离。脚本会检查 `qwen3.5:9b` 与 `nomic-embed-text:latest`，并为 Server 显式启用 MinIO、Qdrant、RabbitMQ outbox relay、Valkey run-event fanout 和 Phase 6 运维任务；不会把本地路由静默切换为云路由。
+
+完整的当前应用运行面需要下列 Docker core 服务：
+
+| 服务 | 用途 | 默认宿主机端口 |
+| --- | --- | --- |
+| PostgreSQL | 业务数据、版本与审计真相 | `25432` |
+| Qdrant | dense candidate index | `26333`、`26334` |
+| RabbitMQ | outbox 与摄取事件传输 | `25672`、管理台 `25673` |
+| Valkey | Session、缓存和 run-event fanout | `26379` |
+| MinIO | 原始文件与解析产物 | `29000`、控制台 `29001` |
+
+Server 和 Web 当前从宿主机源码启动，不需要对应 Docker 容器。Ollama 默认也是宿主机服务（`11434`），其 Compose `ollama` profile 仅用于明确选择的全容器化 smoke 环境。`observability.yaml` 中的 OTel Collector、Prometheus、Grafana、Loki 和 Tempo 是可选运维观测面，不是应用功能依赖。
+
+当前 `apps/ingestion-worker` 尚无生产 `IngestionSideEffectHandler` 实现；在 `RAGFORGE_INGESTION_ENABLED=false` 下启动只会得到不消费消息的空闲进程，所以统一脚本不会将其伪装成完整可用能力。该缺口补齐前，可运行范围是已经接入 Server 的认证/RBAC、版本化契约、检索/索引、RAG 回答、引用、SSE、审计与 Phase 6 运维能力。
 
 `--project-name` 是本地隔离边界。入口会强制派生 `<project-name>-core` network、
 `<project-name>_...` volumes，以及稳定的 host-port block：默认 `ragforge-p1` 保留

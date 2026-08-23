@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -46,6 +47,7 @@ public class OutboxRelayService {
     private final String exchange;
     private final int batchSize;
 
+    @Autowired
     public OutboxRelayService(
             JdbcTemplate jdbc,
             ObjectMapper objectMapper,

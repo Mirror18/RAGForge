@@ -75,10 +75,16 @@ RAGForge/
 
 ## 4. 本地启动（开发环境）
 
-前置条件：Docker Desktop、Java 21、Maven 和 Node.js。Windows 下推荐使用统一启动脚本；它会启动隔离的 Compose core、Server 和 Web，并在 Server/Web 就绪后输出访问地址：
+前置条件：Docker Desktop、Java 21、Maven、Node.js，以及运行于 `http://127.0.0.1:11434` 的本机 Ollama（需有 `qwen3.5:9b`、`nomic-embed-text:latest`）。Windows 下推荐使用统一启动脚本；它会启动隔离的 Compose core、为 Server 启用当前已接线的本地 adapters，再启动 Web，并在 Server/Web 就绪后输出访问地址：
 
 ```bat
 .\scripts\dev\start-local.bat
+```
+
+如需启动后直接打开浏览器：
+
+```bat
+.\scripts\dev\start-local.bat -OpenBrowser
 ```
 
 默认访问地址为 `http://127.0.0.1:18082`（Server）和 `http://127.0.0.1:5174`（Web）。如需只启动 API，可跳过 Web：
@@ -116,6 +122,8 @@ mvn -pl apps/server spring-boot:run
 ```powershell
 npm --prefix apps/web run dev
 ```
+
+Docker core 包含 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO；Server/Web 与本机 Ollama 不在 Docker 中。可选的 OTel/Prometheus/Grafana/Loki/Tempo 观测栈不属于应用功能硬依赖。当前 ingestion worker 仍缺生产 `IngestionSideEffectHandler`，因此统一脚本不会启动一个不消费任务的伪可用 Worker。更多端口与能力边界见 [`scripts/dev/README.md`](scripts/dev/README.md)。
 
 该流程仅用于本地开发；`.env.example` 中的值是开发占位值，不能用于共享环境或生产环境。
 

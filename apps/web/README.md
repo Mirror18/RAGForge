@@ -2,10 +2,11 @@
 
 计划基线：Vue 3、TypeScript、Vite、组件/状态/测试工具在 Phase 1 锁定精确版本。
 
-当前 SPA 已提供两个 P4-G 薄客户端工作区：
+当前 SPA 提供本地账号登录/注册、首次知识空间创建，以及三个薄客户端工作区：
 
 - Chunk Studio：按当前 `spaceId` 读取 child projection，展示 provenance、parent-child、anchor、vector/index status 和 override 审计摘要；支持编辑外部已存储内容的 opaque replacement `contentRef` 与 SHA-256 `textHash`、创建 override 以及 `ACTIVE -> NEEDS_REVIEW -> ACTIVE/DISCARDED` 流转。
 - Retrieval Playground：提交 query、index version 与 profile A/B candidate，展示 dense、BM25、RRF、rerank、context、evidence 和 abstention 的结构化 trace。
+- 带引用问答：创建版本化 Run 与 Answer，消费 SSE，并展示由服务端 provenance 生成的 citation、失败和拒答状态。
 
 页面只渲染契约允许的引用、hash、位置和审计 metadata，不渲染正文、原文、embedding、vector、secret 或自由文本 citation。replacement 字段只指向外部已存储内容，正文不进入本客户端；contentRef 会拒绝空白、超长和敏感字段，textHash 必须为 64 位 SHA-256 十六进制值。A/B 实验不提供 active profile 操作。
 
@@ -25,4 +26,4 @@ npm ci
 npm run dev
 ```
 
-Vite 默认将 `/api` 与 `/actuator` 代理到 `http://127.0.0.1:18082`，可通过 `VITE_SERVER_TARGET` 覆盖。页面启动时读取当前 session 与可见空间；需要后端 session cookie 才能操作。
+Vite 默认将 `/api` 与 `/actuator` 代理到 `http://127.0.0.1:18082`，可通过 `VITE_SERVER_TARGET` 覆盖。页面启动时读取当前 session 与可见空间；未登录时显示本地账号入口，登录后若没有可见空间则引导创建第一个空间。Session 继续使用后端 HttpOnly Cookie，密码不会写入 URL、日志或浏览器存储。
