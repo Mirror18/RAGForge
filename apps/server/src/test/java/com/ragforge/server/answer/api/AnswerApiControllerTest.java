@@ -18,6 +18,7 @@ import com.ragforge.server.provider.SpaceAuthorization;
 import com.ragforge.server.run.RunEvent;
 import com.ragforge.server.run.RunEventService;
 import com.ragforge.server.run.RunEventStore;
+import com.ragforge.server.run.RunRepository;
 import com.ragforge.server.retrieval.EvidenceBundle;
 import com.ragforge.server.space.SpaceRole;
 import org.junit.jupiter.api.Test;
@@ -199,6 +200,31 @@ class AnswerApiControllerTest {
                 assertThat(envelope.at("/payload/citation").has("retrieval_profile_version")).isFalse();
             }
         }
+    }
+
+    @Test
+    void publisherProjectsRagUsageFromTheSameSpaceAndRun() throws Exception {
+        RunEventService eventService = mock(RunEventService.class);
+        RunRepository runs = mock(RunRepository.class);
+        when(runs.findUsageByRun(spaceId, runId)).thenReturn(List.of(new RunRepository.UsageLedgerRecord(
+                UuidV7.random(), spaceId, UuidV7.random(), "rag-" + runId,
+                RunRepository.UsageSource.PROVIDER_REPORTED, "rag-" + runId,
+                384L, 79L, 463L, java.math.BigDecimal.ZERO, "USD", "{}",
+                Instant.now(), Instant.now(), correlationId)));
+
+        new AnswerEventPublisher(eventService, objectMapper, null, runs).publish(completedAnswer());
+
+        ArgumentCaptor<String> payloads = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> types = ArgumentCaptor.forClass(String.class);
+        verify(eventService, org.mockito.Mockito.times(4)).append(eq(spaceId), eq(runId), eq(correlationId),
+                types.capture(), eq(1), payloads.capture());
+        int usageIndex = types.getAllValues().indexOf("answer.usage");
+        assertThat(usageIndex).isGreaterThanOrEqualTo(0);
+        JsonNode usage = objectMapper.readTree(payloads.getAllValues().get(usageIndex));
+        assertThat(usage.get("inputTokens").asLong()).isEqualTo(384L);
+        assertThat(usage.get("outputTokens").asLong()).isEqualTo(79L);
+        assertThat(usage.get("totalTokens").asLong()).isEqualTo(463L);
+        assertThat(usage.get("providerReported").asBoolean()).isTrue();
     }
 
     @Test
