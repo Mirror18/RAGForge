@@ -117,7 +117,7 @@ public class AuthController {
     public record CurrentSessionResponse(SessionResponse session, UserResponse user) {
         static CurrentSessionResponse from(SessionPrincipal principal) {
             UserAccount user = new UserAccount(principal.userId(), principal.email(), principal.displayName(),
-                    "", principal.platformRole());
+                    "", principal.platformRole(), "ACTIVE", null, null);
             return new CurrentSessionResponse(SessionResponse.from(principal), UserResponse.from(user));
         }
     }

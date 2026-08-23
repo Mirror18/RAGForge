@@ -115,3 +115,10 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 - `R-032` 已关闭（本轮业务闭环范围）：真实浏览器完成注册/登录、建空间、配置发布、摄取、索引、引用问答、引用预览、Run/Step/usage 和增量同步；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。这不代表 Phase 7 发布验收或观测 Dashboard 视觉验收完成。
 - `R-034` 保持 MITIGATING：`D:\\project\\learning\\notes` 已作为本地配置约定，浏览器入口、Markdown/.obsidian 过滤和相对路径安全已验证；本轮为避免读取个人内容，未执行真实个人 notes 摄取。用户显式选择脱敏目录后再补 corpus 证据。
+
+## 11. 用户与空间管理、前端可用性增量复审（2026-08-24）
+
+- 新增 `R-036`：平台管理员首个授予仍依赖受控运维流程，若部署未完成 bootstrap，普通注册用户无法看到平台用户管理入口。P=3、I=3、Score=9，Operations / IAM，MITIGATING；不自动提升首个注册用户，部署时按受控流程授予 `PLATFORM_ADMIN`，并在后续补充 bootstrap runbook。
+- 新增 `R-037`：本轮完成 API/构建/集成安全回归，但尚未替代真实浏览器对用户管理、空间归档和时区显示的视觉验收。P=2、I=3、Score=6，Product / Web，MITIGATING；已增加清晰入口、错误提示和浏览器时区显示，下一轮用真实测试账号执行 Web smoke。
+- `R-033` 继续保持 MITIGATING：MiMo 凭据只存在本地 ignored 配置，且曾在对话中暴露；使用后仍应轮换，生产必须使用 Secret 管理。
+- `R-004` 的云端出境边界未放宽：Chat 默认优先 MiMo 仅是前端选择策略，仍必须经过空间授权和 typed authorization context；Embedding/Rerank 保持本地，不允许静默 fallback。

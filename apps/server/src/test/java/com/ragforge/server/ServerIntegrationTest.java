@@ -237,6 +237,92 @@ class ServerIntegrationTest {
     }
 
     @Test
+    void platformAdminCanManageUsersButRegularUserCannot() throws Exception {
+        register("admin@example.test", "correct horse battery", "Admin");
+        UUID adminId = userId("admin@example.test");
+        jdbc.update("UPDATE users SET platform_role = 'PLATFORM_ADMIN' WHERE id = ?", adminId);
+        Login admin = login("admin@example.test", "correct horse battery", "/auth/login");
+
+        mvc.perform(get("/api/v1/users").cookie(admin.cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.items[0].createdAt").exists())
+                .andExpect(jsonPath("$.items[0].passwordHash").doesNotExist());
+
+        MvcResult created = mvc.perform(post("/api/v1/users").cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "admin-create-managed-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"managed@example.test\",\"displayName\":\"Managed\",\"password\":\"correct horse battery\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andReturn();
+        UUID managedId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString()).get("userId").asText());
+
+        mvc.perform(put("/api/v1/users/{userId}", managedId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "admin-update-managed-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Managed Updated\",\"platformRole\":\"USER\",\"status\":\"ACTIVE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Managed Updated"));
+
+        mvc.perform(delete("/api/v1/users/{userId}", managedId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "admin-disable-managed-user"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DISABLED"));
+        mvc.perform(post("/api/v1/auth/login")
+                        .header("Idempotency-Key", "disabled-login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"managed@example.test\",\"password\":\"correct horse battery\"}"))
+                .andExpect(status().isUnauthorized());
+
+        register("regular@example.test", "correct horse battery", "Regular");
+        Login regular = login("regular@example.test", "correct horse battery", "/sessions");
+        mvc.perform(get("/api/v1/users").cookie(regular.cookie))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PLATFORM_ADMIN_REQUIRED"));
+    }
+
+    @Test
+    void spaceAdminCanUpdateArchiveAndManageMembersWithVersionChecks() throws Exception {
+        register("space-admin@example.test", "correct horse battery", "Space Admin");
+        Login admin = login("space-admin@example.test", "correct horse battery", "/sessions");
+        MvcResult created = mvc.perform(post("/api/v1/spaces").cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "space-crud-create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"CRUD Space\",\"description\":\"before\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        String spaceId = objectMapper.readTree(created.getResponse().getContentAsString()).get("spaceId").asText();
+
+        mvc.perform(put("/api/v1/spaces/{spaceId}", spaceId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "space-crud-update")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"CRUD Space Updated\",\"description\":\"after\",\"version\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("CRUD Space Updated"))
+                .andExpect(jsonPath("$.version").value(1));
+
+        mvc.perform(get("/api/v1/spaces/{spaceId}/members", spaceId).cookie(admin.cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].email").value("space-admin@example.test"))
+                .andExpect(jsonPath("$.items[0].role").value("SPACE_ADMIN"));
+
+        mvc.perform(delete("/api/v1/spaces/{spaceId}", spaceId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "space-crud-archive")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/spaces").cookie(admin.cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty());
+    }
+
+    @Test
     void idempotencyBindsAnonymousRequestHashAndRejectsReuse() throws Exception {
         String body = "{\"email\":\"idempotent@example.test\",\"password\":\"correct horse battery\",\"displayName\":\"Idempotent\"}";
         mvc.perform(post("/api/v1/auth/register")

@@ -1,6 +1,6 @@
 # 项目状态
 
-- Updated: 2026-08-23
+- Updated: 2026-08-24
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
 - Current stage: Phase 6 评估、观测、安全与恢复已完成（`completed-with-explicit-waiver`）；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
 - Repository: GitHub `Mirror18/RAGForge`
@@ -114,3 +114,10 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - RAG prompt 初始化与校验已强化为 `claim_text` 必须是 `answer_text` 的精确连续子串；无效可选字符范围由服务端安全回退为文本定位，伪造 citation UUID 仍严格拒绝。
 - 常用本地知识库入口已加入业务流：前端可选择本地 `notes` 文件夹，仅提交 Markdown，并以文件夹相对路径进入当前空间；`.obsidian` 目录、附件和非 Markdown 文件被过滤，服务端继续执行路径遍历、绝对路径和控制字符拒绝。`.env.local` 已配置本机 notes 根路径供本地开发约定使用，但浏览器仍要求用户显式选择文件夹，避免服务端任意读取本机文件。
 - 本轮证据和限制见 [`2026-08-23-mimo-notes-business-loop.md`](2026-08-23-mimo-notes-business-loop.md)。实际个人 notes 文件选择/摄取未在自动化浏览器工具中伪造完成，待用户在浏览器文件选择器中执行一次后再补充真实 corpus 摄取证据；个人 notes 不进入 Git、CI、长期 evidence 或云端调用。
+## 9. 管理与前端闭环增量（2026-08-24）
+
+- 平台用户管理已落地：`PLATFORM_ADMIN` 可查看、创建、编辑、停用用户；停用为可审计软删除，禁止自我降权/自我停用，停用用户的登录和已有 session 均失效；普通用户请求用户管理接口返回 403。首个平台管理员仍需通过受控运维流程授予，普通注册账号不会自动升级。
+- 知识空间管理已落地：空间管理员可编辑名称/描述、归档空间、查看成员、调整成员角色和移除成员；所有写入使用版本乐观锁，归档不物理删除，最后一个空间管理员不可被降权或移除。成员分配只接受 ACTIVE 用户。
+- 前端业务入口已整理为“空间 → 成员/用户 → 云端 Chat 配置 → 知识导入/索引 → 问答追踪”；账号与空间页显示浏览器 IANA 时区，日期时间统一按浏览器时区格式化；`selectedPromptTemplateId` 已在控制台声明并由 TypeScript/构建门禁覆盖。
+- Chat 模型默认优先选择云端 MiMo；云端调用仍需要空间显式授权和 typed authorization context，不允许静默云端回退。Embedding/Rerank 继续保持本地能力边界，避免把用户对 Chat 的云端选择扩大成未经授权的全链路出境。
+- 代码与证据：`V16__user_lifecycle_management.sql`、`UserAdminController/Service`、`SpaceController/Service`、`PersonalSpaceView.vue`、`format.ts`、OpenAPI v1 增量；`ServerIntegrationTest` 新增用户管理与空间管理安全回归。验证结果为服务端 `ServerIntegrationTest` 7/7、服务端 Java 21 compile、Web format/build、OpenAPI JSON contract test 通过。

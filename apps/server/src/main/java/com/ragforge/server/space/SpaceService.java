@@ -29,6 +29,16 @@ public class SpaceService {
         return spaceRepository.findAllForUser(principal.userId());
     }
 
+    public List<SpaceMemberView> listMembers(SessionPrincipal principal, UUID spaceId) {
+        requireAdmin(principal, spaceId);
+        ensureActive(spaceId);
+        return spaceRepository.findMembers(spaceId);
+    }
+
+    public long currentVersion(UUID spaceId) {
+        return ensureActive(spaceId).version();
+    }
+
     @Transactional
     public KnowledgeSpace create(SessionPrincipal principal, String name, String description,
                                  HttpServletRequest request) {
@@ -47,23 +57,87 @@ public class SpaceService {
     @Transactional
     public SpaceMember updateMember(SessionPrincipal principal, UUID spaceId, UUID userId, SpaceRole role,
                                     HttpServletRequest request) {
-        SpaceRole actorRole = spaceRepository.findRole(spaceId, principal.userId()).orElseThrow(() ->
-                new ApiException(HttpStatus.NOT_FOUND, "space_not_found", "Space not found", "Space not found"));
-        if (actorRole != SpaceRole.SPACE_ADMIN) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "space_admin_required", "Forbidden",
-                    "Space admin permission is required");
-        }
-        if (spaceRepository.findById(spaceId).isEmpty()) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "space_not_found", "Space not found", "Space not found");
-        }
+        requireAdmin(principal, spaceId);
+        ensureActive(spaceId);
         if (!spaceRepository.userExists(userId)) {
             throw new ApiException(HttpStatus.NOT_FOUND, "user_not_found", "User not found", "User not found");
+        }
+        if (principal.userId().equals(userId) && role != SpaceRole.SPACE_ADMIN && spaceRepository.countAdmins(spaceId) <= 1) {
+            throw new ApiException(HttpStatus.CONFLICT, "last_space_admin", "Last admin cannot be removed",
+                    "A space must retain at least one space administrator");
         }
         Instant now = Instant.now();
         long version = spaceRepository.upsertMembership(spaceId, userId, role, now);
         auditOutboxService.record("space.member.updated.v1", principal.userId(), spaceId, spaceId,
                 correlationId(request), Map.of("spaceId", spaceId, "userId", userId, "role", role.name()));
         return new SpaceMember(spaceId, userId, role, version);
+    }
+
+    @Transactional
+    public KnowledgeSpace update(SessionPrincipal principal, UUID spaceId, String name, String description,
+                                 long expectedVersion, HttpServletRequest request) {
+        requireAdmin(principal, spaceId);
+        KnowledgeSpace current = ensureActive(spaceId);
+        try {
+            if (!spaceRepository.updateSpace(spaceId, name.trim(), description == null ? null : description.trim(),
+                    expectedVersion, Instant.now())) {
+                throw new ApiException(HttpStatus.PRECONDITION_FAILED, "space_version_conflict", "Version conflict",
+                        "The space changed since it was loaded");
+            }
+        } catch (org.springframework.dao.DuplicateKeyException exception) {
+            throw new ApiException(HttpStatus.CONFLICT, "space_name_already_exists", "Space name already exists",
+                    "Choose a different space name");
+        }
+        auditOutboxService.record("space.updated.v1", principal.userId(), spaceId, spaceId,
+                correlationId(request), Map.of("spaceId", spaceId, "previousVersion", current.version()));
+        return spaceRepository.findById(spaceId).orElseThrow();
+    }
+
+    @Transactional
+    public void archive(SessionPrincipal principal, UUID spaceId, long expectedVersion, HttpServletRequest request) {
+        requireAdmin(principal, spaceId);
+        KnowledgeSpace current = ensureActive(spaceId);
+        if (!spaceRepository.archive(spaceId, expectedVersion, Instant.now())) {
+            throw new ApiException(HttpStatus.PRECONDITION_FAILED, "space_version_conflict", "Version conflict",
+                    "The space changed since it was loaded");
+        }
+        auditOutboxService.record("space.archived.v1", principal.userId(), spaceId, spaceId,
+                correlationId(request), Map.of("spaceId", spaceId, "previousVersion", current.version()));
+    }
+
+    @Transactional
+    public void removeMember(SessionPrincipal principal, UUID spaceId, UUID userId, HttpServletRequest request) {
+        requireAdmin(principal, spaceId);
+        ensureActive(spaceId);
+        SpaceRole targetRole = spaceRepository.findRole(spaceId, userId).orElseThrow(() ->
+                new ApiException(HttpStatus.NOT_FOUND, "member_not_found", "Member not found", "Member not found"));
+        if (targetRole == SpaceRole.SPACE_ADMIN && spaceRepository.countAdmins(spaceId) <= 1) {
+            throw new ApiException(HttpStatus.CONFLICT, "last_space_admin", "Last admin cannot be removed",
+                    "A space must retain at least one space administrator");
+        }
+        if (!spaceRepository.deleteMembership(spaceId, userId)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "member_not_found", "Member not found", "Member not found");
+        }
+        auditOutboxService.record("space.member.removed.v1", principal.userId(), spaceId, spaceId,
+                correlationId(request), Map.of("spaceId", spaceId, "userId", userId));
+    }
+
+    private void requireAdmin(SessionPrincipal principal, UUID spaceId) {
+        SpaceRole actorRole = spaceRepository.findRole(spaceId, principal.userId()).orElseThrow(() ->
+                new ApiException(HttpStatus.NOT_FOUND, "space_not_found", "Space not found", "Space not found"));
+        if (actorRole != SpaceRole.SPACE_ADMIN && !"PLATFORM_ADMIN".equals(principal.platformRole())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "space_admin_required", "Forbidden",
+                    "Space admin permission is required");
+        }
+    }
+
+    private KnowledgeSpace ensureActive(UUID spaceId) {
+        KnowledgeSpace space = spaceRepository.findById(spaceId).orElseThrow(() ->
+                new ApiException(HttpStatus.NOT_FOUND, "space_not_found", "Space not found", "Space not found"));
+        if (!"ACTIVE".equals(space.status())) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "space_not_found", "Space not found", "Space not found");
+        }
+        return space;
     }
 
     private UUID correlationId(HttpServletRequest request) {

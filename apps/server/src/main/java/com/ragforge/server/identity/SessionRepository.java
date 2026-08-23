@@ -45,7 +45,7 @@ public class SessionRepository {
         }
         return jdbc.query("""
                         SELECT email, display_name, platform_role
-                        FROM users WHERE id = ?
+                        FROM users WHERE id = ? AND status = 'ACTIVE'
                         """, (rs, rowNum) -> new SessionPrincipal(
                         stored.userId(), stored.sessionId(), rs.getString("email"), rs.getString("display_name"),
                         stored.csrfToken(), rs.getString("platform_role"), stored.expiresAt()),
