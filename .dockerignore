@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+**/node_modules
+**/target
+**/dist
+tmp
+tests/evidence
+tests/fixtures
+notes
+*.log
+*.pid
+*.iml
+.idea
+.vscode

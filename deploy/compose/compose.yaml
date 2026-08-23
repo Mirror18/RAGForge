@@ -5,9 +5,8 @@ name: ${COMPOSE_PROJECT_NAME:-ragforge-p1}
 x-ragforge-provider:
   OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
 
-# Phase 1 core infrastructure only. Application containers will be added when
-# their contracts and build artifacts exist; the stack must remain usable before
-# those services are implemented.
+# Core infrastructure is always available. The optional app profile adds the
+# server, ingestion worker and static web container from the unified Dockerfile.
 services:
   postgres:
     image: ${POSTGRES_IMAGE:-postgres:16.4-alpine}
@@ -149,6 +148,116 @@ services:
       timeout: 10s
       retries: 12
       start_period: 20s
+
+  server:
+    image: ${RAGFORGE_SERVER_IMAGE:-ragforge/server:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: server
+    profiles:
+      - app
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8080
+      JDBC_DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ragforge}
+      JDBC_DATABASE_USERNAME: ${POSTGRES_USER:-ragforge}
+      JDBC_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      VALKEY_URL: redis://:${VALKEY_PASSWORD:-change-me}@valkey:6379
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-ragforge}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-change-me}
+      RAGFORGE_RABBIT_HEALTH_ENABLED: "true"
+      RAGFORGE_OBJECT_STORAGE_ENABLED: "true"
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-ragforge}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-minio-secret}
+      S3_BUCKET: ${S3_BUCKET:-ragforge}
+      S3_PREFIX: ${S3_PREFIX:-phase3}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-change-me}
+      RAGFORGE_OUTBOX_RELAY_ENABLED: "true"
+      RAGFORGE_RUN_EVENT_FANOUT_ENABLED: "true"
+      RAGFORGE_PHASE6_OPERATIONS_ENABLED: "true"
+    ports:
+      - "${APP_SERVER_PORT:-25082}:8080"
+    networks:
+      - core
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker:
+    image: ${RAGFORGE_WORKER_IMAGE:-ragforge/ingestion-worker:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: worker
+    profiles:
+      - app
+    restart: unless-stopped
+    environment:
+      RAGFORGE_INGESTION_ENABLED: "true"
+      RAGFORGE_RABBITMQ_HOST: rabbitmq
+      RAGFORGE_RABBITMQ_PORT: 5672
+      RAGFORGE_RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-ragforge}
+      RAGFORGE_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-change-me}
+      JDBC_DATABASE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-ragforge}
+      JDBC_DATABASE_USERNAME: ${POSTGRES_USER:-ragforge}
+      JDBC_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-ragforge}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-minio-secret}
+      S3_BUCKET: ${S3_BUCKET:-ragforge}
+      S3_PREFIX: ${S3_PREFIX:-phase3}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-change-me}
+      OLLAMA_ENDPOINT: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}
+    networks:
+      - core
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  web:
+    image: ${RAGFORGE_WEB_IMAGE:-ragforge/web:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: web
+    profiles:
+      - app
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-25174}:80"
+    networks:
+      - core
+    depends_on:
+      - server
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O /dev/null http://127.0.0.1/
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
 
 networks:
   core:

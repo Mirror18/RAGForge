@@ -9,6 +9,8 @@ python scripts/dev/core.py health
 python scripts/dev/core.py ps
 python scripts/dev/core.py backup-smoke --dry-run
 python scripts/dev/core.py down
+python scripts/dev/core.py --profile app build
+python scripts/dev/core.py --profile app up --build
 ```
 
 Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server 与 Web。`.bat` 是默认入口，内部调用 `start-local.ps1`；脚本要求 Docker Desktop、Java 21、Maven、Node.js 和本机 Ollama，并将启动日志写入已忽略的 `tmp/local-run/`：
@@ -33,7 +35,7 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server �
 | Valkey | Session、缓存和 run-event fanout | `26379` |
 | MinIO | 原始文件与解析产物 | `29000`、控制台 `29001` |
 
-Server 和 Web 当前从宿主机源码启动，不需要对应 Docker 容器。Ollama 默认也是宿主机服务（`11434`），其 Compose `ollama` profile 仅用于明确选择的全容器化 smoke 环境。`observability.yaml` 中的 OTel Collector、Prometheus、Grafana、Loki 和 Tempo 是可选运维观测面，不是应用功能依赖。
+Server 和 Web 默认仍从宿主机源码启动；需要完整容器化运行时可启用 `app` profile。应用镜像统一由 `deploy/docker/Dockerfile` 的 `server`、`worker`、`web` targets 生成。Ollama 默认也是宿主机服务（`11434`），其 Compose `ollama` profile 仅用于明确选择的全容器化 smoke 环境。`observability.yaml` 中的 OTel Collector、Prometheus、Grafana、Loki 和 Tempo 是可选运维观测面，不是应用功能依赖。
 
 当前 `apps/ingestion-worker` 尚无生产 `IngestionSideEffectHandler` 实现；在 `RAGFORGE_INGESTION_ENABLED=false` 下启动只会得到不消费消息的空闲进程，所以统一脚本不会将其伪装成完整可用能力。该缺口补齐前，可运行范围是已经接入 Server 的认证/RBAC、版本化契约、检索/索引、RAG 回答、引用、SSE、审计与 Phase 6 运维能力。
 

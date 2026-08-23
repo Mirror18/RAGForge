@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""统一管理 RAGForge Phase 1 core Compose 的本地入口。"""
+"""统一管理 RAGForge Docker Compose core/app profile 的本地入口。"""
 
 from __future__ import annotations
 
@@ -52,10 +52,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--profile", action="append", default=[], help="启用 Compose profile，可重复指定")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("config", help="渲染并校验 Compose 配置")
-    subparsers.add_parser("ps", help="查看 core 容器状态")
+    subparsers.add_parser("ps", help="查看启用 profile 的容器状态")
     up = subparsers.add_parser("up", help="启动 core 容器")
     up.add_argument("--foreground", action="store_true", help="前台运行，不使用 -d")
-    down = subparsers.add_parser("down", help="停止 core 容器并保留数据卷")
+    up.add_argument("--build", action="store_true", help="启动前构建启用 profile 的应用镜像")
+    build = subparsers.add_parser("build", help="构建启用 profile 的应用镜像")
+    build.add_argument("--no-cache", action="store_true", help="禁用 Docker 构建缓存")
+    down = subparsers.add_parser("down", help="停止启用 profile 的容器并保留数据卷")
     down.add_argument("--volumes", action="store_true", help="显式删除本项目数据卷")
     subparsers.add_parser("health", help="执行基础设施健康探针")
     backup = subparsers.add_parser("backup-smoke", help="执行 PostgreSQL 备份 smoke")
@@ -82,8 +85,15 @@ def main() -> int:
         return run(compose_command(args) + ["ps"], environment)
     if args.command == "up":
         command = compose_command(args) + ["up"]
+        if args.build:
+            command.append("--build")
         if not args.foreground:
             command.append("--detach")
+        return run(command, environment)
+    if args.command == "build":
+        command = compose_command(args) + ["build"]
+        if args.no_cache:
+            command.append("--no-cache")
         return run(command, environment)
     if args.command == "down":
         command = compose_command(args) + ["down", "--remove-orphans"]
