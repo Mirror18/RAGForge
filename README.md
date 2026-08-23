@@ -2,9 +2,9 @@
 
 RAGForge 是一个面向企业内部、单租户多用户场景的通用 RAG 知识助手学习型工程。仓库的首要目标不是快速堆出一个聊天页面，而是完整实践商业项目从产品定义、架构决策、研发、测试、安全、交付到运维复盘的全过程。
 
-当前阶段为 **Phase 3 Complete; Phase 4 Ready**：工程与领域骨架、Provider/Prompt/Run 纵向切片，以及版本化摄取流水线均已完成阶段验收。下一阶段为 Chunk Studio、索引与检索；带引用的 RAG 问答尚未实现。
+当前阶段为 **Phase 6 Complete; Phase 7 Ready**：工程骨架、Provider/Prompt/Run、版本化摄取、索引检索、带引用问答、评估/安全/观测/恢复均已完成阶段验收；真实 Web 业务闭环证据见 [`business-loop-e2e.v1.json`](tests/evidence/business-loop-e2e.v1.json)。下一阶段为 Linux 交付与可公开准备。
 
-当前可运行范围：本地环境可启动基础设施、Server、Worker 与 Web 骨架；已实现的接口包括身份与空间 RBAC、Provider/Prompt/Run，以及文件、本地目录和 Git 的版本化摄取。实际运行状态和验收证据以[项目状态](docs/08-records/PROJECT_STATUS.md)为准。
+当前可运行范围：本地环境可启动基础设施、Server、Worker 与 Web；用户可在浏览器注册测试账号、创建空间、发布本地 Ollama 配置和 Prompt、上传 Markdown、等待真实摄取/索引、执行带结构化引用的 LOCAL_ONLY 问答，并查看 Run/Step/usage。常用本地 notes 目录通过显式文件夹选择接入，个人内容不会自动读取。实际运行状态和验收证据以[项目状态](docs/08-records/PROJECT_STATUS.md)为准。
 
 ## 1. 已确认的产品边界
 
@@ -134,7 +134,7 @@ Foundation 阶段完成不等于“目录已经建好”。还需满足：
 1. 执行 [Phase 0 基准研究](docs/03-delivery/ROADMAP.md#phase-0竞品基准与许可证闸门)。
 2. 固化首版 ADR、领域词汇和验收样本。
 3. 建立 CI、依赖锁定、SBOM 与秘密扫描。
-4. 创建最薄端到端切片：登录 → 建空间 → 导入 Markdown → 检索 → 带引用回答。
+4. 创建最薄端到端切片：注册/登录 → 建空间 → 发布本地配置 → 导入 Markdown → 等待摄取与 active index → 带引用回答 → 增量同步复验。
 5. 每个阶段复盘保存在 `docs/08-records/retrospectives/`；项目稳定后再选择性同步到 Obsidian。
 
 ## 7. 许可证与引用

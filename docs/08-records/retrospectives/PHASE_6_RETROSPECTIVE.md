@@ -41,6 +41,10 @@
 - 版本化 Prompt、Profile、Route 和空间绑定可以复用现有 API，但需要一个显式的本地 Ollama 初始化入口，否则新空间无法从控制台走到可问答状态。
 - Run 创建和 Answer 提交必须复用服务端返回的 correlation ID；仅在每次请求生成新的 correlation ID 会在真实问答流程中触发 `RUN_CORRELATION_MISMATCH`。
 - Worker 的对象存储依赖要和 `ragforge.ingestion.enabled` 同步启用；否则禁用摄取的集成测试上下文会被业务 handler 的强制依赖阻断。
+- 真实浏览器验收补齐了此前只停留在 API/构建层的缺口：同一测试空间通过 UI 完成注册、配置发布、两次 Markdown 摄取、候选索引发布、LOCAL_ONLY 引用问答和 Run/Step 追踪；最新证据的答案事件序列为 `DELTA → CITATION → USAGE → DONE`。
+- 发现并修正了两个可见性缺口：本地 Ollama 默认等待窗口不足导致首答超时；成功 Run 的 correlationId 误从 error 投影读取。两者均通过真实浏览器复验，失败重试保留在证据中。
+- 增量同步真实生成第二个 immutable revision 和 active index v2，同时保留 v1；第二次回答的 citation 指向 v2 revision/chunk，旧 revision 仍可审计。
+- 跨空间负测通过 UI 读取第一空间 Run 返回 `RUN_NOT_FOUND`；个人 notes 仍只作为显式本地文件选择入口，本轮不读取私人内容。
 
 - “有 runner”不等于“有人工质量结论”；证据状态必须把 deterministic、synthetic、real、manual 分开记录。
 - 容量演练的真实维度探针、批量写入、混合查询和在线 API/SSE 探针应拆成可独立重试的阶段，避免一个 Qdrant 超时阻塞所有指标。

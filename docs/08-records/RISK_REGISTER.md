@@ -112,3 +112,6 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - 新增 `R-033`：MiMo 凭据已按用户要求写入本地 ignored `.env.local`，但密钥曾在对话中暴露，存在凭据泄露风险。P=4、I=5、Score=20，Security / Operations，MITIGATING；不进入 Git、日志、证据或 CI，使用后应尽快在 MiMo 控制台轮换/撤销；生产环境改用正式 Secret 管理。
 - 新增 `R-034`：浏览器安全模型要求用户显式选择本地 `notes` 文件夹，当前自动化浏览器工具未执行真实文件选择和个人 notes 摄取。P=3、I=4、Score=12，Product / Web，MITIGATING；保留文件夹入口、`.obsidian` 过滤、相对路径安全校验，待用户选择一次真实脱敏目录后补充 ingestion E2E 证据。
 - 新增 `R-035`：Ollama `qwen3.5:0.8b` 在真实回答中产生不满足 citation range 投影的结构化结果。P=3、I=4、Score=12，RAG / Platform，MITIGATING；默认使用已通过真实 RAG E2E 的 `qwen3.5:9b`，服务端保留严格 citation 校验和安全范围回退，不把小模型作为默认验收基线。
+
+- `R-032` 已关闭（本轮业务闭环范围）：真实浏览器完成注册/登录、建空间、配置发布、摄取、索引、引用问答、引用预览、Run/Step/usage 和增量同步；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。这不代表 Phase 7 发布验收或观测 Dashboard 视觉验收完成。
+- `R-034` 保持 MITIGATING：`D:\\project\\learning\\notes` 已作为本地配置约定，浏览器入口、Markdown/.obsidian 过滤和相对路径安全已验证；本轮为避免读取个人内容，未执行真实个人 notes 摄取。用户显式选择脱敏目录后再补 corpus 证据。

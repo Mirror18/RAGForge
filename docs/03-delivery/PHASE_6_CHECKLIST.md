@@ -70,6 +70,7 @@
 - 人工/red-team 评审 manifest：[`phase6-human-redteam-review.manifest.v1.json`](../../tests/evidence/phase6-human-redteam-review.manifest.v1.json)；项目用户于 2026-08-23 明确批准豁免至少 2 名人审 + 1 名红队评审门槛，manifest 为 `PASS_WITH_EXPLICIT_WAIVER`。`signatures` 保持为空；这不是人工复核通过，也不是用自动化结果代签；残余风险为 R-005、R-012。
 - Agent-assisted red-team 前置报告：[`phase6-redteam-agent-pre-review.v1.json`](../../tests/evidence/phase6-redteam-agent-pre-review.v1.json)；4 组可重跑安全/合同/工具测试共 32 tests 通过，但明确不替代人工签名。
 - 多实例 live fan-out：[`ADR-0011`](../../docs/02-architecture/adr/0011-multi-instance-run-event-fanout.md) 已由用户于 2026-08-22 接受；[`phase6-multi-instance-run-event-fanout.v1.json`](../../tests/evidence/phase6-multi-instance-run-event-fanout.v1.json) 与双 Spring context 集成测试通过。该证据仅覆盖隔离 PostgreSQL/Valkey 与合成数据，不外推生产容量或云端部署。
+- Web 业务闭环补充：[`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json) 记录真实浏览器注册/登录、空间、LOCAL_ONLY 配置发布、两次上传摄取、Parse Report、候选索引发布、两次带结构化引用的回答、Run/Step/usage 展示及跨空间 404；仅使用公共 synthetic Markdown，个人 notes 仍需用户显式选择且不进入长期证据。
 
 ## 阶段治理例外
 

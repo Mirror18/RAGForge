@@ -21,6 +21,8 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server �
 
 默认 Server/Web 端口为 `18082` 和 `5174`，可通过 `-ServerPort`、`-WebPort` 调整；`-ProjectName` 保持 Compose 网络、卷和基础设施端口隔离。
 
+启动后可直接打开 Web 完成真实业务闭环：注册/登录 → 创建空间 → 初始化本地 Ollama → 选择 Markdown（或显式选择本地 notes 文件夹）→ 等待摄取和 active index → 带引用问答 → Run/Step/usage → 再次上传修改后的同一文件验证增量 Revision。可复核证据见 [`tests/evidence/business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 不会被服务端自动扫描，云端 route 也不会自动回退。
+
 `--project-name` 是本地隔离边界。入口会强制派生 `<project-name>-core` network、
 `<project-name>_...` volumes，以及稳定的 host-port block：默认 `ragforge-p1` 保留
 基准端口；其他 project 使用 `SHA-256(project_name) mod 997 * 20` 作为偏移，所有端口
