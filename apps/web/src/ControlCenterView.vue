@@ -9,6 +9,7 @@ const props = defineProps<{
   currentRole: SpaceRole | PlatformRole | string;
   currentUserId: string;
   initialSection?: ControlSection;
+  initialRunId?: string;
 }>();
 
 const section = ref<ControlSection>(props.initialSection ?? "providers");
@@ -20,13 +21,22 @@ const modelProfiles = ref<ModelProfile[]>([]);
 const modelRoutes = ref<ModelRoute[]>([]);
 const promptTemplates = ref<PromptTemplate[]>([]);
 const promptVersionDetails = ref<PromptVersion | null>(null);
-const runId = ref("");
+const runId = ref(props.initialRunId ?? "");
 const runSnapshot = ref<RunSnapshot | null>(null);
 
 const providerForm = ref({ displayName: "本地 Ollama", providerType: "OLLAMA", egressClass: "LOCAL", endpoint: "http://127.0.0.1:11434", credentialRef: "local-ollama", status: "ACTIVE" });
-const profileForm = ref({ providerConnectionId: "", purpose: "CHAT", modelName: "qwen3.5:9b", capabilities: "CHAT,STREAMING,TOOLS,USAGE_REPORTING", contextWindow: 8192, maxOutputTokens: 1024, embeddingDimension: null as number | null, usageReporting: "PROVIDER_REPORTED", status: "DRAFT" });
-const routeForm = ref({ purpose: "CHAT", egressClass: "LOCAL", failoverPolicy: "NONE", modelProfileId: "", status: "DRAFT" });
+const profileForm = ref({ providerConnectionId: "", purpose: "CHAT", modelName: "qwen3.5:9b", capabilities: "CHAT,STREAMING,TOOLS,USAGE_REPORTING", contextWindow: 8192, maxOutputTokens: 1024, embeddingDimension: null as number | null, usageReporting: "PROVIDER_REPORTED", status: "PUBLISHED" });
+const routeForm = ref({ purpose: "CHAT", egressClass: "LOCAL", failoverPolicy: "NONE", modelProfileId: "", status: "ACTIVE" });
 const promptForm = ref({ name: "RAG Chat Prompt", purpose: "CHAT" });
+const promptVersionForm = ref({
+  messages: JSON.stringify([
+    { role: "SYSTEM", content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. If evidence is insufficient, return a short answer and make claim_text the exact matching substring from answer_text." },
+    { role: "USER", content: "{{query}}" },
+  ], null, 2),
+  variableSchema: JSON.stringify({ type: "object", required: ["context", "question"] }, null, 2),
+  outputContract: JSON.stringify({ type: "object", required: ["answer", "citations"] }, null, 2),
+  changeDescription: "创建初始 Prompt 版本",
+});
 
 const canManage = computed(() => props.currentRole === "SPACE_ADMIN" || props.currentRole === "PLATFORM_ADMIN");
 const sectionTitle = computed(() => ({ spaces: "空间与运行上下文", providers: "Provider 连接", models: "模型 Profile 与路由", prompts: "Prompt 模板", runs: "Run / Step 追踪" })[section.value]);
@@ -51,6 +61,7 @@ function formatDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 function describeError(value: unknown, fallback: string): string {
+  if (value instanceof Error && !(value instanceof ApiError)) return value.message;
   if (!(value instanceof ApiError)) return fallback;
   const permission = value.status === 403 ? "当前角色无权执行此操作。" : value.status === 404 ? "资源不存在或不属于当前空间。" : value.status === 409 ? "资源版本冲突，请刷新后重试。" : "请检查输入并稍后重试。";
   return `${value.problem?.code ? `${value.problem.code}：` : ""}${value.problem?.detail ?? value.message} ${permission}`;
@@ -85,7 +96,11 @@ async function loadSection(): Promise<void> {
     } else if (section.value === "prompts") {
       const response = await apiFetch<{ items: PromptTemplate[] }>(path("/prompt-templates"));
       promptTemplates.value = response.items;
-      promptVersionDetails.value = null;
+      if (!response.items.some((item) => item.promptTemplateId === selectedPromptTemplateId.value)) {
+        selectedPromptTemplateId.value = response.items.find((item) => item.purpose === "CHAT")?.promptTemplateId
+          ?? response.items[0]?.promptTemplateId ?? "";
+        promptVersionDetails.value = null;
+      }
     }
   } catch (value) {
     error.value = describeError(value, "功能中心数据加载失败。");
@@ -133,10 +148,67 @@ async function createPrompt(): Promise<void> {
   if (!ensureSpace() || !canManage.value) return;
   loading.value = true; error.value = ""; notice.value = "";
   try {
-    await apiFetch<PromptTemplate>(path("/prompt-templates"), { method: "POST", body: promptForm.value });
+    const created = await apiFetch<PromptTemplate>(path("/prompt-templates"), { method: "POST", body: promptForm.value });
+    selectedPromptTemplateId.value = created.promptTemplateId;
+    promptVersionDetails.value = null;
     notice.value = "Prompt template 已创建；请继续为它创建版本。";
     await loadSection();
   } catch (value) { error.value = describeError(value, "Prompt template 创建失败。"); }
+  finally { loading.value = false; }
+}
+
+function parseJsonObject(value: string, field: string): Record<string, unknown> {
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); } catch { throw new Error(`${field} 必须是有效 JSON。`); }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error(`${field} 必须是 JSON 对象。`);
+  return parsed as Record<string, unknown>;
+}
+
+function parsePromptMessages(value: string): Array<{ role: "SYSTEM" | "USER" | "ASSISTANT" | "TOOL"; content: string }> {
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); } catch { throw new Error("messages 必须是有效 JSON 数组。"); }
+  if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("messages 至少需要一条消息。");
+  const roles = new Set(["SYSTEM", "USER", "ASSISTANT", "TOOL"]);
+  if (parsed.some((item) => typeof item !== "object" || item === null || Array.isArray(item)
+    || typeof (item as Record<string, unknown>).role !== "string"
+    || !roles.has((item as Record<string, unknown>).role as string)
+    || typeof (item as Record<string, unknown>).content !== "string"
+    || !(item as Record<string, unknown>).content)) {
+    throw new Error("messages 必须包含合法 role 和非空 content。");
+  }
+  return parsed as Array<{ role: "SYSTEM" | "USER" | "ASSISTANT" | "TOOL"; content: string }>;
+}
+
+async function createPromptVersion(): Promise<void> {
+  if (!ensureSpace() || !canManage.value) return;
+  if (!selectedPromptTemplateId.value) { error.value = "请先选择 Prompt Template。"; return; }
+  loading.value = true; error.value = ""; notice.value = "";
+  try {
+    const version = await apiFetch<PromptVersion>(path(`/prompt-templates/${encodeURIComponent(selectedPromptTemplateId.value)}/versions`), {
+      method: "POST",
+      body: {
+        messages: parsePromptMessages(promptVersionForm.value.messages),
+        variableSchema: parseJsonObject(promptVersionForm.value.variableSchema, "variableSchema"),
+        outputContract: parseJsonObject(promptVersionForm.value.outputContract, "outputContract"),
+        changeDescription: promptVersionForm.value.changeDescription.trim(),
+      },
+    });
+    promptVersionDetails.value = version;
+    notice.value = `Prompt version v${version.version} 已创建为 DRAFT，请确认后发布。`;
+  } catch (value) { error.value = describeError(value, "Prompt version 创建失败。"); }
+  finally { loading.value = false; }
+}
+
+async function publishPromptVersion(): Promise<void> {
+  if (!ensureSpace() || !canManage.value || !promptVersionDetails.value) return;
+  if (promptVersionDetails.value.state !== "DRAFT") return;
+  loading.value = true; error.value = ""; notice.value = "";
+  try {
+    const version = promptVersionDetails.value;
+    promptVersionDetails.value = await apiFetch<PromptVersion>(path(`/prompt-templates/${encodeURIComponent(version.promptTemplateId)}/versions/${version.version}/publish`), { method: "POST" });
+    notice.value = `Prompt version v${version.version} 已由服务端发布，发布后不可变。`;
+    await loadSection();
+  } catch (value) { error.value = describeError(value, "Prompt version 发布失败。"); }
   finally { loading.value = false; }
 }
 
@@ -164,7 +236,10 @@ async function initializeLocalRag(): Promise<void> {
     const providerPage = await apiFetch<{ items: ProviderConnection[] }>(path("/provider-connections?limit=100"));
     let localProvider = providerPage.items.find((item) => item.providerType === "OLLAMA" && item.egressClass === "LOCAL" && item.status === "ACTIVE");
     if (!localProvider) {
-      localProvider = await apiFetch<ProviderConnection>(path("/provider-connections"), { method: "POST", body: providerForm.value });
+      localProvider = await apiFetch<ProviderConnection>(path("/provider-connections"), {
+        method: "POST",
+        body: { displayName: "本地 Ollama", providerType: "OLLAMA", egressClass: "LOCAL", endpoint: "http://127.0.0.1:11434", credentialRef: "local-ollama", status: "ACTIVE" },
+      });
     }
 
     const profilePage = await apiFetch<{ items: ModelProfile[] }>(path("/model-profiles?limit=100"));
@@ -207,7 +282,7 @@ async function initializeLocalRag(): Promise<void> {
         body: {
           messages: [
             { role: "SYSTEM", content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. If evidence is insufficient, return a short answer and make claim_text the exact matching substring from answer_text." },
-            { role: "USER", content: "{{question}}" },
+            { role: "USER", content: "{{query}}" },
           ],
           variableSchema: { type: "object", required: ["context", "question"] },
           outputContract: { type: "object", required: ["answer", "citations"] },
@@ -299,7 +374,15 @@ async function retryRun(): Promise<void> {
 }
 
 watch(() => props.initialSection, (value) => { if (value) section.value = value; });
-watch(() => [props.selectedSpaceId, section.value], () => { void loadSection(); }, { immediate: true });
+watch(() => props.initialRunId, (value) => {
+  if (!value || value === runId.value) return;
+  runId.value = value;
+  if (section.value === "runs") void loadRun();
+});
+watch(() => [props.selectedSpaceId, section.value], () => {
+  if (section.value === "runs" && runId.value) void loadRun();
+  else void loadSection();
+}, { immediate: true });
 </script>
 
 <template>
@@ -328,10 +411,10 @@ watch(() => [props.selectedSpaceId, section.value], () => { void loadSection(); 
 
     <div v-else-if="section === 'models'" class="control-layout">
       <div class="stack"><article class="card list-card"><div class="card-title"><h3>Model Profiles</h3><span class="tag">{{ modelProfiles.length }} 个</span></div><p v-if="!modelProfiles.length" class="empty-state">暂无 Model Profile。</p><div v-for="item in modelProfiles" :key="item.modelProfileId" class="list-row"><div><strong>{{ item.purpose }} · {{ item.capabilities.join(", ") }}</strong><span>{{ item.modelProfileId }} · v{{ item.version }} · {{ item.providerConnectionId }}</span></div><span class="state-pill">{{ item.status }}</span></div></article><article class="card list-card"><div class="card-title"><h3>Model Routes</h3><span class="tag">{{ modelRoutes.length }} 个</span></div><p v-if="!modelRoutes.length" class="empty-state">暂无 Model Route。</p><div v-for="item in modelRoutes" :key="item.modelRouteId" class="list-row"><div><strong>{{ item.purpose }} · {{ item.egressClass }} · {{ item.failoverPolicy }}</strong><span>{{ item.modelRouteId }} · v{{ item.version }} · candidates {{ item.candidates.length }}</span></div><span class="state-pill">{{ item.status }}</span></div></article></div>
-      <div class="stack"><form class="card form-card" @submit.prevent="createProfile"><h3>创建 Model Profile</h3><div class="form-grid"><div class="field wide"><label for="profile-provider">Provider connection</label><select id="profile-provider" v-model="profileForm.providerConnectionId" required><option value="">选择连接</option><option v-for="item in providerConnections" :key="item.providerConnectionId" :value="item.providerConnectionId">{{ item.providerType }} · {{ item.endpoint }}</option></select></div><div class="field"><label for="profile-purpose">用途</label><select id="profile-purpose" v-model="profileForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><div class="field"><label for="profile-model">模型名</label><input id="profile-model" v-model="profileForm.modelName" required /></div></div><div class="form-grid"><div class="field wide"><label for="profile-capabilities">能力（逗号分隔）</label><input id="profile-capabilities" v-model="profileForm.capabilities" required /></div><div class="field"><label for="profile-context">Context window</label><input id="profile-context" v-model.number="profileForm.contextWindow" type="number" min="1" required /></div><div class="field"><label for="profile-output">Max output</label><input id="profile-output" v-model.number="profileForm.maxOutputTokens" type="number" min="1" required /></div><div class="field"><label for="profile-embedding-dimension">Embedding dimension</label><input id="profile-embedding-dimension" v-model.number="profileForm.embeddingDimension" type="number" min="1" max="4096" placeholder="仅 EMBEDDING 填写" /></div></div><button type="submit" :disabled="loading || !canManage">创建 Profile</button></form><form class="card form-card" @submit.prevent="createRoute"><h3>创建 Model Route</h3><div class="form-grid"><div class="field"><label for="route-purpose">用途</label><select id="route-purpose" v-model="routeForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><div class="field"><label for="route-egress">出境等级</label><select id="route-egress" v-model="routeForm.egressClass"><option>LOCAL</option><option>CLOUD</option></select></div><div class="field"><label for="route-failover">Failover</label><select id="route-failover" v-model="routeForm.failoverPolicy"><option>NONE</option><option>SAME_EGRESS_ONLY</option></select></div></div><div class="field"><label for="route-profile">Candidate Profile</label><select id="route-profile" v-model="routeForm.modelProfileId" required><option value="">选择 profile</option><option v-for="item in modelProfiles" :key="item.modelProfileId" :value="item.modelProfileId">{{ item.purpose }} · {{ item.modelProfileId }}</option></select></div><button type="submit" :disabled="loading || !canManage">创建 Route</button></form></div>
+      <div class="stack"><form class="card form-card" @submit.prevent="createProfile"><h3>创建 Model Profile</h3><div class="form-grid"><div class="field wide"><label for="profile-provider">Provider connection</label><select id="profile-provider" v-model="profileForm.providerConnectionId" required><option value="">选择连接</option><option v-for="item in providerConnections" :key="item.providerConnectionId" :value="item.providerConnectionId">{{ item.providerType }} · {{ item.endpoint }}</option></select></div><div class="field"><label for="profile-purpose">用途</label><select id="profile-purpose" v-model="profileForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><div class="field"><label for="profile-model">模型名</label><input id="profile-model" v-model="profileForm.modelName" required /></div></div><div class="form-grid"><div class="field wide"><label for="profile-capabilities">能力（逗号分隔）</label><input id="profile-capabilities" v-model="profileForm.capabilities" required /></div><div class="field"><label for="profile-context">Context window</label><input id="profile-context" v-model.number="profileForm.contextWindow" type="number" min="1" required /></div><div class="field"><label for="profile-output">Max output</label><input id="profile-output" v-model.number="profileForm.maxOutputTokens" type="number" min="1" required /></div><div class="field"><label for="profile-embedding-dimension">Embedding dimension</label><input id="profile-embedding-dimension" v-model.number="profileForm.embeddingDimension" type="number" min="1" max="4096" placeholder="仅 EMBEDDING 填写" /></div><div class="field"><label for="profile-status">创建状态</label><select id="profile-status" v-model="profileForm.status"><option>PUBLISHED</option><option>DRAFT</option><option>DISABLED</option></select><p class="field-hint">选择 PUBLISHED 后可直接用于 ACTIVE route；服务端仍会校验 Provider、能力和空间权限。</p></div></div><button type="submit" :disabled="loading || !canManage">创建 Profile</button></form><form class="card form-card" @submit.prevent="createRoute"><h3>创建 Model Route</h3><div class="form-grid"><div class="field"><label for="route-purpose">用途</label><select id="route-purpose" v-model="routeForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><div class="field"><label for="route-egress">出境等级</label><select id="route-egress" v-model="routeForm.egressClass"><option>LOCAL</option><option>CLOUD</option></select></div><div class="field"><label for="route-failover">Failover</label><select id="route-failover" v-model="routeForm.failoverPolicy"><option>NONE</option><option>SAME_EGRESS_ONLY</option></select></div><div class="field"><label for="route-status">创建状态</label><select id="route-status" v-model="routeForm.status"><option>ACTIVE</option><option>DRAFT</option><option>DISABLED</option></select></div></div><div class="field"><label for="route-profile">Candidate Profile</label><select id="route-profile" v-model="routeForm.modelProfileId" required><option value="">选择 profile</option><option v-for="item in modelProfiles.filter((candidate) => candidate.purpose === routeForm.purpose && candidate.status === 'PUBLISHED' && ((routeForm.egressClass === 'LOCAL' && providerConnections.some((provider) => provider.providerConnectionId === candidate.providerConnectionId && provider.egressClass === 'LOCAL')) || (routeForm.egressClass === 'CLOUD' && providerConnections.some((provider) => provider.providerConnectionId === candidate.providerConnectionId && provider.egressClass === 'CLOUD'))))" :key="item.modelProfileId" :value="item.modelProfileId">{{ item.purpose }} · {{ item.modelName }} · {{ item.modelProfileId }}</option></select><p class="field-hint">候选已按用途、发布状态和出境等级过滤，避免提交服务端必然拒绝的组合。</p></div><button type="submit" :disabled="loading || !canManage">创建 Route</button></form></div>
     </div>
 
-    <div v-else-if="section === 'prompts'" class="control-layout"><div class="card list-card"><div class="card-title"><h3>Prompt Templates</h3><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><p v-if="!promptTemplates.length" class="empty-state">当前空间还没有 Prompt 模板。</p><article v-for="item in promptTemplates" :key="item.promptTemplateId" class="list-row"><div><strong>{{ item.name }} · {{ item.purpose }}</strong><span>{{ item.promptTemplateId }} · 当前版本 {{ item.currentVersion ?? "未创建" }}</span></div><div class="list-row-actions"><span class="tag">版本化</span><button v-if="item.currentVersion" type="button" class="quiet-button" @click="viewPromptVersion(item)">查看版本</button></div></article><article v-if="promptVersionDetails" class="prompt-version-card"><div class="card-title"><h3>Prompt version v{{ promptVersionDetails.version }}</h3><span class="state-pill">{{ promptVersionDetails.state }}</span></div><p>contentHash：<code>{{ promptVersionDetails.contentHash }}</code></p><p>messages：{{ promptVersionDetails.messages.map((message) => `${message.role}: ${message.content}`).join(" · ") }}</p><p>variableSchema：<code>{{ JSON.stringify(promptVersionDetails.variableSchema) }}</code></p><p>outputContract：<code>{{ JSON.stringify(promptVersionDetails.outputContract) }}</code></p></article></div><form class="card form-card" @submit.prevent="createPrompt"><h3>创建 Prompt Template</h3><p class="muted">模板创建后仍需通过版本 API 创建消息、变量 schema 和 output contract；发布后的版本不可变。</p><div class="field"><label for="prompt-name">名称</label><input id="prompt-name" v-model="promptForm.name" required /></div><div class="field"><label for="prompt-purpose">用途</label><select id="prompt-purpose" v-model="promptForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><button type="submit" :disabled="loading || !canManage">创建模板</button></form></div>
+    <div v-else-if="section === 'prompts'" class="control-layout"><div class="card list-card"><div class="card-title"><h3>Prompt Templates</h3><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><p v-if="!promptTemplates.length" class="empty-state">当前空间还没有 Prompt 模板。</p><article v-for="item in promptTemplates" :key="item.promptTemplateId" class="list-row"><div><strong>{{ item.name }} · {{ item.purpose }}</strong><span>{{ item.promptTemplateId }} · 当前版本 {{ item.currentVersion ?? "未创建" }}</span></div><div class="list-row-actions"><span class="tag">版本化</span><button type="button" class="quiet-button" @click="selectedPromptTemplateId = item.promptTemplateId; promptVersionDetails = null">选为版本模板</button><button v-if="item.currentVersion" type="button" class="quiet-button" @click="viewPromptVersion(item)">查看版本</button></div></article><article v-if="promptVersionDetails" class="prompt-version-card"><div class="card-title"><h3>Prompt version v{{ promptVersionDetails.version }}</h3><span class="state-pill">{{ promptVersionDetails.state }}</span></div><p>contentHash：<code>{{ promptVersionDetails.contentHash }}</code></p><p>messages：{{ promptVersionDetails.messages.map((message) => `${message.role}: ${message.content}`).join(" · ") }}</p><p>variableSchema：<code>{{ JSON.stringify(promptVersionDetails.variableSchema) }}</code></p><p>outputContract：<code>{{ JSON.stringify(promptVersionDetails.outputContract) }}</code></p><button v-if="promptVersionDetails.state === 'DRAFT'" type="button" @click="publishPromptVersion">发布此版本</button></article></div><div class="stack"><form class="card form-card" @submit.prevent="createPrompt"><h3>创建 Prompt Template</h3><p class="muted">模板创建后自动成为版本表单的选择项；后续版本使用服务端生成的版本号。</p><div class="field"><label for="prompt-name">名称</label><input id="prompt-name" v-model="promptForm.name" required /></div><div class="field"><label for="prompt-purpose">用途</label><select id="prompt-purpose" v-model="promptForm.purpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div><button type="submit" :disabled="loading || !canManage">创建模板</button></form><form class="card form-card" @submit.prevent="createPromptVersion"><h3>创建 Prompt Version</h3><p class="muted">模板、版本号和 contentHash 均来自服务端；这里只填写消息与契约内容，发布后不可变。</p><div class="field"><label for="prompt-version-template">Prompt Template</label><select id="prompt-version-template" v-model="selectedPromptTemplateId" required><option value="">选择模板</option><option v-for="item in promptTemplates" :key="item.promptTemplateId" :value="item.promptTemplateId">{{ item.name }} · {{ item.purpose }} · {{ item.currentVersion ? `当前 v${item.currentVersion}` : "未发布" }}</option></select></div><div class="field"><label for="prompt-messages">messages（JSON 数组）</label><textarea id="prompt-messages" v-model="promptVersionForm.messages" rows="7" required></textarea></div><div class="field"><label for="prompt-variables">variableSchema（JSON 对象）</label><textarea id="prompt-variables" v-model="promptVersionForm.variableSchema" rows="4" required></textarea></div><div class="field"><label for="prompt-contract">outputContract（JSON 对象）</label><textarea id="prompt-contract" v-model="promptVersionForm.outputContract" rows="4" required></textarea></div><div class="field"><label for="prompt-change-description">变更说明</label><input id="prompt-change-description" v-model="promptVersionForm.changeDescription" required /></div><button type="submit" :disabled="loading || !canManage || !selectedPromptTemplateId">创建 DRAFT 版本</button></form></div></div>
 
     <div v-else class="run-center"><form class="card lookup-form" @submit.prevent="loadRun"><div class="field"><label for="run-id">Run ID</label><input id="run-id" v-model="runId" autocomplete="off" placeholder="UUIDv7" required /></div><button type="submit" :disabled="loading">{{ loading ? "读取中…" : "读取 Run" }}</button></form><article v-if="runSnapshot" class="card run-card"><div class="card-title"><div><span class="card-label">Run</span><code>{{ runSnapshot.runId }}</code></div><span class="state-pill">{{ runSnapshot.status }}</span></div><dl class="details"><dt>correlationId</dt><dd><code>{{ runSnapshot.error?.correlationId ?? "—" }}</code></dd><dt>modelRouteId</dt><dd><code>{{ runSnapshot.modelRouteId }}</code></dd><dt>promptVersionId</dt><dd><code>{{ runSnapshot.promptVersionId }}</code></dd><dt>created / finished</dt><dd>{{ formatDate(runSnapshot.createdAt) }} / {{ formatDate(runSnapshot.finishedAt) }}</dd><dt>last sequence</dt><dd>{{ runSnapshot.lastSequence }}</dd></dl><p v-if="runSnapshot.error" class="alert error">{{ runSnapshot.error.message }}</p><div class="button-row"><button type="button" :disabled="loading || !runSnapshot.error?.retryable || !canManage" @click="retryRun">重试 Run</button><span class="muted">重试仍由服务端权限、状态和幂等规则裁决。</span></div><h3 class="steps-heading">Steps</h3><div v-for="step in runSnapshot.steps" :key="step.stepId" class="list-row"><div><strong>#{{ step.sequence }} · {{ step.type }}</strong><span>{{ step.stepId }} · attempt {{ step.attempt }} · {{ formatDate(step.createdAt) }}</span></div><span class="state-pill">{{ step.status }}</span></div></article><div v-else class="empty-state card"><strong>尚未读取 Run</strong><span>输入当前空间内的 Run ID；不会跨空间查找。</span></div></div>
   </section>

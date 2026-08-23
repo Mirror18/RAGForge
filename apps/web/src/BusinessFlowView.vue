@@ -42,9 +42,17 @@ const selectedProvider = computed(() => providerConnections.value.find((item) =>
 const selectedTemplate = computed(() => promptTemplates.value.find((item) => item.promptTemplateId === selectedPromptTemplateId.value) ?? null);
 const chatRoutes = computed(() => modelRoutes.value.filter((item) => item.purpose === "CHAT" && item.status === "ACTIVE"));
 const runtimeMode = ref<"LOCAL" | "MIMO">("LOCAL");
-const hasPublishedModel = computed(() => selectedRoute.value?.status === "ACTIVE" && selectedProfile.value?.status === "PUBLISHED" && selectedProvider.value?.status === "ACTIVE");
-const hasPublishedPrompt = computed(() => Boolean(promptVersion.value?.promptVersionId && promptVersion.value.state === "PUBLISHED"));
-const hasIndexIdentity = computed(() => Boolean(activeIndex.value?.pointer.activeIndexVersionId));
+const selectedRouteCandidate = computed(() => selectedRoute.value?.candidates.find((candidate) => candidate.modelProfileId === selectedProfileId.value) ?? null);
+const hasPublishedModel = computed(() => selectedRoute.value?.purpose === "CHAT"
+  && selectedRoute.value.status === "ACTIVE"
+  && selectedRouteCandidate.value?.egressClass === selectedRoute.value.egressClass
+  && selectedProfile.value?.status === "PUBLISHED"
+  && selectedProvider.value?.status === "ACTIVE");
+const hasPublishedPrompt = computed(() => Boolean(promptVersion.value?.promptVersionId
+  && promptVersion.value.promptTemplateId === selectedPromptTemplateId.value
+  && promptVersion.value.state === "PUBLISHED"));
+const hasIndexIdentity = computed(() => Boolean(activeIndex.value?.pointer.activeIndexVersionId
+  && activeIndex.value.datasetHash && /^[0-9a-f]{64}$/i.test(activeIndex.value.datasetHash)));
 const canStart = computed(() => Boolean(props.selectedSpaceId && hasPublishedModel.value && hasPublishedPrompt.value && hasIndexIdentity.value));
 
 function apiPath(suffix: string): string {
@@ -111,6 +119,13 @@ function describeError(value: unknown): string {
   if (value.status === 403) return "当前角色无权读取或操作此空间配置。";
   if (value.status === 404) return "配置资源不存在，或不属于当前空间。";
   return value.problem?.detail ?? value.message;
+}
+
+function selectRoute(): void {
+  const candidate = selectedRoute.value?.candidates[0];
+  selectedProfileId.value = candidate?.modelProfileId ?? "";
+  const profile = modelProfiles.value.find((item) => item.modelProfileId === selectedProfileId.value);
+  if (profile) model.value = profile.modelName;
 }
 
 async function readWithTimeout<T>(label: string, task: Promise<T>, fallback: T, failures: string[]): Promise<T> {

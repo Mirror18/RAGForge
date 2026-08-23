@@ -5,6 +5,7 @@ import { AnswerStreamError, cancelAnswerRun, consumeAnswerStream, createAnswer, 
 import { type RunProjection } from "./answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null }>();
+const emit = defineEmits<{ "run-created": [runId: string] }>();
 
 type UiStatus = "empty" | "loading" | "reconnecting" | "completed" | "abstained" | "failed" | "cancelled" | "degraded" | "timeout" | "cancelling";
 
@@ -54,7 +55,7 @@ const model = ref("");
 const datasetHash = ref("");
 const configHash = ref("");
 const allowCloudEgress = ref(false);
-const timeoutSeconds = ref(30);
+const timeoutSeconds = ref(120);
 const status = ref<UiStatus>("empty");
 const answerText = ref("");
 const citations = ref<AnswerCitation[]>([]);
@@ -84,7 +85,7 @@ watch(() => props.defaults, (defaults) => {
   datasetHash.value = defaults.datasetHash;
   configHash.value = defaults.configHash;
   allowCloudEgress.value = defaults.allowCloudEgress;
-  timeoutSeconds.value = defaults.allowCloudEgress ? 60 : 30;
+  timeoutSeconds.value = defaults.allowCloudEgress ? 60 : 120;
 }, { immediate: true });
 
 let abortController: AbortController | null = null;
@@ -230,7 +231,7 @@ function validateStart(): string | null {
   if (!props.selectedSpaceId) return "请先在页面顶部选择当前空间。";
   if (!question.value.trim()) return "请输入问题。";
   if (!routeVersionId.value.trim() || !profileVersionId.value.trim() || !providerConnectionId.value.trim() || !promptVersionId.value.trim() || !model.value.trim()) return "需要填写 route、profile、provider connection、prompt 和 model。";
-  if (!/^[0-9a-f]{64}$/i.test(datasetHash.value) || !/^[0-9a-f]{64}$/i.test(configHash.value)) return "需要填写 64 位 dataset/config hash，避免使用未版本化的运行配置。";
+  if (!/^[0-9a-f]{64}$/i.test(datasetHash.value) || !/^[0-9a-f]{64}$/i.test(configHash.value)) return "业务闭环尚未返回有效的 dataset/config hash，请回到业务闭环刷新真实状态。";
   if (!Number.isInteger(timeoutSeconds.value) || timeoutSeconds.value < 1 || timeoutSeconds.value > 120) return "timeoutSeconds 必须是 1–120 的整数。";
   return null;
 }
@@ -266,6 +267,7 @@ async function startAnswer(): Promise<void> {
     const run = await createAnswerRun(spaceIdAtStart, activeConversationId, request, runIdempotencyKey);
     const runId = runIdentifier(run);
     if (!runId || run.spaceId !== spaceIdAtStart || props.selectedSpaceId !== spaceIdAtStart || !run.correlationId) throw new Error("run context unavailable");
+    emit("run-created", runId);
     runContext.value = { spaceId: spaceIdAtStart, runId, correlationId: run.correlationId };
     cancelIdempotencyKey = createKey(`answer-cancel-${runId}`);
     // Open SSE before the synchronous answer projection is created. The
