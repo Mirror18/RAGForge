@@ -585,6 +585,13 @@ export async function uploadMarkdown(spaceId: string, file: File, relativePath?:
   return (await parseResponse(response)) as { jobId: string; documentRevisionId: string; sourceId: string };
 }
 
+export function ingestWebSource(spaceId: string, url: string, allowCloudEgress: boolean): Promise<{ jobId: string; documentRevisionId: string; sourceId: string }> {
+  return apiFetch("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/sources/web", {
+    method: "POST",
+    body: { url, allowCloudEgress },
+  });
+}
+
 export function listIngestionJobs(spaceId: string): Promise<IngestionJobView[]> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs`);
 }

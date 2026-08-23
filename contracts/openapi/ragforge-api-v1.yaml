@@ -530,6 +530,20 @@
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConversationRequest"}}}},
         "responses": {"201": {"description": "Conversation created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Conversation"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "429": {"$ref": "#/components/responses/TooManyRequests"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      },
+      "get": {
+        "tags": ["runs"], "operationId": "listConversations", "summary": "List conversation history in the authorized space", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/IncludeArchived"}],
+        "responses": {"200": {"description": "Conversation history", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConversationPage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/conversations/{conversationId}/archive": {
+      "x-ragforge-implementation-status": "phase7-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/ConversationId"}],
+      "post": {
+        "tags": ["runs"], "operationId": "archiveConversation", "summary": "Archive a conversation", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "responses": {"200": {"description": "Conversation archived", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Conversation"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}}
       }
     },
     "/api/v1/spaces/{spaceId}/conversations/{conversationId}/runs": {
@@ -540,6 +554,11 @@
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RunRequest"}}}},
         "responses": {"202": {"description": "Run accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Run"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "429": {"$ref": "#/components/responses/TooManyRequests"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      },
+      "get": {
+        "tags": ["runs"], "operationId": "listConversationRuns", "summary": "List runs in a conversation for follow-up and history", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Conversation runs", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RunPage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
     },
     "/api/v1/spaces/{spaceId}/runs/{runId}": {
@@ -861,16 +880,26 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/sources/web": {
+      "x-ragforge-implementation-status": "phase7-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/CorrelationId"}],
+      "post": {
+        "tags": ["ingestion"], "operationId": "ingestWebSource", "summary": "Fetch an allowlisted public web page into the knowledge space", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WebSourceRequest"}}}},
+        "responses": {"200": {"description": "Web source accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessUploadResponse"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "502": {"$ref": "#/components/responses/BadGateway"}}
+      }
+    },
     "/api/v1/spaces/{spaceId}/sources/uploads": {
       "x-ragforge-implementation-status": "phase-business-loop",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/CorrelationId"}],
       "post": {
         "tags": ["ingestion"],
-        "operationId": "uploadMarkdownSource",
-        "summary": "Upload a Markdown source and enqueue real ingestion",
+        "operationId": "uploadSource",
+        "summary": "Upload a supported document source and enqueue real ingestion",
         "security": [{"cookieAuth": []}, {"serviceToken": []}],
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
-        "requestBody": {"required": true, "content": {"multipart/form-data": {"schema": {"type": "object", "required": ["file"], "properties": {"file": {"type": "string", "format": "binary", "description": "UTF-8 Markdown, maximum 10 MiB."}}}}}},
+        "requestBody": {"required": true, "content": {"multipart/form-data": {"schema": {"type": "object", "required": ["file"], "properties": {"file": {"type": "string", "format": "binary", "description": "UTF-8 Markdown/TXT or PDF/DOCX/PPTX/XLSX, maximum 10 MiB."}}}}}},
         "responses": {
           "200": {"description": "Upload accepted and represented by a persisted ingestion job", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessUploadResponse"}}}},
           "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "503": {"$ref": "#/components/responses/ServiceUnavailable"}
@@ -989,6 +1018,12 @@
         "in": "path",
         "required": true,
         "schema": {"$ref": "#/components/schemas/UuidV7"}
+      },
+      "IncludeArchived": {
+        "name": "includeArchived",
+        "in": "query",
+        "required": false,
+        "schema": {"type": "boolean", "default": false}
       },
       "RunId": {
         "name": "runId",
@@ -1324,16 +1359,19 @@
       "PromptBindingUpdateRequest": {"type": "object", "additionalProperties": false, "required": ["version", "promptVersionId"], "properties": {"version": {"type": "integer", "minimum": 1}, "promptVersionId": {"$ref": "#/components/schemas/UuidV7"}}},
       "PromptBinding": {"type": "object", "additionalProperties": false, "required": ["promptBindingId", "spaceId", "version", "promptVersionId", "createdAt", "updatedAt"], "properties": {"promptBindingId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "promptVersionId": {"$ref": "#/components/schemas/UuidV7"}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}}},
       "ConversationRequest": {"type": "object", "additionalProperties": false, "required": ["title"], "properties": {"title": {"type": "string", "minLength": 1, "maxLength": 200}}},
-      "Conversation": {"type": "object", "additionalProperties": false, "required": ["conversationId", "spaceId", "title", "createdAt", "updatedAt"], "properties": {"conversationId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "title": {"type": "string", "minLength": 1, "maxLength": 200}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}}},
+      "Conversation": {"type": "object", "additionalProperties": false, "required": ["id", "spaceId", "actorUserId", "title", "status", "archivedAt", "createdAt", "updatedAt"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "actorUserId": {"$ref": "#/components/schemas/UuidV7"}, "title": {"type": "string", "minLength": 1, "maxLength": 200}, "status": {"type": "string", "enum": ["ACTIVE", "ARCHIVED"]}, "archivedAt": {"type": ["string", "null"], "format": "date-time"}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}}},
+      "ConversationPage": {"type": "object", "additionalProperties": false, "required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Conversation"}}}},
       "RunRequest": {"type": "object", "additionalProperties": false, "required": ["message", "modelRouteId", "promptVersionId", "timeoutSeconds", "maxAttempts"], "properties": {"message": {"type": "string", "minLength": 1, "maxLength": 100000}, "modelRouteId": {"$ref": "#/components/schemas/UuidV7"}, "promptVersionId": {"$ref": "#/components/schemas/UuidV7"}, "timeoutSeconds": {"type": "integer", "minimum": 1, "maximum": 3600}, "maxAttempts": {"type": "integer", "minimum": 1, "maximum": 5}, "stream": {"type": "boolean", "default": true}}},
       "RunError": {"type": "object", "additionalProperties": false, "required": ["errorClass", "retryable", "message", "correlationId"], "properties": {"errorClass": {"$ref": "#/components/schemas/ErrorClass"}, "retryable": {"type": "boolean"}, "message": {"type": "string", "minLength": 1, "maxLength": 500}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "retryAfterSeconds": {"type": ["integer", "null"], "minimum": 1, "maximum": 3600}}},
       "Run": {"type": "object", "additionalProperties": false, "required": ["runId", "spaceId", "conversationId", "version", "status", "correlationId", "modelRouteId", "promptVersionId", "createdAt", "usageLedgerId"], "properties": {"runId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "conversationId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "status": {"$ref": "#/components/schemas/RunStatus"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "modelRouteId": {"$ref": "#/components/schemas/UuidV7"}, "promptVersionId": {"$ref": "#/components/schemas/UuidV7"}, "usageLedgerId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}], "description": "The preferred persisted usage row; null is valid before usage is recorded or for a cancelled run."}, "cancelRequested": {"type": "boolean", "default": false}, "error": {"oneOf": [{"$ref": "#/components/schemas/RunError"}, {"type": "null"}]}, "createdAt": {"type": "string", "format": "date-time"}, "startedAt": {"type": ["string", "null"], "format": "date-time"}, "finishedAt": {"type": ["string", "null"], "format": "date-time"}}},
+      "RunPage": {"type": "object", "additionalProperties": false, "required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Run"}}}},
       "RunSnapshot": {"allOf": [{"$ref": "#/components/schemas/Run"}, {"type": "object", "required": ["lastSequence", "steps"], "properties": {"lastSequence": {"type": "integer", "minimum": 0}, "steps": {"type": "array", "items": {"$ref": "#/components/schemas/Step"}}}}]},
       "Step": {"type": "object", "additionalProperties": false, "required": ["stepId", "spaceId", "runId", "version", "sequence", "type", "status", "correlationId", "attempt", "createdAt"], "properties": {"stepId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "sequence": {"type": "integer", "minimum": 1}, "type": {"$ref": "#/components/schemas/StepType"}, "status": {"$ref": "#/components/schemas/StepStatus"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "attempt": {"type": "integer", "minimum": 1, "maximum": 5}, "createdAt": {"type": "string", "format": "date-time"}, "finishedAt": {"type": ["string", "null"], "format": "date-time"}, "error": {"oneOf": [{"$ref": "#/components/schemas/RunError"}, {"type": "null"}]}}},
       "StepPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Step"}}, "nextCursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 512}}},
       "ModelInvocation": {"type": "object", "additionalProperties": false, "required": ["modelInvocationId", "spaceId", "runId", "stepId", "version", "correlationId", "modelProfileId", "modelProfileVersion", "status", "attempt", "usageLedgerId", "createdAt"], "properties": {"modelInvocationId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "stepId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileVersion": {"type": "integer", "minimum": 1}, "status": {"$ref": "#/components/schemas/RunStatus"}, "attempt": {"type": "integer", "minimum": 1, "maximum": 5}, "usageLedgerId": {"$ref": "#/components/schemas/UuidV7"}, "error": {"oneOf": [{"$ref": "#/components/schemas/RunError"}, {"type": "null"}]}, "createdAt": {"type": "string", "format": "date-time"}, "finishedAt": {"type": ["string", "null"], "format": "date-time"}}},
       "UsageLedger": {"type": "object", "additionalProperties": false, "required": ["usageLedgerId", "spaceId", "runId", "modelInvocationId", "version", "correlationId", "source", "dedupeKey", "inputTokens", "outputTokens", "totalTokens", "isFinal", "recordedAt"], "properties": {"usageLedgerId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "modelInvocationId": {"$ref": "#/components/schemas/UuidV7"}, "version": {"type": "integer", "minimum": 1}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "source": {"$ref": "#/components/schemas/UsageSource"}, "dedupeKey": {"type": "string", "minLength": 10, "maxLength": 512, "pattern": "^[A-Za-z0-9._:-]+$"}, "inputTokens": {"type": "integer", "minimum": 0}, "outputTokens": {"type": "integer", "minimum": 0}, "totalTokens": {"type": "integer", "minimum": 0}, "isFinal": {"type": "boolean"}, "recordedAt": {"type": "string", "format": "date-time"}}, "description": "Usage is upserted by (spaceId, modelInvocationId, source, dedupeKey); duplicate provider reports do not create a second ledger row.", "x-ragforge-uniqueness": ["spaceId", "modelInvocationId", "source", "dedupeKey"], "x-ragforge-on-duplicate": "upsert-same-ledger-row"},
       "Source": {"$ref": "../ingestion/ingestion-domain.v1.schema.json#/$defs/source"},
+      "WebSourceRequest": {"type": "object", "additionalProperties": false, "required": ["url", "allowCloudEgress"], "properties": {"url": {"type": "string", "format": "uri", "maxLength": 2048}, "allowCloudEgress": {"type": "boolean", "const": true, "description": "Must be explicitly enabled for the current space; server still enforces binding, expiry, allowlist and public DNS checks."}}},
       "BusinessUploadResponse": {"type": "object", "additionalProperties": false, "required": ["spaceId", "sourceId", "sourceDocumentId", "documentRevisionId", "jobId", "attemptId", "displayName", "status"], "properties": {"spaceId": {"$ref": "#/components/schemas/UuidV7"}, "sourceId": {"$ref": "#/components/schemas/UuidV7"}, "sourceDocumentId": {"$ref": "#/components/schemas/UuidV7"}, "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"}, "jobId": {"$ref": "#/components/schemas/UuidV7"}, "attemptId": {"$ref": "#/components/schemas/UuidV7"}, "displayName": {"type": "string"}, "status": {"type": "string", "enum": ["REQUESTED", "RUNNING", "SUCCEEDED", "FAILED", "RETRY_SCHEDULED", "DLQ"]}}},
       "BusinessSourceDocument": {"type": "object", "additionalProperties": false, "required": ["id", "spaceId", "sourceId", "stableSourceObjectId", "canonicalSourcePath", "basename", "versionNo", "state"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "sourceId": {"$ref": "#/components/schemas/UuidV7"}, "stableSourceObjectId": {"type": "string"}, "canonicalSourcePath": {"type": "string"}, "basename": {"type": "string"}, "versionNo": {"type": "integer", "minimum": 1}, "state": {"type": "string"}, "activeRevisionId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]}}},
       "BusinessJobView": {"type": "object", "additionalProperties": false, "required": ["job", "attempts", "steps"], "properties": {"job": {"type": "object"}, "attempts": {"type": "array", "items": {"type": "object"}}, "steps": {"type": "array", "items": {"type": "object"}}}},

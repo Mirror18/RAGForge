@@ -155,6 +155,12 @@ Editor 可检查/修订 chunk；用户可检索；高级用户可 A/B 对比 ret
 
 阶段治理例外：质量/安全人工复核门槛仅可在用户明确批准后豁免；此时必须保留未执行复核的事实、残余风险和可重新开启复核的条件，不得将豁免描述为人工复核通过。
 
+### Phase 7 业务闭环增量（2026-08-24）
+
+- 已补齐核心业务所需的文件/文件夹/网页来源入口、模型选择、会话历史、连续追问和会话归档 API 与前端入口。
+- 网页来源默认 fail-closed：必须配置 RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS（映射到 ragforge.web-source.allowed-hosts），并通过空间云端出境授权、DNS 公网地址、大小和媒体类型检查。
+- 本增量不改变 Phase 7 Linux 部署、升级、回滚、SBOM 和公开化退出条件；这些条件仍未因业务页面完成而自动满足。
+
 本轮业务闭环增量（2026-08-23）：Phase 2 的 Provider 切换能力扩展了 MiMo Chat，Phase 3 的数据源入口扩展了前端本地 notes 文件夹选择；两项复用既有 Provider、revision/artifact、摄取和索引边界，不改变 Phase 6 已完成状态。MiMo 真实云 Chat 与本地 `qwen3.5:9b` RAG E2E 已有证据；真实个人 notes 文件选择需用户手势，完成后再补充实际 corpus 摄取证据。
 
 本轮管理与前端闭环增量（2026-08-24）：新增平台管理员用户生命周期管理、空间编辑/归档、成员查询/角色调整/移除及最后管理员保护；前端补齐对应入口，统一按浏览器 IANA 时区显示，并修复 Prompt 选择变量未声明导致的运行时错误。Chat 大模型默认优先云端 MiMo，但仍受空间显式授权和 fail-closed 出境策略约束；Embedding/Rerank 不因 Chat 选择而自动出境。该增量不改变 Phase 6 已完成状态，也不宣称 Phase 7 的 Linux 交付、视觉验收或生产发布条件已完成。

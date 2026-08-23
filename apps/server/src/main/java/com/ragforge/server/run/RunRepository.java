@@ -49,6 +49,17 @@ public class RunRepository {
         }
     }
 
+    public List<RunRecord> findRuns(UUID spaceId, UUID conversationId) {
+        return jdbc.query("""
+                        SELECT id, space_id, conversation_id, actor_user_id, correlation_id, request_kind, status,
+                               model_route_version_id, prompt_version_id, input_hash, output_hash,
+                               error_class, error_code, started_at, completed_at, created_at, updated_at, version
+                        FROM runs
+                        WHERE space_id = ? AND conversation_id = ?
+                        ORDER BY created_at DESC, id DESC
+                        """, (rs, rowNum) -> mapRun(rs), spaceId, conversationId);
+    }
+
     @Transactional
     public RunRecord transitionRun(UUID spaceId, UUID runId, RunStatus nextStatus, ErrorClass errorClass,
                                    String errorCode, Instant now, long expectedVersion) {

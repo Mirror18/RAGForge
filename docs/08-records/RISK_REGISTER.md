@@ -116,6 +116,11 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-032` 已关闭（本轮业务闭环范围）：真实浏览器完成注册/登录、建空间、配置发布、摄取、索引、引用问答、引用预览、Run/Step/usage 和增量同步；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。这不代表 Phase 7 发布验收或观测 Dashboard 视觉验收完成。
 - `R-034` 保持 MITIGATING：`D:\\project\\learning\\notes` 已作为本地配置约定，浏览器入口、Markdown/.obsidian 过滤和相对路径安全已验证；本轮为避免读取个人内容，未执行真实个人 notes 摄取。用户显式选择脱敏目录后再补 corpus 证据。
 
+## 10.1 核心业务闭环增量复审（2026-08-24）
+
+- 新增 R-038：网页知识源依赖服务端域名白名单和云端出境授权，默认空白名单会拒绝抓取；若部署者误配白名单或目标站点变化，网页摄取可能失败。P=3、I=4、Score=12，Security / Ingestion，MITIGATING；保持 allowlist、DNS 公网地址、无自动重定向、响应大小/媒体类型限制，并补充真实白名单 smoke。
+- 新增 R-039：历史 answer projection 依赖当前 durable answer persistence；尚未完成浏览器视觉验收，部分历史 run 可能只显示运行状态而没有 answer projection。P=2、I=3、Score=6，Product / Web，MITIGATING；前端明确显示不可读取状态，不伪造回答内容，后续用真实测试空间补验收。
+
 ## 11. 用户与空间管理、前端可用性增量复审（2026-08-24）
 
 - 新增 `R-036`：平台管理员首个授予仍依赖受控运维流程，若部署未完成 bootstrap，普通注册用户无法看到平台用户管理入口。P=3、I=3、Score=9，Operations / IAM，MITIGATING；不自动提升首个注册用户，部署时按受控流程授予 `PLATFORM_ADMIN`，并在后续补充 bootstrap runbook。

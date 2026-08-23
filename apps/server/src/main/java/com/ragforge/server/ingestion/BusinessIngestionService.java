@@ -62,23 +62,46 @@ public class BusinessIngestionService {
                              SessionPrincipal principal, HttpServletRequest request) {
         authorization.requireWrite(spaceId, principal);
         if (file == null || file.isEmpty() || file.getSize() > MAX_UPLOAD_BYTES) {
-            throw invalid("file", "Markdown file is required and must be at most 10 MiB");
+            throw invalid("file", "文件不能为空且必须不超过 10 MiB");
         }
         String name = safeName(file.getOriginalFilename());
-        if (!name.toLowerCase(java.util.Locale.ROOT).endsWith(".md")
-                && !name.toLowerCase(java.util.Locale.ROOT).endsWith(".markdown")) {
-            throw invalid("file", "Only Markdown uploads are supported in the first vertical slice");
+        String mediaType = mediaType(name);
+        if ("application/octet-stream".equals(mediaType)) {
+            throw invalid("file", "仅支持 Markdown、TXT、PDF、DOCX、PPTX 和 XLSX 文件");
         }
-        String mediaType = "text/markdown";
         byte[] content;
         try {
             content = file.getBytes();
         } catch (java.io.IOException exception) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "upload_read_failed", "Upload failed", "The upload could not be read");
         }
-        if (content.length == 0 || content.length > MAX_UPLOAD_BYTES || !isUtf8(content)) {
-            throw invalid("file", "The Markdown content is empty, too large, or not valid UTF-8");
+        if (content.length == 0 || content.length > MAX_UPLOAD_BYTES) {
+            throw invalid("file", "文件内容为空或超过 10 MiB");
         }
+        if (isTextMediaType(mediaType) && !isUtf8(content)) {
+            throw invalid("file", "文本文件不是有效 UTF-8；二进制文档必须使用受支持格式");
+        }
+        return ingestBytes(spaceId, name, name, mediaType, content, idempotencyKey, principal, request,
+                IngestionRepository.ConnectorType.FILESYSTEM, "upload://" + name);
+    }
+
+    @Transactional
+    public UploadView ingestFetched(UUID spaceId, String displayName, String canonicalPath, String mediaType,
+                                    byte[] content, String idempotencyKey, SessionPrincipal principal,
+                                    HttpServletRequest request, String rootRef) {
+        authorization.requireWrite(spaceId, principal);
+        if (content == null || content.length == 0 || content.length > MAX_UPLOAD_BYTES || !isUtf8(content)) {
+            throw invalid("content", "网页内容为空、超过 10 MiB 或不是有效 UTF-8");
+        }
+        return ingestBytes(spaceId, displayName, canonicalPath, mediaType, content, idempotencyKey, principal,
+                request, IngestionRepository.ConnectorType.WEB, rootRef);
+    }
+
+    private UploadView ingestBytes(UUID spaceId, String displayName, String canonicalPath, String mediaType,
+                                   byte[] content, String idempotencyKey, SessionPrincipal principal,
+                                   HttpServletRequest request, IngestionRepository.ConnectorType connectorType,
+                                   String rootRef) {
+        String name = safeName(canonicalPath);
         String hash = sha256(content);
         String key = idempotencyKey == null || idempotencyKey.isBlank() ? "upload-" + hash : idempotencyKey;
         if (!key.matches("[A-Za-z0-9._~-]{1,255}")) {
@@ -93,7 +116,7 @@ public class BusinessIngestionService {
         }
         idempotency.updateRequestHash(principal.userId().toString(), key, hash);
         UUID correlationId = UUID.fromString(CorrelationIdFilter.current(request));
-        UUID sourceId = findSource(spaceId, name).orElseGet(UuidV7::random);
+        UUID sourceId = findSource(spaceId, name, rootRef).orElseGet(UuidV7::random);
         Optional<IngestionRepository.ExistingUpload> existing = ingestion.findExistingUpload(spaceId, sourceId, key, hash);
         if (existing.isPresent()) {
             IngestionRepository.ExistingUpload value = existing.get();
@@ -104,17 +127,17 @@ public class BusinessIngestionService {
         UUID sourceVersionId = UuidV7.random();
         Instant now = Instant.now();
         ingestion.createSourceVersion(new IngestionRepository.NewSourceVersion(sourceVersionId, spaceId, sourceId,
-                sourceVersionNo, IngestionRepository.ConnectorType.FILESYSTEM, name,
-                IngestionRepository.SourceState.ACTIVE, "upload://" + name, "[]", "[]", false, correlationId, now));
+                sourceVersionNo, connectorType, displayName,
+                IngestionRepository.SourceState.ACTIVE, rootRef, "[]", "[]", false, correlationId, now));
         IngestionRepository.SourceDocument document = ingestion.findSourceDocumentByPath(spaceId, sourceId, name)
                 .orElseGet(() -> ingestion.createSourceDocument(new IngestionRepository.NewSourceDocument(
-                        UuidV7.random(), spaceId, sourceId, name, name, name, 1,
+                        UuidV7.random(), spaceId, sourceId, name, canonicalPath, displayName, 1,
                         IngestionRepository.DocumentState.ACTIVE, null, correlationId, now)));
         UUID pipelineId = UuidV7.random();
-        String pipelineHash = sha256("markdown|" + PARSER_VERSION);
+        String pipelineHash = sha256("native-document|" + PARSER_VERSION);
         ingestion.createPipelineVersion(new IngestionRepository.NewPipelineVersion(pipelineId, spaceId,
-                next("SELECT COALESCE(MAX(version_no), 0) + 1 FROM pipeline_versions WHERE space_id = ? AND pipeline_name = ?", spaceId, "markdown-upload"),
-                "markdown-upload", "ragforge-native-parser", PARSER_VERSION, pipelineHash, correlationId, now));
+                next("SELECT COALESCE(MAX(version_no), 0) + 1 FROM pipeline_versions WHERE space_id = ? AND pipeline_name = ?", spaceId, "native-document-upload"),
+                "native-document-upload", "ragforge-native-parser", PARSER_VERSION, pipelineHash, correlationId, now));
         UUID revisionId = UuidV7.random();
         UUID discoveryRevisionId = UuidV7.random();
         UUID artifactId = UuidV7.random();
@@ -126,10 +149,10 @@ public class BusinessIngestionService {
         int discoveryRevisionNo = next("SELECT COALESCE(MAX(revision_no), 0) + 1 FROM document_revisions WHERE space_id = ? AND source_document_id = ?",
                 spaceId, document.id());
         ingestion.createDiscoveryRevision(new IngestionRepository.NewDiscoveryRevision(discoveryRevisionId, spaceId,
-                document.id(), discoveryRevisionNo, Integer.toString(sourceVersionNo), name, hash, now));
+                document.id(), discoveryRevisionNo, Integer.toString(sourceVersionNo), canonicalPath, hash, now));
         ingestion.createUploadedJob(new IngestionRepository.UploadedJobInput(spaceId, sourceId, document.id(),
                 discoveryRevisionId, revisionId, artifactId, pipelineId, jobId, attemptId, discoveryRevisionNo,
-                Integer.toString(sourceVersionNo), name, hash, mediaType, content.length, storageUri, key, correlationId, null, now));
+                Integer.toString(sourceVersionNo), displayName, hash, mediaType, content.length, storageUri, key, correlationId, null, now));
         if (ingestion.findCheckpoint(spaceId, sourceId).isEmpty()) {
             ingestion.createCheckpoint(new IngestionRepository.NewSourceCheckpoint(UuidV7.random(), spaceId, sourceId,
                     sourceVersionId, sourceVersionNo, IngestionRepository.CursorType.NONE, null, null, now));
@@ -139,7 +162,7 @@ public class BusinessIngestionService {
                         "pipelineVersionId", pipelineId, "attemptId", attemptId, "operation", "DOCUMENT_UPSERT",
                         "artifactRef", Map.of("artifactId", artifactId, "mediaType", mediaType,
                                 "byteLength", content.length, "sha256", hash, "storageUri", storageUri)));
-        return new UploadView(spaceId, sourceId, document.id(), revisionId, jobId, attemptId, name, "REQUESTED");
+        return new UploadView(spaceId, sourceId, document.id(), revisionId, jobId, attemptId, displayName, "REQUESTED");
     }
 
     @Transactional(readOnly = true)
@@ -211,9 +234,9 @@ public class BusinessIngestionService {
                 + "/artifacts/" + artifactId + "/sha256/" + hash;
     }
 
-    private Optional<UUID> findSource(UUID spaceId, String name) {
-        return jdbc.query("SELECT id FROM sources s WHERE s.space_id = ? AND EXISTS (SELECT 1 FROM source_versions v WHERE v.space_id = s.space_id AND v.source_id = s.id AND v.display_name = ?) ORDER BY s.created_at LIMIT 1",
-                (rs, row) -> rs.getObject("id", UUID.class), spaceId, name).stream().findFirst();
+    private Optional<UUID> findSource(UUID spaceId, String name, String rootRef) {
+        return jdbc.query("SELECT id FROM sources s WHERE s.space_id = ? AND EXISTS (SELECT 1 FROM source_versions v WHERE v.space_id = s.space_id AND v.source_id = s.id AND (v.display_name = ? OR v.root_ref = ?)) ORDER BY s.created_at LIMIT 1",
+                (rs, row) -> rs.getObject("id", UUID.class), spaceId, name, rootRef).stream().findFirst();
     }
 
     private int next(String sql, Object... args) { return jdbc.queryForObject(sql, Integer.class, args); }
@@ -231,6 +254,20 @@ public class BusinessIngestionService {
             throw invalid("file", "File path is invalid");
         }
         return String.join("/", segments);
+    }
+    static String mediaType(String name) {
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "text/markdown";
+        if (lower.endsWith(".txt") || lower.endsWith(".text")) return "text/plain";
+        if (lower.endsWith(".pdf")) return "application/pdf";
+        if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (lower.endsWith(".pptx")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        return "application/octet-stream";
+    }
+    private static boolean isTextMediaType(String value) {
+        return "text/plain".equalsIgnoreCase(value) || "text/markdown".equalsIgnoreCase(value)
+                || "text/html".equalsIgnoreCase(value) || "application/xhtml+xml".equalsIgnoreCase(value);
     }
     private static boolean isUtf8(byte[] value) { try { StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(value)); return true; } catch (Exception e) { return false; } }
     private static String sha256(byte[] value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); } catch (Exception e) { throw new IllegalStateException(e); } }

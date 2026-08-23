@@ -80,12 +80,40 @@ public class RunExecutionService {
         return conversations.create(UUID.randomUUID(), spaceId, principal.userId(), title, Instant.now());
     }
 
+    public List<ConversationRepository.ConversationRecord> listConversations(UUID spaceId,
+                                                                               SessionPrincipal principal,
+                                                                               boolean includeArchived) {
+        requireRole(spaceId, principal, false);
+        return conversations.list(spaceId, includeArchived);
+    }
+
+    public List<RunRepository.RunRecord> listConversationRuns(UUID spaceId, UUID conversationId,
+                                                               SessionPrincipal principal) {
+        requireRole(spaceId, principal, false);
+        conversations.find(spaceId, conversationId)
+                .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
+        return runs.findRuns(spaceId, conversationId);
+    }
+
+    @Transactional
+    public ConversationRepository.ConversationRecord archiveConversation(UUID spaceId, UUID conversationId,
+                                                                          SessionPrincipal principal) {
+        requireRole(spaceId, principal, true);
+        conversations.find(spaceId, conversationId)
+                .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
+        return conversations.archive(spaceId, conversationId, principal.userId(), Instant.now());
+    }
+
     /** Creates the run, executes it synchronously, and returns the persisted terminal/failed state. */
     public RunRepository.RunRecord createRun(UUID spaceId, UUID conversationId, SessionPrincipal principal,
                                               RunRequest request, UUID correlationId) {
         requireRole(spaceId, principal, true);
         ConversationRepository.ConversationRecord conversation = conversations.find(spaceId, conversationId)
                 .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
+        if (!"ACTIVE".equals(conversation.status())) {
+            throw new ApiException(HttpStatus.CONFLICT, "conversation_archived", "Conversation archived",
+                    "Archived conversations cannot receive new questions");
+        }
         SpaceBindingRepository.SpaceBindingRecord binding = bindings.findCurrent(spaceId)
                 .filter(item -> spaceId.equals(item.spaceId()))
                 .orElseThrow(() -> notFound("space_binding_not_found", "Space binding not found"));

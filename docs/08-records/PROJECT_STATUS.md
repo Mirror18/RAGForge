@@ -114,6 +114,13 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - RAG prompt 初始化与校验已强化为 `claim_text` 必须是 `answer_text` 的精确连续子串；无效可选字符范围由服务端安全回退为文本定位，伪造 citation UUID 仍严格拒绝。
 - 常用本地知识库入口已加入业务流：前端可选择本地 `notes` 文件夹，仅提交 Markdown，并以文件夹相对路径进入当前空间；`.obsidian` 目录、附件和非 Markdown 文件被过滤，服务端继续执行路径遍历、绝对路径和控制字符拒绝。`.env.local` 已配置本机 notes 根路径供本地开发约定使用，但浏览器仍要求用户显式选择文件夹，避免服务端任意读取本机文件。
 - 本轮证据和限制见 [`2026-08-23-mimo-notes-business-loop.md`](2026-08-23-mimo-notes-business-loop.md)。实际个人 notes 文件选择/摄取未在自动化浏览器工具中伪造完成，待用户在浏览器文件选择器中执行一次后再补充真实 corpus 摄取证据；个人 notes 不进入 Git、CI、长期 evidence 或云端调用。
+## 8.1 核心业务闭环增量（2026-08-24）
+
+- 服务端新增受空间隔离保护的 conversation 历史查询、conversation run 列表和软归档；归档会话保留历史 answer/citation provenance，并拒绝新问题写入。
+- 数据源入口扩展为受支持文档文件/文件夹和网页 URL。网页入口复用 revision/artifact 与 ingestion job 流程，并要求显式云端出境授权、域名白名单、公网 DNS、大小和媒体类型检查；RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS 为空时默认拒绝网页抓取。
+- 前端问答页新增会话历史、历史 run 查看、同一 conversation 追问和归档入口；业务流新增网页来源入口，并继续由服务端真实状态驱动模型、Prompt、active index 和出境策略。
+- 本轮已通过服务端 Java 21 compile、Web TypeScript/build、OpenAPI/contract test；尚未宣称真实浏览器视觉验收和 Phase 7 Linux 交付条件完成。下一动作是用脱敏测试空间执行历史/追问/归档和网页白名单 smoke。
+
 ## 9. 管理与前端闭环增量（2026-08-24）
 
 - 平台用户管理已落地：`PLATFORM_ADMIN` 可查看、创建、编辑、停用用户；停用为可审计软删除，禁止自我降权/自我停用，停用用户的登录和已有 session 均失效；普通用户请求用户管理接口返回 403。首个平台管理员仍需通过受控运维流程授予，普通注册账号不会自动升级。

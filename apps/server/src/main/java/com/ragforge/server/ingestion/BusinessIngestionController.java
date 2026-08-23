@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,9 +21,11 @@ import java.util.UUID;
 @RequestMapping("/api/v1/spaces/{spaceId}")
 public class BusinessIngestionController {
     private final BusinessIngestionService service;
+    private final WebSourceIngestionService webSources;
 
-    public BusinessIngestionController(BusinessIngestionService service) {
+    public BusinessIngestionController(BusinessIngestionService service, WebSourceIngestionService webSources) {
         this.service = service;
+        this.webSources = webSources;
     }
 
     @PostMapping(value = "/sources/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -32,6 +35,15 @@ public class BusinessIngestionController {
                                                        @AuthenticationPrincipal SessionPrincipal principal,
                                                        HttpServletRequest request) {
         return service.upload(spaceId, file, idempotencyKey, principal, request);
+    }
+
+    @PostMapping("/sources/web")
+    public BusinessIngestionService.UploadView web(@PathVariable UUID spaceId,
+                                                   @RequestBody WebSourceIngestionService.WebSourceRequest source,
+                                                   @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                                   @AuthenticationPrincipal SessionPrincipal principal,
+                                                   HttpServletRequest request) {
+        return webSources.ingest(spaceId, source, idempotencyKey, principal, request);
     }
 
     @GetMapping("/source-documents")

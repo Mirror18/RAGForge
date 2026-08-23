@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.Authentication;
@@ -48,6 +49,27 @@ public class RunExecutionController {
                                                    Authentication authentication) {
         var conversation = service.createConversation(spaceId, principal(authentication), request.title());
         return ConversationResponse.from(conversation);
+    }
+
+    @GetMapping("/conversations")
+    public ConversationPageResponse listConversations(@PathVariable UUID spaceId,
+                                                      @RequestParam(defaultValue = "false") boolean includeArchived,
+                                                      Authentication authentication) {
+        return new ConversationPageResponse(service.listConversations(spaceId, principal(authentication), includeArchived)
+                .stream().map(ConversationResponse::from).toList());
+    }
+
+    @GetMapping("/conversations/{conversationId}/runs")
+    public RunPageResponse listConversationRuns(@PathVariable UUID spaceId, @PathVariable UUID conversationId,
+                                                Authentication authentication) {
+        return new RunPageResponse(service.listConversationRuns(spaceId, conversationId, principal(authentication))
+                .stream().map(run -> RunResponse.from(run, jdbc)).toList());
+    }
+
+    @PostMapping("/conversations/{conversationId}/archive")
+    public ConversationResponse archiveConversation(@PathVariable UUID spaceId, @PathVariable UUID conversationId,
+                                                    Authentication authentication) {
+        return ConversationResponse.from(service.archiveConversation(spaceId, conversationId, principal(authentication)));
     }
 
     @PostMapping("/conversations/{conversationId}/runs")
@@ -106,12 +128,19 @@ public class RunExecutionController {
                                    @jakarta.validation.constraints.Max(120) Integer timeoutSeconds) {
     }
 
-    public record ConversationResponse(UUID id, UUID spaceId, UUID actorUserId, String title,
-                                       java.time.Instant createdAt, java.time.Instant updatedAt) {
+    public record ConversationResponse(UUID id, UUID spaceId, UUID actorUserId, String title, String status,
+                                       java.time.Instant archivedAt, java.time.Instant createdAt,
+                                       java.time.Instant updatedAt) {
         static ConversationResponse from(ConversationRepository.ConversationRecord value) {
             return new ConversationResponse(value.id(), value.spaceId(), value.actorUserId(), value.title(),
-                    value.createdAt(), value.updatedAt());
+                    value.status(), value.archivedAt(), value.createdAt(), value.updatedAt());
         }
+    }
+
+    public record ConversationPageResponse(List<ConversationResponse> items) {
+    }
+
+    public record RunPageResponse(List<RunResponse> items) {
     }
 
     @JsonInclude(JsonInclude.Include.ALWAYS)
