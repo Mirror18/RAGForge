@@ -100,7 +100,10 @@ let cancelIdempotencyKey = "";
 const seenEventIds = new Set<string>();
 
 const isActive = computed(() => status.value === "loading" || status.value === "reconnecting" || status.value === "degraded" || status.value === "cancelling");
-const statusLabel = computed(() => ({ empty: "等待提问", loading: "回答生成中", reconnecting: "连接恢复中", completed: "已完成", abstained: "安全拒答", failed: "回答失败", cancelled: "已取消", degraded: "服务降级", timeout: "请求超时", cancelling: "正在取消" })[status.value]);
+const statusLabel = computed(() => {
+  if (status.value === "abstained") return abstentionTitle(abstention.value?.reasonCode ?? "");
+  return ({ empty: "等待提问", loading: "回答生成中", reconnecting: "连接恢复中", completed: "已完成", abstained: "无法安全回答", failed: "回答失败", cancelled: "已取消", degraded: "服务降级", timeout: "请求超时", cancelling: "正在取消" })[status.value];
+});
 const contextLabel = computed(() => runContext.value ? `space ${runContext.value.spaceId} · run ${runContext.value.runId} · correlation ${runContext.value.correlationId}` : "尚未创建 run");
 const hasRuntimeDefaults = computed(() => Boolean(routeVersionId.value && profileVersionId.value && providerConnectionId.value && promptVersionId.value && model.value && datasetHash.value && configHash.value));
 
@@ -136,6 +139,13 @@ function safeErrorLabel(code: AnswerErrorCode): string {
 
 function safeAbstentionLabel(reasonCode: AnswerAbstentionReason | ""): string {
   return ({ NO_EVIDENCE: "当前空间没有足够证据", LOW_CONFIDENCE: "证据置信度不足", EVIDENCE_CONFLICT: "当前证据相互冲突", POLICY_BLOCKED: "当前问题被空间策略拒绝", SPACE_ACCESS_DENIED: "当前空间访问策略不允许回答", TOOL_UNAUTHORIZED: "所需只读工具未获授权", TOOL_FAILURE: "只读工具未能提供可靠结果", PROVIDER_UNAVAILABLE: "回答服务暂不可用", CANCELLED: "回答已取消" } satisfies Record<AnswerAbstentionReason, string>)[reasonCode as AnswerAbstentionReason] ?? "当前问题无法安全回答";
+}
+
+function abstentionTitle(reasonCode: AnswerAbstentionReason | ""): string {
+  if (reasonCode === "NO_EVIDENCE") return "知识库没有相关证据";
+  if (reasonCode === "LOW_CONFIDENCE") return "证据相关性不足";
+  if (reasonCode === "POLICY_BLOCKED" || reasonCode === "SPACE_ACCESS_DENIED") return "策略拒答";
+  return "安全拒答";
 }
 
 function safeAbstentionDetail(reasonCode: AnswerAbstentionReason | ""): string {
@@ -428,7 +438,7 @@ onBeforeUnmount(() => abortController?.abort());
 
     <div v-if="runContext" class="answer-context card" aria-live="polite"><span class="card-label">本次运行上下文</span><code>{{ contextLabel }}</code><span class="muted">last sequence {{ lastSequence }} · last event {{ lastEventId ?? "—" }}</span></div>
     <article v-if="answerText || status === 'completed'" class="card answer-result" aria-live="polite"><div class="card-title"><h3>回答</h3><span class="state-pill" :class="status">{{ statusLabel }}</span></div><p class="answer-text">{{ answerText || "服务端未返回可安全展示的回答正文。" }}</p></article>
-    <article v-if="status === 'abstained' || abstention" class="abstention answer-state"><strong>安全拒答</strong><span>{{ safeAbstentionLabel(abstention?.reasonCode ?? "") }}</span><small>{{ safeAbstentionDetail(abstention?.reasonCode ?? "") }}</small></article>
+    <article v-if="status === 'abstained' || abstention" class="abstention answer-state"><strong>{{ abstentionTitle(abstention?.reasonCode ?? "") }}</strong><span>{{ safeAbstentionLabel(abstention?.reasonCode ?? "") }}</span><small>{{ safeAbstentionDetail(abstention?.reasonCode ?? "") }}</small></article>
     <article v-if="status === 'timeout'" class="answer-state warning-state"><strong>请求超时</strong><span>回答连接超过客户端等待窗口，未自动切换到云端或其他空间。</span></article>
     <article v-if="status === 'degraded' || status === 'reconnecting'" class="answer-state warning-state"><strong>服务降级</strong><span>{{ notice || "事件连接正在恢复；已有事件将按 sequence 与 event_id 去重。" }}</span></article>
     <article v-if="status === 'cancelled'" class="answer-state"><strong>回答已取消</strong><span>服务端已确认取消；取消后的 answer delta 会被丢弃。</span></article>

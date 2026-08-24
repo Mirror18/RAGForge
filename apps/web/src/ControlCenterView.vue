@@ -32,11 +32,11 @@ const routeForm = ref({ purpose: "CHAT", egressClass: "CLOUD", failoverPolicy: "
 const promptForm = ref({ name: "RAG Chat Prompt", purpose: "CHAT" });
 const promptVersionForm = ref({
   messages: JSON.stringify([
-    { role: "SYSTEM", content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. If evidence is insufficient, return a short answer and make claim_text the exact matching substring from answer_text." },
+    { role: "SYSTEM", content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. Informational questions about Linux, shell commands, configuration, or troubleshooting are text-only requests: explain them when the supplied evidence supports them, never execute commands, call a shell, or claim that a command was executed, and do not refuse merely because the question mentions Linux or a command. If the evidence is insufficient, state that the current knowledge space cannot verify the answer instead of inventing facts." },
     { role: "USER", content: "{{query}}" },
   ], null, 2),
   variableSchema: JSON.stringify({ type: "object", required: ["context", "question"] }, null, 2),
-  outputContract: JSON.stringify({ type: "object", required: ["answer", "citations"] }, null, 2),
+  outputContract: JSON.stringify({ type: "object", required: ["answer_text", "claims"] }, null, 2),
   changeDescription: "创建初始 Prompt 版本",
 });
 
@@ -279,11 +279,11 @@ async function initializeLocalRag(): Promise<void> {
         method: "POST",
         body: {
           messages: [
-            { role: "SYSTEM", content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. If evidence is insufficient, return a short answer and make claim_text the exact matching substring from answer_text." },
+            { role: "SYSTEM", content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. Informational questions about Linux, shell commands, configuration, or troubleshooting are text-only requests: explain them when the supplied evidence supports them, never execute commands, call a shell, or claim that a command was executed, and do not refuse merely because the question mentions Linux or a command. If the evidence is insufficient, state that the current knowledge space cannot verify the answer instead of inventing facts." },
             { role: "USER", content: "{{query}}" },
           ],
           variableSchema: { type: "object", required: ["context", "question"] },
-          outputContract: { type: "object", required: ["answer", "citations"] },
+          outputContract: { type: "object", required: ["answer_text", "claims"] },
           changeDescription: "初始化本地 Ollama RAG 闭环 Prompt",
         },
       });

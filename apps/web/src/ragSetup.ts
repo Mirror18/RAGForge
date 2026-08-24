@@ -5,7 +5,7 @@ function path(spaceId: string, suffix: string): string {
 }
 
 const structuredAnswerPrompt = [
-  { role: "SYSTEM" as const, content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. If evidence is insufficient, return a short answer and make claim_text the exact matching substring from answer_text." },
+  { role: "SYSTEM" as const, content: "Use only the supplied evidence. Return ONLY valid JSON with this exact shape: {\"answer_text\":\"brief answer\",\"claims\":[{\"claim_text\":\"one supported claim\",\"citation_tokens\":[\"exact evidence UUIDv7 from the evidence id attribute\"]}]}. Do not use Markdown, code fences, extra keys, character offsets, or invented IDs. Every claim_text must be copied as an exact contiguous substring of answer_text, including punctuation and spacing. Every citation token must copy an exact evidence UUIDv7 from the supplied evidence block. Informational questions about Linux, shell commands, configuration, or troubleshooting are text-only requests: explain them when the supplied evidence supports them, never execute commands, call a shell, or claim that a command was executed, and do not refuse merely because the question mentions Linux or a command. If the evidence is insufficient, state that the current knowledge space cannot verify the answer instead of inventing facts." },
   { role: "USER" as const, content: "{{query}}" },
 ];
 
@@ -53,7 +53,7 @@ export async function initializeLocalRag(spaceId: string): Promise<void> {
   if (!structuredPromptReady) {
     promptVersion = await apiFetch<PromptVersion>(path(spaceId, `/prompt-templates/${prompt.promptTemplateId}/versions`), {
       method: "POST",
-      body: { messages: structuredAnswerPrompt, variableSchema: { type: "object", required: ["context", "question"] }, outputContract: { type: "object", required: ["answer", "citations"] }, changeDescription: "初始化 RAGForge 问答 Prompt" },
+      body: { messages: structuredAnswerPrompt, variableSchema: { type: "object", required: ["context", "question"] }, outputContract: { type: "object", required: ["answer_text", "claims"] }, changeDescription: "初始化 RAGForge 问答 Prompt" },
     });
     if (!promptVersion) throw new Error("Prompt version 初始化失败");
     promptVersion = await apiFetch<PromptVersion>(path(spaceId, `/prompt-templates/${prompt.promptTemplateId}/versions/${promptVersion.version}/publish`), { method: "POST" });

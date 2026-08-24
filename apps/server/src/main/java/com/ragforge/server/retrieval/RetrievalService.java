@@ -142,7 +142,20 @@ public final class RetrievalService {
 
     private List<EvidenceBundle.Evidence> selectContext(Request request, List<Reranker.Result> reranked) {
         Map<UUID, ContextSelection> selections = new LinkedHashMap<>();
+        boolean requiresLexicalCorroboration = hasSpecificAlphanumericTerm(request.originalQuery());
         for (Reranker.Result result : reranked) {
+            boolean noLexicalSupport = "rrf-only-no-lexical-text".equals(result.reason())
+                    || "rrf-only-no-lexical-overlap".equals(result.reason());
+            if (requiresLexicalCorroboration && noLexicalSupport) {
+                // Dense-only candidates without lexical corroboration are
+                // not safe evidence for a query with a specific external
+                // term (for example Linux or PostgreSQL): a semantically
+                // nearby chunk can otherwise make an unrelated question look
+                // answerable. Natural-language Chinese questions without an
+                // explicit external term still retain dense retrieval for
+                // synonym/semantic matches.
+                continue;
+            }
             RrfMerger.MergedCandidate candidate = result.candidate();
             catalog.findChild(request.spaceId(), candidate.childChunkId()).ifPresent(child -> {
                 if (!matchesCandidate(candidate, child)) {
@@ -182,6 +195,10 @@ public final class RetrievalService {
                     candidate.rrfScore(), selection.rerankScore(), selection.reason()));
         }
         return result;
+    }
+
+    private static boolean hasSpecificAlphanumericTerm(String query) {
+        return query != null && query.matches(".*(?i)(?<![a-z0-9])[a-z][a-z0-9_-]{1,}.*");
     }
 
     private void addSiblings(Request request, Map<UUID, ContextSelection> selections,
