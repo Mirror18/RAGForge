@@ -22,12 +22,15 @@ import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @ConditionalOnProperty(name = "ragforge.ingestion.enabled", havingValue = "true")
 public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHandler {
     private static final String PARSER_VERSION = "1.0.0";
+    private static final int MAX_CHILD_CHARS = 2000;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private final ContentAddressedObjectStore store;
@@ -74,7 +77,7 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         step(spaceId, jobId, attemptId, "PARSE", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
         step(spaceId, jobId, attemptId, "PERSIST", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
 
-        persistChunk(spaceId, revisionId, textArtifactId, parsed.extractedText(), now);
+        persistChunks(spaceId, revisionId, textArtifactId, parsed.extractedText(), now);
         jdbc.update("UPDATE source_documents SET active_revision_id = ?, version_no = ?, current_state = 'ACTIVE', updated_at = ? WHERE space_id = ? AND id = ?",
                 revisionId, context.revisionNo(), Timestamp.from(now), spaceId, context.sourceDocumentId());
         jdbc.update("""
@@ -169,24 +172,57 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
                 report.ocr().engineVersion(), report.ocr().triggerReason().name(), report.ocr().auditState().name(), Timestamp.from(now));
     }
 
-    private Chunk persistChunk(UUID spaceId, UUID revisionId, UUID textArtifactId, String text, Instant now) {
+    private List<Chunk> persistChunks(UUID spaceId, UUID revisionId, UUID textArtifactId, String text, Instant now) {
         UUID parentId = UuidV7.random();
-        UUID childId = UuidV7.random();
-        String ref = "spaces/" + spaceId + "/revisions/" + revisionId + "/chunks/child/" + childId;
-        String hash = sha256(text.getBytes(StandardCharsets.UTF_8));
         String headings = headingJson(text);
         int tokens = Math.max(1, text.strip().split("\\s+").length);
+        String parentRef = "spaces/" + spaceId + "/revisions/" + revisionId + "/chunks/parent/" + parentId;
         jdbc.update("""
                 INSERT INTO parent_chunks (id, space_id, document_revision_id, chunk_index, version_no, heading_path,
                     token_start, token_end, char_start, char_end, content_ref, immutable, created_at)
                 VALUES (?, ?, ?, 0, 1, CAST(? AS jsonb), 0, ?, 0, ?, ?, TRUE, ?)
-                """, parentId, spaceId, revisionId, headings, tokens, text.length(), ref.replace("child/", "parent/"), Timestamp.from(now));
-        jdbc.update("""
-                INSERT INTO child_chunks (id, space_id, parent_chunk_id, document_revision_id, chunk_index, version_no,
-                    heading_path, token_start, token_end, char_start, char_end, line_start, line_end, content_ref, text_hash, immutable, created_at)
-                VALUES (?, ?, ?, ?, 0, 1, CAST(? AS jsonb), 0, ?, 0, ?, 1, ?, ?, ?, TRUE, ?)
-                """, childId, spaceId, parentId, revisionId, headings, tokens, text.length(), countLines(text), ref, hash, Timestamp.from(now));
-        return new Chunk(parentId, childId, ref, hash, text);
+                """, parentId, spaceId, revisionId, headings, tokens, text.length(), parentRef, Timestamp.from(now));
+        List<Chunk> chunks = new ArrayList<>();
+        int tokenStart = 0;
+        int lineStart = 1;
+        int chunkIndex = 0;
+        for (ChunkRange range : chunkRanges(text)) {
+            String slice = text.substring(range.start(), range.end());
+            UUID childId = UuidV7.random();
+            String ref = "spaces/" + spaceId + "/revisions/" + revisionId + "/chunks/child/" + childId;
+            String hash = sha256(slice.getBytes(StandardCharsets.UTF_8));
+            int sliceTokens = Math.max(1, slice.strip().split("\\s+").length);
+            int lineEnd = lineStart + countLines(slice) - 1;
+            jdbc.update("""
+                    INSERT INTO child_chunks (id, space_id, parent_chunk_id, document_revision_id, chunk_index, version_no,
+                        heading_path, token_start, token_end, char_start, char_end, line_start, line_end, content_ref, text_hash, immutable, created_at)
+                    VALUES (?, ?, ?, ?, ?, 1, CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
+                    """, childId, spaceId, parentId, revisionId, chunkIndex++, headingJson(slice), tokenStart,
+                    tokenStart + sliceTokens, range.start(), range.end(), lineStart, lineEnd, ref, hash, Timestamp.from(now));
+            chunks.add(new Chunk(parentId, childId, ref, hash, slice));
+            tokenStart += sliceTokens;
+            lineStart = lineEnd + 1;
+        }
+        return List.copyOf(chunks);
+    }
+
+    static List<ChunkRange> chunkRanges(String text) {
+        if (text == null || text.isEmpty()) return List.of(new ChunkRange(0, 0));
+        List<ChunkRange> ranges = new ArrayList<>();
+        int start = 0;
+        while (start < text.length()) {
+            int preferredEnd = Math.min(text.length(), start + MAX_CHILD_CHARS);
+            int end = preferredEnd;
+            if (preferredEnd < text.length()) {
+                int newline = text.lastIndexOf('\n', preferredEnd - 1);
+                if (newline >= start + MAX_CHILD_CHARS / 4) end = newline + 1;
+            }
+            if (end <= start) end = preferredEnd;
+            if (end < text.length() && Character.isLowSurrogate(text.charAt(end))) end--;
+            ranges.add(new ChunkRange(start, end));
+            start = end;
+        }
+        return List.copyOf(ranges);
     }
 
     private void ensureRetrievalProfile(UUID spaceId, Instant now) {
@@ -223,5 +259,6 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     private static String sha256(byte[] value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); } catch (Exception e) { throw new IllegalStateException(e); } }
 
     private record DocumentContext(UUID sourceDocumentId, String path, int revisionNo, String sourceVersion) { }
+    record ChunkRange(int start, int end) { }
     private record Chunk(UUID parentId, UUID childId, String contentRef, String textHash, String text) { }
 }

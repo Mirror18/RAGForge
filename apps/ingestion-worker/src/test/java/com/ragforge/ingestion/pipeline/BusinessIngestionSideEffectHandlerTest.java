@@ -10,8 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -44,5 +46,30 @@ class BusinessIngestionSideEffectHandlerTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("artifact reference identity validation failed");
         verifyNoInteractions(jdbc, store);
+    }
+
+    @Test
+    void splitsLongMarkdownAtSafeBoundariesWithoutGapsOrOverlaps() {
+        String text = "# Linux\n" + "a".repeat(2_300) + "\n\n" + "df -h\n" + "b".repeat(2_300);
+
+        List<BusinessIngestionSideEffectHandler.ChunkRange> ranges =
+                BusinessIngestionSideEffectHandler.chunkRanges(text);
+
+        assertThat(ranges).isNotEmpty();
+        assertThat(ranges.get(0).start()).isZero();
+        assertThat(ranges.get(ranges.size() - 1).end()).isEqualTo(text.length());
+        assertThat(ranges).allSatisfy(range -> {
+            assertThat(range.end()).isGreaterThan(range.start());
+            assertThat(range.end() - range.start()).isLessThanOrEqualTo(2_000);
+        });
+        for (int index = 1; index < ranges.size(); index++) {
+            assertThat(ranges.get(index).start()).isEqualTo(ranges.get(index - 1).end());
+        }
+    }
+
+    @Test
+    void keepsShortMarkdownAsOneChunk() {
+        assertThat(BusinessIngestionSideEffectHandler.chunkRanges("Linux\ndf -h\nfree -h"))
+                .containsExactly(new BusinessIngestionSideEffectHandler.ChunkRange(0, 19));
     }
 }
