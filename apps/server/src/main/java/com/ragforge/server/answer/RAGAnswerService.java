@@ -1,5 +1,7 @@
 package com.ragforge.server.answer;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.common.UuidV7;
 import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.adapter.EgressDecision;
@@ -29,6 +31,7 @@ import java.util.concurrent.TimeoutException;
  */
 public final class RAGAnswerService {
     private static final Logger log = LoggerFactory.getLogger(RAGAnswerService.class);
+    private static final ObjectMapper PROMPT_OBJECT_MAPPER = new ObjectMapper();
     private final SpaceAuthorizer authorizer;
     private final QueryEmbeddingProvider embeddingProvider;
     private final RetrievalPort retrievalPort;
@@ -329,7 +332,7 @@ public final class RAGAnswerService {
 
     private static String renderPrompt(RagPromptPort.VersionedRagPrompt prompt, String query,
                                        EvidenceBundleSnapshot snapshot) {
-        String system = prompt.template().replace("{{query}}", query);
+        String system = renderSystemInstructions(prompt.template(), query);
         StringBuilder rendered = new StringBuilder(system).append("\n\n<ragforge_evidence>\n");
         Map<UUID, String> material = snapshot.materialById();
         for (EvidenceBundle.Evidence evidence : snapshot.bundle().evidence()) {
@@ -344,6 +347,46 @@ public final class RAGAnswerService {
                         .map(UUID::toString).collect(java.util.stream.Collectors.joining(", ")))
                 .append("\n</ragforge_citation_token_allow_list>");
         return rendered.toString();
+    }
+
+    /**
+     * Prompt management stores a version as a JSON message array.  The
+     * generation port already supplies the user's query as a separate user
+     * message, so sending the serialized array as system text both duplicates
+     * the query and makes provider JSON compliance needlessly fragile.
+     * Legacy plain-text templates remain supported.
+     */
+    private static String renderSystemInstructions(String template, String query) {
+        String trimmed = template == null ? "" : template.trim();
+        if (!trimmed.startsWith("[")) {
+            return template.replace("{{query}}", query);
+        }
+        try {
+            JsonNode messages = PROMPT_OBJECT_MAPPER.readTree(trimmed);
+            if (!messages.isArray()) {
+                return template.replace("{{query}}", query);
+            }
+            StringBuilder instructions = new StringBuilder();
+            for (JsonNode message : messages) {
+                if (!message.isObject() || !message.path("content").isTextual()) {
+                    continue;
+                }
+                String role = message.path("role").asText("");
+                if (!"SYSTEM".equalsIgnoreCase(role)) {
+                    continue;
+                }
+                if (!instructions.isEmpty()) {
+                    instructions.append("\n\n");
+                }
+                instructions.append(message.path("content").textValue().replace("{{query}}", query));
+            }
+            return instructions.isEmpty() ? template.replace("{{query}}", query) : instructions.toString();
+        } catch (Exception ignored) {
+            // A versioned prompt is still treated as opaque input if an old
+            // record is not valid message JSON; provider validation remains
+            // fail-closed and no command is executed by this fallback.
+            return template.replace("{{query}}", query);
+        }
     }
 
     private static void validateBundleScope(AnswerRequest request, EvidenceBundleSnapshot snapshot) {

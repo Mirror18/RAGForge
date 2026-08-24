@@ -84,6 +84,35 @@ class RetrievalServiceTest {
     }
 
     @Test
+    void denseOnlyCandidateWithoutLexicalSupportProducesExplicitAbstention() {
+        CandidateIndexStore dense = new FakeDenseStore(List.of(new CandidateIndexStore.CandidateHit(
+                CHILD_1, 0.95, SPACE, INDEX, REVISION, PARENT, ref(CHILD_1), HASH)));
+        RetrievalService service = new RetrievalService(dense, new InMemoryBm25CandidateStore(),
+                new FakeCatalog(), new LexicalReranker());
+
+        EvidenceBundle bundle = service.retrieve(new RetrievalService.Request(SPACE, INDEX,
+                profile(ExpansionMode.NONE, 0, 0, 100), "Linux 查看磁盘空间", List.of(0.1)));
+
+        assertThat(bundle.abstained()).isTrue();
+        assertThat(bundle.abstentionReason()).isEqualTo("NO_VERIFIED_EVIDENCE");
+        assertThat(bundle.evidence()).isEmpty();
+    }
+
+    @Test
+    void denseOnlyCandidateRemainsAvailableForNaturalLanguageSemanticQueries() {
+        CandidateIndexStore dense = new FakeDenseStore(List.of(new CandidateIndexStore.CandidateHit(
+                CHILD_1, 0.95, SPACE, INDEX, REVISION, PARENT, ref(CHILD_1), HASH)));
+        RetrievalService service = new RetrievalService(dense, new InMemoryBm25CandidateStore(),
+                new FakeCatalog(), new LexicalReranker());
+
+        EvidenceBundle bundle = service.retrieve(new RetrievalService.Request(SPACE, INDEX,
+                profile(ExpansionMode.NONE, 0, 0, 100), "当前知识库有哪些主题", List.of(0.1)));
+
+        assertThat(bundle.abstained()).isFalse();
+        assertThat(bundle.evidence()).hasSize(1);
+    }
+
+    @Test
     void requestCannotUseProfileFromAnotherSpace() {
         assertThatThrownBy(() -> new RetrievalService.Request(SPACE, INDEX,
                 new RetrievalProfileRepository.RetrievalProfileVersion(PROFILE_VERSION_ID, FOREIGN_SPACE, PROFILE_ID, 1,

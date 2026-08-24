@@ -205,14 +205,48 @@ class RAGAnswerServiceTest {
         assertThat(redacted).doesNotContain("content:alpha");
     }
 
+    @Test
+    void jsonMessagePromptIsRenderedAsSystemInstructionsInsteadOfSerializedMessages() {
+        AtomicReference<GenerationPort.GenerationRequest> generationRequest = new AtomicReference<>();
+        String prompt = "[{\"role\":\"SYSTEM\",\"content\":\"Linux questions are informational; never execute commands.\"},"
+                + "{\"role\":\"USER\",\"content\":\"{{query}}\"}]";
+        RAGAnswerService service = service(snapshot(false, null), new InMemoryAnswerPersistence(),
+                (request, token) -> completed(new GenerationPort.GenerationResult("Alpha is stable.",
+                        List.of(new GenerationPort.GeneratedClaim("Alpha is stable.", List.of(EVIDENCE_A.toString()))),
+                        "model", EgressDecision.LOCAL_ONLY)), generationRequest, prompt);
+
+        Answer answer = service.answer(request(100, new CancellationToken()));
+
+        assertThat(answer.status()).isEqualTo(AnswerStatus.COMPLETED);
+        assertThat(generationRequest.get().renderedPrompt())
+                .contains("Linux questions are informational; never execute commands.")
+                .doesNotContain("\"role\":\"SYSTEM\"")
+                .doesNotContain("\"role\":\"USER\"");
+    }
+
     private static RAGAnswerService service(EvidenceBundleSnapshot snapshot, AnswerPersistencePort persistence,
                                              GenerationPort generation, AtomicReference<GenerationPort.GenerationRequest> requestRef) {
-        return service(snapshot, persistence, generation, requestRef, null);
+        return service(snapshot, persistence, generation, requestRef, null,
+                "Answer the question {{query}} using only the evidence.");
     }
 
     private static RAGAnswerService service(EvidenceBundleSnapshot snapshot, AnswerPersistencePort persistence,
                                              GenerationPort generation, AtomicReference<GenerationPort.GenerationRequest> ignored,
                                              AtomicReference<GenerationPort.GenerationRequest> secondRef) {
+        return service(snapshot, persistence, generation, ignored, secondRef,
+                "Answer the question {{query}} using only the evidence.");
+    }
+
+    private static RAGAnswerService service(EvidenceBundleSnapshot snapshot, AnswerPersistencePort persistence,
+                                             GenerationPort generation, AtomicReference<GenerationPort.GenerationRequest> ignored,
+                                             String promptTemplate) {
+        return service(snapshot, persistence, generation, ignored, null, promptTemplate);
+    }
+
+    private static RAGAnswerService service(EvidenceBundleSnapshot snapshot, AnswerPersistencePort persistence,
+                                             GenerationPort generation, AtomicReference<GenerationPort.GenerationRequest> ignored,
+                                             AtomicReference<GenerationPort.GenerationRequest> secondRef,
+                                             String promptTemplate) {
         GenerationPort wrapped = (request, token) -> {
             if (ignored != null) ignored.set(request);
             if (secondRef != null) secondRef.set(request);
@@ -224,7 +258,7 @@ class RAGAnswerServiceTest {
                 (request, decision, token) -> List.of(0.1, 0.2),
                 (request, token) -> snapshot,
                 (spaceId, promptVersionId, correlationId) -> new RagPromptPort.VersionedRagPrompt(
-                        PROMPT, SPACE, "rag-answer", 1, "Answer the question {{query}} using only the evidence.",
+                        PROMPT, SPACE, "rag-answer", 1, promptTemplate,
                         "opaque:rag-answer-v1", HASH),
                 wrapped, persistence, provenance -> {
                 });

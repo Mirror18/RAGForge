@@ -22,7 +22,8 @@ public final class LexicalReranker implements Reranker {
                     long overlap = queryTerms.stream().filter(documentTerms::contains).count();
                     double lexical = queryTerms.isEmpty() ? 0.0 : (double) overlap / queryTerms.size();
                     double score = candidate.rrfScore() * 0.35 + lexical * 0.65;
-                    String reason = documentTerms.isEmpty() ? "rrf-only-no-lexical-text" : "lexical-overlap-and-rrf";
+                    String reason = documentTerms.isEmpty() ? "rrf-only-no-lexical-text"
+                            : overlap == 0 ? "rrf-only-no-lexical-overlap" : "lexical-overlap-and-rrf";
                     return new Result(candidate, score, reason);
                 })
                 .sorted(Comparator.comparingDouble(Result::score).reversed()
@@ -38,26 +39,45 @@ public final class LexicalReranker implements Reranker {
         }
         String lower = text.toLowerCase(java.util.Locale.ROOT);
         StringBuilder ascii = new StringBuilder();
+        StringBuilder han = new StringBuilder();
         for (int offset = 0; offset < lower.length();) {
             int codePoint = lower.codePointAt(offset);
-            boolean han = Character.UnicodeScript.of(codePoint) == Character.UnicodeScript.HAN;
-            if (han) {
+            boolean isHan = Character.UnicodeScript.of(codePoint) == Character.UnicodeScript.HAN;
+            if (isHan) {
                 if (!ascii.isEmpty()) {
                     result.add(ascii.toString());
                     ascii.setLength(0);
                 }
-                result.add(new String(Character.toChars(codePoint)));
+                han.appendCodePoint(codePoint);
             } else if (Character.isLetterOrDigit(codePoint)) {
+                addHanNgrams(result, han);
                 ascii.appendCodePoint(codePoint);
-            } else if (!ascii.isEmpty()) {
-                result.add(ascii.toString());
-                ascii.setLength(0);
+            } else {
+                if (!ascii.isEmpty()) {
+                    result.add(ascii.toString());
+                    ascii.setLength(0);
+                }
+                addHanNgrams(result, han);
             }
             offset += Character.charCount(codePoint);
         }
+        addHanNgrams(result, han);
         if (!ascii.isEmpty()) {
             result.add(ascii.toString());
         }
         return result;
+    }
+
+    private static void addHanNgrams(Set<String> result, StringBuilder han) {
+        if (han.isEmpty()) {
+            return;
+        }
+        String value = han.toString();
+        for (int length = 2; length <= 4; length++) {
+            for (int start = 0; start + length <= value.length(); start++) {
+                result.add(value.substring(start, start + length));
+            }
+        }
+        han.setLength(0);
     }
 }
