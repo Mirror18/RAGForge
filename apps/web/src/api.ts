@@ -125,7 +125,7 @@ export interface ModelRoute {
   egressClass: "LOCAL" | "CLOUD";
   failoverPolicy: "NONE" | "SAME_EGRESS_ONLY";
   candidates: Array<{ modelProfileId: string; priority: number; egressClass: "LOCAL" | "CLOUD" }>;
-  status: "DRAFT" | "PUBLISHED" | "DISABLED";
+  status: "DRAFT" | "ACTIVE" | "DISABLED";
   createdAt: string;
   updatedAt: string;
 }
