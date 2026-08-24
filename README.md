@@ -98,7 +98,7 @@ RAGForge/
 .\scripts\dev\start-local.bat -OpenBrowser
 ```
 
-默认访问地址为 `http://127.0.0.1:18082`（Server）和 `http://127.0.0.1:5174`（Web）。如需只启动 API，可跳过 Web：
+默认访问地址为 `http://127.0.0.1:18083`（Server）和 `http://127.0.0.1:5175`（Web）。如需只启动 API，可跳过 Web：
 
 ```bat
 .\scripts\dev\start-local.bat -SkipWeb
@@ -111,12 +111,12 @@ python scripts/dev/core.py up
 python scripts/dev/core.py health
 ```
 
-Server 使用 Compose 暴露的本地开发端口。以下命令在 PowerShell 中启动一个端口为 `18082` 的实例；如端口被占用，可调整 `SERVER_PORT`：
+Server 使用 Compose 暴露的本地开发端口。以下命令在 PowerShell 中启动一个端口为 `18083` 的实例；如端口被占用，可调整 `SERVER_PORT`：
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Java\jdk-21'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-$env:SERVER_PORT = '18082'
+$env:SERVER_PORT = '18083'
 $env:JDBC_DATABASE_URL = 'jdbc:postgresql://localhost:25432/ragforge'
 $env:JDBC_DATABASE_USERNAME = 'ragforge'
 $env:JDBC_DATABASE_PASSWORD = 'change-me'
@@ -128,7 +128,7 @@ $env:SPRING_RABBITMQ_PASSWORD = 'change-me'
 mvn -pl apps/server spring-boot:run
 ```
 
-启动成功后，可通过 `http://127.0.0.1:18082/actuator/health` 验证 Server。Web 骨架可在另一个终端运行：
+启动成功后，可通过 `http://127.0.0.1:18083/actuator/health` 验证 Server。Web 骨架可在另一个终端运行：
 
 ```powershell
 npm --prefix apps/web run dev

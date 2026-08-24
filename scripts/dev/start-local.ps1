@@ -1,8 +1,8 @@
 ﻿[CmdletBinding()]
 param(
     [string]$ProjectName = "ragforge-p1",
-    [int]$ServerPort = 18082,
-    [int]$WebPort = 5174,
+    [int]$ServerPort = 18083,
+    [int]$WebPort = 5175,
     [switch]$SkipWeb,
     [switch]$SkipModelCheck,
     [switch]$OpenBrowser

@@ -23,7 +23,7 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 .\scripts\dev\start-local.bat -OpenBrowser
 ```
 
-默认 Server/Web 端口为 `18082` 和 `5174`，可通过 `-ServerPort`、`-WebPort` 调整；`-ProjectName` 保持 Compose 网络、卷和基础设施端口隔离。脚本会检查 `qwen3.5:9b` 与 `nomic-embed-text:latest`，并为 Server 显式启用 MinIO、Qdrant、RabbitMQ outbox relay、Valkey run-event fanout 和 Phase 6 运维任务；不会把本地路由静默切换为云路由。
+默认 Server/Web 端口为 `18083` 和 `5175`，可通过 `-ServerPort`、`-WebPort` 调整；`-ProjectName` 保持 Compose 网络、卷和基础设施端口隔离。脚本会检查 `qwen3.5:9b` 与 `nomic-embed-text:latest`，并为 Server 显式启用 MinIO、Qdrant、RabbitMQ outbox relay、Valkey run-event fanout 和 Phase 6 运维任务；不会把本地路由静默切换为云路由。
 
 完整的当前应用运行面需要下列 Docker core 服务：
 
