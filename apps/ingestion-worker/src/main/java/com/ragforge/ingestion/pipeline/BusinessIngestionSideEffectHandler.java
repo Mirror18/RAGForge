@@ -12,7 +12,6 @@ import com.ragforge.ingestion.parser.NativeDocumentParser;
 import com.ragforge.ingestion.parser.ParseRequest;
 import com.ragforge.ingestion.parser.ParseStatus;
 import com.ragforge.ingestion.parser.ParsedDocument;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -23,7 +22,6 @@ import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -33,22 +31,16 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private final ContentAddressedObjectStore store;
-    private final OllamaEmbeddingClient embedding;
-    private final QdrantIndexWriter qdrant;
-    private final String embeddingProfileVersion;
+    private final SpaceCandidateIndexBuilder indexBuilder;
     private final NativeDocumentParser parser = new NativeDocumentParser();
 
     public BusinessIngestionSideEffectHandler(JdbcTemplate jdbc, ObjectMapper mapper,
                                               ContentAddressedObjectStore store,
-                                              OllamaEmbeddingClient embedding, QdrantIndexWriter qdrant,
-                                              @Value("${ragforge.ollama.embedding-model:nomic-embed-text:latest}")
-                                              String embeddingProfileVersion) {
+                                              SpaceCandidateIndexBuilder indexBuilder) {
         this.jdbc = jdbc;
         this.mapper = mapper;
         this.store = store;
-        this.embedding = embedding;
-        this.qdrant = qdrant;
-        this.embeddingProfileVersion = embeddingProfileVersion;
+        this.indexBuilder = indexBuilder;
     }
 
     @Override
@@ -82,35 +74,7 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         step(spaceId, jobId, attemptId, "PARSE", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
         step(spaceId, jobId, attemptId, "PERSIST", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
 
-        Chunk chunk = persistChunk(spaceId, revisionId, textArtifactId, parsed.extractedText(), now);
-        UUID indexId = UUID.nameUUIDFromBytes(("ragforge-index:" + spaceId + ":" + revisionId)
-                .getBytes(StandardCharsets.UTF_8));
-        int indexVersion = next("SELECT COALESCE(MAX(version_no), 0) + 1 FROM index_versions WHERE space_id = ?", spaceId);
-        String collection = "ragforge_" + compact(spaceId) + "_" + compact(indexId);
-        List<Double> vector = embedding.embed(chunk.text());
-        jdbc.update("""
-                INSERT INTO index_versions (id, space_id, version_no, index_state, candidate_collection,
-                    embedding_profile_version, chunking_strategy_version, document_revision_count, child_chunk_count, created_at)
-                VALUES (?, ?, ?, 'BUILDING', ?, ?, 'markdown-simple-v1', 1, 1, ?)
-                """, indexId, spaceId, indexVersion, collection, embeddingProfileVersion, Timestamp.from(now));
-        QdrantIndexWriter.Point point = new QdrantIndexWriter.Point(
-                chunk.childId(), revisionId, chunk.parentId(), chunk.contentRef(), chunk.textHash(), vector);
-        qdrant.createAndUpsert(collection, vector.size(), spaceId, indexId, List.of(point));
-        QdrantIndexWriter.Validation validation = qdrant.validateCandidate(collection, spaceId, indexId, point);
-        if (!validation.sampleRetrievalPassed() || !validation.spaceFilterPassed()) {
-            throw new IllegalStateException("candidate index validation failed");
-        }
-        jdbc.update("""
-                UPDATE index_versions SET index_state = 'VALIDATING', validation_document_count = 1,
-                    validation_child_chunk_count = 1, validation_vector_dimension = ?, validation_orphan_child_count = 0,
-                    validation_sample_retrieval_passed = ?, validation_space_filter_passed = ?,
-                    validation_checked_at = ?
-                WHERE space_id = ? AND id = ?
-                """, vector.size(), validation.sampleRetrievalPassed(), validation.spaceFilterPassed(),
-                Timestamp.from(now), spaceId, indexId);
-        requireSingleRow(jdbc.update("UPDATE index_versions SET index_state = 'READY' WHERE space_id = ? AND id = ?",
-                spaceId, indexId), "candidate index READY transition");
-        ensureRetrievalProfile(spaceId, now);
+        persistChunk(spaceId, revisionId, textArtifactId, parsed.extractedText(), now);
         jdbc.update("UPDATE source_documents SET active_revision_id = ?, version_no = ?, current_state = 'ACTIVE', updated_at = ? WHERE space_id = ? AND id = ?",
                 revisionId, context.revisionNo(), Timestamp.from(now), spaceId, context.sourceDocumentId());
         jdbc.update("""
@@ -119,6 +83,8 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
                 ON CONFLICT (space_id, source_document_id) DO UPDATE SET active_revision_id = EXCLUDED.active_revision_id,
                     version_no = EXCLUDED.version_no, updated_at = EXCLUDED.updated_at
                 """, UuidV7.random(), spaceId, context.sourceDocumentId(), revisionId, context.revisionNo(), Timestamp.from(now));
+        ensureRetrievalProfile(spaceId, now);
+        indexBuilder.build(spaceId, now);
         jdbc.update("UPDATE ingestion_jobs SET status = 'SUCCEEDED', document_revision_id = ?, updated_at = ?, version_no = version_no + 1 WHERE space_id = ? AND id = ?",
                 revisionId, Timestamp.from(now), spaceId, jobId);
         jdbc.update("UPDATE ingestion_job_attempts SET status = 'SUCCEEDED', finished_at = ? WHERE space_id = ? AND id = ?",
@@ -254,7 +220,6 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     private int next(String sql, Object... args) { return jdbc.queryForObject(sql, Integer.class, args); }
     private static int countLines(String value) { return (int) value.chars().filter(c -> c == '\n').count() + 1; }
     private static String headingJson(String text) { String first = text.lines().filter(line -> line.startsWith("#")).findFirst().orElse(""); String heading = first.replaceFirst("^#+\\s*", "").replace("\"", ""); return heading.isBlank() ? "[]" : "[\"" + heading + "\"]"; }
-    private static String compact(UUID id) { return id.toString().replace("-", ""); }
     private static String sha256(byte[] value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); } catch (Exception e) { throw new IllegalStateException(e); } }
 
     private record DocumentContext(UUID sourceDocumentId, String path, int revisionNo, String sourceVersion) { }

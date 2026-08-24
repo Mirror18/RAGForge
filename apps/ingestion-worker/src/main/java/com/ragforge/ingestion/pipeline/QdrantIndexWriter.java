@@ -49,12 +49,22 @@ public final class QdrantIndexWriter {
      * fail closed.
      */
     public Validation validateCandidate(String collection, UUID spaceId, UUID indexId, Point point) {
-        JsonNode scoped = search(collection, spaceId, indexId, point.vector());
-        boolean sampleRetrievalPassed = containsPoint(scoped, point, spaceId, indexId);
+        return validateCandidate(collection, spaceId, indexId, List.of(point));
+    }
+
+    public Validation validateCandidate(String collection, UUID spaceId, UUID indexId, List<Point> points) {
+        if (points == null || points.isEmpty()) {
+            throw new IllegalArgumentException("candidate validation requires at least one point");
+        }
+        boolean sampleRetrievalPassed = true;
+        for (Point point : points.stream().limit(5).toList()) {
+            JsonNode scoped = search(collection, spaceId, indexId, point.vector());
+            sampleRetrievalPassed &= containsPoint(scoped, point, spaceId, indexId);
+        }
 
         UUID foreignSpaceId = UUID.nameUUIDFromBytes(
                 ("ragforge-forbidden-space:" + spaceId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        JsonNode foreign = search(collection, foreignSpaceId, indexId, point.vector());
+        JsonNode foreign = search(collection, foreignSpaceId, indexId, points.get(0).vector());
         boolean spaceFilterPassed = sampleRetrievalPassed && foreign.path("result").isArray()
                 && foreign.path("result").isEmpty();
         return new Validation(sampleRetrievalPassed, spaceFilterPassed);

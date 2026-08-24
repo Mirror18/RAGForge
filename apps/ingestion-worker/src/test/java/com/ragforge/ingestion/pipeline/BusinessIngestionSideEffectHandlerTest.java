@@ -38,8 +38,7 @@ class BusinessIngestionSideEffectHandlerTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         ContentAddressedObjectStore store = mock(ContentAddressedObjectStore.class);
         BusinessIngestionSideEffectHandler handler = new BusinessIngestionSideEffectHandler(
-                jdbc, mapper, store, mock(OllamaEmbeddingClient.class), mock(QdrantIndexWriter.class),
-                "nomic-embed-text:latest");
+                jdbc, mapper, store, mock(SpaceCandidateIndexBuilder.class));
 
         assertThatThrownBy(() -> handler.handle(envelope, payload))
                 .isInstanceOf(IllegalStateException.class)
