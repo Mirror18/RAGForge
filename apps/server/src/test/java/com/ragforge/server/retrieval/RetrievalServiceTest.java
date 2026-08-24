@@ -84,18 +84,30 @@ class RetrievalServiceTest {
     }
 
     @Test
-    void denseOnlyCandidateWithoutLexicalSupportProducesExplicitAbstention() {
+    void denseOnlyCandidateWithoutInlineTextRemainsForMaterialVerification() {
         CandidateIndexStore dense = new FakeDenseStore(List.of(new CandidateIndexStore.CandidateHit(
                 CHILD_1, 0.95, SPACE, INDEX, REVISION, PARENT, ref(CHILD_1), HASH)));
-        RetrievalService service = new RetrievalService(dense, new InMemoryBm25CandidateStore(),
+        InMemoryBm25CandidateStore bm25 = new InMemoryBm25CandidateStore();
+        bm25.upsert(new Bm25CandidateStore.Document(SPACE, INDEX, CHILD_1, REVISION, PARENT, ref(CHILD_1), HASH,
+                "unrelated frontend notes"));
+        RetrievalService service = new RetrievalService(dense, bm25,
                 new FakeCatalog(), new LexicalReranker());
 
         EvidenceBundle bundle = service.retrieve(new RetrievalService.Request(SPACE, INDEX,
                 profile(ExpansionMode.NONE, 0, 0, 100), "Linux 查看磁盘空间", List.of(0.1)));
 
-        assertThat(bundle.abstained()).isTrue();
-        assertThat(bundle.abstentionReason()).isEqualTo("NO_VERIFIED_EVIDENCE");
-        assertThat(bundle.evidence()).isEmpty();
+        assertThat(bundle.abstained()).isFalse();
+        assertThat(bundle.evidence()).hasSize(1);
+    }
+
+    @Test
+    void materialLexicalCorroborationRecognizesLinuxButRejectsUnrelatedText() {
+        assertThat(RetrievalService.hasLexicalCorroboration("Linux 查看磁盘空间", "Linux 命令 df -h 查看磁盘空间"))
+                .isTrue();
+        assertThat(RetrievalService.hasLexicalCorroboration("Linux 查看磁盘空间", "前端项目的页面布局说明"))
+                .isFalse();
+        assertThat(RetrievalService.hasLexicalCorroboration("当前知识库有哪些主题", "任意语义相关内容"))
+                .isTrue();
     }
 
     @Test

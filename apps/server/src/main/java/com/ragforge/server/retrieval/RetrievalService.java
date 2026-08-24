@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,8 @@ import com.ragforge.server.index.CandidateIndexStore;
 /** Dense + BM25 + RRF + rerank + bounded context expansion orchestration. */
 @Service
 public final class RetrievalService {
+    private static final Pattern SPECIFIC_ALPHANUMERIC_TERM = Pattern.compile(
+            "(?i)(?<![a-z0-9])[a-z][a-z0-9_-]{1,}(?![a-z0-9])");
     public record Request(UUID spaceId, UUID indexVersionId,
             RetrievalProfileRepository.RetrievalProfileVersion profile,
             String originalQuery, List<Double> queryVector) {
@@ -144,15 +148,17 @@ public final class RetrievalService {
         Map<UUID, ContextSelection> selections = new LinkedHashMap<>();
         boolean requiresLexicalCorroboration = hasSpecificAlphanumericTerm(request.originalQuery());
         for (Reranker.Result result : reranked) {
-            boolean noLexicalSupport = "rrf-only-no-lexical-text".equals(result.reason())
-                    || "rrf-only-no-lexical-overlap".equals(result.reason());
+            boolean noLexicalSupport = "rrf-only-no-lexical-overlap".equals(result.reason());
             if (requiresLexicalCorroboration && noLexicalSupport) {
                 // Dense-only candidates without lexical corroboration are
                 // not safe evidence for a query with a specific external
                 // term (for example Linux or PostgreSQL): a semantically
                 // nearby chunk can otherwise make an unrelated question look
-                // answerable. Natural-language Chinese questions without an
-                // explicit external term still retain dense retrieval for
+                // answerable. Candidates with no searchable text are kept
+                // until the revision/artifact material resolver can verify
+                // them; the production Qdrant payload intentionally contains
+                // metadata only. Natural-language Chinese questions without
+                // an explicit external term still retain dense retrieval for
                 // synonym/semantic matches.
                 continue;
             }
@@ -197,8 +203,33 @@ public final class RetrievalService {
         return result;
     }
 
-    private static boolean hasSpecificAlphanumericTerm(String query) {
-        return query != null && query.matches(".*(?i)(?<![a-z0-9])[a-z][a-z0-9_-]{1,}.*");
+    public static boolean hasSpecificAlphanumericTerm(String query) {
+        return query != null && SPECIFIC_ALPHANUMERIC_TERM.matcher(query).find();
+    }
+
+    /**
+     * Checks material after retrieval without exposing it in candidate traces.
+     * This is deliberately token-boundary aware so a query for Linux cannot be
+     * corroborated by an unrelated word that merely contains "linux".
+     */
+    public static boolean hasLexicalCorroboration(String query, String material) {
+        if (!hasSpecificAlphanumericTerm(query)) {
+            return true;
+        }
+        if (material == null || material.isBlank()) {
+            return false;
+        }
+        String lowerMaterial = material.toLowerCase(java.util.Locale.ROOT);
+        Matcher matcher = SPECIFIC_ALPHANUMERIC_TERM.matcher(query);
+        while (matcher.find()) {
+            String term = matcher.group().toLowerCase(java.util.Locale.ROOT);
+            Pattern materialTerm = Pattern.compile("(?i)(?<![a-z0-9])" + Pattern.quote(term)
+                    + "(?![a-z0-9])");
+            if (materialTerm.matcher(lowerMaterial).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void addSiblings(Request request, Map<UUID, ContextSelection> selections,

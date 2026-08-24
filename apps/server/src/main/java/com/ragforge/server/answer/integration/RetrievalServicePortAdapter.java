@@ -74,6 +74,7 @@ public final class RetrievalServicePortAdapter implements RetrievalPort {
             return snapshot(execution, bundle, List.of());
         }
         List<EvidenceBundleSnapshot.EvidenceMaterial> resolved = new ArrayList<>();
+        List<EvidenceBundle.Evidence> materiallyCorroborated = new ArrayList<>();
         for (EvidenceBundle.Evidence evidence : bundle.evidence()) {
             if (cancellationToken.isCancellationRequested()) {
                 throw new ProviderAdapterException(ProviderErrorClass.CANCELLED,
@@ -86,7 +87,23 @@ public final class RetrievalServicePortAdapter implements RetrievalPort {
                 throw new ProviderAdapterException(ProviderErrorClass.UNAVAILABLE,
                         "Verified evidence material is unavailable", request.correlationId(), 0, false);
             }
-            resolved.add(new EvidenceBundleSnapshot.EvidenceMaterial(evidence.evidenceId(), content));
+            if (RetrievalService.hasLexicalCorroboration(request.query(), content)) {
+                materiallyCorroborated.add(evidence);
+                resolved.add(new EvidenceBundleSnapshot.EvidenceMaterial(evidence.evidenceId(), content));
+            }
+        }
+        if (RetrievalService.hasSpecificAlphanumericTerm(request.query()) && materiallyCorroborated.isEmpty()) {
+            EvidenceBundle abstained = new EvidenceBundle(bundle.spaceId(), bundle.indexVersionId(), bundle.profileId(),
+                    bundle.profileVersion(), bundle.originalQuery(), bundle.normalizedQuery(), List.of(), true,
+                    "NO_VERIFIED_EVIDENCE");
+            observer.record(new Phase5IntegrationObserver.Decision(request.spaceId(), request.runId(),
+                    request.correlationId(), "retrieval", "ABSTAINED", abstained.abstentionReason(), null));
+            return snapshot(execution, abstained, List.of());
+        }
+        if (materiallyCorroborated.size() != bundle.evidence().size()) {
+            bundle = new EvidenceBundle(bundle.spaceId(), bundle.indexVersionId(), bundle.profileId(),
+                    bundle.profileVersion(), bundle.originalQuery(), bundle.normalizedQuery(), materiallyCorroborated,
+                    false, null);
         }
         observer.record(new Phase5IntegrationObserver.Decision(request.spaceId(), request.runId(),
                 request.correlationId(), "retrieval", "SUCCEEDED", "EVIDENCE_BUNDLE_READY", null));
