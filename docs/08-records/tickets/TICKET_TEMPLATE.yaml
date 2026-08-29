@@ -1,0 +1,148 @@
+# Worker Agent Ticket 模板
+
+> 本目录由 **Orchestrator Agent** 为每张活跃卡片创建一个 Ticket YAML 文件。
+> Worker Agent 收到任务后，**只读取 Ticket 中列出的文件路径**，不得自行 Grep/Search 全仓。
+>
+> 每张卡片一份 Ticket，命名格式：`<CARD_ID>-<agent-slug>.yaml`，例如 `P7C-01-a1.yaml`。
+> 卡片合并完成后，Orchestrator 删除对应 Ticket 文件。
+
+```yaml
+# ============================================================
+# RAGForge Worker Agent Ticket — 示例 / 模板
+# 字段说明：
+#   meta.*               — 卡片身份与治理字段（Orchestrator 填写）
+#   scope.ownership      — Worker 可写入的目录/文件白名单
+#   scope.read_only      — Worker 允许 Read 的文件（精确到文件名，不得写）
+#   scope.forbidden      — 严格禁止读取或触碰的路径（高风险 / 共享资产 / 状态卡）
+#   acceptance.*         — 验收标准（逐条对应 TASK_BOARD.md）
+#   tests.must_run       — 验收前必须执行的命令，一条也不能跳过
+#   tests.evidence_file  — 大于 50 行的输出必须保存到该文件，回报只写摘要
+#   budget.token_limit   — Token 预算上限；消耗 > limit × 1.2 时必须停工汇报
+#   report_schema        — Worker 回报的固定 JSON 结构（必须严格遵守）
+# ============================================================
+
+meta:
+  card_id: P7C-01
+  title: 来源任务中心后端 API
+  priority: P0
+  agent_slug: a1
+  branch: codex/p7-source-task-api-a1
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-source-task-api-a1
+  base_sha: a80321a5507181cbf3ebb5554781522431fe5dff
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: []      # 若有依赖，写 ["P7C-01", ...]
+  migration_owner: true     # 本卡片是否为迁移的唯一 owner；冲突就停止
+  migration_next: V19       # 若需要迁移，下一个可用版本（若不需要则写 null）
+
+scope:
+  ownership:
+    - apps/server/src/main/java/com/ragforge/server/ingestion/
+    - apps/server/src/test/java/com/ragforge/server/ingestion/
+    - apps/server/src/main/java/com/ragforge/server/index/
+    - apps/server/src/test/java/com/ragforge/server/index/
+    - apps/server/src/main/resources/db/migration/
+    - contracts/openapi/ragforge-api-v1.yaml
+  read_only:
+    # 契约（只需要这几个具体文件，不要读 contracts/ 下所有文件）
+    - contracts/ingestion/ingestion-domain.v1.schema.json
+    - contracts/ingestion/index-version.v1.schema.json
+    - contracts/openapi/ragforge-api-v1.yaml
+    # 只读取 DoD 的 §1、§2（若 Worker 能直接跳到行号则更省）
+    - docs/03-delivery/DEFINITION_OF_DONE.md
+    - docs/02-architecture/INGESTION_PIPELINE.md
+    # 现有实现参考（精确到文件，不做目录级 Grep）
+    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
+    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionService.java
+    - apps/server/src/main/java/com/ragforge/server/ingestion/IngestionRepository.java
+    - apps/server/src/main/java/com/ragforge/server/index/IndexRepository.java
+  forbidden:
+    # 这些文件 / 目录 Worker 绝对不能写，也不要读取浪费 Token
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - AGENTS.md
+    - docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md
+    - MEMORY.md
+    - docs/08-records/TASK_BOARD.md
+    - apps/web/
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - pom.xml                # 除非明确需要加依赖；否则不动
+    - deploy/
+    - .github/workflows/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 新增 /sources、/jobs、/indexes 的分页 / 筛选 API；cursor 分页，不再使用 slice(0,5) / limit=100 硬截断
+    - id: A2
+      text: 重试 / 重放 / 重新同步 / 归档 / 删除都有幂等 Key + 乐观锁 + space_id 强制
+    - id: A3
+      text: OpenAPI 新增所有 operation，schema 全部通过 contract 52/52
+    - id: A4
+      text: 跨空间 / 未授权 / 停用用户三种拒绝路径都有 ServerIntegrationTest 用例
+    - id: A5
+      text: 若需要 V19 迁移，必须是 append-only，必须有锁/回填说明，不得与其他卡片 V19 编号冲突
+
+budget:
+  token_limit: 8000
+  # Worker 回报时必须填入消耗；Orchestrator 会核对。
+
+tests:
+  must_run:
+    - name: contract test
+      command: python scripts/ci/contract_test.py
+      expected: "Phase 4 42/42 + Phase 5 10/10 = 52/52"
+    - name: Server target compile
+      command: mvn -q -pl apps/server -am test-compile -DskipTests=false
+      expected: BUILD SUCCESS
+    - name: Server ingestion/index 定向测试
+      command: mvn -q -pl apps/server test -Dtest="ServerIntegrationTest,BusinessIngestionPathPolicyTest,Phase3IngestionPersistenceIntegrationTest"
+      expected: "新增用例 > 5；全部绿"
+    - name: Web typecheck
+      command: npm --prefix apps/web run typecheck
+      expected: 0 errors
+  evidence_file: tests/evidence/P7C-01-worker-summary.v1.json
+  # 大于 50 行的 stdout/stderr 必须写入 evidence_file，回报只写摘要
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: true       # 如果原始输出真的超过 50 行就 true；否则 false
+
+# Worker 完成后，必须按此结构向 Orchestrator 汇报；字段不能缺失
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]       # 只列相对路径，不贴内容
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string    # 若超过 limit × 1.0，说明原因；否则 null
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string   # 合并时需要注意的跨范围提示；空则写 ""
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string       # tests/evidence/ 下的路径
+```

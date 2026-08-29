@@ -1,5 +1,19 @@
 # 项目状态
 
+> 🧭 **AI Agent 入口提示（2026-08-30 起生效）**
+>
+> 如果你是被指派「日常执行任务」的 AI Agent，请**不要阅读本文件全文**（除非你的任务明确是「审计 / 阶段复盘 / 发布验收」）。
+>
+> 日常运行的正确入口顺序：
+> 1. **先读 [`AGENT_STATE_CARD.md`](AGENT_STATE_CARD.md)** —— 压缩版状态卡，~1k tokens，涵盖基线 SHA / 当前阶段 / 卡片依赖图 / 分派表 / 停机条件。
+> 2. 再读 [`TASK_BOARD.md`](TASK_BOARD.md) 中与你职责对应的卡片范围（不要整包复制）。
+> 3. Worker 角色只读自己的 Ticket：[`tickets/<CARD_ID>-<slug>.yaml`](tickets/TICKET_TEMPLATE.yaml)。
+> 4. 只有当状态卡与代码事实发生冲突，或你的任务属于「阶段验收」「发布治理」时，才回到本文件逐段核对。
+>
+> 本文件是**治理级 / 证据级权威记录**，保留所有历史阶段的审计证据、基线 SHA、CI 链接与风险说明。日常重复读取会造成显著 Token 浪费（~180 行 / 单轮 8–15k tokens 不等），应当通过状态卡摘要来避免。
+>
+> 若 `AGENT_STATE_CARD.md` 与本文件存在冲突，**以本文件为准**，并立即通知 Orchestrator Agent 回写修正状态卡。
+
 - Updated: 2026-08-29
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
 - Current stage: Phase 7 实现对齐（`implementation-reconciliation`）。代码审计推翻了“只剩 Linux 交付”的任务假设：平台管理员 bootstrap、Provider 实测发布闸门和真实 generation streaming 已闭环；P7-CORE-04 Git 来源接线已闭环；durable BM25/真实 rerank、反馈/审计管理、Web 自动化和工具链 preflight 仍未闭环；完成这些断点后才进入发布验收。

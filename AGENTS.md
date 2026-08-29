@@ -21,10 +21,12 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 ### Orchestrator responsibility
 
 - One primary agent acts as orchestrator. It owns task decomposition, dependency ordering, worktree allocation, integration, full verification, project-status updates, and phase closure.
-- The orchestrator reads `docs/08-records/PROJECT_STATUS.md`, the active phase in `docs/03-delivery/ROADMAP.md`, and its checklist before assigning work.
+- **Daily-entry rule (token efficiency):** The orchestrator first reads `docs/08-records/AGENT_STATE_CARD.md` (the compressed state card, ~1k tokens) and `docs/08-records/TASK_BOARD.md` (the budgeted task board). It only opens `PROJECT_STATUS.md`, `ROADMAP.md`, and phase checklists when doing audit, phase closure, or when the state card conflicts with code facts. Under no circumstances should the orchestrator re-read these long governance documents every round.
+- Tasks are taken from the board card-by-card (never "do Phase 7" as one task). Each card has an explicit token budget recorded in the board and mirrored in the per-worker ticket.
 - Only parallelize concrete tasks that can be completed and tested independently. Contracts, shared schemas, migrations, dependency/BOM files, and architecture decisions are coordination points and must have one explicit owner.
 - Keep at most one agent editing a given file or schema area. If ownership is unclear, serialize the work.
 - The orchestrator keeps the primary worktree on `main`. Worker agents never implement features directly in the primary worktree.
+- After each batch of 1–3 successfully-merged cards, the orchestrator updates `docs/08-records/AGENT_STATE_CARD.md` §1 (baseline SHA) and §6 (dispatch table: status / actual tokens / commit SHA / notes). Other sections of the state card are edited only during audit-grade corrections.
 
 ### Branch and worktree isolation
 
@@ -49,14 +51,73 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 
 Before reporting completion, each worker must:
 
-1. Re-read its acceptance criteria and inspect the complete diff.
-2. Run the smallest sufficient formatting, unit, contract, integration, security, or evaluation checks for its scope.
-3. Update owned documentation and tests together with behavior changes.
-4. Confirm `git status` contains no unrelated or untracked artifacts.
-5. Commit the completed task stage on its own branch using a Chinese Conventional Commit.
-6. Report branch, worktree, base SHA, commit SHA, changed files, tests/results, risks, and any integration notes.
+1. Re-read only its acceptance ticket (`docs/08-records/tickets/<CARD_ID>-<agent>.yaml`). Do **not** re-read AGENTS.md, PROJECT_STATUS, ROADMAP, ADRs, or the whole contracts/ directory unless the ticket explicitly lists those paths in `read_only`.
+2. Modify only files inside the ticket's `ownership` whitelist. If a required change falls outside the whitelist, the worker proposes the exact delta to the orchestrator instead of editing silently.
+3. Read only files listed in the ticket's `read_only`. Do not run broad `Grep` / `SearchCodebase` / `Glob` outside the ticket scope to discover context. Ask the orchestrator to extend the `read_only` list if genuinely needed.
+4. Implement the smallest vertical slice including tests, failure paths, permission/space isolation, observability, and any documentation owned by this card.
+5. Run exactly the commands listed in `tests.must_run` of the ticket; additionally run any format/link/secret/architecture gates that are standard for the ownership area.
+6. For any command producing more than ~50 lines of output, store raw output at `tests.evidence_file` from the ticket and keep only a structured summary in the report (total / passed / failed / failed_cases / duration_ms). Never paste the complete stdout/stderr.
+7. Confirm `git status` has no unrelated or untracked artifacts.
+8. Commit the completed task stage on its own branch using a Chinese Conventional Commit.
+9. Report with the exact YAML/JSON schema from `report_schema` in the ticket, including `budget.token_used`. If `token_used > 1.2 × token_limit`, report status `BLOCKED` with a short `overrun_reason`; do not keep implementing to "just finish".
 
 A worker must not claim completion with uncommitted changes, failing required tests, unresolved conflicts, placeholder behavior, or fabricated verification. If blocked, it reports evidence and leaves the branch recoverable; it does not create a false “completed” commit.
+
+## Agent token-efficiency protocol
+
+This section is a hard gate for all agents. The goal is to keep the per-card effective/total token ratio well above 40% (before the protocol the measured ratio was ~20%, with ~60–80% waste on duplicated reads).
+
+### E1. Three-agent role separation
+
+Do not mix these contexts inside one agent invocation:
+
+- **Orchestrator**: reads only the compressed state card, task board, and the tickets under creation. Never reads whole-module source code or long governance documents. Owns dispatch, merge order, state-card updates, and phase-closure governance commits.
+- **Audit Agent**: a one-shot high-context role. Invoked only (a) at phase entry, (b) at suspected state-card drift, or (c) at release preparation. It reads PROJECT_STATUS, checklists, execution plans, and wide code facts. Product: an updated state card + updated board + delta plan. After execution, its context is discarded; subsequent workers do not inherit its full-context prompt.
+- **Worker Agent**: owns exactly one ticket. Reads exactly the files in `scope.read_only` of that ticket. Exactly one card per invocation. After pass/fail/blocked report, its worktree remains, but the worker session ends.
+
+When a user prompt says "keep working on Phase 7" (or similar scope), route as: **1 Orchestrator × (2–3 parallel Workers max)**. Never a single big agent doing everything inside one context window.
+
+### E2. Precise-context feeding (no wholesale reads)
+
+The orchestrator writes every ticket's `scope.read_only` as an allow-list of exact file paths (and, when tooling supports it, exact line ranges). The worker never falls back to "open apps/server/ingestion and read all controllers". General rules:
+
+- Long governance documents (`PROJECT_STATUS.md`, `ROADMAP.md`, `DEFINITION_OF_DONE.md`, `TEST_STRATEGY.md`, `SECURITY_BASELINE.md`, `THREAT_MODEL.md`): a worker may read at most one or two named subsections, never the full file.
+- Contracts: read only the domain-specific schema files and OpenAPI YAML touched by the card. Do not pre-read `contracts/README.md` unless the ticket says so.
+- ADRs: read only the numbered ADR the card explicitly references.
+- Evidence JSON under `tests/evidence/*.json`: if the ticket only needs to confirm a gate, read the top-level `passed`/`summary` fields only; the detail array should not enter the context.
+
+### E3. Output summary gate
+
+Any intermediate artifact longer than 50 lines goes into a file under `tests/evidence/`, and only a summary enters a response. Applies to:
+
+- `mvn test` / `npm test` / `pytest` logs
+- Docker Compose logs, raw CI job output
+- evidence JSON produced by the card
+- diff reviews (the orchestrator inspects a list of changed file paths first, then deep-reads only suspicious ones; never diffs full 30+ files at once into context)
+
+### E4. Budget enforcement
+
+- Every card has a `token_limit` recorded in `docs/08-records/TASK_BOARD.md`.
+- The same limit is mirrored into the worker ticket and consumed by `report_schema.budget.token_used` self-report.
+- Hard rule: if a worker reports `token_used > 1.2 × token_limit` and acceptance is still `status != PASS`, the orchestrator must stop, inspect why, and either (a) split the card into smaller tickets with their own budgets or (b) explicitly approve an overrun, recording it in state-card §6 `notes` and TASK_BOARD.md remarks.
+- Soft rule: if an orchestrator burns > `TASK_BOARD` total P0+P1+P2 × 1.2 in a single phase without finishing the phase checklists, it stops, requests a human audit, and a fresh Audit Agent reconciles the drift.
+
+### E5. Single source of truth (no duplicated state)
+
+- **Project state**: `docs/08-records/AGENT_STATE_CARD.md` is the daily single source. `docs/08-records/PROJECT_STATUS.md` is the authoritative audit record only for phase-closure / release-decision / security-incident scenarios. If they conflict, PROJECT_STATUS wins, and the state card is corrected in a dedicated integration commit (never patched inside a worker task).
+- **Task definition**: `TASK_BOARD.md` is the board. `AGENT_STATE_CARD.md` §6 dispatch table is the execution snapshot. Worker tickets are the per-invocation contracts. Do not duplicate card acceptance criteria into ad-hoc chat messages; always reference the board + ticket.
+- **Memory / lessons learned**: `MEMORY.md` stores only session-wise engineering lessons, not project state. If an agent writes "current phase / next task / completed SHA" anywhere other than the state card, that write must be rejected by the orchestrator at integration review.
+
+### E6. Stopping conditions (mandatory)
+
+An agent halts and reports to the human if and only if any of the following apply (otherwise, it keeps executing the board in order):
+
+1. A high-risk action listed in Non-negotiable rules needs explicit human approval.
+2. The state card vs. PROJECT_STATUS vs. code facts cannot be reconciled without guessing.
+3. A worker needs to modify outside its ownership and the orchestrator is absent / unavailable.
+4. A card crosses its 1.2× token budget (see E4).
+5. An external credential, hardware, or environment (e.g. standalone Ubuntu, signed release key, authorized outbound API) is required to continue and is not available.
+6. A downstream ticket's dependencies are declared satisfied but are actually broken in the current main SHA — stop instead of "trying to work around" a known defect.
 
 ### Chinese commit convention
 
