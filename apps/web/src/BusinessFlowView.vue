@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listIndexes, listIngestionJobs, publishIndex, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "./api";
+import { ApiError, configureGitSource, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listGitSources, listIndexes, listIngestionJobs, publishIndex, syncGitSource, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type GitSourceView, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "./api";
 
 const props = defineProps<{
   selectedSpaceId: string;
@@ -37,6 +37,8 @@ const parseReport = ref<ParseReportView | null>(null);
 const publishBusy = ref("");
 const webUrl = ref("");
 const webEgressApproved = ref(false);
+const gitSources = ref<GitSourceView[]>([]);
+const gitRemote = ref(""); const gitBranch = ref("main"); const gitName = ref(""); const gitInclude = ref("**/*.md"); const gitBusy = ref(false);
 
 const selectedRoute = computed(() => modelRoutes.value.find((item) => item.modelRouteId === selectedRouteId.value) ?? null);
 const selectedProfile = computed(() => modelProfiles.value.find((item) => item.modelProfileId === selectedProfileId.value) ?? null);
@@ -160,7 +162,7 @@ async function loadFlow(): Promise<void> {
   loading.value = true; error.value = ""; notice.value = "";
   try {
     const failures: string[] = [];
-    const [providers, profiles, routes, prompts, active, currentJobs, indexPage] = await Promise.all([
+    const [providers, profiles, routes, prompts, active, currentJobs, indexPage, currentGitSources] = await Promise.all([
       readWithTimeout("Provider connection", apiFetch<{ items: ProviderConnection[] }>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/provider-connections?limit=100`), { items: [] }, failures),
       readWithTimeout("Model profile", apiFetch<{ items: ModelProfile[] }>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-profiles?limit=100`), { items: [] }, failures),
       readWithTimeout("Model route", apiFetch<{ items: ModelRoute[] }>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-routes?limit=100`), { items: [] }, failures),
@@ -168,6 +170,7 @@ async function loadFlow(): Promise<void> {
       readWithTimeout("Active index", getActiveIndex(props.selectedSpaceId), null, failures),
       readWithTimeout("Ingestion jobs", listIngestionJobs(props.selectedSpaceId), [], failures),
       readWithTimeout("Index versions", listIndexes(props.selectedSpaceId), [], failures),
+      readWithTimeout("Git sources", listGitSources(props.selectedSpaceId), [], failures),
     ]);
     providerConnections.value = providers.items;
     modelProfiles.value = profiles.items;
@@ -176,6 +179,7 @@ async function loadFlow(): Promise<void> {
     activeIndex.value = active;
     jobs.value = currentJobs;
     indexes.value = indexPage;
+    gitSources.value = currentGitSources;
     indexVersionId.value = active?.pointer.activeIndexVersionId ?? "";
     datasetHash.value = active?.datasetHash ?? "";
     if (!selectedRouteId.value || !routes.items.some((item) => item.modelRouteId === selectedRouteId.value)) selectedRouteId.value = routes.items.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE" && item.egressClass === "CLOUD")?.modelRouteId ?? routes.items.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE")?.modelRouteId ?? routes.items[0]?.modelRouteId ?? "";
@@ -193,6 +197,17 @@ async function loadFlow(): Promise<void> {
   } finally {
     loading.value = false;
   }
+}
+
+async function saveGitSource(): Promise<void> {
+  if (!gitRemote.value.trim() || !gitName.value.trim()) { error.value = "请填写 Git 来源名称和 remote。"; return; }
+  gitBusy.value = true; error.value = "";
+  try { await configureGitSource(props.selectedSpaceId, { displayName: gitName.value, remote: gitRemote.value, branch: gitBranch.value, include: gitInclude.value.split(",").map(v => v.trim()).filter(Boolean), exclude: [] }); notice.value = "Git 来源配置已保存。"; await loadFlow(); }
+  catch (value) { error.value = describeError(value); } finally { gitBusy.value = false; }
+}
+
+async function syncGit(sourceId: string, mode: "FULL" | "INCREMENTAL"): Promise<void> {
+  gitBusy.value = true; try { const result = await syncGitSource(props.selectedSpaceId, sourceId, mode); notice.value = `${result.operation} 已提交：${result.jobId}`; await loadFlow(); } catch (value) { error.value = describeError(value); } finally { gitBusy.value = false; }
 }
 
 async function uploadFile(): Promise<void> {
@@ -328,6 +343,7 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
 
 <template>
   <div class="card web-source-card"><div class="card-title"><div><span class="card-label">知识来源</span><h3>本地文件、文件夹或网页链接</h3><p class="muted">文件会进入当前空间；网页加载需要显式云端出境授权，并由服务端白名单与公网地址策略拦截危险目标。</p></div></div><div class="web-source-form"><div class="field"><label for="web-source-url">网页链接</label><input id="web-source-url" v-model="webUrl" type="url" placeholder="https://example.com/knowledge" /></div><label class="check-row"><input v-model="webEgressApproved" type="checkbox" />我确认本次加载允许访问已配置白名单的公开网页</label><button type="button" class="secondary-button" :disabled="uploadBusy || !webUrl.trim() || !webEgressApproved" @click="ingestWeb">{{ uploadBusy ? "加载中…" : "加载网页到知识库" }}</button></div></div>
+  <div class="card web-source-card"><div class="card-title"><div><span class="card-label">Git 来源</span><h3>只读仓库同步</h3><p class="muted">配置会按空间保存；同步由 Worker 执行，checkpoint 只有在持久化完成后推进。</p></div></div><div class="web-source-form"><div class="field"><label>名称</label><input v-model="gitName" placeholder="我的 Obsidian 仓库" /></div><div class="field"><label>Remote</label><input v-model="gitRemote" placeholder="https://git.example.com/notes.git" /></div><div class="field"><label>分支</label><input v-model="gitBranch" placeholder="main" /></div><div class="field"><label>Include（逗号分隔）</label><input v-model="gitInclude" placeholder="**/*.md" /></div><button type="button" class="secondary-button" :disabled="gitBusy" @click="saveGitSource">保存 Git 来源</button></div><div v-for="item in gitSources" :key="item.source.sourceId" class="job-row"><span>{{ item.source.displayName }} · {{ item.source.gitBranch || "—" }}</span><small>checkpoint: {{ item.checkpoint?.cursor || "未同步" }}</small><button type="button" class="quiet-button" :disabled="gitBusy" @click="syncGit(item.source.sourceId, 'INCREMENTAL')">增量同步</button><button type="button" class="quiet-button" :disabled="gitBusy" @click="syncGit(item.source.sourceId, 'FULL')">全量同步</button></div></div>
   <section class="view-section business-flow" aria-labelledby="business-flow-heading">
     <div class="section-heading"><div><p class="eyebrow">00 · Guided business flow</p><h2 id="business-flow-heading">业务闭环</h2><p>按真实服务端状态完成配置，再进入问答。这里不接受手填不存在的资源，也不会把前端选中状态当成权限依据。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "可进入问答" : "尚有步骤未完成" }}</div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>

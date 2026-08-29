@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,10 +23,33 @@ import java.util.UUID;
 public class BusinessIngestionController {
     private final BusinessIngestionService service;
     private final WebSourceIngestionService webSources;
+    private final GitSourceService gitSources;
 
-    public BusinessIngestionController(BusinessIngestionService service, WebSourceIngestionService webSources) {
+    public BusinessIngestionController(BusinessIngestionService service, WebSourceIngestionService webSources, GitSourceService gitSources) {
         this.service = service;
         this.webSources = webSources;
+        this.gitSources = gitSources;
+    }
+
+    @GetMapping("/sources")
+    public List<GitSourceService.SourceView> sources(@PathVariable UUID spaceId, @AuthenticationPrincipal SessionPrincipal principal) {
+        return gitSources.list(spaceId, principal);
+    }
+
+    @PostMapping("/sources/git")
+    public GitSourceService.SourceView configureGit(@PathVariable UUID spaceId,
+                                                     @RequestBody GitSourceService.GitSourceRequest source,
+                                                     @AuthenticationPrincipal SessionPrincipal principal,
+                                                     HttpServletRequest request) {
+        return gitSources.configure(spaceId, source, principal, request);
+    }
+
+    @PostMapping("/sources/{sourceId}/sync")
+    public GitSourceService.SyncCommand syncGit(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                 @RequestParam(defaultValue = "INCREMENTAL") String mode,
+                                                 @AuthenticationPrincipal SessionPrincipal principal,
+                                                 HttpServletRequest request) {
+        return gitSources.synchronize(spaceId, sourceId, mode, principal, request);
     }
 
     @PostMapping(value = "/sources/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

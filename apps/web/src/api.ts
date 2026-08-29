@@ -644,6 +644,15 @@ export function ingestWebSource(spaceId: string, url: string, allowCloudEgress: 
   });
 }
 
+export type GitSourceView = { source: { sourceId: string; displayName: string; rootRef: string; gitBranch: string | null; versionNo: number }; checkpoint: { cursorType: string; cursor: string | null; updatedAt: string } | null };
+export function listGitSources(spaceId: string): Promise<GitSourceView[]> { return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources`); }
+export function configureGitSource(spaceId: string, body: { sourceId?: string; displayName: string; remote: string; branch: string; include: string[]; exclude: string[] }): Promise<GitSourceView> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources/git`, { method: "POST", body });
+}
+export function syncGitSource(spaceId: string, sourceId: string, mode: "FULL" | "INCREMENTAL" = "INCREMENTAL"): Promise<{ jobId: string; operation: string; status: string }> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources/${encodeURIComponent(sourceId)}/sync?mode=${mode}`, { method: "POST" });
+}
+
 export function listIngestionJobs(spaceId: string): Promise<IngestionJobView[]> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs`);
 }

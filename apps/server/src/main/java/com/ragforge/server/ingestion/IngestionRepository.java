@@ -38,13 +38,13 @@ public class IngestionRepository {
                 INSERT INTO source_versions
                     (id, space_id, source_id, version_no, connector_type, display_name,
                      source_state, read_only, root_ref, include_rules, exclude_rules,
-                     credential_configured, correlation_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, ?, ?)
+                     credential_configured, correlation_id, created_at, updated_at, git_branch)
+                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, ?, ?, ?, ?)
                 """, input.id(), input.spaceId(), input.sourceId(), input.versionNo(),
                 input.connectorType().name(), input.displayName(), input.sourceState().name(),
                 input.rootRef(), jsonOrEmptyArray(input.includeRulesJson()),
                 jsonOrEmptyArray(input.excludeRulesJson()), input.credentialConfigured(),
-                input.correlationId(), timestamp(input.now()), timestamp(input.now()));
+                input.correlationId(), timestamp(input.now()), timestamp(input.now()), input.gitBranch());
         return findSourceVersion(input.spaceId(), input.sourceId(), input.versionNo()).orElseThrow();
     }
 
@@ -53,7 +53,7 @@ public class IngestionRepository {
             return Optional.ofNullable(jdbc.queryForObject("""
                     SELECT id, space_id, source_id, version_no, connector_type, display_name,
                            source_state, root_ref, include_rules::text, exclude_rules::text,
-                           credential_configured, correlation_id, created_at, updated_at
+                           credential_configured, correlation_id, created_at, updated_at, git_branch
                     FROM source_versions
                     WHERE space_id = ? AND source_id = ? AND version_no = ?
                     """, (rs, row) -> new SourceVersion(
@@ -63,7 +63,7 @@ public class IngestionRepository {
                     SourceState.valueOf(rs.getString("source_state")), rs.getString("root_ref"),
                     rs.getString("include_rules"), rs.getString("exclude_rules"),
                     rs.getBoolean("credential_configured"), rs.getObject("correlation_id", UUID.class),
-                    instant(rs, "created_at"), instant(rs, "updated_at")),
+                    instant(rs, "created_at"), instant(rs, "updated_at"), rs.getString("git_branch")),
                     spaceId, sourceId, versionNo));
         } catch (EmptyResultDataAccessException ignored) {
             return Optional.empty();
@@ -166,6 +166,22 @@ public class IngestionRepository {
                 DocumentState.valueOf(rs.getString("current_state")), rs.getObject("active_revision_id", UUID.class),
                 rs.getObject("correlation_id", UUID.class), instant(rs, "created_at"), instant(rs, "updated_at")),
                 spaceId);
+    }
+
+    public List<SourceVersion> listCurrentSources(UUID spaceId) {
+        return jdbc.query("""
+                SELECT v.id, v.space_id, v.source_id, v.version_no, v.connector_type, v.display_name,
+                       v.source_state, v.root_ref, v.include_rules::text, v.exclude_rules::text,
+                       v.credential_configured, v.correlation_id, v.created_at, v.updated_at, v.git_branch
+                FROM source_versions v
+                WHERE v.space_id = ? AND v.version_no = (SELECT MAX(v2.version_no) FROM source_versions v2
+                    WHERE v2.space_id = v.space_id AND v2.source_id = v.source_id)
+                ORDER BY v.updated_at DESC
+                """, (rs, row) -> new SourceVersion(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("source_id", UUID.class), rs.getInt("version_no"), ConnectorType.valueOf(rs.getString("connector_type")),
+                rs.getString("display_name"), SourceState.valueOf(rs.getString("source_state")), rs.getString("root_ref"),
+                rs.getString("include_rules"), rs.getString("exclude_rules"), rs.getBoolean("credential_configured"),
+                rs.getObject("correlation_id", UUID.class), instant(rs, "created_at"), instant(rs, "updated_at"), rs.getString("git_branch")), spaceId);
     }
 
     @Transactional
@@ -550,11 +566,19 @@ public class IngestionRepository {
 
     public record NewSourceVersion(UUID id, UUID spaceId, UUID sourceId, int versionNo, ConnectorType connectorType,
                                    String displayName, SourceState sourceState, String rootRef, String includeRulesJson,
-                                   String excludeRulesJson, boolean credentialConfigured, UUID correlationId, Instant now) {}
+                                   String excludeRulesJson, boolean credentialConfigured, UUID correlationId, Instant now,
+                                   String gitBranch) {
+        public NewSourceVersion(UUID id, UUID spaceId, UUID sourceId, int versionNo, ConnectorType connectorType,
+                                 String displayName, SourceState sourceState, String rootRef, String includeRulesJson,
+                                 String excludeRulesJson, boolean credentialConfigured, UUID correlationId, Instant now) {
+            this(id, spaceId, sourceId, versionNo, connectorType, displayName, sourceState, rootRef, includeRulesJson,
+                    excludeRulesJson, credentialConfigured, correlationId, now, connectorType == ConnectorType.GIT ? "main" : null);
+        }
+    }
     public record SourceVersion(UUID id, UUID spaceId, UUID sourceId, int versionNo, ConnectorType connectorType,
                                 String displayName, SourceState sourceState, String rootRef, String includeRulesJson,
                                 String excludeRulesJson, boolean credentialConfigured, UUID correlationId,
-                                Instant createdAt, Instant updatedAt) {}
+                                Instant createdAt, Instant updatedAt, String gitBranch) {}
     public record NewSourceCheckpoint(UUID id, UUID spaceId, UUID sourceId, UUID sourceVersionId, int versionNo,
                                      CursorType cursorType, String cursor, UUID changeSetId, Instant updatedAt) {}
     public record SourceCheckpoint(UUID id, UUID spaceId, UUID sourceId, UUID sourceVersionId, int versionNo,
