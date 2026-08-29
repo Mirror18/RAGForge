@@ -46,6 +46,12 @@
 - BLOCKED：Node/npm 当前不在 PATH，Web typecheck/build/test 未在本轮执行；项目本身也没有 Web test script。
 - NOT RUN：容器 build/up/health、真实业务 smoke、SBOM/Grype target image、Ubuntu、升级/回滚。
 
+## 2026-08-29 执行增量
+
+- P7-WEB-01 已完成：空间管理员可在 Web 按已知邮箱把 ACTIVE 注册用户加入当前空间并选择 `SPACE_ADMIN`、`EDITOR` 或 `VIEWER`；精确匹配避免开放平台用户目录。
+- Server 单元 3/3、完整 `ServerIntegrationTest` 8/8、成员定向集成 1/1、contract 52/52、Web typecheck/build、format、architecture 和 secret scan 均通过。
+- P7-B 工作包保持 `pending`，因为平台管理员 bootstrap 和 Provider verified publish gate 尚未完成。部署验收继续暂停。
+
 ## 证据规则
 
 - runtime 证据记录候选 SHA、镜像 digest、JDK/Maven/Node/Docker/Compose 版本、fixture 版本和结果。

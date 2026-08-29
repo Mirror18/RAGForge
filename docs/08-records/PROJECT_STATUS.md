@@ -149,3 +149,10 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 问答未闭环：页面把同步生成完成后的 SSE 事件描述为回答增量；引用 preview API 返回 provenance 元数据，但客户端主动丢弃响应，只显示“已鉴权”，不能查看来源正文；历史回答没有完整 citation 恢复，且没有显式“新会话”、反馈、会话重命名/删除入口。
 - 管理与导航未闭环：Provider/Profile/Route/Prompt 主要是创建和列表，Run 依赖手填 ID，审计/成本/保留没有管理页面；列表普遍固定 `limit=100` 或 `slice(0, 5)` 且忽略 cursor；应用没有 URL Router、可恢复页面状态或 Web unit/component/E2E 测试。
 - 产品判定：当前 Web 是可验证后端能力的工程控制台，不是可交付给普通用户的实用产品。Phase 7 下一工作入口调整为：协作与首次设置 → 来源/任务/索引维护 → 可核验问答 → 调试与管理工具 → Web 自动化；这些 P0/P1 完成后才恢复容器和 Ubuntu 交付。
+
+## 12. P7-B 首次设置与协作进度（2026-08-29）
+
+- `P7-WEB-01` 已完成：新增空间级按精确邮箱添加成员 API 与页面表单。只有当前空间管理员可以操作；服务端只匹配 ACTIVE 注册用户，已存在成员返回冲突，不开放全站用户搜索或模糊账号枚举。
+- 审计事件为 `space.member.added.v1`，payload 只记录 `spaceId`、`userId` 和角色，不记录邮箱或其他账号内容；所有写入继续经过 CSRF、Idempotency-Key、`space_id` 和服务端角色校验。
+- 验证：`SpaceServiceTest` 3/3；完整 `ServerIntegrationTest` 8/8；扩展后的成员定向 Testcontainers 用例 1/1；OpenAPI contract 52/52；format、architecture、secret scan、Web TypeScript 与 Vite build 通过。
+- P7-B 仍未完成：首个平台管理员 bootstrap 与 Provider connection test/verified publish gate 仍为下一任务；本轮未启动 RAGForge Compose 或执行部署。

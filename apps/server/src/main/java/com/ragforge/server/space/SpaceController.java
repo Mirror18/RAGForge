@@ -3,6 +3,7 @@ package com.ragforge.server.space;
 import com.ragforge.server.identity.SessionPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
@@ -66,6 +67,15 @@ public class SpaceController {
         return new MemberPage(spaceService.listMembers(principal(authentication), spaceId));
     }
 
+    @PostMapping("/{spaceId}/members")
+    public ResponseEntity<SpaceMember> addMember(Authentication authentication, @PathVariable UUID spaceId,
+                                                  @Valid @RequestBody AddMemberRequest request,
+                                                  HttpServletRequest servletRequest) {
+        SpaceMember member = spaceService.addMember(principal(authentication), spaceId, request.email(),
+                SpaceRole.parse(request.role()), servletRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(member);
+    }
+
     @PutMapping("/{spaceId}/members/{userId}")
     public ResponseEntity<SpaceMember> updateMember(Authentication authentication,
                                              @PathVariable UUID spaceId,
@@ -100,6 +110,9 @@ public class SpaceController {
     }
 
     public record UpdateMemberRequest(@NotBlank String role, Long version) {
+    }
+
+    public record AddMemberRequest(@NotBlank @Email @Size(max = 320) String email, @NotBlank String role) {
     }
 
     public record SpaceResponse(UUID spaceId, String name, String description, String status, SpaceRole role,

@@ -24,7 +24,7 @@
 - [ ] P7-CORE-04 Git 数据源接线：`GitConnector`/`LocalDirectoryConnector` 目前仅存在于 Worker 库，没有 Server API、持久化 source 配置、调度/手动同步或 Web 入口。补齐只读 remote/branch/checkpoint/include/exclude 全量与增量闭环。
 - [ ] P7-CORE-05 检索执行语义：BM25 当前为 `InMemoryBm25CandidateStore`，重启后丢失；RERANK route 虽被绑定，但 production retrieval 使用 `LexicalReranker`，AI Runtime 仍只有包骨架。选择并实现 durable lexical 重建/存储与真实 rerank adapter，或用 ADR/产品变更移除虚假的 route 能力。
 - [ ] P7-CORE-06 管理闭环：补齐用户反馈 API/UI、Provider/依赖健康聚合、按权限查询的审计/成本视图。当前只有 raw actuator 链接和内部 `Phase6OperationsService`，不等于 PRD 中的管理页面。
-- [ ] P7-WEB-01 协作闭环：在空间成员页提供 ACTIVE 用户搜索/选择和加入操作，并覆盖 Editor/Viewer 首次进入、角色变更、最后管理员保护；不得要求操作者调用 API。
+- [x] P7-WEB-01 协作闭环：空间管理员可按已知注册邮箱精确添加 ACTIVE 用户并选择初始角色；不暴露平台用户目录。Editor/Viewer 首次进入、非管理员拒绝、重复成员、停用用户、角色变更和最后管理员保护已有单元/集成回归；Web typecheck/build 通过。
 - [ ] P7-WEB-02 来源与任务闭环：建立来源库和任务中心；多文件逐项显示提交与终态，支持分页、筛选、失败重试/重放、重新同步、删除/归档和错误详情，不能再用 `slice(0, 5)` 代替任务管理。
 - [ ] P7-WEB-03 索引生命周期：显示 candidate 的构建/验证依据，支持发布、查看 active、回滚上一版本和处理 retired 版本；页面文案不得把 candidate 描述为 active。
 - [ ] P7-WEB-04 可核验问答：实现明确的新会话入口、历史 answer/citation 恢复、可阅读的来源预览或受权原文跳转、反馈、会话重命名/归档；真实 token streaming 完成前移除“回答增量”误导描述。

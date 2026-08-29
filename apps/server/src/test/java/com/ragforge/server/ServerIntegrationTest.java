@@ -323,6 +323,80 @@ class ServerIntegrationTest {
     }
 
     @Test
+    void spaceAdminCanAddActiveMemberByExactEmailWithoutExposingUserDirectory() throws Exception {
+        register("member-admin@example.test", "correct horse battery", "Member Admin");
+        register("editor@example.test", "correct horse battery", "Editor User");
+        register("viewer@example.test", "correct horse battery", "Viewer User");
+        register("outsider@example.test", "correct horse battery", "Outsider");
+        Login admin = login("member-admin@example.test", "correct horse battery", "/sessions");
+        MvcResult created = mvc.perform(post("/api/v1/spaces").cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "member-space-create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Member Space\",\"description\":\"membership\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        String spaceId = objectMapper.readTree(created.getResponse().getContentAsString()).get("spaceId").asText();
+
+        mvc.perform(post("/api/v1/spaces/{spaceId}/members", spaceId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "member-add-editor")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"EDITOR@example.test\",\"role\":\"EDITOR\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userId").value(userId("editor@example.test").toString()))
+                .andExpect(jsonPath("$.role").value("EDITOR"))
+                .andExpect(jsonPath("$.version").value(0));
+
+        mvc.perform(get("/api/v1/spaces/{spaceId}/members", spaceId).cookie(admin.cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[1].email").value("editor@example.test"))
+                .andExpect(jsonPath("$.items[1].role").value("EDITOR"));
+
+        mvc.perform(post("/api/v1/spaces/{spaceId}/members", spaceId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "member-add-viewer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"viewer@example.test\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("VIEWER"));
+        Login viewer = login("viewer@example.test", "correct horse battery", "/sessions");
+        mvc.perform(get("/api/v1/spaces").cookie(viewer.cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].spaceId").value(spaceId))
+                .andExpect(jsonPath("$.items[0].role").value("VIEWER"));
+
+        mvc.perform(post("/api/v1/spaces/{spaceId}/members", spaceId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "member-add-editor-again")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"editor@example.test\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SPACE_MEMBER_ALREADY_EXISTS"));
+
+        Login editor = login("editor@example.test", "correct horse battery", "/sessions");
+        mvc.perform(get("/api/v1/spaces").cookie(editor.cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].spaceId").value(spaceId))
+                .andExpect(jsonPath("$.items[0].role").value("EDITOR"));
+        mvc.perform(post("/api/v1/spaces/{spaceId}/members", spaceId).cookie(editor.cookie)
+                        .header("X-CSRF-Token", editor.csrfToken)
+                        .header("Idempotency-Key", "member-editor-cannot-add")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"outsider@example.test\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SPACE_ADMIN_REQUIRED"));
+
+        jdbc.update("UPDATE users SET status = 'DISABLED' WHERE email = 'outsider@example.test'");
+        mvc.perform(post("/api/v1/spaces/{spaceId}/members", spaceId).cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "member-disabled-not-found")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"outsider@example.test\",\"role\":\"VIEWER\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ACTIVE_USER_NOT_FOUND"));
+    }
+
+    @Test
     void idempotencyBindsAnonymousRequestHashAndRejectsReuse() throws Exception {
         String body = "{\"email\":\"idempotent@example.test\",\"password\":\"correct horse battery\",\"displayName\":\"Idempotent\"}";
         mvc.perform(post("/api/v1/auth/register")

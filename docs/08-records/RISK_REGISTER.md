@@ -144,3 +144,8 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - 新增 `R-049`：来源、摄取任务和索引页面只覆盖短列表 happy path；多文件不逐项等待终态，任务/索引只显示前 5 条，缺少重试、重放、同步、归档/删除和索引回滚。P=5、I=4、Score=20，Product / Ingestion / Web，OPEN；以持久来源库和可恢复任务中心取代截断列表。
 - 新增 `R-050`：Citation preview 客户端丢弃服务端 provenance 响应且不展示来源正文；Chunk Studio/Playground/Run 依赖手填 UUID/hash，普通用户不能完成核验与调试。P=5、I=4、Score=20，Product / Provenance / Web，OPEN；提供受权正文预览和业务对象间导航，内部标识仅作为高级诊断信息。
 - 新增 `R-051`：Web 无 URL Router、页面状态恢复和 cursor 分页，资源超过 100 或任务/索引超过 5 时会被静默遗漏；刷新后工作上下文丢失。P=4、I=3、Score=12，Product / Web，OPEN；建立路由、可恢复筛选/选择状态和规模化分页测试。
+
+## 13. P7-B 首次设置与协作执行（2026-08-29）
+
+- `R-048` 已关闭：空间管理员可按已知注册邮箱精确添加 ACTIVE 用户并指定初始角色；未引入全站用户列表或模糊搜索。Editor/Viewer 首次进入、非管理员拒绝、重复成员、停用用户和无邮箱审计 payload 均有回归测试。
+- `R-043`、`R-044` 继续 OPEN：成员闭环不解决首个平台管理员 bootstrap，也不证明 Provider 连通性或 verified capability 发布闸门。

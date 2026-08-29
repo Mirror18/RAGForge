@@ -315,6 +315,12 @@
         "tags": ["spaces"], "operationId": "listSpaceMembers", "summary": "List members of a space", "security": [{"cookieAuth": []}],
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
         "responses": {"200": {"description": "Space members", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MemberPage"}}}}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}
+      },
+      "post": {
+        "tags": ["spaces"], "operationId": "addSpaceMemberByEmail", "summary": "Add an active registered user to a space by exact email", "security": [{"cookieAuth": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AddSpaceMemberRequest"}}}},
+        "responses": {"201": {"description": "Member added", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SpaceMember"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}}
       }
     },
     "/api/v1/spaces/{spaceId}/members/{userId}": {
@@ -1276,6 +1282,10 @@
           "role": {"$ref": "#/components/schemas/MemberRole"},
           "version": {"type": "integer", "minimum": 0}
         }
+      },
+      "AddSpaceMemberRequest": {
+        "type": "object", "additionalProperties": false, "required": ["email", "role"],
+        "properties": {"email": {"type": "string", "format": "idn-email", "minLength": 1, "maxLength": 320}, "role": {"$ref": "#/components/schemas/MemberRole"}}
       },
       "SpaceMember": {
         "type": "object",

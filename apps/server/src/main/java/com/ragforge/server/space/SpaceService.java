@@ -5,6 +5,8 @@ import com.ragforge.server.common.ApiException;
 import com.ragforge.server.common.CorrelationIdFilter;
 import com.ragforge.server.common.UuidV7;
 import com.ragforge.server.identity.SessionPrincipal;
+import com.ragforge.server.identity.UserAccount;
+import com.ragforge.server.identity.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,10 +20,13 @@ import java.util.UUID;
 @Service
 public class SpaceService {
     private final SpaceRepository spaceRepository;
+    private final UserRepository userRepository;
     private final AuditOutboxService auditOutboxService;
 
-    public SpaceService(SpaceRepository spaceRepository, AuditOutboxService auditOutboxService) {
+    public SpaceService(SpaceRepository spaceRepository, UserRepository userRepository,
+                        AuditOutboxService auditOutboxService) {
         this.spaceRepository = spaceRepository;
+        this.userRepository = userRepository;
         this.auditOutboxService = auditOutboxService;
     }
 
@@ -71,6 +76,25 @@ public class SpaceService {
         auditOutboxService.record("space.member.updated.v1", principal.userId(), spaceId, spaceId,
                 correlationId(request), Map.of("spaceId", spaceId, "userId", userId, "role", role.name()));
         return new SpaceMember(spaceId, userId, role, version);
+    }
+
+    @Transactional
+    public SpaceMember addMember(SessionPrincipal principal, UUID spaceId, String email, SpaceRole role,
+                                 HttpServletRequest request) {
+        requireAdmin(principal, spaceId);
+        ensureActive(spaceId);
+        UserAccount target = userRepository.findByEmail(email.trim()).orElseThrow(() ->
+                new ApiException(HttpStatus.NOT_FOUND, "active_user_not_found", "Active user not found",
+                        "No active user matches that email address"));
+        if (spaceRepository.findRole(spaceId, target.id()).isPresent()) {
+            throw new ApiException(HttpStatus.CONFLICT, "space_member_already_exists", "Member already exists",
+                    "The user is already a member of this space");
+        }
+        Instant now = Instant.now();
+        spaceRepository.addMembership(spaceId, target.id(), role, now);
+        auditOutboxService.record("space.member.added.v1", principal.userId(), spaceId, spaceId,
+                correlationId(request), Map.of("spaceId", spaceId, "userId", target.id(), "role", role.name()));
+        return new SpaceMember(spaceId, target.id(), role, 0);
     }
 
     @Transactional

@@ -550,6 +550,10 @@ export function listSpaceMembers(spaceId: string): Promise<{ items: SpaceMember[
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/members`);
 }
 
+export function addSpaceMember(spaceId: string, payload: { email: string; role: SpaceRole }): Promise<Pick<SpaceMember, "spaceId" | "userId" | "role" | "version">> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/members`, { method: "POST", body: payload });
+}
+
 export function updateSpace(spaceId: string, payload: { name: string; description: string; version: number }): Promise<Space> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}`, { method: "PUT", body: payload });
 }
