@@ -12,4 +12,4 @@
 | `07-research` | GitHub 项目调研、引用和复用登记 | [基准调研](07-research/GITHUB_BENCHMARK.md) |
 | `08-records` | 状态、风险、追溯和阶段复盘 | [项目状态](08-records/PROJECT_STATUS.md) / [风险表](08-records/RISK_REGISTER.md) |
 
-文档状态约定：规划文档描述当前基线；ADR 保存不可变决策历史；records 保存有日期的执行证据。当前阶段为 Phase 7 `in-progress`；每个 Phase 的退出条件必须引用同一候选 SHA 的实际 CI、评估、性能、安全或恢复报告。
+文档状态约定：规划文档描述当前基线；ADR 保存不可变决策历史；records 保存有日期的执行证据。当前阶段为 Phase 7 `implementation-reconciliation`；实现状态必须由代码路径和可重跑测试证明，不能由历史阶段声明、契约占位或 UI 文案推断。

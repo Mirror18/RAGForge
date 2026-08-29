@@ -2,7 +2,7 @@
 
 - Updated: 2026-08-29
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
-- Current stage: Phase 7 Linux 交付与可公开准备进行中（`in-progress`）；Phase 6 已以 `completed-with-explicit-waiver` 闭环。Phase 7 已合入应用容器启动、首次使用入口、空间级 candidate index、长文 child chunk 拆分，以及 Linux 查询/证据 material 相关性修复；干净 Ubuntu 部署、升级/回滚、发布级镜像与公共化门禁尚未闭环。
+- Current stage: Phase 7 实现对齐（`implementation-reconciliation`）。代码审计推翻了“只剩 Linux 交付”的任务假设：平台管理员 bootstrap、Provider 实测发布闸门、真实 generation streaming、Git 来源接线、durable BM25/真实 rerank、反馈/审计管理、Web 自动化和工具链 preflight 均未闭环；完成这些断点后才进入发布验收。
 - 文档核对时的 Phase 7 功能基线：`f6b016840e946ea314cdaf4812c196dcea8ca491`；当时 `main` 比 `origin/main`（`9fdd94e0e12afae1c3843d0680fb48017e00669f`）领先 16 个提交。该功能基线尚无对应远程 CI 证据，不得用历史 Phase 6 CI 运行替代。
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
@@ -130,9 +130,11 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - Chat 模型默认优先选择云端 MiMo；云端调用仍需要空间显式授权和 typed authorization context，不允许静默云端回退。Embedding/Rerank 继续保持本地能力边界，避免把用户对 Chat 的云端选择扩大成未经授权的全链路出境。
 - 代码与证据：`V16__user_lifecycle_management.sql`、`UserAdminController/Service`、`SpaceController/Service`、`PersonalSpaceView.vue`、`format.ts`、OpenAPI v1 增量；`ServerIntegrationTest` 新增用户管理与空间管理安全回归。验证结果为服务端 `ServerIntegrationTest` 7/7、服务端 Java 21 compile、Web format/build、OpenAPI JSON contract test 通过。
 
-## 10. Phase 7 进入与当前修复基线（2026-08-29）
+## 10. Phase 7 代码反向审计（2026-08-29）
 
-- Phase 7 已从 `ready` 转为 `in-progress`。当前执行入口为 [`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) 与 [`PHASE_7_EXECUTION_PLAN.md`](phase-7/PHASE_7_EXECUTION_PLAN.md)。
-- `00432a9` 修复 ingestion worker 容器可执行启动；`dd6902f` 修复首次使用配置入口；`0d399c0` 将 candidate index 构建从单文档修正为空间级 active 文档汇总；`7e23ae5` 对长文 child chunk 继续拆分，避免 embedding 输入超限。
-- `012010c` 与 `12eaf94` 修复 Linux 关键词查询误拒、无关证据回答及 material 相关性判断。相关逻辑继续以当前空间的真实 evidence material 和结构化 citation/provenance 为边界，不允许用生成文本伪造引用。
-- Phase 7 功能基线 `f6b0168` 尚未推送到 `origin/main`，没有同 SHA 的 GitHub Actions、发布镜像 SBOM/Grype 或干净 Ubuntu runtime 证据。因此 Phase 7 不能标记完成，也不能创建 release。
+- 当前执行入口为 [`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) 与 [`PHASE_7_EXECUTION_PLAN.md`](phase-7/PHASE_7_EXECUTION_PLAN.md)。二者以 production code 和可重跑门禁为依据，覆盖并取代此前“Phase 7 只剩部署”的任务判断。
+- 已确认的产品断点：注册只产生 `USER` 且没有平台管理员 bootstrap；OpenAPI 的 Provider connection test 没有 Controller 实现；Model Profile 可在没有 verified capabilities 时直接 `PUBLISHED`；generation request 固定 `stream=false`；Git/local connectors 未接 Server/Web；feedback、审计/成本管理视图缺失。
+- 已确认的检索断点：BM25 是进程内 `InMemoryBm25CandidateStore`；空间虽绑定 RERANK route，production retrieval 仍使用 `LexicalReranker`；`apps/ai-runtime` 只有包骨架。现状不能被描述为 durable lexical 或真实模型 rerank。
+- 已确认的交付断点：Server/Worker 镜像为 UID 10001，但 Web 仍为默认 nginx root；Server/Worker 在 Compose 中没有应用级 healthcheck，三类应用也没有完整 capability/只读写路径/资源限额/digest 证据。
+- 本轮门禁：format、architecture、52 contract tests、Compose 静态验证和 secret scan 通过。直接运行 Maven 时 Maven 绑定 JDK 8；显式切到 JDK 21 后 Server 执行 187 tests，20 个 Testcontainers tests 因 Docker daemon 未运行报 error、1 个真实 Ollama 用例 skipped，Worker 未执行。Node/npm 不在当前 PATH，Web 本轮未构建，且项目没有 Web test script。
+- 因此当前没有同一候选 SHA 的全量 green、容器 runtime、Ubuntu、升级/回滚或目标镜像 SBOM/Grype 证据；Phase 7 不能完成，也不能创建 release。

@@ -130,7 +130,13 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 ## 12. Phase 7 进入复审（2026-08-29）
 
-- 新增 `R-040`：Phase 7 应用镜像与本地业务修复已进入 `main`，但尚无当前头提交的远程 Linux CI、干净 Ubuntu 部署和完整 smoke 证据。P=3、I=5、Score=15，Operations / Delivery，OPEN；必须按 [`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) 固定环境、执行部署/健康/业务 smoke，并保存不可变证据后才能关闭。
-- 新增 `R-041`：Compose 基础依赖仍允许 tag 默认值，应用镜像仍使用 `:local`，非 root、只读文件系统、capability 收敛和资源限额尚未形成发布级证据。P=3、I=5、Score=15，Security / Compliance / Operations，OPEN；发布前固定 digest、生成目标镜像 SBOM/Grype 结果并验证运行时最小权限。
+- 新增 `R-040`：当前候选没有可复现的本地全量 green 或同 SHA 远程 Linux CI。系统 `java` 为 21 但 Maven 绑定 JDK 8；显式切到 21 后又因 Docker daemon 不可用导致 20 个 Testcontainers error；Node/npm 不在 PATH。P=4、I=5、Score=20，Platform / Delivery，OPEN；先实现统一 preflight，再在固定 JDK/Node/Docker 环境生成完整证据。
+- 新增 `R-041`：Server/Worker 镜像已使用 UID 10001，但 Web 仍为默认 nginx root；应用镜像仍使用 `:local`，Server/Worker Compose health、只读文件系统、capability 收敛、资源限额和 digest 尚未形成发布证据。P=3、I=5、Score=15，Security / Compliance / Operations，OPEN；发布前完成三类应用一致加固和目标镜像 SBOM/Grype。
 - 新增 `R-042`：Phase 7 尚未证明从上一兼容版本升级并在定义窗口内回滚；Flyway 为向前迁移，应用回滚必须受 schema 兼容矩阵约束。P=3、I=5、Score=15，Operations / Data，OPEN；使用合成数据执行备份、升级、业务校验和兼容回滚演练，禁止对生产数据库试跑。
 - `R-005` 与 `R-012` 保持 `ACCEPTED`：本轮 retrieval/answer 相关性逻辑有变更，已增加 material-backed 与误拒回归测试，但这不自动撤销 Phase 6 的人工/red-team 豁免事实；Phase 7 发布候选形成后仍需按清单重新评估是否触发独立复核。
+- 新增 `R-043`：干净数据库无法安全产生首个平台管理员；注册固定创建 `USER`，平台用户管理又要求已有 `PLATFORM_ADMIN`。P=5、I=4、Score=20，IAM / Operations，OPEN；实现一次性、可审计、fail-closed 的 bootstrap，禁止“首个注册用户自动提权”。
+- 新增 `R-044`：Provider connection 当前是 space-scoped 且 Editor 可写，与平台管理员登记/空间管理员选择的需求不一致；connection test 只存在于 OpenAPI，Model Profile 又可在 verified capabilities 为空时直接 `PUBLISHED`。P=4、I=5、Score=20，Provider / IAM / RAG，OPEN；先收敛 ownership/权限，再实现脱敏能力探测、结果持久化和发布闸门。
+- 新增 `R-045`：当前 generation adapter 固定 `stream=false`，Answer API 同步生成完成后才发布 SSE 事件；用户可能把事件 replay 误认为真实 token streaming，取消也无法保证及时终止上游生成。P=4、I=4、Score=16，RAG / Product，OPEN；实现 provider streaming/cancel，或经产品决策移出 MVP 并同步契约/UI。
+- 新增 `R-046`：Git/LocalDirectory connector 只有 Worker 库实现，没有 Server source 配置、调度/手动同步、checkpoint 持久化和 Web 入口。P=4、I=4、Score=16，Ingestion / Product，OPEN；完成端到端只读 Git source 用户旅程后再宣称支持。
+- `R-023` 重新确认为当前发布阻塞：production bean 仍是 `InMemoryBm25CandidateStore`，重启会丢失 lexical 候选；同时 RERANK route 未驱动真实 rerank provider。关闭条件必须包含 durable rebuild/storage 和 route-to-runtime 一致性。
+- 新增 `R-047`：Web 没有 unit/component/E2E test script，契约门禁也不校验 OpenAPI operation 是否有 Controller 实现。P=4、I=4、Score=16，Quality / Web，OPEN；覆盖核心业务/权限失败路径，并增加契约-实现双向检查。

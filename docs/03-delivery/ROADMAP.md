@@ -167,7 +167,7 @@ Editor 可检查/修订 chunk；用户可检索；高级用户可 A/B 对比 ret
 
 ## Phase 7：Linux 交付与可公开准备
 
-状态（2026-08-29）：`in-progress`。应用容器、业务首次使用、空间级 candidate index、长文分片和 Linux 查询相关性修复已进入 `main`；干净 Ubuntu 验收、升级/回滚、发布级镜像、SBOM/扫描与公共化检查仍待完成。执行以 [`PHASE_7_CHECKLIST.md`](PHASE_7_CHECKLIST.md) 和 [`PHASE_7_EXECUTION_PLAN.md`](../08-records/phase-7/PHASE_7_EXECUTION_PLAN.md) 为准。
+状态（2026-08-29）：`implementation-reconciliation`。本阶段先依据代码与可执行门禁补齐 MVP 断点，再进入 Linux 发布：平台初始化、Provider 能力实测、生成 streaming/cancel、Git 来源、反馈/审计、durable retrieval/rerank 和自动化测试均不能因已有契约或页面文字而视为完成。随后才执行容器加固、干净 Ubuntu、升级/回滚、SBOM/扫描和公共化检查。执行以 [`PHASE_7_CHECKLIST.md`](PHASE_7_CHECKLIST.md) 和 [`PHASE_7_EXECUTION_PLAN.md`](../08-records/phase-7/PHASE_7_EXECUTION_PLAN.md) 为准。
 
 ### 用户结果
 

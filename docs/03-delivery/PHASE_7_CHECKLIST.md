@@ -1,35 +1,47 @@
-# Phase 7 Checklist：Linux 交付与可公开准备
+# Phase 7 Checklist：实现对齐与 Linux 交付
 
-- 状态：`in-progress`
-- 基线日期：2026-08-29
-- 当前功能基线：`f6b016840e946ea314cdaf4812c196dcea8ca491`
-- 目标环境：干净 Ubuntu 24.04、Docker Engine + Compose plugin
+- 状态：`implementation-reconciliation`
+- 审计日期：2026-08-29
+- 代码基线：`f6b016840e946ea314cdaf4812c196dcea8ca491`
+- 审计方法：直接检查 production code、OpenAPI、迁移、测试、Dockerfile/Compose，并运行当前可用门禁；不采信历史完成声明作为实现证据
 - 执行计划：[`PHASE_7_EXECUTION_PLAN.md`](../08-records/phase-7/PHASE_7_EXECUTION_PLAN.md)
 
-历史 Phase 6 CI 只能证明历史提交，不能替代当前 Phase 7 头提交。所有验收仅使用公开合成数据，不读取个人 notes，不启用未经空间授权的云端出境，也不对生产数据库执行迁移或回滚。
+## 1. 已由代码确认的能力
 
-## 已进入主线的实现
+- Session 注册/登录、空间成员与 `space_id` 授权、用户/空间软停用或归档已有 Controller、Service、迁移和测试代码。
+- 文件/网页上传可创建 revision/artifact/job；Worker 已接入 RabbitMQ、解析、对象存储、embedding、Qdrant candidate index，且 candidate 按空间汇总 active 文档。
+- 问答链已接入 revision/artifact material、结构化 citation/provenance、同步 provider generation、持久化 answer/run/event 和 SSE 事件读取。
+- Server/Worker Docker target 使用 UID 10001；Web、Server、Worker 已有 Compose `app` profile 构建定义，但本轮未完成 runtime build/up 验证。
+- 2026-08-29 本地实测：format、architecture、52 contract tests、Compose 静态验证和 secret scan 通过。
 
-- [x] `app` profile 统一构建 Server、Worker、Web；worker 镜像具备可执行启动入口。
-- [x] 首次使用入口可引导空间完成 RAG 配置，避免依赖手工预置资源。
-- [x] candidate index 按 `space_id` 汇总当前空间 active 文档，不以单文档覆盖空间索引。
-- [x] 长文 child chunk 在 embedding 前继续受控拆分，避免模型输入上限导致整批摄取失败。
-- [x] Linux 关键词查询的拒答与证据相关性使用真实 evidence material 校验，并有定向回归测试。
+这些事实不证明完整用户旅程、真实 streaming、Linux runtime 或发布门槛已经通过。
 
-以上勾选仅表示实现已进入 `main`，不等于 Phase 7 交付验收完成。
+## 2. P0：先修复会阻断 MVP 的实现断点
 
-## 必须完成的交付门槛
+- [ ] P7-CORE-01 平台管理员 bootstrap：为干净数据库提供一次性、可审计、不可重复滥用的 `PLATFORM_ADMIN` 初始化流程；当前注册固定创建 `USER`，而用户管理 API 又要求已有平台管理员。
+- [ ] P7-CORE-02 Provider 权限、验证与发布闸门：当前 connection API 是 space-scoped 且 Editor 可写，与“平台管理员登记、空间管理员选择”的需求不一致；先明确并实现 ownership/权限。随后实现 OpenAPI 已声明但 Controller 缺失的 `POST /provider-connections/{id}/test`，保存脱敏测试结果和 verified capabilities；未经实测或声明/实测不一致的 Profile 不得 `PUBLISHED`。
+- [ ] P7-CORE-03 真实生成 streaming：Provider adapter 当前固定 `stream=false`，`POST /answers` 在生成结束后才返回并发布事件。必须实现 token/delta streaming、上游取消和断线恢复，或经产品决策明确把“流式回答”移出 MVP；不能把完成后 SSE replay 描述为 provider streaming。
+- [ ] P7-CORE-04 Git 数据源接线：`GitConnector`/`LocalDirectoryConnector` 目前仅存在于 Worker 库，没有 Server API、持久化 source 配置、调度/手动同步或 Web 入口。补齐只读 remote/branch/checkpoint/include/exclude 全量与增量闭环。
+- [ ] P7-CORE-05 检索执行语义：BM25 当前为 `InMemoryBm25CandidateStore`，重启后丢失；RERANK route 虽被绑定，但 production retrieval 使用 `LexicalReranker`，AI Runtime 仍只有包骨架。选择并实现 durable lexical 重建/存储与真实 rerank adapter，或用 ADR/产品变更移除虚假的 route 能力。
+- [ ] P7-CORE-06 管理闭环：补齐用户反馈 API/UI、Provider/依赖健康聚合、按权限查询的审计/成本视图。当前只有 raw actuator 链接和内部 `Phase6OperationsService`，不等于 PRD 中的管理页面。
 
-- [ ] P7-CI-01：当前候选提交在 Linux CI 通过格式、架构、契约、Maven、Web、Compose、secret、Markdown link、SBOM 和 Grype 门禁。
-- [ ] P7-DEPLOY-01：从干净 Ubuntu 24.04 按文档构建并启动 core + `app` profile，全部服务达到 health/readiness。
-- [ ] P7-SMOKE-01：使用公共合成 fixture 完成注册/登录、建空间、LOCAL_ONLY 配置、导入、异步摄取、candidate 验证/发布、带结构化引用问答、历史/归档与跨空间拒绝。
-- [ ] P7-OBS-01：叠加 observability profile 后，Dashboard、日志/trace 脱敏和规定告警可由 Runbook 定位。
-- [ ] P7-SEC-01：应用容器以非 root、最小 capability、受控写路径和资源限额运行；Secret 不进入镜像、Compose 展开结果、日志或证据。
-- [ ] P7-SUPPLY-01：发布候选应用及基础镜像固定到不可变 digest，生成目标镜像 SBOM，严重漏洞均已修复或有明确接受记录；Notice/reuse register 一致。
-- [ ] P7-UPGRADE-01：以合成数据从上一兼容基线升级，验证 schema/对象/Qdrant/引用一致性；在兼容矩阵允许范围内完成应用回滚和数据恢复演练。
-- [ ] P7-DOC-01：安装、配置、Secret、备份、恢复、升级、回滚、故障处理命令由第二执行者按原文复现，无隐含本机路径或个人数据依赖。
-- [ ] P7-PUBLIC-01：secret、个人信息、Obsidian 内容、生产数据、raw prompt、许可证、Notice、仓库历史与大文件检查通过；根级许可证仍需单独人类决定。
+## 3. P1：建立可信的开发与回归基线
 
-## 退出条件
+- [ ] P7-TEST-01 统一 preflight：检查 Maven 实际 JVM、Node/npm 和 Docker daemon，而不是只检查命令是否存在。当前机器 `java -version` 为 21，但 `mvn -version` 绑定 JDK 8；Node/npm 不在 PATH；Docker client 存在但 daemon 未运行。
+- [ ] P7-TEST-02 全量 JVM 回归：在 JDK 21 + 可用 Docker 上运行 Server/Worker 全量测试。2026-08-29 显式 JDK 21 运行到 Server 187 tests，纯单元测试无 failure，但 20 个 Testcontainers tests 因 Docker daemon 不可用报 error，Worker 未执行；因此本轮不能记录为全绿。
+- [ ] P7-TEST-03 Web 自动化：`apps/web/package.json` 只有 typecheck/build/dev，没有 unit/component/E2E test 脚本；为登录、首次设置、上传/轮询、索引发布、问答/取消、历史/归档、管理权限和跨空间拒绝建立自动化。
+- [ ] P7-TEST-04 契约-实现一致性：增加 Controller/OpenAPI operation 对照门禁，至少捕获 provider connection test 这类“契约存在、实现缺失”；反向检查生产端点是否遗漏契约。
+- [ ] P7-TEST-05 RAG 变更评估：最近 retrieval/answer 相关性逻辑变化必须重新生成 baseline/candidate、引用/拒答/隔离/注入、latency/token/cost 证据；Phase 6 的人工评审豁免不能自动覆盖新发布候选。
 
-只有以上门槛全部有仓库内不可变证据，且相关 CI 对同一候选 SHA 全绿，Phase 7 才能标记完成。创建 release、接受根级许可证、执行生产迁移仍需用户显式批准；完成清单本身不授权这些高风险动作。
+## 4. P2：产品闭环后执行 Linux 交付
+
+- [ ] P7-DEPLOY-01 容器加固：Web 改为非 root；为 Server/Worker 增加 Compose health/readiness；三类应用统一 capability、只读文件系统/受控写路径、资源限额、优雅关闭和日志验证。
+- [ ] P7-SUPPLY-01 发布镜像：基础与应用镜像固定 immutable digest；使用目标镜像生成 SBOM/Grype 结果；生产 Secret 不使用 Compose 默认占位值，也不进入展开配置、镜像或日志。
+- [ ] P7-DEPLOY-02 干净 Ubuntu 24.04：从文档构建并启动 core + app，以公共合成 fixture 完成平台初始化、Provider test、空间/成员、Git/文件摄取、active index、streaming 引用问答、反馈、审计及跨空间/未授权出境拒绝。
+- [ ] P7-OBS-01 叠加 observability profile，验证 Dashboard、trace/log 脱敏、告警和 Runbook 可定位规定故障。
+- [ ] P7-UPGRADE-01 从上一兼容基线升级并在兼容矩阵允许范围内回滚；验证 PostgreSQL、对象、Qdrant、BM25/rebuild 和 citation 一致性，只使用合成数据。
+- [ ] P7-PUBLIC-01 执行 secret、个人信息、Obsidian 内容、生产数据、raw prompt、许可证、Notice、历史和大文件检查。根许可证、release 版本和生产迁移仍需用户单独批准。
+
+## 5. 退出条件
+
+P0/P1 未完成前不得把任务重心收缩为“只做部署”。全部任务必须有同一候选 SHA 的代码、测试和 runtime 证据；创建 release、接受根级许可证、执行生产迁移不在本清单的自动授权范围内。

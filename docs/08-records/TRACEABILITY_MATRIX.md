@@ -109,7 +109,7 @@
 
 ## Phase 6 实施证据
 
-## Phase 7 核心业务闭环增量
+## Phase 7 核心业务增量（历史实现记录，不等于当前验收）
 
 | 需求 ID | 需求 | 实现与验证 | 验收结果 | 残余边界 |
 |---|---|---|---|---|
@@ -125,6 +125,20 @@
 | P7-OPS-001 | 干净 Ubuntu 24.04 可按文档部署、健康检查和验收 | [`DEPLOYMENT.md`](../05-operations/DEPLOYMENT.md)、[`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) | 运行入口和验收条件已定义 | 尚无当前版本的干净环境不可变证据 |
 | P7-UPGRADE-001 | 上一兼容版本可升级并在定义窗口内回滚 | [`DEPLOYMENT.md`](../05-operations/DEPLOYMENT.md)、[`BACKUP_RESTORE.md`](../05-operations/BACKUP_RESTORE.md) | 原则与恢复基线已存在 | 兼容矩阵、升级/回滚演练和证据待完成 |
 | P7-SUPPLY-001 | 发布镜像固定、最小权限运行并具备 SBOM/漏洞扫描证据 | Compose/Dockerfile、现有 quality workflow、[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) | 开发构建与历史 Syft/Grype 门禁存在 | 目标镜像 digest、运行时加固、发布级 SBOM/Grype 和 Notice 复核待完成 |
+
+## Phase 7 代码审计纠偏基线（2026-08-29）
+
+本表覆盖上方按历史提交形成的乐观描述；只有“代码路径 + 当前可重跑测试”同时存在才算实现。
+
+| 任务 ID | 需求断点 | 代码证据 | 当前判定 | 验收要求 |
+|---|---|---|---|---|
+| P7-AUDIT-001 | 干净部署的平台初始化 | `AuthController` 注册不接受角色；`UserAdminService` 要求现有 `PLATFORM_ADMIN`；无 bootstrap command/API | 未实现 | 一次性、可审计、不可重复滥用的 bootstrap 与安全测试 |
+| P7-AUDIT-002 | Provider ownership、连通性与能力验证 | connection API 是 space-scoped 且 Editor 可写；OpenAPI 有 `testProviderConnection` 但 Controller 无对应 mapping；Profile 可直接保存 `PUBLISHED` 且 verified capabilities 为 `{}` | 权限/契约/实现三者不一致 | 平台与空间 ownership 决策、bounded/redacted probe、verified capability persistence、publish gate、契约-实现测试 |
+| P7-AUDIT-003 | 流式回答与取消 | `ProviderBackedGenerationPort` 构造 `ProviderChatRequest(..., stream=false)`；`AnswerApiController.create` 同步调用 `answers.answer` 后才发布事件 | 仅同步生成 + 完成后 SSE 事件 | token/delta stream、上游 cancel、Last-Event-ID replay 与 usage 幂等 |
+| P7-AUDIT-004 | Git 知识来源 | Worker 有 `GitConnector`/`LocalDirectoryConnector`；Server/Web/OpenAPI 无 source configuration/sync 入口 | 库代码未接产品链路 | remote/branch/checkpoint/include/exclude、手动/调度增量、审计与 Web 闭环 |
+| P7-AUDIT-005 | durable lexical 与真实 rerank | `InMemoryBm25CandidateStore` 是 production component；`LexicalReranker` 未使用空间绑定的 RERANK route；AI Runtime 仅 `__init__.py` | 配置语义与 runtime 不一致 | durable rebuild/storage、route-backed rerank 或经 ADR/PRD 明确降级 |
+| P7-AUDIT-006 | 管理与反馈 | Web 只有 raw `/actuator/health` 链接；未发现 feedback API/UI；内部 audit/cost service 无受权管理投影 | 管理闭环不完整 | feedback、聚合健康、审计/成本查询的 API/UI/权限/脱敏测试 |
+| P7-AUDIT-007 | 当前回归可信度 | format/architecture/52 contracts/Compose static/secret PASS；JDK 21 下 Server 187 tests 中 20 个因 Docker daemon 不可用 error、1 skipped；Worker 未运行；Node/npm 不在 PATH且无 Web test script | 当前候选不是全绿 | preflight、Server/Worker 全量、Web unit/component/E2E、同 SHA Linux CI |
 
 | 证据 ID | 验收内容 | 实现与验证 | 结果 | 后续 |
 |---|---|---|---|---|

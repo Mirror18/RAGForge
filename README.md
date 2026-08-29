@@ -2,9 +2,9 @@
 
 RAGForge 是一个面向企业内部、单租户多用户场景的通用 RAG 知识助手学习型工程。仓库的首要目标不是快速堆出一个聊天页面，而是完整实践商业项目从产品定义、架构决策、研发、测试、安全、交付到运维复盘的全过程。
 
-当前阶段为 **Phase 7 In Progress**：Phase 0–6 已完成阶段验收（Phase 6 含明确记录的人工评审豁免），Phase 7 已进入 Linux 交付与可公开准备。应用容器、首次使用业务流和知识导入/问答正确性修复已进入 `main`；干净 Ubuntu 部署、升级/回滚、发布级镜像与公共化门禁仍未完成，不能宣称可发布。阶段进度见 [`PHASE_7_CHECKLIST.md`](docs/03-delivery/PHASE_7_CHECKLIST.md)。
+当前阶段为 **Phase 7 Implementation Reconciliation**：代码反向审计表明，当前系统已有注册/空间、上传摄取、索引、同步生成与引用投影等纵向实现，但仍存在平台管理员 bootstrap、Provider 实测发布闸门、真实流式生成、Git 来源接线、反馈/审计管理、durable lexical/rerank、前端自动化和运行环境 preflight 等缺口。Linux 发布加固必须在这些产品与运行时缺口闭环后验收；当前不能宣称 MVP 或 Phase 7 完成。权威任务见 [`PHASE_7_CHECKLIST.md`](docs/03-delivery/PHASE_7_CHECKLIST.md)。
 
-当前可运行范围：本地环境可启动基础设施、Server、Worker 与 Web；用户可在浏览器注册测试账号、创建空间、发布本地 Ollama 配置和 Prompt、上传 Markdown、等待真实摄取/索引、执行带结构化引用的 LOCAL_ONLY 问答，并查看 Run/Step/usage。常用本地 notes 目录通过显式文件夹选择接入，个人内容不会自动读取。实际运行状态和验收证据以[项目状态](docs/08-records/PROJECT_STATUS.md)为准。
+仓库已提供基础设施、Server、Worker 与 Web 的本地启动入口，以及注册、空间、配置、上传摄取、索引、同步引用问答和 Run/Step/usage 的实现代码。2026-08-29 代码审计未完成当前候选的全量 runtime 复核，因此这些入口不能等同于发布可用性；实际结果和阻塞以[项目状态](docs/08-records/PROJECT_STATUS.md)为准。个人 notes 仍只允许用户显式选择，不得自动读取或进入长期证据。
 
 ## 1. 已确认的产品边界
 
