@@ -1,6 +1,7 @@
 package com.ragforge.server.ingestion;
 
 import com.ragforge.server.identity.SessionPrincipal;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -44,12 +46,51 @@ public class BusinessIngestionController {
         return gitSources.configure(spaceId, source, principal, request);
     }
 
+    /** Contract-shaped alias used by the public source API. */
+    @PostMapping("/sources")
+    @ResponseStatus(HttpStatus.CREATED)
+    public GitSourceService.SourceView createSource(@PathVariable UUID spaceId,
+                                                    @RequestBody GitSourceService.GitSourceRequest source,
+                                                    @AuthenticationPrincipal SessionPrincipal principal,
+                                                    HttpServletRequest request) {
+        return gitSources.configure(spaceId, source, principal, request);
+    }
+
+    @GetMapping("/sources/{sourceId}")
+    public GitSourceService.SourceView source(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                              @AuthenticationPrincipal SessionPrincipal principal) {
+        return gitSources.get(spaceId, sourceId, principal);
+    }
+
     @PostMapping("/sources/{sourceId}/sync")
     public GitSourceService.SyncCommand syncGit(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
                                                  @RequestParam(defaultValue = "INCREMENTAL") String mode,
+                                                 @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
                                                  @AuthenticationPrincipal SessionPrincipal principal,
                                                  HttpServletRequest request) {
-        return gitSources.synchronize(spaceId, sourceId, mode, principal, request);
+        return gitSources.synchronize(spaceId, sourceId, mode, idempotencyKey, principal, request);
+    }
+
+    @PostMapping("/sources/{sourceId}/sync-jobs")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public GitSourceService.SyncCommand syncJob(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                @RequestBody GitSourceService.SyncRequest body,
+                                                @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                                @AuthenticationPrincipal SessionPrincipal principal,
+                                                HttpServletRequest request) {
+        return gitSources.synchronize(spaceId, sourceId, body == null ? "INCREMENTAL_SYNC" : body.mode(), idempotencyKey, principal, request);
+    }
+
+    @GetMapping("/sync-jobs")
+    public List<BusinessIngestionService.JobView> syncJobs(@PathVariable UUID spaceId,
+                                                           @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.jobs(spaceId, principal).stream().filter(value -> value.job().documentRevisionId() == null).toList();
+    }
+
+    @GetMapping("/sync-jobs/{jobId}")
+    public BusinessIngestionService.JobView syncJob(@PathVariable UUID spaceId, @PathVariable UUID jobId,
+                                                    @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.job(spaceId, jobId, principal);
     }
 
     @PostMapping(value = "/sources/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

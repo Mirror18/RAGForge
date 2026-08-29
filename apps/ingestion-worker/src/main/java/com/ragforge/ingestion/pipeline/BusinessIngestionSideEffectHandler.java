@@ -73,7 +73,8 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         ObjectKey textKey = new ObjectKey(spaceId, sourceId, revisionId, textArtifactId, textHash);
         StoredObject textArtifact = store.put(textKey, "text/plain", textBytes);
         persistRevision(spaceId, sourceId, context.sourceDocumentId(), revisionId, context.revisionNo(),
-                context.sourceVersion(), context.path(), payload, parsed, textArtifact, textKey.value(), now);
+                payload.sourceVersion() == null || payload.sourceVersion().isBlank() ? context.sourceVersion() : payload.sourceVersion(),
+                context.path(), payload, parsed, textArtifact, textKey.value(), now);
         step(spaceId, jobId, attemptId, "PARSE", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
         step(spaceId, jobId, attemptId, "PERSIST", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
 
@@ -93,9 +94,11 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         jdbc.update("UPDATE ingestion_job_attempts SET status = 'SUCCEEDED', finished_at = ? WHERE space_id = ? AND id = ?",
                 Timestamp.from(now), spaceId, attemptId);
         step(spaceId, jobId, attemptId, "PUBLISH", "SUCCEEDED", null, null, parsed.report().parseReportId(), now);
-        requireSingleRow(jdbc.update("UPDATE source_checkpoints SET source_version_id = (SELECT id FROM source_versions WHERE space_id = ? AND source_id = ? ORDER BY version_no DESC LIMIT 1), version_no = version_no + 1, cursor_type = 'FILESYSTEM_SCAN', cursor_value = ?, last_successful_changeset_id = ?, updated_at = ? WHERE space_id = ? AND source_id = ?",
-                spaceId, sourceId, payload.artifactRef().sha256(), envelope.eventId(), Timestamp.from(now), spaceId, sourceId),
-                "source checkpoint advancement");
+        if (!payload.checkpointManagedBySourceSync()) {
+            requireSingleRow(jdbc.update("UPDATE source_checkpoints SET source_version_id = (SELECT id FROM source_versions WHERE space_id = ? AND source_id = ? ORDER BY version_no DESC LIMIT 1), version_no = version_no + 1, cursor_type = 'FILESYSTEM_SCAN', cursor_value = ?, last_successful_changeset_id = ?, updated_at = ? WHERE space_id = ? AND source_id = ?",
+                    spaceId, sourceId, payload.artifactRef().sha256(), envelope.eventId(), Timestamp.from(now), spaceId, sourceId),
+                    "source checkpoint advancement");
+        }
     }
 
     private ObjectKey validateArtifactReference(UUID spaceId, IngestionJobRequestedPayload payload) {

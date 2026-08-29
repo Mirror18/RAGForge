@@ -2,7 +2,7 @@
 
 - Updated: 2026-08-29
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
-- Current stage: Phase 7 实现对齐（`implementation-reconciliation`）。代码审计推翻了“只剩 Linux 交付”的任务假设：平台管理员 bootstrap、Provider 实测发布闸门、真实 generation streaming、Git 来源接线、durable BM25/真实 rerank、反馈/审计管理、Web 自动化和工具链 preflight 均未闭环；完成这些断点后才进入发布验收。
+- Current stage: Phase 7 实现对齐（`implementation-reconciliation`）。代码审计推翻了“只剩 Linux 交付”的任务假设：平台管理员 bootstrap、Provider 实测发布闸门和真实 generation streaming 已闭环；P7-CORE-04 Git 来源接线已闭环；durable BM25/真实 rerank、反馈/审计管理、Web 自动化和工具链 preflight 仍未闭环；完成这些断点后才进入发布验收。
 - 文档核对时的 Phase 7 功能基线：`f6b016840e946ea314cdaf4812c196dcea8ca491`；当时 `main` 比 `origin/main`（`9fdd94e0e12afae1c3843d0680fb48017e00669f`）领先 16 个提交。该功能基线尚无对应远程 CI 证据，不得用历史 Phase 6 CI 运行替代。
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
@@ -144,7 +144,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 当前决策：暂停部署工作，先完成前端可用闭环。第 7～9 节记录的是特定测试数据和操作者路径曾成功跑通，不代表普通用户可以独立、持续地使用产品；本节是对“前端已闭环”描述的权威纠偏。
 - 身份与协作未闭环：干净数据库没有平台管理员 bootstrap；成员 API 支持 upsert，但 `PersonalSpaceView.vue` 只能修改或移除已有成员，没有选择用户并加入空间的入口，因而“创建用户 → 加入空间 → Editor/Viewer 协作”无法从页面完成。
 - Provider 与模型配置未闭环：页面和 `ragSetup.ts` 可以直接创建 ACTIVE/PUBLISHED 配置并写入声明能力，却没有连接测试、verified capability、编辑/停用/轮换或发布闸门；MiMo 初始化还假定本地 Secret 已存在。页面成功提示不能证明模型链路实际可用。
-- 来源与索引未闭环：文件/网页可以提交，但多文件上传不逐个等待终态，任务和索引仅显示前 5 条；没有 Git source、来源库、失败重试/重放、重新同步、删除/归档、分页或候选索引回滚。用户无法持续维护一个增长中的知识库。
+- 来源与索引未完全闭环：文件/网页可以提交，任务和索引管理仍待 P7-WEB-02；P7-CORE-04 已补齐 Git source 配置、只读 clone/discover、全量/增量同步、空间隔离 checkpoint、变更文档任务投递、删除归档和 Web 来源入口。
 - Chunk Studio 与 Retrieval Playground 仍是工程调试界面：前者要求手填 `childChunkId`、`contentRef` 和 64 位 hash，且不展示/编辑正文；后者要求手填 index/profile UUID/version，并暴露 synthetic `queryVector` 测试缝。两者没有从文档、检索结果或引用跳转的上下文。
 - 问答未闭环：页面把同步生成完成后的 SSE 事件描述为回答增量；引用 preview API 返回 provenance 元数据，但客户端主动丢弃响应，只显示“已鉴权”，不能查看来源正文；历史回答没有完整 citation 恢复，且没有显式“新会话”、反馈、会话重命名/删除入口。
 - 管理与导航未闭环：Provider/Profile/Route/Prompt 主要是创建和列表，Run 依赖手填 ID，审计/成本/保留没有管理页面；列表普遍固定 `limit=100` 或 `slice(0, 5)` 且忽略 cursor；应用没有 URL Router、可恢复页面状态或 Web unit/component/E2E 测试。

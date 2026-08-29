@@ -26,7 +26,7 @@ public record IngestionEventEnvelope(
                 || payload == null || !payload.isObject()) {
             throw new EnvelopeValidationException("ENVELOPE_REQUIRED_FIELD_MISSING");
         }
-        if (!eventType.equals("ingestion.job.requested.v1")) {
+        if (!eventType.equals("ingestion.job.requested.v1") && !eventType.equals("source.sync.requested.v1")) {
             throw new EnvelopeValidationException("UNSUPPORTED_INGESTION_EVENT");
         }
         payload.fieldNames().forEachRemaining(field -> {

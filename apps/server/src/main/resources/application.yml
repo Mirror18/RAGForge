@@ -46,6 +46,11 @@ app:
     ttl: ${SESSION_TTL:PT8H}
 
 ragforge:
+  git-source:
+    # Explicit opt-in: scheduled sync performs remote read-only access.
+    sync:
+      enabled: ${RAGFORGE_GIT_SOURCE_SYNC_ENABLED:false}
+      interval-ms: ${RAGFORGE_GIT_SOURCE_SYNC_INTERVAL_MS:3600000}
   bootstrap:
     admin:
       # Disabled by default. Configure a one-time Secret of at least 32 characters, bootstrap, then remove it.

@@ -13,6 +13,8 @@ public class RabbitMessagingProperties {
     private String retryRoutingKey = "ingestion.job.retry.v1";
     private String deadLetterRoutingKey = "ingestion.job.dlq.v1";
     private String statusRoutingKey = "ingestion.job.status.changed.v1";
+    private String sourceSyncQueue = "ragforge.ingestion.source-sync";
+    private String sourceSyncRoutingKey = "source.sync.requested.v1";
     private int maxAttempts = 20;
 
     public String getExchange() { return exchange; }
@@ -33,6 +35,10 @@ public class RabbitMessagingProperties {
     public void setDeadLetterRoutingKey(String deadLetterRoutingKey) { this.deadLetterRoutingKey = deadLetterRoutingKey; }
     public String getStatusRoutingKey() { return statusRoutingKey; }
     public void setStatusRoutingKey(String statusRoutingKey) { this.statusRoutingKey = statusRoutingKey; }
+    public String getSourceSyncQueue() { return sourceSyncQueue; }
+    public void setSourceSyncQueue(String sourceSyncQueue) { this.sourceSyncQueue = sourceSyncQueue; }
+    public String getSourceSyncRoutingKey() { return sourceSyncRoutingKey; }
+    public void setSourceSyncRoutingKey(String sourceSyncRoutingKey) { this.sourceSyncRoutingKey = sourceSyncRoutingKey; }
     public int getMaxAttempts() { return maxAttempts; }
     public void setMaxAttempts(int maxAttempts) { this.maxAttempts = maxAttempts; }
 }

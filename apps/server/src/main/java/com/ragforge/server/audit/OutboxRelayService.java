@@ -29,7 +29,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Publishes only ingestion events from the durable outbox. Other audit events
+ * Publishes ingestion and source synchronization events from the durable outbox. Other audit events
  * remain persisted until their owning transport is introduced; they are never
  * silently routed through the ingestion queue.
  */
@@ -123,7 +123,7 @@ public class OutboxRelayService {
         String dueSql = "SELECT id, event_type, aggregate_id, space_id, correlation_id, "
                 + "causation_id, payload::text AS payload, occurred_at, delivery_attempts "
                 + "FROM outbox_events WHERE published_at IS NULL "
-                + "AND dead_lettered_at IS NULL AND event_type LIKE 'ingestion.%' "
+                + "AND dead_lettered_at IS NULL AND (event_type LIKE 'ingestion.%' OR event_type = 'source.sync.requested.v1') "
                 + "AND aggregate_id IS NOT NULL AND space_id IS NOT NULL "
                 + "AND correlation_id IS NOT NULL "
                 + "AND (next_attempt_at IS NULL OR next_attempt_at <= ?) "

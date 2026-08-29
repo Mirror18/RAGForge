@@ -42,12 +42,18 @@ public class RabbitTopologyConfiguration {
     }
 
     @Bean
+    public Queue sourceSyncQueue(RabbitMessagingProperties properties) {
+        return QueueBuilder.durable(properties.getSourceSyncQueue()).build();
+    }
+
+    @Bean
     public Declarables ingestionBindings(
             DirectExchange ingestionExchange,
             Queue requestedQueue,
             Queue retryQueue,
             Queue deadLetterQueue,
             Queue statusQueue,
+            Queue sourceSyncQueue,
             RabbitMessagingProperties properties) {
         Binding requested = BindingBuilder.bind(requestedQueue).to(ingestionExchange)
                 .with(properties.getRequestedRoutingKey());
@@ -57,6 +63,8 @@ public class RabbitTopologyConfiguration {
                 .with(properties.getDeadLetterRoutingKey());
         Binding status = BindingBuilder.bind(statusQueue).to(ingestionExchange)
                 .with(properties.getStatusRoutingKey());
-        return new Declarables(requested, retry, deadLetter, status);
+        Binding sourceSync = BindingBuilder.bind(sourceSyncQueue).to(ingestionExchange)
+                .with(properties.getSourceSyncRoutingKey());
+        return new Declarables(requested, retry, deadLetter, status, sourceSync);
     }
 }

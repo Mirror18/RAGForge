@@ -9,7 +9,15 @@ public record IngestionJobRequestedPayload(
         UUID pipelineVersionId,
         UUID attemptId,
         String operation,
-        ArtifactReference artifactRef) {
+        ArtifactReference artifactRef,
+        String sourceVersion,
+        boolean checkpointManagedBySourceSync) {
+
+    public IngestionJobRequestedPayload(UUID jobId, UUID sourceId, UUID documentRevisionId,
+                                        UUID pipelineVersionId, UUID attemptId, String operation,
+                                        ArtifactReference artifactRef) {
+        this(jobId, sourceId, documentRevisionId, pipelineVersionId, attemptId, operation, artifactRef, null, false);
+    }
 
     public void validate() {
         if (jobId == null || sourceId == null || documentRevisionId == null || pipelineVersionId == null

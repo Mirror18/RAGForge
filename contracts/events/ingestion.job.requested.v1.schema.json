@@ -21,6 +21,7 @@
             "attemptId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
             "operation": {"type": "string", "enum": ["FULL_SYNC", "INCREMENTAL_SYNC", "DOCUMENT_UPSERT", "DOCUMENT_DELETE"]},
             "sourceVersion": {"type": "string", "minLength": 1, "maxLength": 512},
+            "checkpointManagedBySourceSync": {"type": "boolean"},
             "priority": {"type": "integer", "minimum": 0, "maximum": 100},
             "artifactRef": {
               "type": "object",

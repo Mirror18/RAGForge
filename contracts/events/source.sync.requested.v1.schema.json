@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ragforge.local/events/source.sync.requested.v1.schema.json",
+  "title": "source.sync.requested.v1",
+  "description": "Request for a read-only source discovery/synchronization. It carries identities only; source credentials and bytes remain outside the event.",
+  "allOf": [
+    {"$ref": "./event-envelope.v1.schema.json"},
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {"const": "source.sync.requested.v1"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["jobId", "sourceId", "operation"],
+          "properties": {
+            "jobId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "sourceId": {"$ref": "./event-envelope.v1.schema.json#/$defs/uuidV7"},
+            "operation": {"type": "string", "enum": ["FULL_SYNC", "INCREMENTAL_SYNC"]}
+          }
+        }
+      },
+      "required": ["eventType", "payload"]
+    }
+  ]
+}
