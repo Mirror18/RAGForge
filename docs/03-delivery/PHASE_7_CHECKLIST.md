@@ -24,6 +24,12 @@
 - [ ] P7-CORE-04 Git 数据源接线：`GitConnector`/`LocalDirectoryConnector` 目前仅存在于 Worker 库，没有 Server API、持久化 source 配置、调度/手动同步或 Web 入口。补齐只读 remote/branch/checkpoint/include/exclude 全量与增量闭环。
 - [ ] P7-CORE-05 检索执行语义：BM25 当前为 `InMemoryBm25CandidateStore`，重启后丢失；RERANK route 虽被绑定，但 production retrieval 使用 `LexicalReranker`，AI Runtime 仍只有包骨架。选择并实现 durable lexical 重建/存储与真实 rerank adapter，或用 ADR/产品变更移除虚假的 route 能力。
 - [ ] P7-CORE-06 管理闭环：补齐用户反馈 API/UI、Provider/依赖健康聚合、按权限查询的审计/成本视图。当前只有 raw actuator 链接和内部 `Phase6OperationsService`，不等于 PRD 中的管理页面。
+- [ ] P7-WEB-01 协作闭环：在空间成员页提供 ACTIVE 用户搜索/选择和加入操作，并覆盖 Editor/Viewer 首次进入、角色变更、最后管理员保护；不得要求操作者调用 API。
+- [ ] P7-WEB-02 来源与任务闭环：建立来源库和任务中心；多文件逐项显示提交与终态，支持分页、筛选、失败重试/重放、重新同步、删除/归档和错误详情，不能再用 `slice(0, 5)` 代替任务管理。
+- [ ] P7-WEB-03 索引生命周期：显示 candidate 的构建/验证依据，支持发布、查看 active、回滚上一版本和处理 retired 版本；页面文案不得把 candidate 描述为 active。
+- [ ] P7-WEB-04 可核验问答：实现明确的新会话入口、历史 answer/citation 恢复、可阅读的来源预览或受权原文跳转、反馈、会话重命名/归档；真实 token streaming 完成前移除“回答增量”误导描述。
+- [ ] P7-WEB-05 上下文工具：从来源/Revision/Chunk、检索命中和 Citation 直接进入 Chunk Studio/Playground；普通路径不要求手填 `childChunkId`、`contentRef`、hash、index/profile UUID/version，生产 UI 不暴露 synthetic `queryVector`。
+- [ ] P7-WEB-06 配置与运维生命周期：Provider/Profile/Route/Prompt 提供测试、编辑、停用/退役、版本查看与回滚；Run 支持列表、筛选和 correlation ID 搜索；审计/成本/保留和聚合健康具备受权页面。
 
 ## 3. P1：建立可信的开发与回归基线
 
@@ -32,6 +38,7 @@
 - [ ] P7-TEST-03 Web 自动化：`apps/web/package.json` 只有 typecheck/build/dev，没有 unit/component/E2E test 脚本；为登录、首次设置、上传/轮询、索引发布、问答/取消、历史/归档、管理权限和跨空间拒绝建立自动化。
 - [ ] P7-TEST-04 契约-实现一致性：增加 Controller/OpenAPI operation 对照门禁，至少捕获 provider connection test 这类“契约存在、实现缺失”；反向检查生产端点是否遗漏契约。
 - [ ] P7-TEST-05 RAG 变更评估：最近 retrieval/answer 相关性逻辑变化必须重新生成 baseline/candidate、引用/拒答/隔离/注入、latency/token/cost 证据；Phase 6 的人工评审豁免不能自动覆盖新发布候选。
+- [ ] P7-TEST-06 Web 导航与数据规模：引入 URL Router/可恢复页面上下文；所有 cursor API 提供分页或增量加载，并用超过 100 个资源、超过 5 个任务/索引的 fixture 验证，不允许静默截断。
 
 ## 4. P2：产品闭环后执行 Linux 交付
 
@@ -44,4 +51,4 @@
 
 ## 5. 退出条件
 
-P0/P1 未完成前不得把任务重心收缩为“只做部署”。全部任务必须有同一候选 SHA 的代码、测试和 runtime 证据；创建 release、接受根级许可证、执行生产迁移不在本清单的自动授权范围内。
+P0/P1 未完成前暂停部署验收，不得把任务重心收缩为“只做部署”。实用性验收要求普通用户不借助数据库 seed、API 客户端或手填内部 UUID/hash 完成首次设置、协作、来源维护、失败恢复、索引生命周期和可核验问答。全部任务必须有同一候选 SHA 的代码、测试和 runtime 证据；创建 release、接受根级许可证、执行生产迁移不在本清单的自动授权范围内。

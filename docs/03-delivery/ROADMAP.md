@@ -171,10 +171,15 @@ Editor 可检查/修订 chunk；用户可检索；高级用户可 A/B 对比 ret
 
 ### 用户结果
 
-在干净 Ubuntu 24.04 环境可部署、升级、回滚和验收；仓库具备私有使用和后续公开条件。
+普通用户无需手填内部 UUID/hash，即可在 Web 中完成首次设置、成员协作、来源维护、失败恢复、索引发布/回滚、可查看原始证据的问答和反馈；在此基础上，系统才进入干净 Ubuntu 24.04 的部署、升级、回滚和公开化验收。
 
 ### 工作项
 
+- 补齐平台初始化、成员加入、Provider 实测发布和 Secret 就绪提示。
+- 建立来源库与任务中心，覆盖多文件进度、Git、重试/重放、重新同步、归档/删除、分页和索引回滚。
+- 将 Chunk Studio、Retrieval Playground、Run、Citation 与业务对象连通，移除普通用户对 UUID/hash 的依赖。
+- 补齐真实生成 streaming/cancel、引用正文预览、历史 citation、新会话、反馈与管理查询。
+- 引入 URL Router、可恢复状态及 Web unit/component/E2E 门禁。
 - Compose core/observability/llmops profiles 和生产 override。
 - 非 root 容器、固定 digest、资源限额、健康/就绪、Secret 注入。
 - 安装、升级、回滚、备份、恢复、故障手册。
@@ -183,6 +188,7 @@ Editor 可检查/修订 chunk；用户可检索；高级用户可 A/B 对比 ret
 
 ### 退出条件
 
+- 核心用户旅程不依赖数据库 seed、手填内部标识或开发者工具，并有浏览器自动化覆盖成功、失败、重试和权限路径。
 - 干净环境从文档部署成功并通过冒烟/验收。
 - 上一版本可升级且在定义窗口内回滚。
 - 公共化检查清单全部通过后，才讨论建立公开 GitHub 仓库。

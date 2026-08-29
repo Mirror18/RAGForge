@@ -140,3 +140,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - 新增 `R-046`：Git/LocalDirectory connector 只有 Worker 库实现，没有 Server source 配置、调度/手动同步、checkpoint 持久化和 Web 入口。P=4、I=4、Score=16，Ingestion / Product，OPEN；完成端到端只读 Git source 用户旅程后再宣称支持。
 - `R-023` 重新确认为当前发布阻塞：production bean 仍是 `InMemoryBm25CandidateStore`，重启会丢失 lexical 候选；同时 RERANK route 未驱动真实 rerank provider。关闭条件必须包含 durable rebuild/storage 和 route-to-runtime 一致性。
 - 新增 `R-047`：Web 没有 unit/component/E2E test script，契约门禁也不校验 OpenAPI operation 是否有 Controller 实现。P=4、I=4、Score=16，Quality / Web，OPEN；覆盖核心业务/权限失败路径，并增加契约-实现双向检查。
+- 新增 `R-048`：空间成员后端支持 upsert，但前端只能操作已有成员，没有“选择用户并加入空间”；干净环境无法从 Web 完成多人协作。P=5、I=4、Score=20，Product / IAM / Web，OPEN；补齐 ACTIVE 用户选择、加入、角色和权限回归。
+- 新增 `R-049`：来源、摄取任务和索引页面只覆盖短列表 happy path；多文件不逐项等待终态，任务/索引只显示前 5 条，缺少重试、重放、同步、归档/删除和索引回滚。P=5、I=4、Score=20，Product / Ingestion / Web，OPEN；以持久来源库和可恢复任务中心取代截断列表。
+- 新增 `R-050`：Citation preview 客户端丢弃服务端 provenance 响应且不展示来源正文；Chunk Studio/Playground/Run 依赖手填 UUID/hash，普通用户不能完成核验与调试。P=5、I=4、Score=20，Product / Provenance / Web，OPEN；提供受权正文预览和业务对象间导航，内部标识仅作为高级诊断信息。
+- 新增 `R-051`：Web 无 URL Router、页面状态恢复和 cursor 分页，资源超过 100 或任务/索引超过 5 时会被静默遗漏；刷新后工作上下文丢失。P=4、I=3、Score=12，Product / Web，OPEN；建立路由、可恢复筛选/选择状态和规模化分页测试。

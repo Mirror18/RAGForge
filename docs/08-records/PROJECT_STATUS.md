@@ -138,3 +138,14 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 已确认的交付断点：Server/Worker 镜像为 UID 10001，但 Web 仍为默认 nginx root；Server/Worker 在 Compose 中没有应用级 healthcheck，三类应用也没有完整 capability/只读写路径/资源限额/digest 证据。
 - 本轮门禁：format、architecture、52 contract tests、Compose 静态验证和 secret scan 通过。直接运行 Maven 时 Maven 绑定 JDK 8；显式切到 JDK 21 后 Server 执行 187 tests，20 个 Testcontainers tests 因 Docker daemon 未运行报 error、1 个真实 Ollama 用例 skipped，Worker 未执行。Node/npm 不在当前 PATH，Web 本轮未构建，且项目没有 Web test script。
 - 因此当前没有同一候选 SHA 的全量 green、容器 runtime、Ubuntu、升级/回滚或目标镜像 SBOM/Grype 证据；Phase 7 不能完成，也不能创建 release。
+
+## 11. 前端实用性复审（2026-08-29）
+
+- 当前决策：暂停部署工作，先完成前端可用闭环。第 7～9 节记录的是特定测试数据和操作者路径曾成功跑通，不代表普通用户可以独立、持续地使用产品；本节是对“前端已闭环”描述的权威纠偏。
+- 身份与协作未闭环：干净数据库没有平台管理员 bootstrap；成员 API 支持 upsert，但 `PersonalSpaceView.vue` 只能修改或移除已有成员，没有选择用户并加入空间的入口，因而“创建用户 → 加入空间 → Editor/Viewer 协作”无法从页面完成。
+- Provider 与模型配置未闭环：页面和 `ragSetup.ts` 可以直接创建 ACTIVE/PUBLISHED 配置并写入声明能力，却没有连接测试、verified capability、编辑/停用/轮换或发布闸门；MiMo 初始化还假定本地 Secret 已存在。页面成功提示不能证明模型链路实际可用。
+- 来源与索引未闭环：文件/网页可以提交，但多文件上传不逐个等待终态，任务和索引仅显示前 5 条；没有 Git source、来源库、失败重试/重放、重新同步、删除/归档、分页或候选索引回滚。用户无法持续维护一个增长中的知识库。
+- Chunk Studio 与 Retrieval Playground 仍是工程调试界面：前者要求手填 `childChunkId`、`contentRef` 和 64 位 hash，且不展示/编辑正文；后者要求手填 index/profile UUID/version，并暴露 synthetic `queryVector` 测试缝。两者没有从文档、检索结果或引用跳转的上下文。
+- 问答未闭环：页面把同步生成完成后的 SSE 事件描述为回答增量；引用 preview API 返回 provenance 元数据，但客户端主动丢弃响应，只显示“已鉴权”，不能查看来源正文；历史回答没有完整 citation 恢复，且没有显式“新会话”、反馈、会话重命名/删除入口。
+- 管理与导航未闭环：Provider/Profile/Route/Prompt 主要是创建和列表，Run 依赖手填 ID，审计/成本/保留没有管理页面；列表普遍固定 `limit=100` 或 `slice(0, 5)` 且忽略 cursor；应用没有 URL Router、可恢复页面状态或 Web unit/component/E2E 测试。
+- 产品判定：当前 Web 是可验证后端能力的工程控制台，不是可交付给普通用户的实用产品。Phase 7 下一工作入口调整为：协作与首次设置 → 来源/任务/索引维护 → 可核验问答 → 调试与管理工具 → Web 自动化；这些 P0/P1 完成后才恢复容器和 Ubuntu 交付。
