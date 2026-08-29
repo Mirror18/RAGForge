@@ -118,12 +118,27 @@ public class ProviderConnectionService {
             RequestIdentity identity = new RequestIdentity(requestId, correlationId, null);
             Duration timeout = Duration.ofSeconds(request.timeoutSeconds());
             if (purpose == ProviderRepository.RoutePurpose.CHAT) {
-                var response = adapter.chat(connection, decision,
+                StringBuilder streamed = new StringBuilder();
+                var response = adapter.chatStream(connection, decision,
                         new ProviderChatRequest(spaceId, identity, request.modelName().trim(),
                                 List.of(new ChatMessage("user", "Reply with OK.")), timeout, 8,
-                                Set.of(ModelCapability.CHAT), false, Set.of()), new CancellationToken())
+                                Set.of(ModelCapability.CHAT, ModelCapability.STREAMING), true, Set.of()),
+                        new CancellationToken(), delta -> {
+                            if (streamed.length() + delta.length() > 4096) {
+                                throw new ProviderAdapterException(
+                                        com.ragforge.server.provider.adapter.ProviderErrorClass.INVALID_RESPONSE,
+                                        "Provider probe stream exceeded its bounded output");
+                            }
+                            streamed.append(delta);
+                        })
                         .toCompletableFuture().join();
+                if (streamed.isEmpty() || !streamed.toString().equals(response.content())) {
+                    throw new ProviderAdapterException(
+                            com.ragforge.server.provider.adapter.ProviderErrorClass.INVALID_RESPONSE,
+                            "Provider probe stream was incomplete");
+                }
                 verified.add("CHAT");
+                verified.add("STREAMING");
                 if (response.usage() != null) {
                     verified.add("USAGE_REPORTING");
                 }

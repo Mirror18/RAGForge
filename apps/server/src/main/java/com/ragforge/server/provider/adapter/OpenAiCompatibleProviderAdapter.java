@@ -41,7 +41,10 @@ public class OpenAiCompatibleProviderAdapter extends AbstractHttpProviderAdapter
             item.put("role", message.role());
             item.put("content", message.content());
         });
-        root.put("stream", false);
+        root.put("stream", request.stream());
+        if (request.stream()) {
+            root.putObject("stream_options").put("include_usage", true);
+        }
         if (request.maxOutputTokens() != null) {
             root.put("max_tokens", request.maxOutputTokens());
         }
@@ -72,6 +75,35 @@ public class OpenAiCompatibleProviderAdapter extends AbstractHttpProviderAdapter
                     ? choice.get("finish_reason").textValue() : null;
             return new ProviderChatResponse(request.identity(), model, message.get("content").textValue(),
                     finishReason, usage, textOrNull(root, "id"));
+        } catch (ProviderAdapterException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw invalidResponse(request);
+        }
+    }
+
+    @Override
+    protected ChatStreamChunk parseStreamLine(ProviderChatRequest request, String line) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty() || trimmed.startsWith(":")) return null;
+        if (!trimmed.startsWith("data:")) return null;
+        String value = trimmed.substring(5).trim();
+        if ("[DONE]".equals(value)) return new ChatStreamChunk("", null, null, null, null, true);
+        try {
+            JsonNode root = objectMapper().readTree(value);
+            JsonNode choices = root == null ? null : root.path("choices");
+            String delta = "";
+            String finishReason = null;
+            if (choices != null && choices.isArray() && !choices.isEmpty()) {
+                JsonNode choice = choices.get(0);
+                JsonNode content = choice.path("delta").path("content");
+                if (content.isTextual()) delta = content.textValue();
+                if (choice.path("finish_reason").isTextual()) finishReason = choice.path("finish_reason").textValue();
+            }
+            ProviderUsage usage = usage(root == null ? null : root.get("usage"),
+                    "prompt_tokens", "completion_tokens", "total_tokens", request);
+            return new ChatStreamChunk(delta, textOrNull(root, "model"), finishReason, usage,
+                    textOrNull(root, "id"), false);
         } catch (ProviderAdapterException exception) {
             throw exception;
         } catch (Exception exception) {

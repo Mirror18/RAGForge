@@ -3,6 +3,7 @@ package com.ragforge.server.answer.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.answer.GenerationPort;
+import com.ragforge.server.answer.GenerationStreamObserver;
 import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.adapter.ChatMessage;
 import com.ragforge.server.provider.adapter.ModelCapability;
@@ -62,6 +63,20 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
     @Override
     public CompletionStage<GenerationResult> generate(GenerationRequest request,
                                                       CancellationToken cancellationToken) {
+        return generate(request, cancellationToken, null);
+    }
+
+    @Override
+    public CompletionStage<GenerationResult> generateStreaming(GenerationRequest request,
+                                                                CancellationToken cancellationToken,
+                                                                GenerationStreamObserver streamObserver) {
+        Objects.requireNonNull(streamObserver, "streamObserver");
+        return generate(request, cancellationToken, streamObserver);
+    }
+
+    private CompletionStage<GenerationResult> generate(GenerationRequest request,
+                                                        CancellationToken cancellationToken,
+                                                        GenerationStreamObserver streamObserver) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(cancellationToken, "cancellationToken");
         if (cancellationToken.isCancellationRequested()) {
@@ -93,7 +108,9 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
                     new RequestIdentity(request.runId(), request.correlationId(), request.idempotencyKey()),
                     route.model(), List.of(new ChatMessage("system", request.renderedPrompt()),
                             new ChatMessage("user", request.query())), timeout, null,
-                    java.util.Set.of(ModelCapability.CHAT), false,
+                    streamObserver == null ? java.util.Set.of(ModelCapability.CHAT)
+                            : java.util.Set.of(ModelCapability.CHAT, ModelCapability.STREAMING),
+                    streamObserver != null,
                     request.evidenceBundle().bundle().evidence().stream()
                             .map(item -> item.evidenceId().toString()).collect(java.util.stream.Collectors.toSet()));
         } catch (RuntimeException failure) {
@@ -101,8 +118,13 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
                     "Generation request could not be prepared", request.correlationId(), 0, false));
         }
         CompletionStage<ProviderChatResponse> response;
+        AnswerTextDeltaDecoder deltaDecoder = streamObserver == null
+                ? null : new AnswerTextDeltaDecoder(streamObserver);
         try {
-            response = adapter.chat(route.connection(), request.egressDecision(), providerRequest, cancellationToken);
+            response = streamObserver == null
+                    ? adapter.chat(route.connection(), request.egressDecision(), providerRequest, cancellationToken)
+                    : adapter.chatStream(route.connection(), request.egressDecision(), providerRequest,
+                    cancellationToken, deltaDecoder::accept);
         } catch (RuntimeException failure) {
             return CompletableFuture.failedFuture(failure);
         }
@@ -138,6 +160,7 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
                         "Provider response was invalid", request.correlationId(), 0, false);
             }
             GenerationResult result = parseStructuredResponse(value, request);
+            if (deltaDecoder != null) deltaDecoder.finish(result.answerText());
             observer.record(new Phase5IntegrationObserver.Decision(request.spaceId(), request.runId(),
                     request.correlationId(), "generation", "SUCCEEDED", "EXACT_ROUTE", request.egressDecision()));
             return result;
@@ -216,5 +239,88 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
         return new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE,
                 "Provider response did not match the versioned answer schema: " + reason,
                 request.correlationId(), 0, false);
+    }
+
+    /** Incrementally projects only the decoded root answer_text JSON string, never raw provider frames. */
+    private static final class AnswerTextDeltaDecoder {
+        private static final String FIELD = "\"answer_text\"";
+        private final GenerationStreamObserver observer;
+        private final StringBuilder raw = new StringBuilder();
+        private int emittedChars;
+
+        private AnswerTextDeltaDecoder(GenerationStreamObserver observer) {
+            this.observer = observer;
+        }
+
+        private void accept(String chunk) {
+            if (chunk == null || chunk.isEmpty()) return;
+            raw.append(chunk);
+            Decoded decoded = decode();
+            int safeLength = decoded.value.length();
+            if (!decoded.closed && safeLength > 0 && Character.isHighSurrogate(decoded.value.charAt(safeLength - 1))) {
+                safeLength--;
+            }
+            if (safeLength > emittedChars) {
+                observer.onDelta(decoded.value.substring(emittedChars, safeLength));
+                emittedChars = safeLength;
+            }
+        }
+
+        private void finish(String validatedAnswerText) {
+            Decoded decoded = decode();
+            if (!decoded.closed || !validatedAnswerText.equals(decoded.value)) {
+                throw new IllegalArgumentException("Streamed answer_text did not match the validated response");
+            }
+            if (decoded.value.length() > emittedChars) {
+                observer.onDelta(decoded.value.substring(emittedChars));
+                emittedChars = decoded.value.length();
+            }
+        }
+
+        private Decoded decode() {
+            int field = raw.indexOf(FIELD);
+            if (field < 0) return new Decoded("", false);
+            int cursor = field + FIELD.length();
+            while (cursor < raw.length() && Character.isWhitespace(raw.charAt(cursor))) cursor++;
+            if (cursor >= raw.length() || raw.charAt(cursor) != ':') return new Decoded("", false);
+            cursor++;
+            while (cursor < raw.length() && Character.isWhitespace(raw.charAt(cursor))) cursor++;
+            if (cursor >= raw.length() || raw.charAt(cursor) != '"') return new Decoded("", false);
+            cursor++;
+            StringBuilder value = new StringBuilder();
+            while (cursor < raw.length()) {
+                char current = raw.charAt(cursor++);
+                if (current == '"') return new Decoded(value.toString(), true);
+                if (current != '\\') {
+                    if (current < 0x20) throw new IllegalArgumentException("Invalid JSON string control character");
+                    value.append(current);
+                    continue;
+                }
+                if (cursor >= raw.length()) break;
+                char escaped = raw.charAt(cursor++);
+                switch (escaped) {
+                    case '"', '\\', '/' -> value.append(escaped);
+                    case 'b' -> value.append('\b');
+                    case 'f' -> value.append('\f');
+                    case 'n' -> value.append('\n');
+                    case 'r' -> value.append('\r');
+                    case 't' -> value.append('\t');
+                    case 'u' -> {
+                        if (cursor + 4 > raw.length()) return new Decoded(value.toString(), false);
+                        try {
+                            value.append((char) Integer.parseInt(raw.substring(cursor, cursor + 4), 16));
+                        } catch (NumberFormatException invalid) {
+                            throw new IllegalArgumentException("Invalid JSON unicode escape", invalid);
+                        }
+                        cursor += 4;
+                    }
+                    default -> throw new IllegalArgumentException("Invalid JSON string escape");
+                }
+            }
+            return new Decoded(value.toString(), false);
+        }
+
+        private record Decoded(String value, boolean closed) {
+        }
     }
 }

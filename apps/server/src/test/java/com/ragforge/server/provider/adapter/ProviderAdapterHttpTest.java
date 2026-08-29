@@ -364,6 +364,79 @@ class ProviderAdapterHttpTest {
     }
 
     @Test
+    void openAiSseStreamEmitsDeltasAndAggregatesFinalResponse() throws Exception {
+        behavior.set((exchange, body) -> respond(exchange, 200, """
+                data: {"id":"stream-1","model":"test-model","choices":[{"delta":{"content":"hel"},"finish_reason":null}]}
+
+                data: {"id":"stream-1","model":"test-model","choices":[{"delta":{"content":"lo"},"finish_reason":"stop"}]}
+
+                data: {"id":"stream-1","model":"test-model","choices":[],"usage":{"prompt_tokens":2,"completion_tokens":3,"total_tokens":5}}
+
+                data: [DONE]
+
+                """));
+        List<String> deltas = new ArrayList<>();
+
+        ProviderChatResponse response = openAi().chatStream(connection(ProviderType.OPENAI_COMPATIBLE),
+                EgressDecision.LOCAL_ONLY, streamingRequest(identity("openai-stream")),
+                new CancellationToken(), deltas::add).toCompletableFuture().get(3, TimeUnit.SECONDS);
+
+        assertThat(deltas).containsExactly("hel", "lo");
+        assertThat(response.content()).isEqualTo("hello");
+        assertThat(response.usage()).isEqualTo(new ProviderUsage(2L, 3L, 5L, UsageSource.PROVIDER_REPORTED));
+        assertThat(MAPPER.readTree(observedBody.get()).path("stream").asBoolean()).isTrue();
+    }
+
+    @Test
+    void ollamaNdjsonStreamEmitsDeltasAndAggregatesUsage() throws Exception {
+        behavior.set((exchange, body) -> respond(exchange, 200,
+                "{\"model\":\"test-model\",\"message\":{\"content\":\"本地\"},\"done\":false}\n"
+                        + "{\"model\":\"test-model\",\"message\":{\"content\":\"回答\"},\"done\":true,"
+                        + "\"done_reason\":\"stop\",\"prompt_eval_count\":4,\"eval_count\":2}\n"));
+        List<String> deltas = new ArrayList<>();
+
+        ProviderChatResponse response = ollama().chatStream(connection(ProviderType.OLLAMA),
+                EgressDecision.LOCAL_ONLY, streamingRequest(identity("ollama-stream")),
+                new CancellationToken(), deltas::add).toCompletableFuture().get(3, TimeUnit.SECONDS);
+
+        assertThat(deltas).containsExactly("本地", "回答");
+        assertThat(response.content()).isEqualTo("本地回答");
+        assertThat(response.usage()).isEqualTo(new ProviderUsage(4L, 2L, 6L, UsageSource.PROVIDER_REPORTED));
+    }
+
+    @Test
+    void cancellationClosesAnInFlightProviderStream() throws Exception {
+        behavior.set((exchange, body) -> {
+            try {
+                exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+                exchange.sendResponseHeaders(200, 0);
+                exchange.getResponseBody().write(("data: {\"id\":\"cancel-stream\",\"model\":\"test-model\","
+                        + "\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                exchange.getResponseBody().flush();
+                Thread.sleep(2_000);
+            } catch (IOException ignored) {
+                // Expected when the client closes the streaming response.
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            } finally {
+                exchange.close();
+            }
+        });
+        CancellationToken token = new CancellationToken();
+        CountDownLatch deltaSeen = new CountDownLatch(1);
+        CompletableFuture<ProviderChatResponse> call = openAi().chatStream(
+                connection(ProviderType.OPENAI_COMPATIBLE), EgressDecision.LOCAL_ONLY,
+                streamingRequest(identity("cancel-stream")), token, ignored -> deltaSeen.countDown())
+                .toCompletableFuture();
+        assertThat(deltaSeen.await(2, TimeUnit.SECONDS)).isTrue();
+
+        token.cancel();
+
+        assertThat(failure(call).errorClass()).isEqualTo(ProviderErrorClass.CANCELLED);
+    }
+
+    @Test
     void concurrentCallsKeepRequestIdentityAndAuthorizationIndependent() {
         int calls = 20;
         behavior.set((exchange, body) -> respond(exchange, 200,
@@ -434,6 +507,12 @@ class ProviderAdapterHttpTest {
         return new ProviderChatRequest(SPACE_ID, identity, "test-model",
                 List.of(new ChatMessage("user", PROMPT)), Duration.ofSeconds(2), null,
                 Set.of(ModelCapability.CHAT), false);
+    }
+
+    private ProviderChatRequest streamingRequest(RequestIdentity identity) {
+        return new ProviderChatRequest(SPACE_ID, identity, "test-model",
+                List.of(new ChatMessage("user", PROMPT)), Duration.ofSeconds(2), null,
+                Set.of(ModelCapability.CHAT, ModelCapability.STREAMING), true);
     }
 
     private static RequestIdentity identity(String suffix) {

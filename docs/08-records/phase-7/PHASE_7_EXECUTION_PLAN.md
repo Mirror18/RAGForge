@@ -1,6 +1,6 @@
 # Phase 7 执行计划：实现对齐与 Linux 交付
 
-- Version: `phase7-plan.v4`
+- Version: `phase7-plan.v5`
 - Status: `implementation-reconciliation`
 - Code baseline: `f6b016840e946ea314cdaf4812c196dcea8ca491`
 - Checklist: [`PHASE_7_CHECKLIST.md`](../../03-delivery/PHASE_7_CHECKLIST.md)
@@ -16,7 +16,7 @@
 | 身份/空间 | Session、CSRF、成员角色、用户/空间管理、一次性平台管理员 bootstrap、按精确邮箱加入成员 | Provider 首次配置仍缺少验证发布闸门 | 干净数据库可进入平台管理与成员协作，尚不能完成可用 Provider 配置 |
 | Provider | space-scoped connection/profile/route/binding 与 adapter | Editor 可登记 connection，与平台管理员 ownership 需求不一致；connection test 仅有 OpenAPI；verified capability 不控制发布 | 权限模型和 `PUBLISHED` 均未达到需求语义 |
 | 摄取 | 上传、网页、revision/artifact/job、Worker pipeline | Git/local connector 未接 Server/Web/调度 | 不能宣称 Git 知识源用户旅程完成 |
-| 问答 | material-backed retrieval、同步 generation、citation、answer/event persistence | provider 固定非 streaming；SSE 是结果事件读取 | 不能宣称真实流式回答/取消闭环 |
+| 问答 | material-backed retrieval、Provider 原生 streaming、结构化 citation、durable answer/event、Last-Event-ID、同/多实例 cancel | citation 正文、历史 citation、反馈和上下文导航仍未闭环 | 流式生成与取消已真实接线，但完整普通用户核验旅程仍属于 P7-D |
 | Retrieval | Qdrant dense、RRF、parent expansion、lexical rerank | BM25 进程内；RERANK route 未调用；AI Runtime 空壳 | 重启与配置语义不满足部署要求 |
 | 管理 | 用户/空间/模型/Prompt 页面、raw health link | feedback、审计/成本/聚合健康页面缺失 | PRD 管理闭环不完整 |
 | 测试 | Java/contract/安全/评估资产丰富 | Web 无测试脚本；契约未校验 Controller 覆盖；本机 preflight 不可靠 | 当前候选不可据此判定全绿 |
@@ -33,7 +33,7 @@
 | P7-A 审计与任务冻结 | completed | 本计划、checklist、风险/追溯更新 | 任务由代码事实驱动，历史声明不作为完成证据 | 无 |
 | P7-B 首次设置与协作 | completed | admin bootstrap、成员加入、connection test、verified publish | 干净数据库可通过 Web 完成平台初始化、空间协作和可核验 Provider 配置；完整 RAG 一键绑定仍受 P7-D 真实 RERANK 约束 | P7-A |
 | P7-C 来源、任务与索引维护 | pending | 来源库、Git source、多任务终态、重试/同步/归档、索引发布/回滚 | 增长中的知识库可持续维护，失败不需要 API/DB 修复 | P7-B |
-| P7-D 问答与上下文工具 | pending | streaming/cancel、citation 正文、历史 citation、新会话/反馈、Studio/Playground 上下文跳转、durable lexical、rerank adapter | 普通用户不手填内部标识即可完成可核验问答；运行时与配置语义一致 | P7-C |
+| P7-D 问答与上下文工具 | in_progress | ~~streaming/cancel~~、citation 正文、历史 citation、新会话/反馈、Studio/Playground 上下文跳转、durable lexical、rerank adapter | 普通用户不手填内部标识即可完成可核验问答；运行时与配置语义一致 | P7-C |
 | P7-E 管理与 Web 自动化 | pending | Provider/Prompt 生命周期、Run/audit/cost/health 查询、Router/pagination、Web tests、contract-implementation gate、preflight | 关键 UI/API/失败/规模/权限路径可自动回归 | P7-B/P7-C/P7-D |
 | P7-F 镜像与 Compose 加固 | pending | non-root Web、health、limits、digest、Secret | Definition of Done 可部署能力满足 | P7-E |
 | P7-G Ubuntu/观测/升级验收 | pending | clean deploy、smoke、observability、upgrade/rollback evidence | 同一候选 SHA 和镜像 digest 可追溯 | P7-F |
@@ -62,6 +62,13 @@
 - CHAT/EMBEDDING 通过 production adapter 发送固定合成样本。云端探测要求逐次 `allowCloudProbe=true`；探测前校验 URI、DNS/IP 与出境等级，LOCAL 不得访问公网，CLOUD 只允许 HTTPS 公网。RERANK adapter 不存在时明确记录 `UNSUPPORTED_CAPABILITY`。
 - Profile `PUBLISHED` 必须匹配同 connection/model/purpose 的最新测试且结果成功；声明能力必须是 verified 子集，embedding 维度必须一致。后续失败复测会立即阻断新发布，不能继续沿用更早的成功结果。
 - P7-B 标记完成，但这不代表完整本地 RAG 一键初始化完成：当前 RERANK runtime 仍是 `P7-CORE-05` 的阻塞项，页面不得把 CHAT 探测冒充 RERANK 验证。部署验收继续暂停。
+
+## 2026-08-29 Streaming 增量
+
+- P7-CORE-03 已完成：Ollama NDJSON 与 OpenAI-compatible/MiMo SSE 进入 production adapter；CHAT connection probe 同时验证真实 `STREAMING`。
+- 生成桥只投影增量解码的 `answer_text`，不透传 provider frame/JSON；durable delta、终态 citation 校验、失败清除暂态文本、稳定 answer ID 和不重复终态正文已闭环。
+- cancel 通过本机 active token 和共享 run-event fan-out 关闭生成实例上游流；event store 在 `CANCELLED` 后继续独立拒绝 delta，Last-Event-ID 复用持久序列。
+- 定向 Java 63/63、事件持久化/多实例 fan-out 回归 6/6 通过。本轮没有部署或调用真实模型；P7-D 仍因 citation 正文/历史、上下文导航、durable lexical 和真实 RERANK 等工作保持 `in_progress`。
 
 ## 证据规则
 

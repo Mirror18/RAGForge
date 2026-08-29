@@ -34,6 +34,7 @@ flowchart LR
 | Provider 探测 SSRF | 管理员登记恶意 endpoint，借连接测试访问 metadata/内网或把本地探测发往公网 | 平台管理员权限、逐次云确认、HTTP(S) 结构校验、每次探测 DNS/IP 分类、LOCAL 仅内网、CLOUD 仅 HTTPS 公网、响应不持久化 | loopback synthetic probe、云端未确认拒绝、地址分类回归 |
 | 恶意上传 | parser RCE/zip bomb/path traversal | quarantine、AV、sandbox、limits、safe extraction | fuzz/malicious corpus |
 | Citation forgery | 模型生成不存在来源 | server-side citation ID validation | unknown ID tests |
+| 流式输出绕过终态校验 | Provider 在部分 JSON 中输出正文，随后提交伪造 citation、畸形 JSON 或被取消 | 只解码根级 `answer_text`、不投影原始 frame、稳定 answer ID、终态结构/citation allow-list 校验、非 COMPLETED 清除暂态文本、取消后拒绝 delta | 分块 JSON、畸形/越界 citation、同实例与 fan-out cancel、replay tests |
 | 未授权出境 | fallback 把内容发云端 | per-space opt-in、route compatibility、deny audit | provider spy tests |
 | 消息重放 | 重复 chunk/vector/cost | idempotency keys、attempt records、ledger dedupe | redelivery tests |
 | Poisoned index | 半构建索引上线 | candidate validation + atomic pointer | fault injection |

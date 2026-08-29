@@ -84,10 +84,15 @@ public final class RAGAnswerService {
     }
 
     public Answer answer(AnswerRequest request) {
-        return answer(request, null);
+        return answer(request, null, null);
     }
 
     public Answer answer(AnswerRequest request, AnswerAuthorizationContext authorizationContext) {
+        return answer(request, authorizationContext, null);
+    }
+
+    public Answer answer(AnswerRequest request, AnswerAuthorizationContext authorizationContext,
+                         GenerationStreamObserver streamObserver) {
         Objects.requireNonNull(request, "request");
         try {
             if (authorizationContext == null) {
@@ -117,7 +122,7 @@ public final class RAGAnswerService {
                         "This idempotent answer is available only as a redacted replay record.", List.of(),
                         unavailableProvenance(request));
             }
-            Answer result = execute(request);
+            Answer result = execute(request, streamObserver);
             answerCache.put(scope, result);
             return result;
         }
@@ -128,7 +133,7 @@ public final class RAGAnswerService {
         return answer(request);
     }
 
-    private Answer execute(AnswerRequest request) {
+    private Answer execute(AnswerRequest request, GenerationStreamObserver streamObserver) {
         CancellationToken cancellation = request.cancellationToken();
         if (cancellation.isCancellationRequested()) {
             return refusal(request, AnswerStatus.CANCELLED, AbstentionReason.CANCELLED,
@@ -183,8 +188,10 @@ public final class RAGAnswerService {
                     request.spaceId(), request.runId(), request.correlationId(), request.idempotencyKey(),
                     request.query(), prompt, renderedPrompt, bounded, request.model(),
                     request.modelRouteVersionId(), request.modelProfileVersionId(), request.egressDecision());
-            CompletableFuture<GenerationPort.GenerationResult> future = generationPort
-                    .generate(generationRequest, cancellation).toCompletableFuture();
+            CompletableFuture<GenerationPort.GenerationResult> future = (streamObserver == null
+                    ? generationPort.generate(generationRequest, cancellation)
+                    : generationPort.generateStreaming(generationRequest, cancellation, streamObserver))
+                    .toCompletableFuture();
             GenerationPort.GenerationResult generated;
             try {
                 generated = future.get(request.timeout().toMillis(), TimeUnit.MILLISECONDS);
@@ -224,7 +231,7 @@ public final class RAGAnswerService {
             }
             generationAudit.record(request, generated, provenance);
             try {
-                return complete(request, bounded, generated, provenance);
+                return complete(request, bounded, generated, provenance, streamObserver);
             } catch (CitationTokenParser.CitationTokenException invalidCitation) {
                 log.warn("Answer citation projection rejected: runId={}, correlationId={}, reason={}",
                         request.runId(), request.correlationId(), invalidCitation.getMessage());
@@ -254,7 +261,8 @@ public final class RAGAnswerService {
     }
 
     private Answer complete(AnswerRequest request, EvidenceBundleSnapshot snapshot,
-                            GenerationPort.GenerationResult generated, AnswerProvenance provenance) {
+                            GenerationPort.GenerationResult generated, AnswerProvenance provenance,
+                            GenerationStreamObserver streamObserver) {
         List<Claim> claims = new ArrayList<>();
         List<Citation> citations = new ArrayList<>();
         int searchFrom = 0;
@@ -281,8 +289,8 @@ public final class RAGAnswerService {
             }
             searchFrom = end;
         }
-        Answer answer = Answer.completed(request.spaceId(), request.correlationId(), request.runId(),
-                request.idempotencyKey(), generated.answerText(), claims, citations, provenance);
+        Answer answer = Answer.completed(request.answerId(), request.spaceId(), request.correlationId(),
+                request.runId(), request.idempotencyKey(), generated.answerText(), claims, citations, provenance);
         AnswerPersistencePort.PersistedAnswer persisted = answerPersistence.saveIfAbsent(answer);
         if (!persisted.answerId().equals(answer.answerId())) {
             return refusal(request, AnswerStatus.FAILED, AbstentionReason.POLICY_BLOCKED,
@@ -296,8 +304,8 @@ public final class RAGAnswerService {
                            List<UUID> evidenceIds, AnswerProvenance provenance) {
         Abstention abstention = new Abstention(request.spaceId(), request.correlationId(), request.runId(),
                 request.idempotencyKey(), reason, evidenceIds, message);
-        Answer answer = Answer.refusal(request.spaceId(), request.correlationId(), request.runId(),
-                request.idempotencyKey(), status, abstention, provenance);
+        Answer answer = Answer.refusal(request.answerId(), request.spaceId(), request.correlationId(),
+                request.runId(), request.idempotencyKey(), status, abstention, provenance);
         // Persist the full refusal projection, including its structured abstention.
         // A summary-only row cannot be reconstructed into a valid Answer on the
         // controller's idempotent replay path because FAILED/ABSTAINED outcomes

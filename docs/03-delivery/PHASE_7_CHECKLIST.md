@@ -20,7 +20,7 @@
 
 - [x] P7-CORE-01 平台管理员 bootstrap：干净数据库可从登录页使用显式配置的 32 字符以上一次性 Token 创建或提升首个 ACTIVE `PLATFORM_ADMIN`；数据库事务锁保证并发请求最多成功一次，完成后 fail-closed，普通注册用户不会自动提权，审计不记录邮箱、密码或 Token。
 - [x] P7-CORE-02 Provider 权限、验证与发布闸门：保持现有 space-scoped 数据模型；只有同时属于目标空间的平台管理员可登记和实测 connection，空间管理员负责 Profile/Route，Editor 不再可写。测试通过现有 adapter 发送固定合成样本，云端逐次显式确认，结果只保存分类、能力、维度、耗时和 ID；最新匹配测试失败、缺失或声明/实测不一致时 Profile 不得 `PUBLISHED`。RERANK adapter 尚未实现时测试明确失败，不伪造 verified capability。
-- [ ] P7-CORE-03 真实生成 streaming：Provider adapter 当前固定 `stream=false`，`POST /answers` 在生成结束后才返回并发布事件。必须实现 token/delta streaming、上游取消和断线恢复，或经产品决策明确把“流式回答”移出 MVP；不能把完成后 SSE replay 描述为 provider streaming。
+- [x] P7-CORE-03 真实生成 streaming：Ollama NDJSON 与 OpenAI-compatible/MiMo SSE 由 production adapter 实时消费；只把增量解码后的根级 `answer_text` 投影为 durable `answer.delta`，完整结构、claim 与 citation allow-list 仍在终态校验。取消通过同进程 token 和多实例 run-event fan-out 关闭上游流，取消后 event store 拒绝新增 delta；`Last-Event-ID` 继续从持久事件恢复。失败/拒答/取消时 Web 清除未通过终态校验的暂态文本。
 - [ ] P7-CORE-04 Git 数据源接线：`GitConnector`/`LocalDirectoryConnector` 目前仅存在于 Worker 库，没有 Server API、持久化 source 配置、调度/手动同步或 Web 入口。补齐只读 remote/branch/checkpoint/include/exclude 全量与增量闭环。
 - [ ] P7-CORE-05 检索执行语义：BM25 当前为 `InMemoryBm25CandidateStore`，重启后丢失；RERANK route 虽被绑定，但 production retrieval 使用 `LexicalReranker`，AI Runtime 仍只有包骨架。选择并实现 durable lexical 重建/存储与真实 rerank adapter，或用 ADR/产品变更移除虚假的 route 能力。
 - [ ] P7-CORE-06 管理闭环：补齐用户反馈 API/UI、Provider/依赖健康聚合、按权限查询的审计/成本视图。当前只有 raw actuator 链接和内部 `Phase6OperationsService`，不等于 PRD 中的管理页面。

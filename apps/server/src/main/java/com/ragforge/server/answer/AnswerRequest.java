@@ -24,7 +24,8 @@ public record AnswerRequest(
         String datasetHash,
         String configHash,
         UUID traceId,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        UUID answerId) {
 
     public AnswerRequest {
         Objects.requireNonNull(spaceId, "spaceId");
@@ -58,6 +59,17 @@ public record AnswerRequest(
         }
         Objects.requireNonNull(traceId, "traceId");
         cancellationToken = cancellationToken == null ? new CancellationToken() : cancellationToken;
+        answerId = answerId == null ? com.ragforge.server.common.UuidV7.random() : answerId;
+    }
+
+    public AnswerRequest(UUID spaceId, UUID runId, UUID correlationId, String idempotencyKey, String query,
+                         UUID promptVersionId, UUID modelRouteVersionId, UUID modelProfileVersionId,
+                         String model, EgressDecision egressDecision, int maxContextTokens, Duration timeout,
+                         String toolSchemaVersionsJson, String datasetHash, String configHash, UUID traceId,
+                         CancellationToken cancellationToken) {
+        this(spaceId, runId, correlationId, idempotencyKey, query, promptVersionId, modelRouteVersionId,
+                modelProfileVersionId, model, egressDecision, maxContextTokens, timeout, toolSchemaVersionsJson,
+                datasetHash, configHash, traceId, cancellationToken, null);
     }
 
     public AnswerRequest(UUID spaceId, UUID runId, UUID correlationId, String idempotencyKey, String query,
@@ -66,6 +78,6 @@ public record AnswerRequest(
                          String datasetHash, String configHash) {
         this(spaceId, runId, correlationId, idempotencyKey, query, promptVersionId, modelRouteVersionId,
                 modelProfileVersionId, model, egressDecision, maxContextTokens, timeout, "{}", datasetHash,
-                configHash, runId, new CancellationToken());
+                configHash, runId, new CancellationToken(), null);
     }
 }

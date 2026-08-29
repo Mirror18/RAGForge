@@ -8,6 +8,7 @@ import com.ragforge.server.answer.AnswerRequest;
 import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerStatus;
 import com.ragforge.server.answer.RAGAnswerService;
+import com.ragforge.server.answer.GenerationStreamObserver;
 import com.ragforge.server.common.ApiException;
 import com.ragforge.server.common.CorrelationIdFilter;
 import com.ragforge.server.common.UuidV7;
@@ -44,6 +45,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Versioned answer HTTP adapter. It never accepts provider output as a citation. */
 @RestController
@@ -59,6 +63,7 @@ public class AnswerApiController {
     private final AnswerEventPublisher publisher;
     private final AnswerSseEventAdapter sseAdapter;
     private final AnswerAuthorizationContextFactory authorizationContexts;
+    private final ConcurrentMap<RunScope, ActiveGeneration> activeGenerations = new ConcurrentHashMap<>();
 
     public AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                                ObjectMapper objectMapper) {
@@ -114,14 +119,40 @@ public class AnswerApiController {
             return existing;
         }
         UUID correlationId = correlationId(servletRequest);
-        AnswerRequest answerRequest = request.toDomain(spaceId, correlationId, idempotencyKey);
-        Answer answer = authorizationContexts == null
-                ? answers.answer(answerRequest)
-                : answers.answer(answerRequest, authorizationContexts.issue(principal(authentication), spaceId,
-                request.runId(), correlationId, request.runId()));
-        Answer stored = projections.saveIfAbsent(answer);
-        publisher.publish(stored);
-        return stored;
+        RunScope scope = new RunScope(spaceId, request.runId());
+        ActiveGeneration active = new ActiveGeneration(UuidV7.random(), new CancellationToken());
+        AnswerRequest answerRequest = request.toDomain(spaceId, correlationId, idempotencyKey,
+                active.cancellationToken, active.answerId);
+        if (activeGenerations.putIfAbsent(scope, active) != null) {
+            throw new ApiException(HttpStatus.CONFLICT, "answer_already_running", "Answer conflict",
+                    "An answer is already running for this space and run");
+        }
+        GenerationStreamObserver observer = new GenerationStreamObserver() {
+            @Override public UUID answerId() { return active.answerId; }
+            @Override public void onDelta(String delta) {
+                publisher.publishDelta(answerRequest, active.answerId, delta);
+                active.deltaCount.incrementAndGet();
+            }
+        };
+        RunEventStore.Subscription cancellationSubscription = null;
+        try {
+            java.util.function.Consumer<RunEvent> cancellationConsumer = event -> {
+                if (isCancellationEvent(scope, event)) active.cancellationToken.cancel();
+            };
+            cancellationSubscription = events.subscribe(spaceId, request.runId(), cancellationConsumer);
+            events.replay(spaceId, request.runId(), null).events().forEach(cancellationConsumer);
+            cancellationSubscription.activate();
+            Answer answer = authorizationContexts == null
+                    ? answers.answer(answerRequest, null, observer)
+                    : answers.answer(answerRequest, authorizationContexts.issue(principal(authentication), spaceId,
+                    request.runId(), correlationId, request.runId()), observer);
+            Answer stored = projections.saveIfAbsent(answer);
+            publisher.publish(stored, active.deltaCount.get() > 0);
+            return stored;
+        } finally {
+            if (cancellationSubscription != null) cancellationSubscription.close();
+            activeGenerations.remove(scope, active);
+        }
     }
 
     @GetMapping(value = "/answers/{runId}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -170,6 +201,8 @@ public class AnswerApiController {
         }
         UUID correlationId = correlationId(servletRequest);
         RunEventStore.CancellationResult result = events.cancel(spaceId, runId, correlationId);
+        ActiveGeneration active = activeGenerations.get(new RunScope(spaceId, runId));
+        if (active != null) active.cancellationToken.cancel();
         if (result.firstCancellation()) {
             projections.find(spaceId, runId).ifPresent(answer -> publisher.publishCancellation(answer, correlationId));
         }
@@ -245,6 +278,16 @@ public class AnswerApiController {
         return new ApiException(HttpStatus.NOT_FOUND, code, "Not found", message);
     }
 
+    private boolean isCancellationEvent(RunScope scope, RunEvent event) {
+        if (event == null || !RunEventStore.RUN_STATUS_EVENT_TYPE.equals(event.type())
+                || !scope.spaceId.equals(event.spaceId()) || !scope.runId.equals(event.runId())) return false;
+        try {
+            return "CANCELLED".equals(objectMapper.readTree(event.payloadJson()).path("status").asText());
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     public record CreateAnswerRequest(@NotNull UUID runId, @NotBlank @Size(max = 32_000) String query,
                                       @NotNull UUID promptVersionId, @NotNull UUID modelRouteVersionId,
                                       @NotNull UUID modelProfileVersionId, @NotBlank @Size(max = 200) String model,
@@ -255,11 +298,21 @@ public class AnswerApiController {
                                       @NotBlank @Size(min = 64, max = 64) String configHash,
                                       Boolean allowCloudEgress) {
         AnswerRequest toDomain(UUID spaceId, UUID correlationId, String idempotencyKey) {
+            return toDomain(spaceId, correlationId, idempotencyKey, new CancellationToken());
+        }
+
+        AnswerRequest toDomain(UUID spaceId, UUID correlationId, String idempotencyKey,
+                               CancellationToken cancellationToken) {
+            return toDomain(spaceId, correlationId, idempotencyKey, cancellationToken, null);
+        }
+
+        AnswerRequest toDomain(UUID spaceId, UUID correlationId, String idempotencyKey,
+                               CancellationToken cancellationToken, UUID answerId) {
             return new AnswerRequest(spaceId, runId, correlationId, idempotencyKey, query, promptVersionId,
                     modelRouteVersionId, modelProfileVersionId, model,
                     Boolean.TRUE.equals(allowCloudEgress) ? EgressDecision.CLOUD_ALLOWED : EgressDecision.LOCAL_ONLY,
                     maxContextTokens, Duration.ofSeconds(timeoutSeconds == null ? 30 : timeoutSeconds),
-                    toolSchemaVersionsJson, datasetHash, configHash, runId, new CancellationToken());
+                    toolSchemaVersionsJson, datasetHash, configHash, runId, cancellationToken, answerId);
         }
     }
 
@@ -268,5 +321,19 @@ public class AnswerApiController {
 
     public record CancelResponse(UUID runId, UUID spaceId, String status, boolean firstCancellation,
                                  UUID eventId, UUID correlationId, String reason) {
+    }
+
+    private record RunScope(UUID spaceId, UUID runId) {
+    }
+
+    private static final class ActiveGeneration {
+        private final UUID answerId;
+        private final CancellationToken cancellationToken;
+        private final AtomicInteger deltaCount = new AtomicInteger();
+
+        private ActiveGeneration(UUID answerId, CancellationToken cancellationToken) {
+            this.answerId = answerId;
+            this.cancellationToken = cancellationToken;
+        }
     }
 }

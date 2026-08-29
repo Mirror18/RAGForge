@@ -53,7 +53,7 @@ public final class OllamaProviderAdapter extends AbstractHttpProviderAdapter {
         // qwen3.5 exposes reasoning in a separate field; disable it for this
         // synchronous adapter so the typed answer is returned in message.content.
         root.put("think", false);
-        root.put("stream", false);
+        root.put("stream", request.stream());
         ObjectNode options = root.putObject("options");
         options.put("temperature", 0);
         options.put("seed", 0);
@@ -111,6 +111,29 @@ public final class OllamaProviderAdapter extends AbstractHttpProviderAdapter {
                     root.has("done_reason") && root.get("done_reason").isTextual()
                             ? root.get("done_reason").textValue() : null,
                     usage, textOrNull(root, "created_at"));
+        } catch (ProviderAdapterException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw invalidResponse(request);
+        }
+    }
+
+    @Override
+    protected ChatStreamChunk parseStreamLine(ProviderChatRequest request, String line) {
+        try {
+            JsonNode root = objectMapper().readTree(line);
+            JsonNode message = root == null ? null : root.get("message");
+            String delta = message != null && message.isObject() && message.path("content").isTextual()
+                    ? message.path("content").textValue() : "";
+            boolean done = root != null && root.path("done").asBoolean(false);
+            Long prompt = optionalNonNegativeLong(root, "prompt_eval_count", request);
+            Long completion = optionalNonNegativeLong(root, "eval_count", request);
+            ProviderUsage usage = prompt == null && completion == null ? null
+                    : new ProviderUsage(prompt, completion,
+                    prompt != null && completion != null ? prompt + completion : null,
+                    UsageSource.PROVIDER_REPORTED);
+            return new ChatStreamChunk(delta, textOrNull(root, "model"),
+                    textOrNull(root, "done_reason"), usage, textOrNull(root, "created_at"), done);
         } catch (ProviderAdapterException exception) {
             throw exception;
         } catch (Exception exception) {

@@ -6,6 +6,7 @@ import com.ragforge.server.answer.Abstention;
 import com.ragforge.server.answer.Answer;
 import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerStatus;
+import com.ragforge.server.answer.AnswerRequest;
 import com.ragforge.server.answer.Citation;
 import com.ragforge.server.run.RunEventService;
 import com.ragforge.server.run.RunRepository;
@@ -38,11 +39,17 @@ public final class AnswerEventPublisher {
     }
 
     public void publish(Answer answer) {
+        publish(answer, false);
+    }
+
+    public void publish(Answer answer, boolean deltaAlreadyPublished) {
         if (answer.status() == AnswerStatus.COMPLETED) {
-            ObjectNode delta = base(answer);
-            delta.put("answer_id", answer.answerId().toString());
-            delta.put("delta", answer.answerText());
-            append(answer, "answer.delta", delta);
+            if (!deltaAlreadyPublished) {
+                ObjectNode delta = base(answer);
+                delta.put("answer_id", answer.answerId().toString());
+                delta.put("delta", answer.answerText());
+                append(answer, "answer.delta", delta);
+            }
             for (Citation citation : answer.citations()) {
                 ObjectNode citationPayload = base(answer);
                 citationPayload.put("answer_id", answer.answerId().toString());
@@ -79,6 +86,24 @@ public final class AnswerEventPublisher {
         done.put("answer_id", answer.answerId().toString());
         done.put("status", answer.status() == AnswerStatus.COMPLETED ? "COMPLETED" : answer.status().name());
         append(answer, "answer.done", done);
+    }
+
+    public void publishDelta(AnswerRequest request, UUID answerId, String delta) {
+        if (delta == null || delta.isEmpty()) return;
+        int start = 0;
+        while (start < delta.length()) {
+            int end = Math.min(delta.length(), start + 4096);
+            if (end < delta.length() && end > start && Character.isHighSurrogate(delta.charAt(end - 1))) end--;
+            ObjectNode payload = objectMapper.createObjectNode();
+            payload.put("idempotency_key", request.idempotencyKey());
+            payload.put("space_id", request.spaceId().toString());
+            payload.put("correlation_id", request.correlationId().toString());
+            payload.put("run_id", request.runId().toString());
+            payload.put("answer_id", answerId.toString());
+            payload.put("delta", delta.substring(start, end));
+            append(request, "answer.delta", payload);
+            start = end;
+        }
     }
 
     private void publishUsage(Answer answer) {
@@ -172,6 +197,15 @@ public final class AnswerEventPublisher {
             }
         } catch (Exception exception) {
             throw new IllegalStateException("Answer event could not be serialized", exception);
+        }
+    }
+
+    private void append(AnswerRequest request, String type, ObjectNode payload) {
+        try {
+            events.append(request.spaceId(), request.runId(), request.correlationId(), type, 1,
+                    objectMapper.writeValueAsString(payload));
+        } catch (Exception exception) {
+            throw new IllegalStateException("Answer stream delta could not be serialized", exception);
         }
     }
 

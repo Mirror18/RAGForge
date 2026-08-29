@@ -40,7 +40,10 @@ public final class MiMoProviderAdapter extends OpenAiCompatibleProviderAdapter {
             item.put("role", message.role());
             item.put("content", message.content());
         });
-        root.put("stream", false);
+        root.put("stream", request.stream());
+        if (request.stream()) {
+            root.putObject("stream_options").put("include_usage", true);
+        }
         root.putObject("thinking").put("type", "disabled");
         root.putObject("response_format").put("type", "json_object");
         if (request.maxOutputTokens() != null) {

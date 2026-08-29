@@ -647,7 +647,7 @@
         "tags": ["answers"],
         "operationId": "createAnswer",
         "summary": "Create a verified answer projection",
-        "description": "Runs retrieval and generation only through the explicitly configured space route. The response contains structured claims/citations or a refusal; provider URLs, filenames, quotes and bodies are never citation fields.",
+        "description": "Runs retrieval and generation only through the explicitly configured space route. While this request is in flight, a client that already opened the run SSE endpoint receives provider-native answer_text deltas. The terminal response contains validated structured claims/citations or a refusal; provider frames, URLs, filenames, quotes and bodies are never citation fields.",
         "security": [{"cookieAuth": []}, {"serviceToken": []}],
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerRequest"}}}},
@@ -670,7 +670,7 @@
       "x-ragforge-implementation-status": "phase5-implemented",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RunId"}],
       "get": {
-        "tags": ["answers"], "operationId": "streamAnswerEvents", "summary": "Stream answer events with replay", "description": "The strict answer SSE v1 stream validates event identity, sequence, citations and sensitive fields. Last-Event-ID resumes only events after the acknowledged cursor; cancellation emits no later answer.delta.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "tags": ["answers"], "operationId": "streamAnswerEvents", "summary": "Stream provider-native answer deltas with replay", "description": "The strict answer SSE v1 stream exposes only incrementally decoded answer_text, never raw provider frames. Deltas are provisional until the terminal structured answer and citation allow-list validate; non-COMPLETED outcomes require clients to clear provisional text. Last-Event-ID resumes durable events after the acknowledged cursor; cancellation emits no later answer.delta.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/LastEventId"}],
         "responses": {"200": {"description": "Server-sent answer events", "headers": {"Cache-Control": {"schema": {"type": "string", "const": "no-cache"}}, "X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"text/event-stream": {"schema": {"$ref": "#/components/schemas/AnswerSseEvent"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
@@ -679,7 +679,7 @@
       "x-ragforge-implementation-status": "phase5-implemented",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RunId"}],
       "post": {
-        "tags": ["answers"], "operationId": "cancelAnswer", "summary": "Cancel an answer idempotently", "description": "Cancellation is space-authorized and idempotent. Once CANCELLED is published, no subsequent answer.delta is valid.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "tags": ["answers"], "operationId": "cancelAnswer", "summary": "Cancel an answer idempotently", "description": "Cancellation is space-authorized and idempotent. It signals the in-flight provider HTTP stream on the generating instance through local state or multi-instance run-event fan-out. Once CANCELLED is published, the event store rejects subsequent answer.delta.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
         "requestBody": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerCancelRequest"}}}},
         "responses": {"202": {"description": "Cancellation accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerCancelResponse"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "500": {"$ref": "#/components/responses/InternalError"}}

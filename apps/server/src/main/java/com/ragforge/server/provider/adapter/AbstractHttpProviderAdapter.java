@@ -21,6 +21,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
     private final HttpClient httpClient;
@@ -44,6 +47,8 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
 
     protected abstract ProviderChatResponse parseResponse(ProviderChatRequest request, String body);
 
+    protected abstract ChatStreamChunk parseStreamLine(ProviderChatRequest request, String line);
+
     protected abstract URI embeddingEndpoint(URI endpoint);
 
     protected abstract ObjectNode embeddingRequestBody(ProviderEmbeddingRequest request);
@@ -51,7 +56,8 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
     protected abstract ProviderEmbeddingResponse parseEmbeddingResponse(ProviderEmbeddingRequest request, String body);
 
     protected Set<ModelCapability> supportedCapabilities() {
-        return Set.of(ModelCapability.CHAT, ModelCapability.EMBEDDING, ModelCapability.USAGE_REPORTING);
+        return Set.of(ModelCapability.CHAT, ModelCapability.EMBEDDING, ModelCapability.STREAMING,
+                ModelCapability.USAGE_REPORTING);
     }
 
     /** Header used for the resolved opaque credential value. */
@@ -93,6 +99,43 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
         } catch (IOException | RuntimeException exception) {
             return CompletableFuture.failedFuture(new ProviderAdapterException(
                     ProviderErrorClass.INVALID_RESPONSE, "Provider request could not be prepared",
+                    request == null || request.identity() == null ? null : request.identity().requestId(), 0));
+        }
+    }
+
+    @Override
+    public final java.util.concurrent.CompletionStage<ProviderChatResponse> chatStream(
+            ProviderConnection connection, EgressDecision egressDecision, ProviderChatRequest request,
+            CancellationToken cancellationToken, Consumer<String> deltaConsumer) {
+        try {
+            validateStreamingCall(connection, egressDecision, request, cancellationToken, deltaConsumer);
+            URI endpoint = chatEndpoint(connection.endpoint());
+            String authorization = resolveAuthorization(connection, request);
+            String body = objectMapper.writeValueAsString(requestBody(request));
+            HttpRequest.Builder builder = HttpRequest.newBuilder(endpoint)
+                    .timeout(request.timeout())
+                    .header("Accept", providerType() == ProviderType.OLLAMA
+                            ? "application/x-ndjson" : "text/event-stream")
+                    .header("Content-Type", "application/json")
+                    .header("X-RAGForge-Request-Id", request.identity().requestId().toString())
+                    .header("X-RAGForge-Correlation-Id", request.identity().correlationId().toString())
+                    .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+            if (request.identity().idempotencyKey() != null) {
+                builder.header("Idempotency-Key", request.identity().idempotencyKey());
+            }
+            if (authorization != null && !authorization.isBlank()) {
+                if (authorization.indexOf('\r') >= 0 || authorization.indexOf('\n') >= 0) {
+                    throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
+                            "Resolved authorization header is invalid", request.identity().requestId(), 0);
+                }
+                builder.header(credentialHeaderName(), authorization);
+            }
+            return sendStream(builder.build(), request, cancellationToken, deltaConsumer);
+        } catch (ProviderAdapterException exception) {
+            return CompletableFuture.failedFuture(exception);
+        } catch (IOException | RuntimeException exception) {
+            return CompletableFuture.failedFuture(new ProviderAdapterException(
+                    ProviderErrorClass.INVALID_RESPONSE, "Provider stream request could not be prepared",
                     request == null || request.identity() == null ? null : request.identity().requestId(), 0));
         }
     }
@@ -146,6 +189,35 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
         if (request.stream() || request.requiredCapabilities().contains(ModelCapability.STREAMING)) {
             throw new ProviderAdapterException(ProviderErrorClass.UNSUPPORTED_CAPABILITY,
                     "Streaming is not supported by this synchronous adapter",
+                    request.identity().requestId(), 0);
+        }
+        if (!supportedCapabilities().containsAll(request.requiredCapabilities())) {
+            throw new ProviderAdapterException(ProviderErrorClass.UNSUPPORTED_CAPABILITY,
+                    "Requested provider capability is not supported",
+                    request.identity().requestId(), 0);
+        }
+    }
+
+    private void validateStreamingCall(ProviderConnection connection, EgressDecision egressDecision,
+                                       ProviderChatRequest request, CancellationToken cancellationToken,
+                                       Consumer<String> deltaConsumer) {
+        if (connection == null || egressDecision == null || request == null || cancellationToken == null
+                || deltaConsumer == null) {
+            throw new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE,
+                    "Provider stream request is incomplete");
+        }
+        if (connection.providerType() != providerType()) {
+            throw new ProviderAdapterException(ProviderErrorClass.UNSUPPORTED_CAPABILITY,
+                    "Provider adapter does not match the configured provider",
+                    request.identity().requestId(), 0);
+        }
+        EgressPolicy.validateConnection(request.spaceId(), egressDecision, connection);
+        if (cancellationToken.isCancellationRequested()) {
+            throw cancellation(request.identity().requestId());
+        }
+        if (!request.stream() || !request.requiredCapabilities().contains(ModelCapability.STREAMING)) {
+            throw new ProviderAdapterException(ProviderErrorClass.UNSUPPORTED_CAPABILITY,
+                    "Streaming request must require the streaming capability",
                     request.identity().requestId(), 0);
         }
         if (!supportedCapabilities().containsAll(request.requiredCapabilities())) {
@@ -275,6 +347,123 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
                     }
                 });
         return result;
+    }
+
+    private CompletableFuture<ProviderChatResponse> sendStream(HttpRequest request,
+                                                                ProviderChatRequest chatRequest,
+                                                                CancellationToken cancellationToken,
+                                                                Consumer<String> deltaConsumer) {
+        CompletableFuture<ProviderChatResponse> result = new CompletableFuture<>();
+        AtomicReference<Stream<String>> bodyRef = new AtomicReference<>();
+        final CompletableFuture<HttpResponse<Stream<String>>> transport;
+        try {
+            transport = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofLines());
+        } catch (RuntimeException exception) {
+            result.completeExceptionally(mapTransportFailure(exception,
+                    chatRequest.identity().requestId(), cancellationToken));
+            return result;
+        }
+        cancellationToken.onCancel(() -> {
+            transport.cancel(true);
+            close(bodyRef.get());
+            result.completeExceptionally(cancellation(chatRequest.identity().requestId()));
+        });
+        transport.whenComplete((response, failure) -> {
+            if (failure != null) {
+                result.completeExceptionally(mapTransportFailure(failure,
+                        chatRequest.identity().requestId(), cancellationToken));
+                return;
+            }
+            bodyRef.set(response.body());
+            CompletableFuture.runAsync(() -> consumeStream(response, chatRequest, cancellationToken,
+                    deltaConsumer, result)).whenComplete((ignored, processingFailure) -> {
+                if (processingFailure != null && !result.isDone()) {
+                    result.completeExceptionally(mapTransportFailure(processingFailure,
+                            chatRequest.identity().requestId(), cancellationToken));
+                }
+            });
+        });
+        CompletableFuture.delayedExecutor(chatRequest.timeout().toMillis(),
+                        java.util.concurrent.TimeUnit.MILLISECONDS)
+                .execute(() -> {
+                    if (result.completeExceptionally(new ProviderAdapterException(ProviderErrorClass.TIMEOUT,
+                            "Provider stream timed out", chatRequest.identity().requestId(), 0))) {
+                        transport.cancel(true);
+                        close(bodyRef.get());
+                    }
+                });
+        result.whenComplete((ignored, failure) -> close(bodyRef.get()));
+        return result;
+    }
+
+    private void consumeStream(HttpResponse<Stream<String>> response, ProviderChatRequest request,
+                               CancellationToken cancellationToken, Consumer<String> deltaConsumer,
+                               CompletableFuture<ProviderChatResponse> result) {
+        try (Stream<String> lines = response.body()) {
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                String errorBody = lines.limit(128).reduce("", (left, right) -> left + right);
+                result.completeExceptionally(ProviderErrorMapper.map(response.statusCode(), errorBody,
+                        request.identity().requestId(), objectMapper));
+                return;
+            }
+            StringBuilder content = new StringBuilder();
+            MutableStreamState state = new MutableStreamState(request.model());
+            var iterator = lines.iterator();
+            while (iterator.hasNext()) {
+                if (cancellationToken.isCancellationRequested()) throw cancellation(request.identity().requestId());
+                ChatStreamChunk chunk = parseStreamLine(request, iterator.next());
+                if (chunk == null) continue;
+                if (chunk.model() != null && !chunk.model().isBlank()) state.model = chunk.model();
+                if (chunk.finishReason() != null) state.finishReason = chunk.finishReason();
+                if (chunk.usage() != null) state.usage = chunk.usage();
+                if (chunk.responseId() != null) state.responseId = chunk.responseId();
+                if (chunk.done()) state.done = true;
+                if (chunk.delta() != null && !chunk.delta().isEmpty()) {
+                    int deltaBytes = chunk.delta().getBytes(StandardCharsets.UTF_8).length;
+                    if (state.outputBytes + deltaBytes > 1_000_000) {
+                        throw invalidResponse(request);
+                    }
+                    state.outputBytes += deltaBytes;
+                    content.append(chunk.delta());
+                    deltaConsumer.accept(chunk.delta());
+                }
+            }
+            if (!state.done || content.isEmpty()) throw invalidResponse(request);
+            result.complete(new ProviderChatResponse(request.identity(), state.model, content.toString(),
+                    state.finishReason, state.usage, state.responseId));
+        } catch (ProviderAdapterException exception) {
+            result.completeExceptionally(exception);
+        } catch (RuntimeException exception) {
+            if (cancellationToken.isCancellationRequested()) {
+                result.completeExceptionally(cancellation(request.identity().requestId()));
+            } else {
+                result.completeExceptionally(new ProviderAdapterException(ProviderErrorClass.INVALID_RESPONSE,
+                        "Provider stream response was invalid", request.identity().requestId(), response.statusCode()));
+            }
+        }
+    }
+
+    private static void close(Stream<String> body) {
+        if (body != null) {
+            try { body.close(); } catch (RuntimeException ignored) { }
+        }
+    }
+
+    protected record ChatStreamChunk(String delta, String model, String finishReason,
+                                     ProviderUsage usage, String responseId, boolean done) {
+    }
+
+    private static final class MutableStreamState {
+        private String model;
+        private String finishReason;
+        private ProviderUsage usage;
+        private String responseId;
+        private boolean done;
+        private int outputBytes;
+
+        private MutableStreamState(String model) {
+            this.model = model;
+        }
     }
 
     private ProviderAdapterException mapTransportFailure(Throwable failure, UUID requestId,

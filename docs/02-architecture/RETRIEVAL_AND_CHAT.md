@@ -86,4 +86,6 @@ MVP 工具：
 - 事件类型至少含 run/step 状态、answer delta、citation、usage、error、done。
 - 服务端短期保存事件，客户端可用 `Last-Event-ID` 重连。
 - cancel 是幂等操作；Run 进入 `CANCELLED` 后不再接受新增 answer delta。
+- Production generation 使用 Provider 原生流协议：Ollama 为 NDJSON，OpenAI-compatible/MiMo 为 SSE。Provider frame 不直接进入浏览器或持久化；服务端只增量解码结构化输出根级 `answer_text`，按最多 4096 UTF-16 code unit 的事件片段保存为 `answer.delta`。完整 JSON、claim 和 citation token allow-list 仍必须在终态统一校验；失败、拒答或取消时客户端必须清除暂态文本。
+- Answer 创建期间使用预分配的稳定 `answer_id` 关联 delta/citation/done。同实例 cancel 直接触发当前 `CancellationToken`；其他实例的 cancel 通过 durable run-event fan-out 通知生成实例。HTTP stream、总输出（1 MB）和回答请求均有限时/限长；取消后的 delta 由事件存储再次 fail-closed 拒绝。
 - 调用重试创建新 invocation；usage ledger 用供应商 request ID 或本地幂等键去重。

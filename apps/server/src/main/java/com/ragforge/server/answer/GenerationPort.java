@@ -12,6 +12,12 @@ import java.util.concurrent.CompletionStage;
 public interface GenerationPort {
     CompletionStage<GenerationResult> generate(GenerationRequest request, CancellationToken cancellationToken);
 
+    default CompletionStage<GenerationResult> generateStreaming(GenerationRequest request,
+                                                                 CancellationToken cancellationToken,
+                                                                 GenerationStreamObserver observer) {
+        return generate(request, cancellationToken);
+    }
+
     record GenerationRequest(UUID spaceId, UUID runId, UUID correlationId, String idempotencyKey,
                              String query, RagPromptPort.VersionedRagPrompt prompt, String renderedPrompt,
                              EvidenceBundleSnapshot evidenceBundle, String model,

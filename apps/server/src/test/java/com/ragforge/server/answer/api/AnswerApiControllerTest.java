@@ -11,6 +11,7 @@ import com.ragforge.server.answer.AnswerStatus;
 import com.ragforge.server.answer.Citation;
 import com.ragforge.server.answer.Claim;
 import com.ragforge.server.answer.RAGAnswerService;
+import com.ragforge.server.answer.GenerationStreamObserver;
 import com.ragforge.server.common.CorrelationIdFilter;
 import com.ragforge.server.common.UuidV7;
 import com.ragforge.server.identity.SessionPrincipal;
@@ -35,11 +36,17 @@ import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -63,8 +70,13 @@ class AnswerApiControllerTest {
         RunEventService eventService = mock(RunEventService.class);
         SpaceAuthorization authorization = mock(SpaceAuthorization.class);
         doNothing().when(authorization).requireWrite(eq(spaceId), any());
+        RunEventStore.Subscription streamSubscription = mock(RunEventStore.Subscription.class);
+        when(eventService.subscribe(eq(spaceId), eq(runId), any())).thenReturn(streamSubscription);
+        when(eventService.replay(spaceId, runId, null)).thenReturn(new RunEventStore.ReplayResult(
+                List.of(), RunEventStore.CursorStatus.NO_CURSOR, null, 0, 0));
         Answer answer = completedAnswer();
-        when(answerService.answer(any(AnswerRequest.class))).thenReturn(answer);
+        when(answerService.answer(any(AnswerRequest.class), isNull(), any(GenerationStreamObserver.class)))
+                .thenReturn(answer);
         AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
                 objectMapper);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
@@ -94,7 +106,7 @@ class AnswerApiControllerTest {
                         .header("X-Correlation-Id", correlationId)
                         .principal(authentication).content(body))
                 .andExpect(status().isAccepted());
-        verify(answerService).answer(any(AnswerRequest.class));
+        verify(answerService).answer(any(AnswerRequest.class), isNull(), any(GenerationStreamObserver.class));
     }
 
     @Test
@@ -117,6 +129,108 @@ class AnswerApiControllerTest {
                 .andExpect(jsonPath("$.documentRevisionId").value(answer.citations().getFirst().documentRevisionId().toString()))
                 .andReturn().getResponse().getContentAsString();
         assertThat(response).doesNotContain("fullText", "rawText", "documentContent", "quote", "url", "prompt");
+    }
+
+    @Test
+    void cancelSignalsTheSameInFlightAnswerToken() throws Exception {
+        RAGAnswerService answerService = mock(RAGAnswerService.class);
+        RunEventService eventService = mock(RunEventService.class);
+        SpaceAuthorization authorization = mock(SpaceAuthorization.class);
+        doNothing().when(authorization).requireWrite(eq(spaceId), any());
+        RunEventStore.Subscription cancellationSubscription = mock(RunEventStore.Subscription.class);
+        when(eventService.subscribe(eq(spaceId), eq(runId), any())).thenReturn(cancellationSubscription);
+        when(eventService.replay(spaceId, runId, null)).thenReturn(new RunEventStore.ReplayResult(
+                List.of(), RunEventStore.CursorStatus.NO_CURSOR, null, 0, 0));
+        CountDownLatch started = new CountDownLatch(1);
+        AtomicReference<AnswerRequest> inFlight = new AtomicReference<>();
+        when(answerService.answer(any(AnswerRequest.class), isNull(), any(GenerationStreamObserver.class)))
+                .thenAnswer(invocation -> {
+                    AnswerRequest request = invocation.getArgument(0);
+                    inFlight.set(request);
+                    started.countDown();
+                    while (!request.cancellationToken().isCancellationRequested()) Thread.onSpinWait();
+                    AnswerProvenance provenance = AnswerProvenance.unavailable(request.spaceId(),
+                            request.correlationId(), request.runId(), request.idempotencyKey(), request.traceId(),
+                            request.datasetHash(), request.configHash());
+                    return Answer.refusal(request.answerId(), request.spaceId(), request.correlationId(),
+                            request.runId(), request.idempotencyKey(), AnswerStatus.CANCELLED,
+                            new Abstention(request.spaceId(), request.correlationId(), request.runId(),
+                                    request.idempotencyKey(), AbstentionReason.CANCELLED, List.of(), "Cancelled"),
+                            provenance);
+                });
+        RunEvent cancellationEvent = new RunEvent(UuidV7.random(), 1, runId, spaceId, correlationId,
+                Instant.now(), "run.status", 1, "{}");
+        when(eventService.cancel(spaceId, runId, correlationId))
+                .thenReturn(new RunEventStore.CancellationResult(true, cancellationEvent));
+        AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
+                objectMapper);
+        MockHttpServletRequest createRequest = new MockHttpServletRequest();
+        createRequest.setAttribute(CorrelationIdFilter.ATTRIBUTE, correlationId.toString());
+        AnswerApiController.CreateAnswerRequest body = new AnswerApiController.CreateAnswerRequest(runId,
+                "What is verified?", UuidV7.random(), UuidV7.random(), UuidV7.random(), "local-test", 1000,
+                30, "{}", "a".repeat(64), "b".repeat(64), false);
+
+        CompletableFuture<Answer> call = CompletableFuture.supplyAsync(() -> controller.create(spaceId, body,
+                idempotencyKey, authentication(), createRequest));
+        assertThat(started.await(2, TimeUnit.SECONDS)).isTrue();
+        MockHttpServletRequest cancelRequest = new MockHttpServletRequest();
+        cancelRequest.setAttribute(CorrelationIdFilter.ATTRIBUTE, correlationId.toString());
+        AnswerApiController.CancelResponse cancelled = controller.cancel(spaceId, runId,
+                new AnswerApiController.CancelRequest("user_cancelled"), "answer-cancel-key-0001",
+                authentication(), cancelRequest);
+
+        assertThat(cancelled.firstCancellation()).isTrue();
+        assertThat(call.get(2, TimeUnit.SECONDS).status()).isEqualTo(AnswerStatus.CANCELLED);
+        assertThat(inFlight.get().cancellationToken().isCancellationRequested()).isTrue();
+    }
+
+    @Test
+    void remoteCancellationEventSignalsTheInFlightAnswerToken() throws Exception {
+        RAGAnswerService answerService = mock(RAGAnswerService.class);
+        RunEventService eventService = mock(RunEventService.class);
+        SpaceAuthorization authorization = mock(SpaceAuthorization.class);
+        doNothing().when(authorization).requireWrite(eq(spaceId), any());
+        RunEventStore.Subscription cancellationSubscription = mock(RunEventStore.Subscription.class);
+        AtomicReference<Consumer<RunEvent>> subscribed = new AtomicReference<>();
+        when(eventService.subscribe(eq(spaceId), eq(runId), any())).thenAnswer(invocation -> {
+            subscribed.set(invocation.getArgument(2));
+            return cancellationSubscription;
+        });
+        when(eventService.replay(spaceId, runId, null)).thenReturn(new RunEventStore.ReplayResult(
+                List.of(), RunEventStore.CursorStatus.NO_CURSOR, null, 0, 0));
+        CountDownLatch started = new CountDownLatch(1);
+        AtomicReference<AnswerRequest> inFlight = new AtomicReference<>();
+        when(answerService.answer(any(AnswerRequest.class), isNull(), any(GenerationStreamObserver.class)))
+                .thenAnswer(invocation -> {
+                    AnswerRequest request = invocation.getArgument(0);
+                    inFlight.set(request);
+                    started.countDown();
+                    while (!request.cancellationToken().isCancellationRequested()) Thread.onSpinWait();
+                    AnswerProvenance provenance = AnswerProvenance.unavailable(request.spaceId(),
+                            request.correlationId(), request.runId(), request.idempotencyKey(), request.traceId(),
+                            request.datasetHash(), request.configHash());
+                    return Answer.refusal(request.answerId(), request.spaceId(), request.correlationId(),
+                            request.runId(), request.idempotencyKey(), AnswerStatus.CANCELLED,
+                            new Abstention(request.spaceId(), request.correlationId(), request.runId(),
+                                    request.idempotencyKey(), AbstentionReason.CANCELLED, List.of(), "Cancelled"),
+                            provenance);
+                });
+        AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
+                objectMapper);
+        MockHttpServletRequest createRequest = new MockHttpServletRequest();
+        createRequest.setAttribute(CorrelationIdFilter.ATTRIBUTE, correlationId.toString());
+        AnswerApiController.CreateAnswerRequest body = new AnswerApiController.CreateAnswerRequest(runId,
+                "What is verified?", UuidV7.random(), UuidV7.random(), UuidV7.random(), "local-test", 1000,
+                30, "{}", "a".repeat(64), "b".repeat(64), false);
+
+        CompletableFuture<Answer> call = CompletableFuture.supplyAsync(() -> controller.create(spaceId, body,
+                idempotencyKey, authentication(), createRequest));
+        assertThat(started.await(2, TimeUnit.SECONDS)).isTrue();
+        subscribed.get().accept(new RunEvent(UuidV7.random(), 1, runId, spaceId, correlationId, Instant.now(),
+                RunEventStore.RUN_STATUS_EVENT_TYPE, 1, "{\"status\":\"CANCELLED\"}"));
+
+        assertThat(call.get(2, TimeUnit.SECONDS).status()).isEqualTo(AnswerStatus.CANCELLED);
+        assertThat(inFlight.get().cancellationToken().isCancellationRequested()).isTrue();
     }
 
     @Test
@@ -225,6 +339,33 @@ class AnswerApiControllerTest {
         assertThat(usage.get("outputTokens").asLong()).isEqualTo(79L);
         assertThat(usage.get("totalTokens").asLong()).isEqualTo(463L);
         assertThat(usage.get("providerReported").asBoolean()).isTrue();
+    }
+
+    @Test
+    void publisherRetainsIncrementalDeltasWithoutRepeatingTheFullAnswer() throws Exception {
+        RunEventService eventService = mock(RunEventService.class);
+        Answer answer = completedAnswer();
+        AnswerRequest request = new AnswerRequest(spaceId, runId, correlationId, idempotencyKey,
+                "What is verified?", UuidV7.random(), UuidV7.random(), UuidV7.random(), "local-test",
+                com.ragforge.server.provider.adapter.EgressDecision.LOCAL_ONLY, 1000,
+                java.time.Duration.ofSeconds(30), "{}", "a".repeat(64), "b".repeat(64), runId,
+                new com.ragforge.server.provider.adapter.CancellationToken(), answer.answerId());
+        AnswerEventPublisher publisher = new AnswerEventPublisher(eventService, objectMapper);
+
+        publisher.publishDelta(request, answer.answerId(), "Verified ");
+        publisher.publishDelta(request, answer.answerId(), "answer");
+        publisher.publish(answer, true);
+
+        ArgumentCaptor<String> payloads = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> types = ArgumentCaptor.forClass(String.class);
+        verify(eventService, org.mockito.Mockito.times(4)).append(eq(spaceId), eq(runId), eq(correlationId),
+                types.capture(), eq(1), payloads.capture());
+        assertThat(types.getAllValues()).containsExactly("answer.delta", "answer.delta",
+                "answer.citation", "answer.done");
+        assertThat(objectMapper.readTree(payloads.getAllValues().get(0)).path("delta").asText()
+                + objectMapper.readTree(payloads.getAllValues().get(1)).path("delta").asText())
+                .isEqualTo("Verified answer");
+        assertThat(payloads.getAllValues().subList(2, 4)).noneMatch(value -> value.contains("Verified answer"));
     }
 
     @Test

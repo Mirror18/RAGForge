@@ -229,7 +229,7 @@ class ProviderConnectionApiIntegrationTest {
                 exchange.close();
                 return;
             }
-            byte[] response = "{\"model\":\"probe-model\",\"message\":{\"content\":\"OK\"},\"done_reason\":\"stop\",\"prompt_eval_count\":2,\"eval_count\":1}"
+            byte[] response = "{\"model\":\"probe-model\",\"message\":{\"content\":\"OK\"},\"done\":true,\"done_reason\":\"stop\",\"prompt_eval_count\":2,\"eval_count\":1}\n"
                     .getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, response.length);
@@ -257,7 +257,7 @@ class ProviderConnectionApiIntegrationTest {
 
             String profile = objectMapper.writeValueAsString(Map.of(
                     "providerConnectionId", connectionId, "purpose", "CHAT", "modelName", "probe-model",
-                    "capabilities", java.util.List.of("CHAT", "USAGE_REPORTING"), "contextWindow", 8192,
+                    "capabilities", java.util.List.of("CHAT", "STREAMING", "USAGE_REPORTING"), "contextWindow", 8192,
                     "maxOutputTokens", 128, "usageReporting", "PROVIDER_REPORTED", "status", "PUBLISHED"));
             mvc.perform(post("/api/v1/spaces/{spaceId}/model-profiles", spaceId)
                             .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
@@ -275,7 +275,8 @@ class ProviderConnectionApiIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.outcome").value("SUCCEEDED"))
                     .andExpect(jsonPath("$.verifiedCapabilities[0]").value("CHAT"))
-                    .andExpect(jsonPath("$.verifiedCapabilities[1]").value("USAGE_REPORTING"))
+                    .andExpect(jsonPath("$.verifiedCapabilities[1]").value("STREAMING"))
+                    .andExpect(jsonPath("$.verifiedCapabilities[2]").value("USAGE_REPORTING"))
                     .andExpect(jsonPath("$.errorClass").value(org.hamcrest.Matchers.nullValue()));
 
             failProbe.set(true);
@@ -318,7 +319,8 @@ class ProviderConnectionApiIntegrationTest {
                     WHERE outcome = 'SUCCEEDED' ORDER BY tested_at DESC LIMIT 1
                     """,
                     String.class);
-            assertThat(stored).contains("CHAT", "USAGE_REPORTING").doesNotContain("OK", "probe-provider-test");
+            assertThat(stored).contains("CHAT", "STREAMING", "USAGE_REPORTING")
+                    .doesNotContain("OK", "probe-provider-test");
 
             MvcResult cloudCreated = mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections", spaceId)
                             .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)

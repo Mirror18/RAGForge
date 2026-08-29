@@ -3,9 +3,11 @@ package com.ragforge.server.answer.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.answer.EvidenceBundleSnapshot;
 import com.ragforge.server.answer.GenerationPort;
+import com.ragforge.server.answer.GenerationStreamObserver;
 import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.adapter.EgressClass;
 import com.ragforge.server.provider.adapter.EgressDecision;
+import com.ragforge.server.provider.adapter.ModelCapability;
 import com.ragforge.server.provider.adapter.ProviderAdapter;
 import com.ragforge.server.provider.adapter.ProviderAdapterException;
 import com.ragforge.server.provider.adapter.ProviderChatRequest;
@@ -21,10 +23,12 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -94,6 +98,30 @@ class Phase5ProviderIntegrationTest {
 
         assertThat(claim.answerCharStart()).isNull();
         assertThat(claim.answerCharEnd()).isNull();
+    }
+
+    @Test
+    void streamingProjectsOnlyDecodedAnswerTextAndRetainsFinalCitationValidation() {
+        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OLLAMA,
+                CompletableFuture.completedFuture(response("local-model", structuredAnswer())),
+                List.of("{\"answer_text\":\"Ver", "ified.\",\"claims\":[{\"claim_text\":\"Verified.\",",
+                        "\"citation_tokens\":[\"" + TOKEN + "\"]}]}"));
+        ProviderBackedGenerationPort port = port(EgressClass.LOCAL, EgressDecision.LOCAL_ONLY, adapter,
+                (space, route, profile, model, decision, correlation) -> route(EgressClass.LOCAL, decision));
+        List<String> deltas = new ArrayList<>();
+
+        GenerationPort.GenerationResult result = port.generateStreaming(request(EgressDecision.LOCAL_ONLY),
+                new CancellationToken(), new GenerationStreamObserver() {
+                    @Override public UUID answerId() { return RUN; }
+                    @Override public void onDelta(String delta) { deltas.add(delta); }
+                }).toCompletableFuture().join();
+
+        assertThat(String.join("", deltas)).isEqualTo("Verified.");
+        assertThat(deltas).allMatch(delta -> !delta.contains("answer_text") && !delta.contains("citation_tokens"));
+        assertThat(result.claims()).singleElement().extracting(GenerationPort.GeneratedClaim::citationTokens)
+                .isEqualTo(List.of(TOKEN));
+        assertThat(adapter.lastRequest.stream()).isTrue();
+        assertThat(adapter.lastRequest.requiredCapabilities()).contains(ModelCapability.STREAMING);
     }
 
     @Test
@@ -199,10 +227,17 @@ class Phase5ProviderIntegrationTest {
         private final CompletionStage<ProviderChatResponse> response;
         private final AtomicInteger calls = new AtomicInteger();
         private ProviderChatRequest lastRequest;
+        private final List<String> streamChunks;
 
         private RecordingAdapter(ProviderType type, CompletionStage<ProviderChatResponse> response) {
+            this(type, response, List.of());
+        }
+
+        private RecordingAdapter(ProviderType type, CompletionStage<ProviderChatResponse> response,
+                                 List<String> streamChunks) {
             this.type = type;
             this.response = response;
+            this.streamChunks = List.copyOf(streamChunks);
         }
 
         @Override
@@ -217,6 +252,18 @@ class Phase5ProviderIntegrationTest {
                                                            CancellationToken cancellationToken) {
             calls.incrementAndGet();
             lastRequest = request;
+            return response;
+        }
+
+        @Override
+        public CompletionStage<ProviderChatResponse> chatStream(ProviderConnection connection,
+                                                                 EgressDecision egressDecision,
+                                                                 ProviderChatRequest request,
+                                                                 CancellationToken cancellationToken,
+                                                                 Consumer<String> deltaConsumer) {
+            calls.incrementAndGet();
+            lastRequest = request;
+            streamChunks.forEach(deltaConsumer);
             return response;
         }
     }

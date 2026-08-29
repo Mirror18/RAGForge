@@ -161,3 +161,9 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-044` 已关闭：connection 登记/实测收敛到同空间平台管理员，Profile/Route 写入收敛到空间管理员；真实 CHAT/EMBEDDING 合成探测、脱敏结果持久化、最新结果优先和 Profile verified publish gate 已实现。RERANK 未接 adapter 时 fail-closed，不再允许声明能力直接发布。
 - 新增 `R-053`：应用层在 Provider 探测前执行 DNS/IP 分类，但解析校验与 Java HTTP client 建连之间仍存在 DNS TOCTOU/rebinding 窗口。P=2、I=5、Score=10，Security / Network，MITIGATING；生产部署必须叠加 egress network policy、阻止 metadata/控制面地址并记录目标网络，后续评估固定解析结果的连接策略。当前代码已阻止云探测访问非公网地址、本地探测访问公网地址，且云探测逐次确认。
 - `R-023` 继续 OPEN：Provider 发布闸门不会把当前 lexical reranker 变成真实 RERANK adapter；完整本地 RAG 初始化仍由 P7-CORE-05 阻塞。部署验收继续暂停。
+
+## 16. P7-CORE-03 Streaming 风险处置（2026-08-29）
+
+- `R-045` 已关闭（实现范围）：production adapter 不再固定 `stream=false`；Ollama NDJSON、OpenAI-compatible/MiMo SSE、durable answer delta、Last-Event-ID replay 和同实例/多实例上游取消已接通。取消后事件存储仍独立拒绝新增 delta。
+- `R-027` 的“production GenerationPort 不暴露 streaming”原因已关闭，但旧 TTFT 数值不能自动成为当前提交的性能证据。本轮只有公共 loopback 协议/竞态测试，没有调用真实模型；发布候选必须重新测量真实 Ollama/MiMo TTFT、总耗时、吞吐、取消延迟和多实例 fan-out 延迟。
+- 流中正文在完整 claims/citation 校验前是暂态。服务端不保存 raw provider frame，只保存投影后的 answer text 事件；非 `COMPLETED` 终态 Web 会清空暂态文本。后续浏览器或其他客户端必须遵守同一规则，不得把中途 delta 当作已核验答案。

@@ -172,3 +172,11 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - Profile 发布以同 connection、model、purpose 的最新一次测试为准；失败复测、能力超报或 embedding 维度不一致均返回 422。没有 RERANK adapter 时返回 `UNSUPPORTED_CAPABILITY`，因此历史“一键本地 RAG”不能再靠声明值伪造 RERANK 可用，后续由 `P7-CORE-05` 闭环。
 - 安全复核：探测前重新校验 HTTP(S) URI 与 DNS/IP 分类；LOCAL 只允许本地/私网，CLOUD 只允许 HTTPS 公网，并且没有本次显式云确认时在发起网络请求前返回 403。仍需部署层 egress policy 抵御 DNS TOCTOU/rebinding，记录为 `R-053`。
 - 验证基线：Provider/Model/Binding 三组集成测试 14/14 通过，包含真实 loopback HTTP 合成探测、权限、缺失测试拒绝、失败复测阻断、恢复后发布、审计/存储脱敏与云端未确认拒绝；Java 21 test-compile、OpenAPI contract 52/52、Web TypeScript/Vite build 通过。本轮未部署、未启用任何空间云出境、未调用真实云 Provider。
+
+## 15. P7-CORE-03 真实生成 Streaming（2026-08-29）
+
+- Production Provider adapter 已实现 Ollama NDJSON 与 OpenAI-compatible/MiMo SSE。CHAT connection test 也改为真实 stream，只有实际完成流协议才验证 `CHAT`、`STREAMING` 及可用的 `USAGE_REPORTING`。
+- `ProviderBackedGenerationPort` 不向下游传递 raw frame 或结构化 JSON chunk，只增量解码根级 `answer_text`；总输出限制 1 MB，SSE delta 再切成最大 4096 字符事件。完整 JSON、claims、evidence UUID allow-list 和引用投影继续在终态强校验。
+- 每次 answer 在生成前获得稳定 `answerId`。delta 进入既有 durable run-event store，因此 live SSE 与 `Last-Event-ID` replay 读取同一序列；终态不重复发送完整正文。失败、拒答或取消时 Web 清空暂态正文，不能把未验证 delta 留作答案。
+- Cancel 先把 Run/event stream 标为 `CANCELLED`，阻止后续 delta，再取消同一生成 token 和 HTTP body。生成实例还订阅共享 run-event fan-out，cancel 落到其他 Server 实例时也能关闭上游流。
+- 验证：Provider HTTP、generation bridge、RAG service、Answer API 和 Provider loopback integration 共 63/63 通过，覆盖两类流协议、分块结构化 JSON 解码、durable delta 不重复、同 token cancel、远端 fan-out cancellation event、上游 body 关闭和真实 loopback CHAT streaming probe；另有事件持久化/多实例 fan-out 回归 6/6 通过。本轮未部署、未调用真实 Ollama/MiMo，真实 TTFT/吞吐需在发布候选复测。

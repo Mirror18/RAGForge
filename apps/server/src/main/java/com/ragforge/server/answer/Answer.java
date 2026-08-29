@@ -86,16 +86,30 @@ public record Answer(
     public static Answer completed(UUID spaceId, UUID correlationId, UUID runId, String idempotencyKey,
                                    String answerText, List<Claim> claims, List<Citation> citations,
                                    AnswerProvenance provenance) {
-        return new Answer("v1", UuidV7.random(), spaceId, correlationId, runId, idempotencyKey,
+        return completed(UuidV7.random(), spaceId, correlationId, runId, idempotencyKey, answerText,
+                claims, citations, provenance);
+    }
+
+    public static Answer completed(UUID answerId, UUID spaceId, UUID correlationId, UUID runId,
+                                   String idempotencyKey, String answerText, List<Claim> claims,
+                                   List<Citation> citations, AnswerProvenance provenance) {
+        return new Answer("v1", answerId, spaceId, correlationId, runId, idempotencyKey,
                 AnswerStatus.COMPLETED, answerText, claims, citations, null, List.of(), provenance, Instant.now());
     }
 
     public static Answer refusal(UUID spaceId, UUID correlationId, UUID runId, String idempotencyKey,
                                  AnswerStatus status, Abstention abstention, AnswerProvenance provenance) {
+        return refusal(UuidV7.random(), spaceId, correlationId, runId, idempotencyKey, status, abstention,
+                provenance);
+    }
+
+    public static Answer refusal(UUID answerId, UUID spaceId, UUID correlationId, UUID runId,
+                                 String idempotencyKey, AnswerStatus status, Abstention abstention,
+                                 AnswerProvenance provenance) {
         if (status == AnswerStatus.COMPLETED || status == AnswerStatus.ABSTAINED && abstention == null) {
             throw new IllegalArgumentException("Refusal status is invalid");
         }
-        return new Answer("v1", UuidV7.random(), spaceId, correlationId, runId, idempotencyKey,
+        return new Answer("v1", answerId, spaceId, correlationId, runId, idempotencyKey,
                 status, null, List.of(), List.of(), abstention, List.of(), provenance, Instant.now());
     }
 }

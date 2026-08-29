@@ -207,6 +207,13 @@ function processEvent(event: AnswerEvent): void {
 
 function applyDone(payload: AnswerDonePayload): void {
   if (payload.status === "COMPLETED") status.value = "completed";
+  if (payload.status !== "COMPLETED") {
+    // Provider deltas are provisional until the server validates the complete
+    // structured answer and its citation allow-list. Never retain them for a
+    // refused, failed or cancelled terminal projection.
+    answerText.value = "";
+    citations.value = [];
+  }
   if (payload.status === "ABSTAINED") status.value = "abstained";
   if (payload.status === "FAILED") status.value = "failed";
   if (payload.status === "CANCELLED") {

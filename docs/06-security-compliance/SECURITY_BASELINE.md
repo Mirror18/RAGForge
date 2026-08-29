@@ -25,6 +25,7 @@
 - Provider connection 登记和实测仅平台管理员可执行；测试只使用固定合成样本。云端探测逐次显式确认并限制为 HTTPS 公网地址，本地探测限制为本地/私网地址；DNS、地址类别和出境等级在每次探测前重新校验，结果不保存请求/响应正文、Header 或 credential reference。
 - 对象 key 使用不可猜 ID，不使用用户文件名作为授权依据。
 - 日志、Trace、错误和审计对 prompt/document/headers 脱敏和限长。
+- Provider stream frame 和完整原始响应不得写入事件、日志或浏览器；只允许投影增量解码后的 `answer_text`。该文本在完整 citation/结构校验前属于暂态，非 COMPLETED 终态必须从 UI 清除；事件仍按空间 retention 管理并保留 `space_id/run_id/correlation_id/idempotency_key`。
 - 数据分类决定云端 route、保留、导出和删除策略。
 
 ## 4. 上传与解析
