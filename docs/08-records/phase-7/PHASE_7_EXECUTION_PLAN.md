@@ -13,8 +13,8 @@
 
 | 区域 | 已实现代码 | 未实现或不一致 | 结论 |
 |---|---|---|---|
-| 身份/空间 | Session、CSRF、成员角色、用户/空间管理、一次性平台管理员 bootstrap、按精确邮箱加入成员 | Provider 首次配置仍缺少验证发布闸门 | 干净数据库可进入平台管理与成员协作，尚不能完成可用 Provider 配置 |
-| Provider | space-scoped connection/profile/route/binding 与 adapter | Editor 可登记 connection，与平台管理员 ownership 需求不一致；connection test 仅有 OpenAPI；verified capability 不控制发布 | 权限模型和 `PUBLISHED` 均未达到需求语义 |
+| 身份/空间 | Session、CSRF、成员角色、用户/空间管理、一次性平台管理员 bootstrap、按精确邮箱加入成员 | 首次 Provider 配置之后仍缺少完整 RAG 一键绑定与真实 RERANK | 干净数据库可进入平台管理、成员协作和可验证 Provider 配置 |
+| Provider | space-scoped connection/profile/route/binding、production adapter、connection probe 与 verified publish gate | RERANK adapter 尚未实现；Provider/配置退役与回滚仍不完整 | 权限、CHAT/EMBEDDING 实测和 `PUBLISHED` 闸门已对齐；不得把 CHAT 探测冒充 RERANK |
 | 摄取 | 上传、网页、revision/artifact/job、Worker pipeline | Git/local connector 未接 Server/Web/调度 | 不能宣称 Git 知识源用户旅程完成 |
 | 问答 | material-backed retrieval、Provider 原生 streaming、结构化 citation、durable answer/event、Last-Event-ID、同/多实例 cancel | citation 正文、历史 citation、反馈和上下文导航仍未闭环 | 流式生成与取消已真实接线，但完整普通用户核验旅程仍属于 P7-D |
 | Retrieval | Qdrant dense、RRF、parent expansion、lexical rerank | BM25 进程内；RERANK route 未调用；AI Runtime 空壳 | 重启与配置语义不满足部署要求 |
@@ -24,7 +24,7 @@
 
 ### 前端实用性结论
 
-现有浏览器证据证明特定操作者可以沿预置数据跑通一次 happy path，但不能证明产品闭环。成员无法从页面加入空间；Provider 未测试即可发布；多文件没有逐项终态；来源/任务/索引没有维护和恢复；Citation 不显示来源正文；Chunk Studio、Playground 与 Run 依赖手填内部 ID；列表静默截断且没有自动化。因此 Web 的当前定位是工程控制台，部署验收暂停到下列可用性工作包完成。
+现有浏览器证据和自动化门禁仍不能证明产品闭环。成员按精确邮箱加入空间、平台管理员 bootstrap、Provider 实测发布闸门和真实回答 streaming/cancel 已完成；但多文件没有逐项终态，来源/任务/索引缺少维护和恢复，Citation 不显示来源正文，Chunk Studio、Playground 与 Run 依赖手填内部 ID，列表仍有静默截断且 Web 没有自动化测试。因此 Web 的当前定位仍是工程控制台，部署验收暂停到下列可用性工作包完成。
 
 ## 执行顺序
 
@@ -39,12 +39,14 @@
 | P7-G Ubuntu/观测/升级验收 | pending | clean deploy、smoke、observability、upgrade/rollback evidence | 同一候选 SHA 和镜像 digest 可追溯 | P7-F |
 | P7-H 供应链与阶段闭环 | pending | SBOM/Grype、public audit、retrospective、状态记录 | checklist 全满足；release 仍需单独批准 | P7-G |
 
-## 2026-08-29 可重跑审计结果
+## 2026-08-29 初始可重跑审计结果（历史快照）
 
 - PASS：format、architecture、52 contract tests、Compose static validation、secret scan。
 - BLOCKED：系统 `java` 为 21，但 Maven 绑定 JDK 8；显式改为 JDK 21 后 Server 执行 187 tests，其中 20 个 Testcontainers tests 因 Docker daemon 不可用报 error、1 个真实 Ollama 用例 skipped，Worker 因 reactor 中止未执行。
 - BLOCKED：Node/npm 当前不在 PATH，Web typecheck/build/test 未在本轮执行；项目本身也没有 Web test script。
 - NOT RUN：容器 build/up/health、真实业务 smoke、SBOM/Grype target image、Ubuntu、升级/回滚。
+
+当前状态更正：后续已通过显式 JDK 21 完成 streaming 定向 Java 63/63，并在可用 Docker/Testcontainers 上完成事件持久化/多实例 fan-out 6/6；Node/npm 也已完成 Web 类型检查与构建。由于统一 preflight 和当前候选的 Server + Worker 全 reactor 仍未执行，P7-TEST-01/02 继续保持未完成；上述历史失败不得再表述为当前环境事实。
 
 ## 2026-08-29 执行增量
 

@@ -10,11 +10,11 @@
 
 - Session 注册/登录、空间成员与 `space_id` 授权、用户/空间软停用或归档已有 Controller、Service、迁移和测试代码。
 - 文件/网页上传可创建 revision/artifact/job；Worker 已接入 RabbitMQ、解析、对象存储、embedding、Qdrant candidate index，且 candidate 按空间汇总 active 文档。
-- 问答链已接入 revision/artifact material、结构化 citation/provenance、同步 provider generation、持久化 answer/run/event 和 SSE 事件读取。
+- 问答链已接入 revision/artifact material、结构化 citation/provenance、Provider 原生 token streaming、持久化 answer/run/event、SSE replay 和同/多实例上游取消。
 - Server/Worker Docker target 使用 UID 10001；Web、Server、Worker 已有 Compose `app` profile 构建定义，但本轮未完成 runtime build/up 验证。
-- 2026-08-29 本地实测：format、architecture、52 contract tests、Compose 静态验证和 secret scan 通过。
+- 2026-08-29 当前增量实测：format、architecture、Markdown links、secret scan、52 contract tests、Web 类型检查/构建、真实 streaming 定向 Java 63/63，以及事件持久化/多实例 fan-out 6/6 通过。
 
-这些事实不证明完整用户旅程、真实 streaming、Linux runtime 或发布门槛已经通过。
+这些事实不证明完整用户旅程、真实模型性能、Linux runtime 或发布门槛已经通过。
 
 ## 2. P0：先修复会阻断 MVP 的实现断点
 
@@ -33,8 +33,8 @@
 
 ## 3. P1：建立可信的开发与回归基线
 
-- [ ] P7-TEST-01 统一 preflight：检查 Maven 实际 JVM、Node/npm 和 Docker daemon，而不是只检查命令是否存在。当前机器 `java -version` 为 21，但 `mvn -version` 绑定 JDK 8；Node/npm 不在 PATH；Docker client 存在但 daemon 未运行。
-- [ ] P7-TEST-02 全量 JVM 回归：在 JDK 21 + 可用 Docker 上运行 Server/Worker 全量测试。2026-08-29 显式 JDK 21 运行到 Server 187 tests，纯单元测试无 failure，但 20 个 Testcontainers tests 因 Docker daemon 不可用报 error，Worker 未执行；因此本轮不能记录为全绿。
+- [ ] P7-TEST-01 统一 preflight：检查 Maven 实际 JVM、Node/npm 和 Docker daemon，而不是只检查命令是否存在。初始审计曾出现 Maven 绑定 JDK 8、Node/npm 不在 PATH、Docker daemon 不可用；当前会话已通过显式 JDK 21、Node/npm 和 Docker/Testcontainers 执行定向门禁，但仓库仍没有自动发现这类漂移的统一 preflight。
+- [ ] P7-TEST-02 全量 JVM 回归：在 JDK 21 + 可用 Docker 上运行 Server/Worker 全量测试。当前已补跑 streaming 相关 Server 定向 63/63 和事件持久化/多实例 Testcontainers 6/6；尚未在当前候选运行 Server + Worker 全 reactor，因此不能记录为全量全绿。
 - [ ] P7-TEST-03 Web 自动化：`apps/web/package.json` 只有 typecheck/build/dev，没有 unit/component/E2E test 脚本；为登录、首次设置、上传/轮询、索引发布、问答/取消、历史/归档、管理权限和跨空间拒绝建立自动化。
 - [ ] P7-TEST-04 契约-实现一致性：增加 Controller/OpenAPI operation 对照门禁，至少捕获 provider connection test 这类“契约存在、实现缺失”；反向检查生产端点是否遗漏契约。
 - [ ] P7-TEST-05 RAG 变更评估：最近 retrieval/answer 相关性逻辑变化必须重新生成 baseline/candidate、引用/拒答/隔离/注入、latency/token/cost 证据；Phase 6 的人工评审豁免不能自动覆盖新发布候选。
