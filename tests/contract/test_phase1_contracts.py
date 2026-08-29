@@ -184,6 +184,7 @@ class Phase1OpenApiContractTest(unittest.TestCase):
             ("/api/v1/auth/register", "post"),
             ("/api/v1/auth/login", "post"),
             ("/api/v1/sessions", "post"),
+            ("/api/v1/bootstrap/platform-admin", "post"),
         }
         for path, path_item in self.spec["paths"].items():
             for method, operation in path_item.items():

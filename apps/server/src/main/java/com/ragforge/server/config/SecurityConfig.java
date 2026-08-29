@@ -22,7 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(SessionProperties.class)
+@EnableConfigurationProperties({SessionProperties.class, BootstrapAdminProperties.class})
 public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -85,7 +85,8 @@ public class SecurityConfig {
                                         "forbidden", "Forbidden", "The authenticated principal is not allowed")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/api/v1/auth/register",
-                                "/api/v1/auth/login", "/api/v1/sessions").permitAll()
+                                "/api/v1/auth/login", "/api/v1/sessions",
+                                "/api/v1/bootstrap/platform-admin").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(sessionAuthenticationFilter, CorrelationIdFilter.class)

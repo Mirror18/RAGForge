@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ApiError, type Anchor, type AnswerDefaults, type ChunkOverrideResponse, type ChunkOverrideTargetState, type CreateChunkOverrideRequest, type ChunkStudioProjection, type CurrentSession, type RetrievalExperiment, type Space, type TransitionChunkOverrideRequest, apiFetch, getCurrentSession, loginUser, logoutCurrentSession, registerUser } from "./api";
+import { ApiError, type Anchor, type AnswerDefaults, type ChunkOverrideResponse, type ChunkOverrideTargetState, type CreateChunkOverrideRequest, type ChunkStudioProjection, type CurrentSession, type PlatformAdminBootstrapStatus, type RetrievalExperiment, type Space, type TransitionChunkOverrideRequest, apiFetch, bootstrapPlatformAdmin, getCurrentSession, getPlatformAdminBootstrapStatus, loginUser, logoutCurrentSession, registerUser } from "./api";
 import AnswerView from "./AnswerView.vue";
 import ControlCenterView from "./ControlCenterView.vue";
 import AuthView from "./AuthView.vue";
@@ -20,10 +20,12 @@ const session = ref<CurrentSession | null>(null);
 const spaces = ref<Space[]>([]);
 const selectedSpaceId = ref("");
 const workspaceError = ref("");
-const authMode = ref<"login" | "register">("login");
+const authMode = ref<"login" | "register" | "bootstrap">("login");
 const authEmail = ref("");
 const authPassword = ref("");
 const authDisplayName = ref("");
+const bootstrapToken = ref("");
+const bootstrapStatus = ref<PlatformAdminBootstrapStatus>({ required: false, available: false });
 const authLoading = ref(false);
 const spaceCreating = ref(false);
 
@@ -121,6 +123,10 @@ async function checkApiHealth(): Promise<void> {
       selectedSpaceId.value = "";
       apiStatus.value = "unauthenticated";
       workspaceError.value = "";
+      try {
+        bootstrapStatus.value = await getPlatformAdminBootstrapStatus();
+        if (bootstrapStatus.value.available) authMode.value = "bootstrap";
+      } catch { bootstrapStatus.value = { required: false, available: false }; }
       return;
     }
     apiStatus.value = "unavailable";
@@ -136,20 +142,29 @@ async function submitAuth(): Promise<void> {
     workspaceError.value = "请填写邮箱和密码。";
     return;
   }
-  if (authMode.value === "register" && !authDisplayName.value.trim()) {
-    workspaceError.value = "注册时需要填写显示名称。";
+  if (authMode.value !== "login" && !authDisplayName.value.trim()) {
+    workspaceError.value = "需要填写显示名称。";
+    return;
+  }
+  if (authMode.value === "bootstrap" && bootstrapToken.value.length < 32) {
+    workspaceError.value = "Bootstrap Secret 至少需要 32 位。";
     return;
   }
   authLoading.value = true;
   try {
-    if (authMode.value === "register") {
+    if (authMode.value === "bootstrap") {
+      await bootstrapPlatformAdmin({ email: authEmail.value.trim(), password: authPassword.value,
+        displayName: authDisplayName.value.trim(), token: bootstrapToken.value });
+      bootstrapToken.value = "";
+      bootstrapStatus.value = { required: false, available: false };
+    } else if (authMode.value === "register") {
       await registerUser({ email: authEmail.value.trim(), password: authPassword.value, displayName: authDisplayName.value.trim() });
     }
     await loginUser({ email: authEmail.value.trim(), password: authPassword.value });
     authPassword.value = "";
     await checkApiHealth();
   } catch (error) {
-    workspaceError.value = describeError(error, authMode.value === "register" ? "注册或登录失败。" : "登录失败。");
+    workspaceError.value = describeError(error, authMode.value === "bootstrap" ? "平台管理员初始化失败。" : authMode.value === "register" ? "注册或登录失败。" : "登录失败。");
   } finally {
     authLoading.value = false;
   }
@@ -247,7 +262,7 @@ onMounted(checkApiHealth);
 
 <template>
   <main class="shell">
-    <AuthView v-if="!session" v-model:mode="authMode" v-model:email="authEmail" v-model:password="authPassword" v-model:display-name="authDisplayName" :loading="authLoading" :error="workspaceError" @submit="submitAuth" />
+    <AuthView v-if="!session" v-model:mode="authMode" v-model:email="authEmail" v-model:password="authPassword" v-model:display-name="authDisplayName" v-model:bootstrap-token="bootstrapToken" :bootstrap-required="bootstrapStatus.required" :bootstrap-available="bootstrapStatus.available" :loading="authLoading" :error="workspaceError" @submit="submitAuth" />
 
     <div v-else class="app-frame">
       <aside class="app-sidebar" aria-label="产品导航">

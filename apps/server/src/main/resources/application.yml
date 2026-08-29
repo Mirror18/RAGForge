@@ -46,6 +46,10 @@ app:
     ttl: ${SESSION_TTL:PT8H}
 
 ragforge:
+  bootstrap:
+    admin:
+      # Disabled by default. Configure a one-time Secret of at least 32 characters, bootstrap, then remove it.
+      token: ${RAGFORGE_BOOTSTRAP_ADMIN_TOKEN:}
   web-source:
     # Empty by default: web ingestion is fail-closed until an operator configures public hosts.
     allowed-hosts: \${RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS:}

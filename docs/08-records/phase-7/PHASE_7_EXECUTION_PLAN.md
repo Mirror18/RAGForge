@@ -1,6 +1,6 @@
 # Phase 7 执行计划：实现对齐与 Linux 交付
 
-- Version: `phase7-plan.v3`
+- Version: `phase7-plan.v4`
 - Status: `implementation-reconciliation`
 - Code baseline: `f6b016840e946ea314cdaf4812c196dcea8ca491`
 - Checklist: [`PHASE_7_CHECKLIST.md`](../../03-delivery/PHASE_7_CHECKLIST.md)
@@ -13,7 +13,7 @@
 
 | 区域 | 已实现代码 | 未实现或不一致 | 结论 |
 |---|---|---|---|
-| 身份/空间 | Session、CSRF、成员角色、用户/空间管理 | 无首个平台管理员 bootstrap | 干净部署无法进入平台管理旅程 |
+| 身份/空间 | Session、CSRF、成员角色、用户/空间管理、一次性平台管理员 bootstrap、按精确邮箱加入成员 | Provider 首次配置仍缺少验证发布闸门 | 干净数据库可进入平台管理与成员协作，尚不能完成可用 Provider 配置 |
 | Provider | space-scoped connection/profile/route/binding 与 adapter | Editor 可登记 connection，与平台管理员 ownership 需求不一致；connection test 仅有 OpenAPI；verified capability 不控制发布 | 权限模型和 `PUBLISHED` 均未达到需求语义 |
 | 摄取 | 上传、网页、revision/artifact/job、Worker pipeline | Git/local connector 未接 Server/Web/调度 | 不能宣称 Git 知识源用户旅程完成 |
 | 问答 | material-backed retrieval、同步 generation、citation、answer/event persistence | provider 固定非 streaming；SSE 是结果事件读取 | 不能宣称真实流式回答/取消闭环 |
@@ -50,7 +50,10 @@
 
 - P7-WEB-01 已完成：空间管理员可在 Web 按已知邮箱把 ACTIVE 注册用户加入当前空间并选择 `SPACE_ADMIN`、`EDITOR` 或 `VIEWER`；精确匹配避免开放平台用户目录。
 - Server 单元 3/3、完整 `ServerIntegrationTest` 8/8、成员定向集成 1/1、contract 52/52、Web typecheck/build、format、architecture 和 secret scan 均通过。
-- P7-B 工作包保持 `pending`，因为平台管理员 bootstrap 和 Provider verified publish gate 尚未完成。部署验收继续暂停。
+- P7-CORE-01 已完成：登录页仅在“无 ACTIVE 平台管理员且服务端配置 bootstrap Token”时显示首次设置；Token 最少 32 字符，仅由请求 Header 提交，不持久化到浏览器、响应或审计。服务端可创建新管理员或提升既有 ACTIVE 用户，并替换其密码；停用用户拒绝提升。
+- 并发 bootstrap 由 PostgreSQL transaction advisory lock 串行化；首个成功事务提交后，其余请求返回 `409 bootstrap_already_completed`。普通注册仍固定为 `USER`，不采用“首个注册用户自动提权”。
+- Bootstrap properties 3/3、完整 `ServerIntegrationTest` 12/12（含密钥、一次性、ACTIVE 用户提升、停用用户拒绝、审计脱敏和并发）、Web typecheck/build 通过；最终静态与契约门禁见本次提交记录。
+- P7-B 工作包保持 `pending`，因为 Provider connection test 与 verified publish gate 尚未完成。部署验收继续暂停。
 
 ## 证据规则
 

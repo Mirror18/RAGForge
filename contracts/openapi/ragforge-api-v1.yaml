@@ -24,6 +24,9 @@
       "name": "auth"
     },
     {
+      "name": "bootstrap"
+    },
+    {
       "name": "sessions"
     },
     {
@@ -55,6 +58,26 @@
     }
   ],
   "paths": {
+    "/api/v1/bootstrap/platform-admin": {
+      "get": {
+        "tags": ["bootstrap"], "operationId": "getPlatformAdminBootstrapStatus", "summary": "Read one-time platform administrator bootstrap availability", "security": [],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {"200": {"description": "Bootstrap status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlatformAdminBootstrapStatus"}}}}}
+      },
+      "post": {
+        "tags": ["bootstrap"], "operationId": "bootstrapPlatformAdmin", "summary": "Create or promote the first platform administrator exactly once", "security": [],
+        "parameters": [
+          {"$ref": "#/components/parameters/CorrelationId"},
+          {"$ref": "#/components/parameters/IdempotencyKey"},
+          {"$ref": "#/components/parameters/BootstrapAdminToken"}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlatformAdminBootstrapRequest"}}}},
+        "responses": {
+          "201": {"description": "First platform administrator bootstrapped", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlatformAdminBootstrapResponse"}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}, "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
     "/api/v1/auth/register": {
       "post": {
         "tags": ["auth"],
@@ -986,6 +1009,13 @@
         "description": "Stable key for a retried write. The server binds the key to the request hash and refuses a conflicting reuse.",
         "schema": {"type": "string", "minLength": 1, "maxLength": 255, "pattern": "^[A-Za-z0-9._~-]+$"}
       },
+      "BootstrapAdminToken": {
+        "name": "X-RAGForge-Bootstrap-Token",
+        "in": "header",
+        "required": true,
+        "description": "One-time operator Secret; clients and intermediaries must redact this header",
+        "schema": {"type": "string", "minLength": 32, "maxLength": 512}
+      },
       "SpaceId": {
         "name": "spaceId",
         "in": "path",
@@ -1177,6 +1207,25 @@
           "email": {"type": "string", "format": "idn-email", "maxLength": 320},
           "password": {"type": "string", "format": "password", "minLength": 12, "maxLength": 256, "writeOnly": true},
           "displayName": {"type": "string", "minLength": 1, "maxLength": 120}
+        }
+      },
+      "PlatformAdminBootstrapStatus": {
+        "type": "object", "additionalProperties": false, "required": ["required", "available"],
+        "properties": {"required": {"type": "boolean"}, "available": {"type": "boolean"}}
+      },
+      "PlatformAdminBootstrapRequest": {
+        "type": "object", "additionalProperties": false, "required": ["email", "password", "displayName"],
+        "properties": {
+          "email": {"type": "string", "format": "idn-email", "maxLength": 320},
+          "password": {"type": "string", "format": "password", "minLength": 12, "maxLength": 128, "writeOnly": true},
+          "displayName": {"type": "string", "minLength": 1, "maxLength": 120}
+        }
+      },
+      "PlatformAdminBootstrapResponse": {
+        "type": "object", "additionalProperties": false, "required": ["userId", "email", "displayName", "platformRole", "status", "mode"],
+        "properties": {
+          "userId": {"$ref": "#/components/schemas/UuidV7"}, "email": {"type": "string", "format": "idn-email"}, "displayName": {"type": "string"},
+          "platformRole": {"type": "string", "enum": ["PLATFORM_ADMIN"]}, "status": {"type": "string", "enum": ["ACTIVE"]}, "mode": {"type": "string", "enum": ["CREATED", "PROMOTED"]}
         }
       },
       "LoginRequest": {

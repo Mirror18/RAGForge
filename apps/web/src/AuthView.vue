@@ -1,11 +1,14 @@
 <script setup lang="ts">
-type AuthMode = "login" | "register";
+type AuthMode = "login" | "register" | "bootstrap";
 
 const props = defineProps<{
   mode: AuthMode;
   email: string;
   password: string;
   displayName: string;
+  bootstrapToken: string;
+  bootstrapRequired: boolean;
+  bootstrapAvailable: boolean;
   loading: boolean;
   error: string;
 }>();
@@ -15,12 +18,23 @@ const emit = defineEmits<{
   "update:email": [value: string];
   "update:password": [value: string];
   "update:displayName": [value: string];
+  "update:bootstrapToken": [value: string];
   submit: [];
 }>();
 
-function updateField(field: "email" | "password" | "displayName", event: Event): void {
+function updateField(field: "email" | "password" | "displayName" | "bootstrapToken", event: Event): void {
   const value = (event.target as HTMLInputElement).value;
   emit(`update:${field}`, value);
+}
+
+function heading(): string {
+  if (props.mode === "bootstrap") return "初始化平台管理员";
+  return props.mode === "login" ? "登录你的工作台" : "创建个人账号";
+}
+
+function description(): string {
+  if (props.mode === "bootstrap") return "使用运维人员配置的一次性 Secret 建立首个平台管理员。";
+  return props.mode === "login" ? "继续管理你的知识空间和 RAG 实验。" : "创建账号后即可建立第一个个人知识空间。";
 }
 </script>
 
@@ -40,18 +54,20 @@ function updateField(field: "email" | "password" | "displayName", event: Event):
 
     <div class="auth-panel card">
       <div class="auth-panel-heading">
-        <div><p class="eyebrow">Welcome back</p><h3>{{ props.mode === "login" ? "登录你的工作台" : "创建个人账号" }}</h3><p>{{ props.mode === "login" ? "继续管理你的知识空间和 RAG 实验。" : "创建账号后即可建立第一个个人知识空间。" }}</p></div>
+        <div><p class="eyebrow">Welcome back</p><h3>{{ heading() }}</h3><p>{{ description() }}</p></div>
         <span class="secure-badge">安全会话</span>
       </div>
       <p v-if="props.error" class="alert error" role="alert">{{ props.error }}</p>
       <form class="auth-form" @submit.prevent="emit('submit')">
-        <div v-if="props.mode === 'register'" class="field"><label for="auth-display-name">显示名称</label><input id="auth-display-name" :value="props.displayName" autocomplete="name" maxlength="120" placeholder="例如：林晓" @input="updateField('displayName', $event)" /></div>
+        <div v-if="props.mode !== 'login'" class="field"><label for="auth-display-name">显示名称</label><input id="auth-display-name" :value="props.displayName" autocomplete="name" maxlength="120" placeholder="例如：林晓" @input="updateField('displayName', $event)" /></div>
         <div class="field"><label for="auth-email">邮箱</label><input id="auth-email" :value="props.email" type="email" autocomplete="username" placeholder="name@example.com" required @input="updateField('email', $event)" /></div>
         <div class="field"><div class="field-label-row"><label for="auth-password">密码</label><span>至少 12 位</span></div><input id="auth-password" :value="props.password" type="password" :autocomplete="props.mode === 'login' ? 'current-password' : 'new-password'" minlength="12" maxlength="128" placeholder="输入密码" required @input="updateField('password', $event)" /></div>
-        <button class="auth-submit" type="submit" :disabled="props.loading">{{ props.loading ? "处理中…" : (props.mode === "login" ? "登录工作台" : "注册并登录") }}</button>
+        <div v-if="props.mode === 'bootstrap'" class="field"><div class="field-label-row"><label for="auth-bootstrap-token">一次性 Bootstrap Secret</label><span>至少 32 位</span></div><input id="auth-bootstrap-token" :value="props.bootstrapToken" type="password" autocomplete="off" minlength="32" maxlength="512" required placeholder="由运维人员临时提供" @input="updateField('bootstrapToken', $event)" /></div>
+        <button class="auth-submit" type="submit" :disabled="props.loading">{{ props.loading ? "处理中…" : (props.mode === "login" ? "登录工作台" : props.mode === "register" ? "注册并登录" : "初始化并登录") }}</button>
       </form>
       <div class="auth-divider"><span>或</span></div>
-      <button type="button" class="secondary-button auth-switch" @click="emit('update:mode', props.mode === 'login' ? 'register' : 'login')">{{ props.mode === "login" ? "没有账号？创建个人账号" : "已有账号？返回登录" }}</button>
+      <div class="auth-alternatives"><button type="button" class="secondary-button auth-switch" @click="emit('update:mode', props.mode === 'login' ? 'register' : 'login')">{{ props.mode === "login" ? "没有账号？创建个人账号" : "返回登录" }}</button><button v-if="props.bootstrapAvailable && props.mode !== 'bootstrap'" type="button" class="secondary-button auth-switch" @click="emit('update:mode', 'bootstrap')">初始化首个平台管理员</button></div>
+      <p v-if="props.bootstrapRequired && !props.bootstrapAvailable" class="bootstrap-note">系统尚未初始化平台管理员。请由运维人员临时配置 <code>RAGFORGE_BOOTSTRAP_ADMIN_TOKEN</code> 后刷新；不要把 Secret 写入仓库或浏览器存储。</p>
       <p class="auth-security-note"><span aria-hidden="true">◈</span> 使用 HttpOnly Cookie 维护会话；密码不会写入 URL、日志或浏览器存储。</p>
     </div>
   </section>
@@ -64,7 +80,7 @@ function updateField(field: "email" | "password" | "displayName", event: Event):
 .brand-mark { display: grid; width: 45px; height: 45px; place-items: center; margin-bottom: 50px; border: 1px solid #ffffff55; border-radius: 13px; background: #ffffff18; font-size: 1.5rem; font-weight: 900; }
 .auth-hero .eyebrow { color: #bcd6f8; }.auth-hero h2 { max-width: 560px; margin: 13px 0 18px; color: #fff; font-size: clamp(2rem, 4vw, 3.35rem); line-height: 1.12; }.auth-hero-copy { max-width: 560px; margin-bottom: 45px; color: #d9e8fa; line-height: 1.75; }
 .auth-feature-list { display: grid; gap: 18px; max-width: 490px; }.auth-feature-list > div { display: flex; align-items: center; gap: 13px; }.auth-feature-list strong, .auth-feature-list small { display: block; }.auth-feature-list strong { margin-bottom: 3px; color: #fff; }.auth-feature-list small { color: #bad2ee; font-size: .78rem; }.feature-icon { display: grid; width: 33px; height: 33px; flex: 0 0 33px; place-items: center; border: 1px solid #ffffff45; border-radius: 9px; color: #d5e9ff; font-size: .68rem; font-weight: 800; }
-.auth-panel { align-self: center; margin: 36px; padding: clamp(25px, 4vw, 45px); box-shadow: none; }.auth-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 28px; }.auth-panel h3 { margin: 8px 0; color: #173363; font-size: 1.7rem; }.auth-panel-heading p:not(.eyebrow) { margin-bottom: 0; color: #687893; font-size: .87rem; line-height: 1.55; }.secure-badge { padding: 7px 9px; border-radius: 999px; background: #e7f6ed; color: #19714c; font-size: .69rem; font-weight: 800; white-space: nowrap; }.auth-form { display: grid; gap: 17px; }.field-label-row { display: flex; justify-content: space-between; gap: 10px; }.field-label-row span { color: #8390a5; font-size: .74rem; }.auth-submit { width: 100%; margin-top: 5px; padding: 13px 16px; }.auth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; color: #9aa7b9; font-size: .75rem; }.auth-divider::before, .auth-divider::after { height: 1px; flex: 1; background: #e3e9f1; content: ""; }.auth-switch { width: 100%; }.auth-security-note { display: flex; gap: 7px; margin: 22px 0 0; color: #8290a4; font-size: .73rem; line-height: 1.5; }.auth-security-note span { color: #2e72ad; }
+.auth-panel { align-self: center; margin: 36px; padding: clamp(25px, 4vw, 45px); box-shadow: none; }.auth-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 28px; }.auth-panel h3 { margin: 8px 0; color: #173363; font-size: 1.7rem; }.auth-panel-heading p:not(.eyebrow) { margin-bottom: 0; color: #687893; font-size: .87rem; line-height: 1.55; }.secure-badge { padding: 7px 9px; border-radius: 999px; background: #e7f6ed; color: #19714c; font-size: .69rem; font-weight: 800; white-space: nowrap; }.auth-form { display: grid; gap: 17px; }.field-label-row { display: flex; justify-content: space-between; gap: 10px; }.field-label-row span { color: #8390a5; font-size: .74rem; }.auth-submit { width: 100%; margin-top: 5px; padding: 13px 16px; }.auth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; color: #9aa7b9; font-size: .75rem; }.auth-divider::before, .auth-divider::after { height: 1px; flex: 1; background: #e3e9f1; content: ""; }.auth-alternatives { display: grid; gap: 8px; }.auth-switch { width: 100%; }.bootstrap-note { margin: 14px 0 0; padding: 10px 12px; border: 1px solid #eed39a; border-radius: 9px; background: #fff9eb; color: #765b24; font-size: .73rem; line-height: 1.55; overflow-wrap: anywhere; }.auth-security-note { display: flex; gap: 7px; margin: 22px 0 0; color: #8290a4; font-size: .73rem; line-height: 1.5; }.auth-security-note span { color: #2e72ad; }
 @media (max-width: 850px) { .auth-page { grid-template-columns: 1fr; }.auth-hero { padding: 38px 30px; }.brand-mark { margin-bottom: 28px; }.auth-hero-copy { margin-bottom: 28px; }.auth-feature-list { gap: 12px; }.auth-panel { margin: 0; border: 0; border-radius: 0; }.auth-hero::after { right: -150px; bottom: -170px; } }
 @media (max-width: 520px) { .auth-page { margin-top: 15px; border-radius: 16px; }.auth-hero { padding: 30px 22px; }.auth-hero h2 { font-size: 2rem; }.auth-panel { padding: 25px 20px; }.auth-panel-heading { flex-direction: column; }.secure-badge { align-self: flex-start; } }
 </style>

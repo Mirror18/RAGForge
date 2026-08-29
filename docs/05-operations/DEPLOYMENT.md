@@ -62,6 +62,17 @@ Ollama 默认运行在宿主机，通过明确地址连接；生产可替换为�
 
 配置优先级：安全代码默认值 < versioned config < environment override < secret reference。模型凭据、数据库密码、S3 key、Session signing/encryption keys 不进入 Git、镜像、Compose 展开日志或错误响应。
 
+### 4.1 首个平台管理员初始化
+
+平台管理员 bootstrap 默认关闭，不自动提升首个注册用户。仅在干净环境首次设置期间，通过受控 Secret 注入至少 32 字符的 `RAGFORGE_BOOTSTRAP_ADMIN_TOKEN`；不要把值写入 `.env`、Compose 文件、命令历史、日志或工单。
+
+1. 限制 Server/Web 入口只允许负责初始化的操作者访问，并核对目标管理员邮箱。
+2. 注入 Token 后启动应用；登录页在“尚无 ACTIVE 平台管理员”时显示首次设置表单。
+3. 提交后确认返回 `PLATFORM_ADMIN`，使用新密码登录，并检查 `platform.admin.bootstrapped.v1` 审计事件只含 `userId` 和 `mode`。
+4. 立即从 Secret/运行环境移除 Token，并重启或滚动应用使其失效；再次查询首次设置状态应为 `required=false`、`available=false`。
+
+并发请求由数据库事务锁保证最多一次成功；管理员已存在时接口固定返回冲突。若怀疑 Token 泄露，在初始化前立刻轮换；若出现非预期成功事件，隔离入口、禁用异常账户并按凭据轮换和事件响应流程处理。该流程不授权生产迁移或发布。
+
 ## 5. 发布流程
 
 1. 固定 commit、镜像 digest、迁移版本和 SBOM。

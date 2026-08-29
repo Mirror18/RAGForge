@@ -24,6 +24,17 @@ public class UserRepository {
         return findById(id).orElseThrow();
     }
 
+    public UserAccount createPlatformAdmin(UUID id, String email, String passwordHash, String displayName,
+                                           java.time.Instant now) {
+        jdbc.update("""
+                        INSERT INTO users
+                            (id, email, password_hash, display_name, platform_role, status, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, 'PLATFORM_ADMIN', 'ACTIVE', ?, ?)
+                        """, id, email, passwordHash, displayName, java.sql.Timestamp.from(now),
+                java.sql.Timestamp.from(now));
+        return findById(id).orElseThrow();
+    }
+
     public Optional<UserAccount> findById(UUID id) {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""
@@ -50,6 +61,28 @@ public class UserRepository {
         } catch (EmptyResultDataAccessException ignored) {
             return Optional.empty();
         }
+    }
+
+    public Optional<UserAccount> findByEmailIncludingDisabled(String email) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                            SELECT id, email, display_name, password_hash, platform_role, status, created_at, updated_at
+                            FROM users WHERE LOWER(email) = LOWER(?)
+                            """, (rs, rowNum) -> map(rs), email));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public boolean hasPlatformAdmin() {
+        Boolean result = jdbc.queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM users WHERE platform_role = 'PLATFORM_ADMIN' AND status = 'ACTIVE')
+                """, Boolean.class);
+        return Boolean.TRUE.equals(result);
+    }
+
+    public void lockPlatformAdminBootstrap() {
+        jdbc.execute("SELECT pg_advisory_xact_lock(7242246630020250829)");
     }
 
     public boolean exists(UUID id) {

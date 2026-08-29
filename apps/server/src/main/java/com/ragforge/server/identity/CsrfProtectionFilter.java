@@ -51,6 +51,7 @@ public class CsrfProtectionFilter extends OncePerRequestFilter {
         }
         return !("POST".equals(request.getMethod()) &&
                 (path.equals("/api/v1/auth/register") || path.equals("/api/v1/auth/login")
-                        || path.equals("/api/v1/sessions")));
+                        || path.equals("/api/v1/sessions")
+                        || path.equals("/api/v1/bootstrap/platform-admin")));
     }
 }

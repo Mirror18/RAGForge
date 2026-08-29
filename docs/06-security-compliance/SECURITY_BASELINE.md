@@ -11,6 +11,7 @@
 ## 2. 身份与访问
 
 - 密码使用现代自适应 hash（实现时选择 Argon2id/bcrypt 参数并压测）。
+- 首个平台管理员初始化默认关闭，必须使用独立的高熵一次性 Secret；禁止把“首个注册用户”自动提升为管理员。检查与创建必须在数据库事务锁内完成，完成后 fail-closed，Secret 不进入浏览器存储、响应、日志或审计。
 - 登录限速、失败审计、Session rotation、退出/禁用立即吊销。
 - Cookie：HttpOnly、Secure、SameSite；写操作 CSRF 防护。
 - RBAC deny-by-default；管理接口不靠 UI 隐藏。

@@ -149,3 +149,9 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 - `R-048` 已关闭：空间管理员可按已知注册邮箱精确添加 ACTIVE 用户并指定初始角色；未引入全站用户列表或模糊搜索。Editor/Viewer 首次进入、非管理员拒绝、重复成员、停用用户和无邮箱审计 payload 均有回归测试。
 - `R-043`、`R-044` 继续 OPEN：成员闭环不解决首个平台管理员 bootstrap，也不证明 Provider 连通性或 verified capability 发布闸门。
+
+## 14. P7-CORE-01 平台初始化风险处置（2026-08-29）
+
+- `R-043` 已关闭：实现默认关闭、显式 Secret 驱动的一次性平台管理员 bootstrap；普通注册不自动提权。Token 最少 32 字符、常量时间比对、限长，且不进入响应、审计或浏览器持久化；并发由 PostgreSQL transaction advisory lock 保证最多一次成功，完成后 fail-closed。
+- 新增残余风险 `R-052`：bootstrap Token 若在首次设置前泄露，攻击者仍可能抢先取得平台管理员身份。P=2、I=5、Score=10，IAM / Operations，MITIGATING；仅通过受控 Secret 注入，首次设置后立即从运行环境移除并重启/滚动配置，限制入口网络暴露，监控 `platform.admin.bootstrapped.v1`，发现异常按账号与 Secret 轮换流程处置。生产首次设置仍需人工核对操作者与目标邮箱。
+- `R-044` 继续 OPEN：平台管理员已可初始化，但 Provider connection 的 ownership、受限探测、verified capabilities 与发布闸门尚未闭环，因此 P7-B 和部署验收继续暂停。

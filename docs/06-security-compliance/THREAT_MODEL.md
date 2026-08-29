@@ -27,6 +27,7 @@ flowchart LR
 
 | 威胁 | 场景 | 关键控制 | 验证 |
 |---|---|---|---|
+| 首次设置劫持 | 攻击者抢注首个账户或重放 bootstrap 请求取得平台管理员 | 禁止首个注册用户自动提权、默认关闭的独立 Token、数据库事务锁、完成后冲突、审计与初始化后移除 Secret | 无效 Token、重复、并发、审计脱敏测试 |
 | 跨空间越权 | 修改 space/document ID | server RBAC + repository/Qdrant filter + deny default | 角色/ID 矩阵 |
 | Prompt injection | 文档命令模型泄密或调用工具 | 指令/数据隔离、tool policy、Evidence 限制、输出校验 | 恶意 fixture |
 | SSRF | Web URL/redirect 指向内网 metadata | allowlist、DNS/IP/redirect 再校验、egress network policy | rebinding/redirect tests |

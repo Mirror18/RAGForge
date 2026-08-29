@@ -21,6 +21,9 @@ import org.testcontainers.containers.GenericContainer;
 import jakarta.servlet.http.Cookie;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -36,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ServerIntegrationTest {
+    private static final String BOOTSTRAP_TOKEN = "test-bootstrap-secret-with-at-least-32-characters";
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16.4-alpine");
 
     static final GenericContainer<?> VALKEY = new GenericContainer<>("valkey/valkey:8.0.1-alpine")
@@ -67,6 +71,7 @@ class ServerIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.data.redis.url", () -> "redis://" + VALKEY.getHost() + ":"
                 + VALKEY.getMappedPort(6379));
+        registry.add("ragforge.bootstrap.admin.token", () -> BOOTSTRAP_TOKEN);
     }
 
     @Autowired
@@ -103,6 +108,120 @@ class ServerIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
                 "SELECT data_type FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'id'",
                 String.class)).isEqualTo("uuid");
+    }
+
+    @Test
+    void firstPlatformAdminBootstrapIsSecretGuardedAuditedAndOneTime() throws Exception {
+        mvc.perform(get("/api/v1/bootstrap/platform-admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.required").value(true))
+                .andExpect(jsonPath("$.available").value(true));
+
+        String body = "{\"email\":\"first-admin@example.test\",\"password\":\"new correct horse battery\",\"displayName\":\"First Admin\"}";
+        mvc.perform(post("/api/v1/bootstrap/platform-admin")
+                        .header("Idempotency-Key", "bootstrap-invalid-token")
+                        .header("X-RAGForge-Bootstrap-Token", "invalid-bootstrap-secret-value-000")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BOOTSTRAP_TOKEN_INVALID"));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users", Integer.class))
+                .isZero();
+
+        mvc.perform(post("/api/v1/bootstrap/platform-admin")
+                        .header("Idempotency-Key", "bootstrap-first-admin")
+                        .header("X-RAGForge-Bootstrap-Token", BOOTSTRAP_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("first-admin@example.test"))
+                .andExpect(jsonPath("$.platformRole").value("PLATFORM_ADMIN"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.mode").value("CREATED"))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.token").doesNotExist());
+
+        mvc.perform(get("/api/v1/bootstrap/platform-admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.required").value(false))
+                .andExpect(jsonPath("$.available").value(false));
+        login("first-admin@example.test", "new correct horse battery", "/sessions");
+
+        mvc.perform(post("/api/v1/bootstrap/platform-admin")
+                        .header("Idempotency-Key", "bootstrap-cannot-repeat")
+                        .header("X-RAGForge-Bootstrap-Token", BOOTSTRAP_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("BOOTSTRAP_ALREADY_COMPLETED"));
+
+        String auditPayload = jdbc.queryForObject("""
+                SELECT payload::text FROM audit_events WHERE event_type = 'platform.admin.bootstrapped.v1'
+                """, String.class);
+        org.assertj.core.api.Assertions.assertThat(auditPayload)
+                .contains("userId", "CREATED")
+                .doesNotContain("first-admin@example.test", BOOTSTRAP_TOKEN, "password");
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM users WHERE platform_role = 'PLATFORM_ADMIN' AND status = 'ACTIVE'
+                """, Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void bootstrapCanPromoteExistingActiveUserAndReplacesPassword() throws Exception {
+        register("promote@example.test", "correct horse battery", "Before Promote");
+
+        mvc.perform(post("/api/v1/bootstrap/platform-admin")
+                        .header("Idempotency-Key", "bootstrap-promote-existing")
+                        .header("X-RAGForge-Bootstrap-Token", BOOTSTRAP_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"PROMOTE@example.test\",\"password\":\"replacement password 123\",\"displayName\":\"Promoted Admin\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mode").value("PROMOTED"))
+                .andExpect(jsonPath("$.displayName").value("Promoted Admin"))
+                .andExpect(jsonPath("$.platformRole").value("PLATFORM_ADMIN"));
+
+        mvc.perform(post("/api/v1/sessions")
+                        .header("Idempotency-Key", "bootstrap-old-password-rejected")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"promote@example.test\",\"password\":\"correct horse battery\"}"))
+                .andExpect(status().isUnauthorized());
+        login("promote@example.test", "replacement password 123", "/sessions");
+    }
+
+    @Test
+    void bootstrapRefusesToReactivateDisabledUser() throws Exception {
+        register("disabled-bootstrap@example.test", "correct horse battery", "Disabled User");
+        jdbc.update("UPDATE users SET status = 'DISABLED' WHERE email = ?", "disabled-bootstrap@example.test");
+
+        mvc.perform(post("/api/v1/bootstrap/platform-admin")
+                        .header("Idempotency-Key", "bootstrap-disabled-user")
+                        .header("X-RAGForge-Bootstrap-Token", BOOTSTRAP_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"disabled-bootstrap@example.test\",\"password\":\"replacement password 123\",\"displayName\":\"Must Stay Disabled\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("BOOTSTRAP_USER_DISABLED"));
+
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM users WHERE platform_role = 'PLATFORM_ADMIN' AND status = 'ACTIVE'
+                """, Integer.class)).isZero();
+    }
+
+    @Test
+    void concurrentBootstrapCreatesExactlyOnePlatformAdmin() throws Exception {
+        var start = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> first = executor.submit(() -> bootstrapStatus(start, "concurrent-a@example.test",
+                    "bootstrap-concurrent-a"));
+            Future<Integer> second = executor.submit(() -> bootstrapStatus(start, "concurrent-b@example.test",
+                    "bootstrap-concurrent-b"));
+            start.countDown();
+
+            org.assertj.core.api.Assertions.assertThat(java.util.List.of(first.get(), second.get()))
+                    .containsExactlyInAnyOrder(201, 409);
+            org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("""
+                    SELECT COUNT(*) FROM users WHERE platform_role = 'PLATFORM_ADMIN' AND status = 'ACTIVE'
+                    """, Integer.class)).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
@@ -436,6 +555,18 @@ class ServerIntegrationTest {
                         .content(objectMapper.writeValueAsString(java.util.Map.of(
                                 "email", email, "password", password, "displayName", displayName))))
                 .andExpect(status().isCreated());
+    }
+
+    private int bootstrapStatus(CountDownLatch start, String email, String idempotencyKey) throws Exception {
+        start.await();
+        return mvc.perform(post("/api/v1/bootstrap/platform-admin")
+                        .header("Idempotency-Key", idempotencyKey)
+                        .header("X-RAGForge-Bootstrap-Token", BOOTSTRAP_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                "email", email, "password", "concurrent password 123",
+                                "displayName", "Concurrent Admin"))))
+                .andReturn().getResponse().getStatus();
     }
 
     private Login login(String email, String password, String path) throws Exception {

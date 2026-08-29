@@ -18,7 +18,7 @@
 
 ## 2. P0：先修复会阻断 MVP 的实现断点
 
-- [ ] P7-CORE-01 平台管理员 bootstrap：为干净数据库提供一次性、可审计、不可重复滥用的 `PLATFORM_ADMIN` 初始化流程；当前注册固定创建 `USER`，而用户管理 API 又要求已有平台管理员。
+- [x] P7-CORE-01 平台管理员 bootstrap：干净数据库可从登录页使用显式配置的 32 字符以上一次性 Token 创建或提升首个 ACTIVE `PLATFORM_ADMIN`；数据库事务锁保证并发请求最多成功一次，完成后 fail-closed，普通注册用户不会自动提权，审计不记录邮箱、密码或 Token。
 - [ ] P7-CORE-02 Provider 权限、验证与发布闸门：当前 connection API 是 space-scoped 且 Editor 可写，与“平台管理员登记、空间管理员选择”的需求不一致；先明确并实现 ownership/权限。随后实现 OpenAPI 已声明但 Controller 缺失的 `POST /provider-connections/{id}/test`，保存脱敏测试结果和 verified capabilities；未经实测或声明/实测不一致的 Profile 不得 `PUBLISHED`。
 - [ ] P7-CORE-03 真实生成 streaming：Provider adapter 当前固定 `stream=false`，`POST /answers` 在生成结束后才返回并发布事件。必须实现 token/delta streaming、上游取消和断线恢复，或经产品决策明确把“流式回答”移出 MVP；不能把完成后 SSE replay 描述为 provider streaming。
 - [ ] P7-CORE-04 Git 数据源接线：`GitConnector`/`LocalDirectoryConnector` 目前仅存在于 Worker 库，没有 Server API、持久化 source 配置、调度/手动同步或 Web 入口。补齐只读 remote/branch/checkpoint/include/exclude 全量与增量闭环。

@@ -54,6 +54,15 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface PlatformAdminBootstrapStatus {
+  required: boolean;
+  available: boolean;
+}
+
+export interface PlatformAdminBootstrapRequest extends RegisterRequest {
+  token: string;
+}
+
 export interface Space {
   spaceId: string;
   name: string;
@@ -466,6 +475,30 @@ async function authFetch<T>(path: string, body: RegisterRequest | LoginRequest):
 
 export async function registerUser(request: RegisterRequest): Promise<void> {
   await authFetch("/api/v1/auth/register", request);
+}
+
+export function getPlatformAdminBootstrapStatus(): Promise<PlatformAdminBootstrapStatus> {
+  return apiFetch("/api/v1/bootstrap/platform-admin");
+}
+
+export async function bootstrapPlatformAdmin(request: PlatformAdminBootstrapRequest): Promise<void> {
+  const response = await fetch("/api/v1/bootstrap/platform-admin", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Correlation-Id": uuidV7(),
+      "Idempotency-Key": idempotencyKey(),
+      "X-RAGForge-Bootstrap-Token": request.token,
+    },
+    credentials: "include",
+    body: JSON.stringify({ email: request.email, password: request.password, displayName: request.displayName }),
+  });
+  if (!response.ok) {
+    const problem = await readProblem(response);
+    throw new ApiError(problem?.detail ?? `初始化失败（HTTP ${response.status}）`, response.status, problem,
+      problem?.correlationId ?? response.headers.get("X-Correlation-Id"));
+  }
 }
 
 export async function loginUser(request: LoginRequest): Promise<CurrentSession> {

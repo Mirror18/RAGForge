@@ -155,4 +155,12 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - `P7-WEB-01` 已完成：新增空间级按精确邮箱添加成员 API 与页面表单。只有当前空间管理员可以操作；服务端只匹配 ACTIVE 注册用户，已存在成员返回冲突，不开放全站用户搜索或模糊账号枚举。
 - 审计事件为 `space.member.added.v1`，payload 只记录 `spaceId`、`userId` 和角色，不记录邮箱或其他账号内容；所有写入继续经过 CSRF、Idempotency-Key、`space_id` 和服务端角色校验。
 - 验证：`SpaceServiceTest` 3/3；完整 `ServerIntegrationTest` 8/8；扩展后的成员定向 Testcontainers 用例 1/1；OpenAPI contract 52/52；format、architecture、secret scan、Web TypeScript 与 Vite build 通过。
-- P7-B 仍未完成：首个平台管理员 bootstrap 与 Provider connection test/verified publish gate 仍为下一任务；本轮未启动 RAGForge Compose 或执行部署。
+- 当时 P7-B 仍未完成：首个平台管理员 bootstrap 与 Provider connection test/verified publish gate 是后续任务；本轮未启动 RAGForge Compose 或执行部署。Bootstrap 的后续完成状态见第 13 节。
+
+## 13. P7-CORE-01 平台首次设置闭环（2026-08-29）
+
+- 干净数据库现在可从登录页完成首个平台管理员初始化。入口只有在不存在 ACTIVE `PLATFORM_ADMIN` 且服务端显式配置 `RAGFORGE_BOOTSTRAP_ADMIN_TOKEN` 时可用；Token 最少 32 字符，通过专用 Header 提交，不进入浏览器存储、API 响应或审计 payload。
+- 初始化可创建新管理员，也可按精确邮箱提升既有 ACTIVE 用户并替换密码；停用用户拒绝提升。普通注册路径仍固定创建 `USER`，不存在“抢注首个账户自动提权”。
+- PostgreSQL transaction advisory lock 把检查与创建置于同一事务内；并发请求最多一个返回 `201`，完成后的请求固定返回冲突。审计事件 `platform.admin.bootstrapped.v1` 仅记录 `userId` 与 `mode`，无邮箱、密码或 Token。
+- 验证：`BootstrapAdminPropertiesTest` 3/3；完整 `ServerIntegrationTest` 12/12，其中覆盖无效 Token、一次性完成、既有 ACTIVE 用户提升/旧密码失效、停用用户拒绝、审计脱敏和双请求并发；Web TypeScript 与 Vite build 通过。本轮没有启动 RAGForge Compose、执行部署或创建 release。
+- 下一项仍为 `P7-CORE-02`：先收敛 Provider ownership/权限，再完成 connection test、verified capabilities 持久化与 Profile 发布闸门；P7-B 在此之前保持 `pending`。
