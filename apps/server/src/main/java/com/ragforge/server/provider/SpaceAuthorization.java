@@ -2,6 +2,7 @@ package com.ragforge.server.provider;
 
 import com.ragforge.server.common.ApiException;
 import com.ragforge.server.identity.SessionPrincipal;
+import com.ragforge.server.identity.UserAdminService;
 import com.ragforge.server.space.SpaceRepository;
 import com.ragforge.server.space.SpaceRole;
 import org.springframework.http.HttpStatus;
@@ -29,5 +30,18 @@ public class SpaceAuthorization {
             throw new ApiException(HttpStatus.FORBIDDEN, "space_editor_required", "Forbidden",
                     "Editor or space admin permission is required");
         }
+    }
+
+    public void requireAdmin(UUID spaceId, SessionPrincipal principal) {
+        SpaceRole role = requireMember(spaceId, principal);
+        if (role != SpaceRole.SPACE_ADMIN && !"PLATFORM_ADMIN".equals(principal.platformRole())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "space_admin_required", "Forbidden",
+                    "Space administrator permission is required");
+        }
+    }
+
+    public void requirePlatformAdmin(UUID spaceId, SessionPrincipal principal) {
+        requireMember(spaceId, principal);
+        UserAdminService.requirePlatformAdmin(principal);
     }
 }

@@ -31,7 +31,7 @@
 | 工作包 | 状态 | 主要产物 | 完成条件 | 依赖 |
 |---|---|---|---|---|
 | P7-A 审计与任务冻结 | completed | 本计划、checklist、风险/追溯更新 | 任务由代码事实驱动，历史声明不作为完成证据 | 无 |
-| P7-B 首次设置与协作 | pending | admin bootstrap、成员加入、connection test、verified publish | 干净数据库可通过 Web 完成平台初始化、空间协作和可用 Provider 配置 | P7-A |
+| P7-B 首次设置与协作 | completed | admin bootstrap、成员加入、connection test、verified publish | 干净数据库可通过 Web 完成平台初始化、空间协作和可核验 Provider 配置；完整 RAG 一键绑定仍受 P7-D 真实 RERANK 约束 | P7-A |
 | P7-C 来源、任务与索引维护 | pending | 来源库、Git source、多任务终态、重试/同步/归档、索引发布/回滚 | 增长中的知识库可持续维护，失败不需要 API/DB 修复 | P7-B |
 | P7-D 问答与上下文工具 | pending | streaming/cancel、citation 正文、历史 citation、新会话/反馈、Studio/Playground 上下文跳转、durable lexical、rerank adapter | 普通用户不手填内部标识即可完成可核验问答；运行时与配置语义一致 | P7-C |
 | P7-E 管理与 Web 自动化 | pending | Provider/Prompt 生命周期、Run/audit/cost/health 查询、Router/pagination、Web tests、contract-implementation gate、preflight | 关键 UI/API/失败/规模/权限路径可自动回归 | P7-B/P7-C/P7-D |
@@ -53,7 +53,15 @@
 - P7-CORE-01 已完成：登录页仅在“无 ACTIVE 平台管理员且服务端配置 bootstrap Token”时显示首次设置；Token 最少 32 字符，仅由请求 Header 提交，不持久化到浏览器、响应或审计。服务端可创建新管理员或提升既有 ACTIVE 用户，并替换其密码；停用用户拒绝提升。
 - 并发 bootstrap 由 PostgreSQL transaction advisory lock 串行化；首个成功事务提交后，其余请求返回 `409 bootstrap_already_completed`。普通注册仍固定为 `USER`，不采用“首个注册用户自动提权”。
 - Bootstrap properties 3/3、完整 `ServerIntegrationTest` 12/12（含密钥、一次性、ACTIVE 用户提升、停用用户拒绝、审计脱敏和并发）、Web typecheck/build 通过；最终静态与契约门禁见本次提交记录。
-- P7-B 工作包保持 `pending`，因为 Provider connection test 与 verified publish gate 尚未完成。部署验收继续暂停。
+- 当时 P7-B 工作包保持 `pending`，因为 Provider connection test 与 verified publish gate 尚未完成；后续完成状态见“Provider 验证增量”。部署验收继续暂停。
+
+## 2026-08-29 Provider 验证增量
+
+- P7-CORE-02 已完成：connection 保持 space-scoped；登记/实测仅限目标空间内的平台管理员，Profile/Route 仅限空间管理员或同空间平台管理员，Editor/Viewer 写入拒绝。
+- `V18__provider_connection_test_runs.sql` 保存 connection/model/purpose、成功/失败、verified capabilities、embedding dimension、错误分类、retryable、耗时、操作者和 correlation ID；不保存 Secret、credentialRef、Header、合成请求或 Provider 响应正文。
+- CHAT/EMBEDDING 通过 production adapter 发送固定合成样本。云端探测要求逐次 `allowCloudProbe=true`；探测前校验 URI、DNS/IP 与出境等级，LOCAL 不得访问公网，CLOUD 只允许 HTTPS 公网。RERANK adapter 不存在时明确记录 `UNSUPPORTED_CAPABILITY`。
+- Profile `PUBLISHED` 必须匹配同 connection/model/purpose 的最新测试且结果成功；声明能力必须是 verified 子集，embedding 维度必须一致。后续失败复测会立即阻断新发布，不能继续沿用更早的成功结果。
+- P7-B 标记完成，但这不代表完整本地 RAG 一键初始化完成：当前 RERANK runtime 仍是 `P7-CORE-05` 的阻塞项，页面不得把 CHAT 探测冒充 RERANK 验证。部署验收继续暂停。
 
 ## 证据规则
 

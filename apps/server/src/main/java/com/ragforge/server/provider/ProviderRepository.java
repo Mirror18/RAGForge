@@ -126,6 +126,48 @@ public class ProviderRepository {
     }
 
     @Transactional
+    public ProviderTestRun createTestRun(NewProviderTestRun input) {
+        jdbc.update("""
+                        INSERT INTO provider_connection_test_runs
+                            (id, space_id, provider_connection_id, model_name, purpose, outcome,
+                             verified_capabilities, embedding_dimension, error_class, retryable, duration_ms,
+                             tested_by, tested_at, correlation_id)
+                        VALUES (?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?)
+                        """, input.id(), input.spaceId(), input.providerConnectionId(), input.modelName(),
+                input.purpose().name(), input.outcome().name(), jsonOrEmptyArray(input.verifiedCapabilitiesJson()),
+                input.embeddingDimension(), input.errorClass(), input.retryable(), input.durationMs(), input.testedBy(),
+                timestamp(input.testedAt()), input.correlationId());
+        return findTestRun(input.spaceId(), input.id()).orElseThrow();
+    }
+
+    public Optional<ProviderTestRun> findLatestTest(UUID spaceId, UUID connectionId,
+                                                    String modelName, RoutePurpose purpose) {
+        List<ProviderTestRun> runs = jdbc.query("""
+                        SELECT id, space_id, provider_connection_id, model_name, purpose, outcome,
+                               verified_capabilities, embedding_dimension, error_class, retryable, duration_ms,
+                               tested_by, tested_at, correlation_id
+                        FROM provider_connection_test_runs
+                        WHERE space_id = ? AND provider_connection_id = ? AND model_name = ? AND purpose = ?
+                        ORDER BY tested_at DESC, id DESC
+                        LIMIT 1
+                        """, (rs, rowNum) -> mapTestRun(rs), spaceId, connectionId, modelName, purpose.name());
+        return runs.stream().findFirst();
+    }
+
+    private Optional<ProviderTestRun> findTestRun(UUID spaceId, UUID id) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                            SELECT id, space_id, provider_connection_id, model_name, purpose, outcome,
+                                   verified_capabilities, embedding_dimension, error_class, retryable, duration_ms,
+                                   tested_by, tested_at, correlation_id
+                            FROM provider_connection_test_runs WHERE id = ? AND space_id = ?
+                            """, (rs, rowNum) -> mapTestRun(rs), id, spaceId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    @Transactional
     public ModelRouteVersion createRouteVersion(NewModelRouteVersion input) {
         jdbc.update("""
                         INSERT INTO model_route_versions
@@ -264,6 +306,16 @@ public class ProviderRepository {
                 instant(rs, "updated_at"), rs.getObject("correlation_id", UUID.class));
     }
 
+    private ProviderTestRun mapTestRun(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new ProviderTestRun(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("provider_connection_id", UUID.class), rs.getString("model_name"),
+                RoutePurpose.valueOf(rs.getString("purpose")), TestOutcome.valueOf(rs.getString("outcome")),
+                rs.getString("verified_capabilities"), (Integer) rs.getObject("embedding_dimension"),
+                rs.getString("error_class"), rs.getBoolean("retryable"), rs.getLong("duration_ms"),
+                rs.getObject("tested_by", UUID.class), instant(rs, "tested_at"),
+                rs.getObject("correlation_id", UUID.class));
+    }
+
     private ModelRouteVersion mapRoute(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new ModelRouteVersion(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
                 rs.getString("route_key"), rs.getInt("version_no"), RoutePurpose.valueOf(rs.getString("purpose")),
@@ -319,6 +371,8 @@ public class ProviderRepository {
 
     public enum BindingStatus { ACTIVE, RETIRED }
 
+    public enum TestOutcome { SUCCEEDED, FAILED }
+
     public record NewProviderConnection(UUID id, UUID spaceId, String providerKey, String displayName,
                                         ProviderType providerType, String endpointUri, String credentialRef,
                                         String credentialHash, String authScheme, String nonSecretHeadersJson,
@@ -361,7 +415,19 @@ public class ProviderRepository {
                                     EgressPolicy egressPolicy, boolean allowCloudEgress,
                                     SelectionPolicy selectionPolicy, String compatibilityJson,
                                     ModelRouteStatus status, Instant createdAt, Instant updatedAt,
-                                    UUID correlationId) {
+                                     UUID correlationId) {
+    }
+
+    public record NewProviderTestRun(UUID id, UUID spaceId, UUID providerConnectionId, String modelName,
+                                     RoutePurpose purpose, TestOutcome outcome, String verifiedCapabilitiesJson,
+                                     Integer embeddingDimension, String errorClass, boolean retryable,
+                                     long durationMs, UUID testedBy, Instant testedAt, UUID correlationId) {
+    }
+
+    public record ProviderTestRun(UUID id, UUID spaceId, UUID providerConnectionId, String modelName,
+                                  RoutePurpose purpose, TestOutcome outcome, String verifiedCapabilitiesJson,
+                                  Integer embeddingDimension, String errorClass, boolean retryable,
+                                  long durationMs, UUID testedBy, Instant testedAt, UUID correlationId) {
     }
 
     public record NewRouteCandidate(UUID id, UUID spaceId, UUID routeVersionId, int candidateNo,

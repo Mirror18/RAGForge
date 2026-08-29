@@ -164,3 +164,11 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - PostgreSQL transaction advisory lock 把检查与创建置于同一事务内；并发请求最多一个返回 `201`，完成后的请求固定返回冲突。审计事件 `platform.admin.bootstrapped.v1` 仅记录 `userId` 与 `mode`，无邮箱、密码或 Token。
 - 验证：`BootstrapAdminPropertiesTest` 3/3；完整 `ServerIntegrationTest` 12/12，其中覆盖无效 Token、一次性完成、既有 ACTIVE 用户提升/旧密码失效、停用用户拒绝、审计脱敏和双请求并发；Web TypeScript 与 Vite build 通过。本轮没有启动 RAGForge Compose、执行部署或创建 release。
 - 下一项仍为 `P7-CORE-02`：先收敛 Provider ownership/权限，再完成 connection test、verified capabilities 持久化与 Profile 发布闸门；P7-B 在此之前保持 `pending`。
+
+## 14. P7-CORE-02 Provider 验证与发布闸门（2026-08-29）
+
+- Provider connection 继续使用现有 space-scoped 外键，未擅自启用 `space_id = NULL` 的全局共享语义。只有同时属于目标空间的平台管理员可登记和实测 connection；空间管理员负责 Profile/Route，Editor/Viewer 不再拥有 Provider 配置写权限。
+- `POST /provider-connections/{id}/test` 已有 Controller 与 Web 入口。CHAT/EMBEDDING 复用 production adapter 和固定合成样本；云端测试逐次确认。结果与审计在同一事务内持久化，只含 ID、用途、成功/失败、verified capabilities、embedding dimension、错误分类、retryable 和耗时。
+- Profile 发布以同 connection、model、purpose 的最新一次测试为准；失败复测、能力超报或 embedding 维度不一致均返回 422。没有 RERANK adapter 时返回 `UNSUPPORTED_CAPABILITY`，因此历史“一键本地 RAG”不能再靠声明值伪造 RERANK 可用，后续由 `P7-CORE-05` 闭环。
+- 安全复核：探测前重新校验 HTTP(S) URI 与 DNS/IP 分类；LOCAL 只允许本地/私网，CLOUD 只允许 HTTPS 公网，并且没有本次显式云确认时在发起网络请求前返回 403。仍需部署层 egress policy 抵御 DNS TOCTOU/rebinding，记录为 `R-053`。
+- 验证基线：Provider/Model/Binding 三组集成测试 14/14 通过，包含真实 loopback HTTP 合成探测、权限、缺失测试拒绝、失败复测阻断、恢复后发布、审计/存储脱敏与云端未确认拒绝；Java 21 test-compile、OpenAPI contract 52/52、Web TypeScript/Vite build 通过。本轮未部署、未启用任何空间云出境、未调用真实云 Provider。

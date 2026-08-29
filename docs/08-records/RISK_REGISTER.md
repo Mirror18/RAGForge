@@ -155,3 +155,9 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-043` 已关闭：实现默认关闭、显式 Secret 驱动的一次性平台管理员 bootstrap；普通注册不自动提权。Token 最少 32 字符、常量时间比对、限长，且不进入响应、审计或浏览器持久化；并发由 PostgreSQL transaction advisory lock 保证最多一次成功，完成后 fail-closed。
 - 新增残余风险 `R-052`：bootstrap Token 若在首次设置前泄露，攻击者仍可能抢先取得平台管理员身份。P=2、I=5、Score=10，IAM / Operations，MITIGATING；仅通过受控 Secret 注入，首次设置后立即从运行环境移除并重启/滚动配置，限制入口网络暴露，监控 `platform.admin.bootstrapped.v1`，发现异常按账号与 Secret 轮换流程处置。生产首次设置仍需人工核对操作者与目标邮箱。
 - `R-044` 继续 OPEN：平台管理员已可初始化，但 Provider connection 的 ownership、受限探测、verified capabilities 与发布闸门尚未闭环，因此 P7-B 和部署验收继续暂停。
+
+## 15. P7-CORE-02 Provider 风险处置（2026-08-29）
+
+- `R-044` 已关闭：connection 登记/实测收敛到同空间平台管理员，Profile/Route 写入收敛到空间管理员；真实 CHAT/EMBEDDING 合成探测、脱敏结果持久化、最新结果优先和 Profile verified publish gate 已实现。RERANK 未接 adapter 时 fail-closed，不再允许声明能力直接发布。
+- 新增 `R-053`：应用层在 Provider 探测前执行 DNS/IP 分类，但解析校验与 Java HTTP client 建连之间仍存在 DNS TOCTOU/rebinding 窗口。P=2、I=5、Score=10，Security / Network，MITIGATING；生产部署必须叠加 egress network policy、阻止 metadata/控制面地址并记录目标网络，后续评估固定解析结果的连接策略。当前代码已阻止云探测访问非公网地址、本地探测访问公网地址，且云探测逐次确认。
+- `R-023` 继续 OPEN：Provider 发布闸门不会把当前 lexical reranker 变成真实 RERANK adapter；完整本地 RAG 初始化仍由 P7-CORE-05 阻塞。部署验收继续暂停。

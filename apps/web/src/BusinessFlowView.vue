@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { ApiError, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listIndexes, listIngestionJobs, publishIndex, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "./api";
-import { initializeLocalRag, initializeMimoRag } from "./ragSetup";
 
 const props = defineProps<{
   selectedSpaceId: string;
@@ -38,7 +37,6 @@ const parseReport = ref<ParseReportView | null>(null);
 const publishBusy = ref("");
 const webUrl = ref("");
 const webEgressApproved = ref(false);
-const setupBusy = ref<"MIMO" | "LOCAL" | null>(null);
 
 const selectedRoute = computed(() => modelRoutes.value.find((item) => item.modelRouteId === selectedRouteId.value) ?? null);
 const selectedProfile = computed(() => modelProfiles.value.find((item) => item.modelProfileId === selectedProfileId.value) ?? null);
@@ -60,23 +58,6 @@ const hasIndexIdentity = computed(() => Boolean(activeIndex.value?.pointer.activ
 const canStart = computed(() => Boolean(props.selectedSpaceId && hasPublishedModel.value && hasPublishedPrompt.value && hasIndexIdentity.value));
 const canManage = computed(() => props.currentRole === "SPACE_ADMIN" || props.currentRole === "PLATFORM_ADMIN");
 const needsRuntimeSetup = computed(() => Boolean(props.selectedSpaceId && (!hasPublishedModel.value || !hasPublishedPrompt.value)));
-
-async function initializeRuntime(kind: "MIMO" | "LOCAL"): Promise<void> {
-  if (!props.selectedSpaceId || !canManage.value) return;
-  setupBusy.value = kind; error.value = ""; notice.value = "";
-  try {
-    if (kind === "MIMO") await initializeMimoRag(props.selectedSpaceId, props.currentUserId);
-    else await initializeLocalRag(props.selectedSpaceId);
-    notice.value = kind === "MIMO"
-      ? "MiMo Chat 已接入，当前空间获得 24 小时显式云端授权；Embedding/Rerank 继续使用本地 Ollama。"
-      : "本地 Ollama RAG 已准备完成，云端出境保持关闭。";
-    await loadFlow();
-  } catch (value) {
-    error.value = value instanceof ApiError ? (value.problem?.detail ?? value.message) : "运行配置初始化失败，请检查服务端和模型环境。";
-  } finally {
-    setupBusy.value = null;
-  }
-}
 
 function apiPath(suffix: string): string {
   return `/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}${suffix}`;
@@ -351,9 +332,9 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
     <div class="section-heading"><div><p class="eyebrow">00 · Guided business flow</p><h2 id="business-flow-heading">业务闭环</h2><p>按真实服务端状态完成配置，再进入问答。这里不接受手填不存在的资源，也不会把前端选中状态当成权限依据。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "可进入问答" : "尚有步骤未完成" }}</div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
     <section v-if="needsRuntimeSetup" class="card setup-card" aria-labelledby="setup-heading">
-      <div><span class="card-label">先准备一次运行环境</span><h3 id="setup-heading">还没有可用的问答模型</h3><p class="muted">新空间默认没有 Provider、模型路由和 Prompt。选择一个方案后，系统会自动创建必要配置并回到当前页面；你不需要手工填写一组 ID。</p></div>
-      <div class="setup-actions"><button type="button" :disabled="!canManage || setupBusy !== null" @click="initializeRuntime('MIMO')">{{ setupBusy === "MIMO" ? "接入 MiMo 中…" : "使用 MiMo 云端 Chat" }}</button><button type="button" class="secondary-button" :disabled="!canManage || setupBusy !== null" @click="initializeRuntime('LOCAL')">{{ setupBusy === "LOCAL" ? "准备 Ollama 中…" : "使用本地 Ollama" }}</button></div>
-      <small v-if="!canManage" class="permission-hint">当前角色没有初始化配置的权限，请让空间管理员完成一次初始化。</small>
+      <div><span class="card-label">先验证运行环境</span><h3 id="setup-heading">还没有可用的问答模型</h3><p class="muted">先在配置中心登记并实测 Provider，再发布与实测结果匹配的模型配置。完整 RAG 还需要 P7-CORE-05 接入真实 Rerank；页面不会创建未经验证的伪闭环。</p></div>
+      <div class="setup-actions"><button type="button" :disabled="!canManage" @click="emit('open-control', 'providers')">前往 Provider 验证</button></div>
+      <small v-if="!canManage" class="permission-hint">当前角色没有配置权限，请让空间管理员完成模型配置。</small>
     </section>
     <div class="flow-steps"><article class="card flow-step done"><span class="step-number">01</span><div><strong>空间</strong><p>{{ selectedSpaceId ? `当前空间 ${selectedSpaceId}` : "请选择空间" }}</p></div><span class="step-state">{{ selectedSpaceId ? "完成" : "待完成" }}</span></article><article class="card flow-step" :class="{ done: hasPublishedModel }"><span class="step-number">02</span><div><strong>模型路由</strong><p>{{ hasPublishedModel ? `${selectedProvider?.providerType} · ${selectedProfile?.purpose}` : "需要 ACTIVE route、PUBLISHED profile 和 ACTIVE provider" }}</p></div><span class="step-state">{{ hasPublishedModel ? "完成" : "去配置" }}</span></article><article class="card flow-step" :class="{ done: hasPublishedPrompt }"><span class="step-number">03</span><div><strong>Prompt 版本</strong><p>{{ hasPublishedPrompt ? `已发布 v${promptVersion?.version}` : "需要已发布的 Prompt version" }}</p></div><span class="step-state">{{ hasPublishedPrompt ? "完成" : "去配置" }}</span></article><article class="card flow-step" :class="{ done: hasIndexIdentity }"><span class="step-number">04</span><div><strong>数据与索引</strong><p>{{ hasIndexIdentity ? `active index v${activeIndex?.index?.versionNo ?? "?"}` : "上传 Markdown 并等待 Worker 发布 active index" }}</p></div><span class="step-state">{{ hasIndexIdentity ? "完成" : "待完成" }}</span></article><article class="card flow-step" :class="{ done: canStart }"><span class="step-number">05</span><div><strong>带引用问答</strong><p>{{ canStart ? "运行配置已准备好，可开始回答" : "完成前置步骤后解锁" }}</p></div><span class="step-state">{{ canStart ? "已解锁" : "锁定" }}</span></article></div>
 

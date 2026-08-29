@@ -21,6 +21,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.util.Map;
 import java.util.UUID;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -87,6 +91,7 @@ class ProviderConnectionApiIntegrationTest {
     @Test
     void adminCreatesLocalConnectionAndResponseContainsNoCredentialMaterial() throws Exception {
         register("provider-admin@example.test", "correct horse battery", "Provider Admin");
+        promoteToPlatformAdmin("provider-admin@example.test");
         Login admin = login("provider-admin@example.test", "correct horse battery");
         UUID spaceId = createSpace(admin, "Provider Space");
 
@@ -143,10 +148,19 @@ class ProviderConnectionApiIntegrationTest {
     }
 
     @Test
-    void viewerCannotCreateProviderConnection() throws Exception {
+    void regularSpaceAdminAndViewerCannotCreateProviderConnection() throws Exception {
         register("viewer-admin@example.test", "correct horse battery", "Admin");
         Login admin = login("viewer-admin@example.test", "correct horse battery");
         UUID spaceId = createSpace(admin, "Viewer Space");
+
+        mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections", spaceId)
+                        .cookie(admin.cookie)
+                        .header("X-CSRF-Token", admin.csrfToken)
+                        .header("Idempotency-Key", "provider-create-space-admin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(providerRequest("Space admin attempt")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PLATFORM_ADMIN_REQUIRED"));
 
         register("provider-viewer@example.test", "correct horse battery", "Viewer");
         Login viewer = login("provider-viewer@example.test", "correct horse battery");
@@ -168,12 +182,13 @@ class ProviderConnectionApiIntegrationTest {
                         .content(providerRequest("Viewer attempt")))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value("SPACE_EDITOR_REQUIRED"));
+                .andExpect(jsonPath("$.code").value("PLATFORM_ADMIN_REQUIRED"));
     }
 
     @Test
     void connectionFromAnotherSpaceIsNotFoundAndDoesNotLeakThroughList() throws Exception {
         register("space-a-admin@example.test", "correct horse battery", "Space A Admin");
+        promoteToPlatformAdmin("space-a-admin@example.test");
         Login adminA = login("space-a-admin@example.test", "correct horse battery");
         UUID spaceA = createSpace(adminA, "Space A");
         MvcResult created = mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections", spaceA)
@@ -200,6 +215,163 @@ class ProviderConnectionApiIntegrationTest {
         mvc.perform(get("/api/v1/spaces/{spaceId}/provider-connections", spaceB).cookie(adminB.cookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isEmpty());
+    }
+
+    @Test
+    void successfulSyntheticProbePersistsRedactedCapabilitiesAndUnlocksPublishedProfile() throws Exception {
+        AtomicReference<String> receivedBody = new AtomicReference<>();
+        AtomicBoolean failProbe = new AtomicBoolean(false);
+        var server = com.sun.net.httpserver.HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/api/chat", exchange -> {
+            receivedBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            if (failProbe.get()) {
+                exchange.sendResponseHeaders(503, -1);
+                exchange.close();
+                return;
+            }
+            byte[] response = "{\"model\":\"probe-model\",\"message\":{\"content\":\"OK\"},\"done_reason\":\"stop\",\"prompt_eval_count\":2,\"eval_count\":1}"
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+        try {
+            register("probe-admin@example.test", "correct horse battery", "Probe Admin");
+            promoteToPlatformAdmin("probe-admin@example.test");
+            Login admin = login("probe-admin@example.test", "correct horse battery");
+            UUID spaceId = createSpace(admin, "Probe Space");
+            MvcResult created = mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections", spaceId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "probe-provider")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of(
+                                    "displayName", "Probe Ollama", "providerType", "OLLAMA",
+                                    "egressClass", "LOCAL",
+                                    "endpoint", "http://127.0.0.1:" + server.getAddress().getPort(),
+                                    "credentialRef", "local:no-auth", "status", "ACTIVE"))))
+                    .andExpect(status().isCreated()).andReturn();
+            UUID connectionId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
+                    .get("providerConnectionId").asText());
+
+            String profile = objectMapper.writeValueAsString(Map.of(
+                    "providerConnectionId", connectionId, "purpose", "CHAT", "modelName", "probe-model",
+                    "capabilities", java.util.List.of("CHAT", "USAGE_REPORTING"), "contextWindow", 8192,
+                    "maxOutputTokens", 128, "usageReporting", "PROVIDER_REPORTED", "status", "PUBLISHED"));
+            mvc.perform(post("/api/v1/spaces/{spaceId}/model-profiles", spaceId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "probe-profile-before-test")
+                            .contentType(MediaType.APPLICATION_JSON).content(profile))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+
+            mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections/{connectionId}/test",
+                            spaceId, connectionId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "probe-provider-test")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"modelName\":\"probe-model\",\"purpose\":\"CHAT\",\"timeoutSeconds\":5,\"allowCloudProbe\":false}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.outcome").value("SUCCEEDED"))
+                    .andExpect(jsonPath("$.verifiedCapabilities[0]").value("CHAT"))
+                    .andExpect(jsonPath("$.verifiedCapabilities[1]").value("USAGE_REPORTING"))
+                    .andExpect(jsonPath("$.errorClass").value(org.hamcrest.Matchers.nullValue()));
+
+            failProbe.set(true);
+            mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections/{connectionId}/test",
+                            spaceId, connectionId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "probe-provider-test-failed")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"modelName\":\"probe-model\",\"purpose\":\"CHAT\",\"timeoutSeconds\":5,\"allowCloudProbe\":false}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.outcome").value("FAILED"))
+                    .andExpect(jsonPath("$.errorClass").value("UNAVAILABLE"));
+            mvc.perform(post("/api/v1/spaces/{spaceId}/model-profiles", spaceId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "probe-profile-after-failed-retest")
+                            .contentType(MediaType.APPLICATION_JSON).content(profile))
+                    .andExpect(status().isUnprocessableEntity());
+
+            failProbe.set(false);
+            mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections/{connectionId}/test",
+                            spaceId, connectionId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "probe-provider-test-recovered")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"modelName\":\"probe-model\",\"purpose\":\"CHAT\",\"timeoutSeconds\":5,\"allowCloudProbe\":false}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.outcome").value("SUCCEEDED"));
+
+            mvc.perform(post("/api/v1/spaces/{spaceId}/model-profiles", spaceId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "probe-profile-after-test")
+                            .contentType(MediaType.APPLICATION_JSON).content(profile))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.status").value("PUBLISHED"))
+                    .andExpect(jsonPath("$.verifiedCapabilities[0]").value("CHAT"));
+
+            assertThat(receivedBody.get()).contains("Reply with OK.").doesNotContain("example.test");
+            String stored = jdbc.queryForObject("""
+                    SELECT verified_capabilities::text FROM provider_connection_test_runs
+                    WHERE outcome = 'SUCCEEDED' ORDER BY tested_at DESC LIMIT 1
+                    """,
+                    String.class);
+            assertThat(stored).contains("CHAT", "USAGE_REPORTING").doesNotContain("OK", "probe-provider-test");
+
+            MvcResult cloudCreated = mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections", spaceId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "cloud-probe-provider")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of(
+                                    "displayName", "Cloud Probe", "providerType", "OPENAI_COMPATIBLE",
+                                    "egressClass", "CLOUD", "endpoint", "https://provider.invalid",
+                                    "credentialRef", "vault:cloud-probe", "status", "ACTIVE"))))
+                    .andExpect(status().isCreated()).andReturn();
+            UUID cloudConnectionId = UUID.fromString(objectMapper.readTree(
+                    cloudCreated.getResponse().getContentAsString()).get("providerConnectionId").asText());
+            mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections/{connectionId}/test",
+                            spaceId, cloudConnectionId)
+                            .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                            .header("Idempotency-Key", "cloud-probe-without-approval")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"modelName\":\"cloud-model\",\"purpose\":\"CHAT\",\"timeoutSeconds\":5,\"allowCloudProbe\":false}"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("CLOUD_PROBE_APPROVAL_REQUIRED"));
+            assertThat(jdbc.queryForObject("""
+                    SELECT COUNT(*) FROM provider_connection_test_runs WHERE provider_connection_id = ?
+                    """, Integer.class, cloudConnectionId)).isZero();
+
+            Map<String, String> unsafeLocalEndpoints = Map.of(
+                    "public", "http://1.1.1.1",
+                    "metadata", "http://169.254.169.254");
+            for (Map.Entry<String, String> unsafeEndpoint : unsafeLocalEndpoints.entrySet()) {
+                MvcResult unsafeLocalCreated = mvc.perform(post(
+                                "/api/v1/spaces/{spaceId}/provider-connections", spaceId)
+                                .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                                .header("Idempotency-Key", "unsafe-local-provider-" + unsafeEndpoint.getKey())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(Map.of(
+                                        "displayName", "Unsafe Local", "providerType", "OLLAMA",
+                                        "egressClass", "LOCAL", "endpoint", unsafeEndpoint.getValue(),
+                                        "credentialRef", "local:no-auth", "status", "ACTIVE"))))
+                        .andExpect(status().isCreated()).andReturn();
+                UUID unsafeLocalId = UUID.fromString(objectMapper.readTree(
+                        unsafeLocalCreated.getResponse().getContentAsString()).get("providerConnectionId").asText());
+                mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections/{connectionId}/test",
+                                spaceId, unsafeLocalId)
+                                .cookie(admin.cookie).header("X-CSRF-Token", admin.csrfToken)
+                                .header("Idempotency-Key", "unsafe-local-probe-" + unsafeEndpoint.getKey())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"modelName\":\"unsafe\",\"purpose\":\"CHAT\",\"timeoutSeconds\":5,\"allowCloudProbe\":false}"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.outcome").value("FAILED"))
+                        .andExpect(jsonPath("$.errorClass").value("SPACE_EGRESS_DENIED"));
+            }
+        } finally {
+            server.stop(0);
+        }
     }
 
     private String providerRequest(String displayName) throws Exception {
@@ -248,6 +420,10 @@ class ProviderConnectionApiIntegrationTest {
 
     private UUID userId(String email) {
         return jdbc.queryForObject("SELECT id FROM users WHERE email = ?", UUID.class, email);
+    }
+
+    private void promoteToPlatformAdmin(String email) {
+        jdbc.update("UPDATE users SET platform_role = 'PLATFORM_ADMIN' WHERE email = ?", email);
     }
 
     private record Login(Cookie cookie, String csrfToken, UUID userId) {

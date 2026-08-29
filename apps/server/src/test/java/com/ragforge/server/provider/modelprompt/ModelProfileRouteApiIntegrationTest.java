@@ -86,6 +86,7 @@ class ModelProfileRouteApiIntegrationTest {
     @Test
     void profileRouteListAndEgressGateAreSpaceScoped() throws Exception {
         register("model-admin@example.test", "correct horse battery", "Model Admin");
+        promoteToPlatformAdmin("model-admin@example.test");
         Login admin = login("model-admin@example.test", "correct horse battery");
         UUID spaceA = createSpace(admin, "Model Space A");
         UUID localConnection = createConnection(admin, spaceA, "LOCAL", "model-local");
@@ -167,6 +168,7 @@ class ModelProfileRouteApiIntegrationTest {
     @Test
     void viewerCannotWriteAndCrossSpaceProfileIsNotFound() throws Exception {
         register("model-owner@example.test", "correct horse battery", "Owner");
+        promoteToPlatformAdmin("model-owner@example.test");
         Login owner = login("model-owner@example.test", "correct horse battery");
         UUID spaceA = createSpace(owner, "Owner Space");
         UUID connection = createConnection(owner, spaceA, "LOCAL", "space-a-connection");
@@ -190,7 +192,7 @@ class ModelProfileRouteApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(profileRequest(connection, "viewer-attempt")))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("SPACE_EDITOR_REQUIRED"));
+                .andExpect(jsonPath("$.code").value("SPACE_ADMIN_REQUIRED"));
 
         register("model-other@example.test", "correct horse battery", "Other");
         Login other = login("model-other@example.test", "correct horse battery");
@@ -234,6 +236,15 @@ class ModelProfileRouteApiIntegrationTest {
 
     private UUID createProfile(Login login, UUID spaceId, UUID connectionId, String status, String key)
             throws Exception {
+        if ("PUBLISHED".equals(status)) {
+            jdbc.update("""
+                    INSERT INTO provider_connection_test_runs
+                        (id, space_id, provider_connection_id, model_name, purpose, outcome,
+                         verified_capabilities, error_class, retryable, duration_ms, tested_by, tested_at,
+                         correlation_id)
+                    VALUES (?, ?, ?, ?, 'CHAT', 'SUCCEEDED', '["CHAT"]'::jsonb, NULL, FALSE, 1, ?, NOW(), ?)
+                    """, UUID.randomUUID(), spaceId, connectionId, key, login.userId, UUID.randomUUID());
+        }
         MvcResult result = mvc.perform(post("/api/v1/spaces/{spaceId}/model-profiles", spaceId)
                         .cookie(login.cookie)
                         .header("X-CSRF-Token", login.csrfToken)
@@ -255,7 +266,7 @@ class ModelProfileRouteApiIntegrationTest {
                 "providerConnectionId", connectionId,
                 "purpose", "CHAT",
                 "modelName", modelName,
-                "capabilities", List.of("CHAT", "STREAMING"),
+                "capabilities", List.of("CHAT"),
                 "contextWindow", 8192,
                 "maxOutputTokens", 1024,
                 "usageReporting", "LOCAL_ESTIMATE",
@@ -299,6 +310,10 @@ class ModelProfileRouteApiIntegrationTest {
 
     private UUID userId(String email) {
         return jdbc.queryForObject("SELECT id FROM users WHERE email = ?", UUID.class, email);
+    }
+
+    private void promoteToPlatformAdmin(String email) {
+        jdbc.update("UPDATE users SET platform_role = 'PLATFORM_ADMIN' WHERE email = ?", email);
     }
 
     private record Login(Cookie cookie, String csrfToken, UUID userId) {

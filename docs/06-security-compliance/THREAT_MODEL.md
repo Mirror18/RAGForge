@@ -31,6 +31,7 @@ flowchart LR
 | 跨空间越权 | 修改 space/document ID | server RBAC + repository/Qdrant filter + deny default | 角色/ID 矩阵 |
 | Prompt injection | 文档命令模型泄密或调用工具 | 指令/数据隔离、tool policy、Evidence 限制、输出校验 | 恶意 fixture |
 | SSRF | Web URL/redirect 指向内网 metadata | allowlist、DNS/IP/redirect 再校验、egress network policy | rebinding/redirect tests |
+| Provider 探测 SSRF | 管理员登记恶意 endpoint，借连接测试访问 metadata/内网或把本地探测发往公网 | 平台管理员权限、逐次云确认、HTTP(S) 结构校验、每次探测 DNS/IP 分类、LOCAL 仅内网、CLOUD 仅 HTTPS 公网、响应不持久化 | loopback synthetic probe、云端未确认拒绝、地址分类回归 |
 | 恶意上传 | parser RCE/zip bomb/path traversal | quarantine、AV、sandbox、limits、safe extraction | fuzz/malicious corpus |
 | Citation forgery | 模型生成不存在来源 | server-side citation ID validation | unknown ID tests |
 | 未授权出境 | fallback 把内容发云端 | per-space opt-in、route compatibility、deny audit | provider spy tests |

@@ -57,4 +57,14 @@ public class ProviderConnectionController {
             @AuthenticationPrincipal SessionPrincipal principal) {
         return service.get(spaceId, providerConnectionId, principal);
     }
+
+    @PostMapping("/{providerConnectionId}/test")
+    public ProviderConnectionService.ProviderConnectionTestView test(
+            @PathVariable UUID spaceId,
+            @PathVariable UUID providerConnectionId,
+            @Valid @RequestBody ProviderConnectionService.ProviderConnectionTestRequest request,
+            @AuthenticationPrincipal SessionPrincipal principal,
+            HttpServletRequest servletRequest) {
+        return service.test(spaceId, providerConnectionId, request, principal, servletRequest);
+    }
 }

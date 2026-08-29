@@ -49,11 +49,32 @@ public class ModelProfileRouteService {
     @Transactional
     public ModelProfileView createProfile(UUID spaceId, ModelProfileRequest request,
                                           SessionPrincipal principal, HttpServletRequest servletRequest) {
-        authorization.requireWrite(spaceId, principal);
+        authorization.requireAdmin(spaceId, principal);
         ProviderRepository.RoutePurpose purpose = purpose(request.purpose());
         ProviderRepository.ModelProfileStatus status = profileStatus(request.status());
         if (providers.findConnectionInSpace(spaceId, request.providerConnectionId()).isEmpty()) {
             throw notFound("model_profile_not_found", "Provider connection not found in the requested space");
+        }
+
+        List<String> declaredCapabilities = normalizedCapabilities(request.capabilities());
+        String verifiedCapabilities = "[]";
+        if (status == ProviderRepository.ModelProfileStatus.PUBLISHED) {
+            ProviderRepository.ProviderTestRun test = providers.findLatestTest(spaceId,
+                            request.providerConnectionId(), request.modelName().trim(), purpose)
+                    .orElseThrow(() -> invalid("status",
+                            "A matching successful provider test is required before publishing"));
+            if (test.outcome() != ProviderRepository.TestOutcome.SUCCEEDED) {
+                throw invalid("status", "The latest matching provider test did not succeed");
+            }
+            List<String> verified = strings(test.verifiedCapabilitiesJson());
+            if (!verified.containsAll(declaredCapabilities) || !verified.contains(purpose.name())) {
+                throw invalid("capabilities", "Declared capabilities exceed the latest verified provider test");
+            }
+            if (purpose == ProviderRepository.RoutePurpose.EMBEDDING
+                    && !java.util.Objects.equals(request.embeddingDimension(), test.embeddingDimension())) {
+                throw invalid("embeddingDimension", "Embedding dimension must match the verified provider test");
+            }
+            verifiedCapabilities = test.verifiedCapabilitiesJson();
         }
 
         UUID id = UuidV7.random();
@@ -62,9 +83,9 @@ public class ModelProfileRouteService {
         ProviderRepository.ModelProfileVersion profile = providers.createProfileVersion(
                 new ProviderRepository.NewModelProfileVersion(
                         id, spaceId, request.providerConnectionId(), profileKey, 1, request.modelName().trim(),
-                        json(request.capabilities()), json(Map.of(
+                        json(declaredCapabilities), json(Map.of(
                         "purpose", purpose.name(), "usageReporting", usageReporting(request.usageReporting()).name())),
-                        "{}", request.contextWindow(), request.maxOutputTokens(), request.embeddingDimension(), null,
+                        verifiedCapabilities, request.contextWindow(), request.maxOutputTokens(), request.embeddingDimension(), null,
                         "{}", null, "{}", status, now, correlationId(servletRequest)));
         return toProfileView(profile);
     }
@@ -88,7 +109,7 @@ public class ModelProfileRouteService {
     @Transactional
     public ModelRouteView createRoute(UUID spaceId, ModelRouteRequest request,
                                       SessionPrincipal principal, HttpServletRequest servletRequest) {
-        authorization.requireWrite(spaceId, principal);
+        authorization.requireAdmin(spaceId, principal);
         ProviderRepository.RoutePurpose purpose = purpose(request.purpose());
         ProviderRepository.EgressPolicy egressPolicy = egressPolicy(request.egressClass());
         ProviderRepository.SelectionPolicy selectionPolicy = selectionPolicy(request.failoverPolicy());
@@ -174,6 +195,7 @@ public class ModelProfileRouteService {
         String usageReporting = text(metadata, "usageReporting", "LOCAL_ESTIMATE");
         return new ModelProfileView(profile.id(), profile.spaceId(), profile.versionNo(),
                 profile.providerConnectionId(), purpose, profile.modelName(), strings(profile.capabilitiesJson()),
+                strings(profile.verifiedCapabilitiesJson()),
                 profile.contextWindow(), profile.maxOutputTokens(), profile.embeddingDimension(), usageReporting,
                 profile.status() == ProviderRepository.ModelProfileStatus.RETIRED ? "DISABLED" : profile.status().name(),
                 profile.createdAt(), profile.updatedAt());
@@ -296,6 +318,17 @@ public class ModelProfileRouteService {
         }
     }
 
+    private static List<String> normalizedCapabilities(List<String> capabilities) {
+        Set<String> allowed = Set.of("CHAT", "EMBEDDING", "RERANK", "STREAMING", "TOOLS", "JSON_SCHEMA",
+                "VISION", "USAGE_REPORTING", "CUSTOM_HEADERS");
+        List<String> normalized = capabilities.stream()
+                .map(value -> value.trim().toUpperCase(Locale.ROOT)).distinct().toList();
+        if (normalized.stream().anyMatch(value -> !allowed.contains(value))) {
+            throw invalid("capabilities", "Capabilities contain an unsupported value");
+        }
+        return normalized;
+    }
+
     private String json(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -338,7 +371,8 @@ public class ModelProfileRouteService {
     }
 
     public record ModelProfileView(UUID modelProfileId, UUID spaceId, int version, UUID providerConnectionId,
-                                   String purpose, String modelName, List<String> capabilities, Integer contextWindow,
+                                   String purpose, String modelName, List<String> capabilities,
+                                   List<String> verifiedCapabilities, Integer contextWindow,
                                    Integer maxOutputTokens, Integer embeddingDimension, String usageReporting, String status,
                                    Instant createdAt, Instant updatedAt) {
     }

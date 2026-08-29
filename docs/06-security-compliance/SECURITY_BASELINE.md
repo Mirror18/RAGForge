@@ -22,6 +22,7 @@
 
 - TLS 终止和内部链路策略在部署阶段明确；生产凭据不得明文穿越不可信网络。
 - Provider/API/数据源凭据使用 envelope encryption 或外部 secret store，主密钥不进 DB。
+- Provider connection 登记和实测仅平台管理员可执行；测试只使用固定合成样本。云端探测逐次显式确认并限制为 HTTPS 公网地址，本地探测限制为本地/私网地址；DNS、地址类别和出境等级在每次探测前重新校验，结果不保存请求/响应正文、Header 或 credential reference。
 - 对象 key 使用不可猜 ID，不使用用户文件名作为授权依据。
 - 日志、Trace、错误和审计对 prompt/document/headers 脱敏和限长。
 - 数据分类决定云端 route、保留、导出和删除策略。

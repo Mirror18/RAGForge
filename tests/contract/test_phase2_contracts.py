@@ -350,7 +350,7 @@ class Phase2OpenApiContractTest(unittest.TestCase):
     }
 
     def _provider_connection(self) -> dict[str, Any]:
-        return {"providerConnectionId": self.ids["invocation"], "spaceId": self.ids["space"], "version": 1, "providerType": "OLLAMA", "egressClass": "LOCAL", "endpoint": "http://ollama:11434", "credentialRef": "local-ollama", "status": "ACTIVE", "createdAt": "2026-08-13T00:00:00Z", "updatedAt": "2026-08-13T00:00:00Z"}
+        return {"providerConnectionId": self.ids["invocation"], "spaceId": self.ids["space"], "version": 1, "providerType": "OLLAMA", "egressClass": "LOCAL", "endpoint": "http://ollama:11434", "status": "ACTIVE", "createdAt": "2026-08-13T00:00:00Z", "updatedAt": "2026-08-13T00:00:00Z"}
 
     def _base_event(self, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
         return {"eventId": self.ids["event"], "eventType": event_type, "occurredAt": "2026-08-13T00:00:00Z", "producer": "ragforge-server", "correlationId": self.ids["correlation"], "causationId": self.ids["causation"], "spaceId": self.ids["space"], "aggregateId": self.ids["run"], "payload": payload}

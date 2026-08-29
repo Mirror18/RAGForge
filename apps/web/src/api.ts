@@ -117,6 +117,7 @@ export interface ModelProfile {
   purpose: "CHAT" | "EMBEDDING" | "RERANK";
   modelName: string;
   capabilities: string[];
+  verifiedCapabilities: string[];
   contextWindow: number;
   maxOutputTokens: number;
   embeddingDimension: number | null;
@@ -124,6 +125,20 @@ export interface ModelProfile {
   status: "DRAFT" | "PUBLISHED" | "DISABLED";
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProviderConnectionTestResult {
+  testRunId: string;
+  providerConnectionId: string;
+  modelName: string;
+  purpose: "CHAT" | "EMBEDDING" | "RERANK";
+  outcome: "SUCCEEDED" | "FAILED";
+  verifiedCapabilities: string[];
+  embeddingDimension: number | null;
+  errorClass: string | null;
+  retryable: boolean;
+  durationMs: number;
+  testedAt: string;
 }
 
 export interface ModelRoute {

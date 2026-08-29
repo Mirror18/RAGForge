@@ -4,6 +4,8 @@
 
 `ProviderConnection` 只描述连接和鉴权；`ModelProfileVersion` 描述一个可调用模型及能力；`ModelRouteVersion` 描述同一用途的候选顺序和兼容约束。三者分开可以避免修改 endpoint 时篡改历史调用证据。
 
+当前实现保持 connection 与 Profile 同属一个 `space_id`：平台管理员必须同时是目标空间成员，才能登记或实测 connection；空间管理员选择经过实测的 connection 创建 Profile/Route；Editor/Viewer 只读。若未来改为全局 connection + 空间分配，必须先用 ADR 定义分配关系、外键、凭据可见性和迁移策略，不能把 `space_id = NULL` 当作隐式共享。
+
 ## 2. 能力协议
 
 标准能力：
@@ -42,6 +44,8 @@
 6. timeout、取消和错误映射。
 
 测试输入使用无敏感固定样本；响应限长并脱敏存档。
+
+实现约束：CHAT/EMBEDDING 测试复用 production adapter；云端测试要求本次请求显式确认，只发送固定合成文本。请求前重新解析 endpoint，LOCAL 只能访问本地/私网地址，CLOUD 只能通过 HTTPS 访问公网地址；测试结果不保存请求/响应正文、Header 或 credential reference。Profile 发布读取同 connection、model、purpose 的最新测试；最新结果必须成功，声明能力必须是 verified capabilities 子集，embedding 维度必须精确一致。没有 RERANK adapter 时返回 `UNSUPPORTED_CAPABILITY`，不得用 CHAT 成功冒充 RERANK 验证。
 
 ## 5. Prompt 版本
 

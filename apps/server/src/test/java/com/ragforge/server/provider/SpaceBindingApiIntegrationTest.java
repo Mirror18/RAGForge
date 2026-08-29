@@ -261,6 +261,7 @@ class SpaceBindingApiIntegrationTest {
 
     private Fixture fixture(String label) throws Exception {
         Login admin = registerAndLogin(label + "-admin");
+        jdbc.update("UPDATE users SET platform_role = 'PLATFORM_ADMIN' WHERE id = ?", admin.userId());
         UUID spaceId = createSpace(admin, label + " space");
         UUID connectionId = createConnection(admin, spaceId, label);
         UUID chatProfile = createProfile(admin, spaceId, connectionId, "CHAT", label + " chat");
@@ -295,20 +296,33 @@ class SpaceBindingApiIntegrationTest {
 
     private UUID createProfile(Login login, UUID spaceId, UUID connectionId, String purpose, String label)
             throws Exception {
+        jdbc.update("""
+                INSERT INTO provider_connection_test_runs
+                    (id, space_id, provider_connection_id, model_name, purpose, outcome,
+                     verified_capabilities, embedding_dimension, error_class, retryable, duration_ms,
+                     tested_by, tested_at, correlation_id)
+                VALUES (?, ?, ?, ?, ?, 'SUCCEEDED', CAST(? AS jsonb), ?, NULL, FALSE, 1, ?, NOW(), ?)
+                """, UUID.randomUUID(), spaceId, connectionId, label, purpose,
+                objectMapper.writeValueAsString(List.of(purpose)), "EMBEDDING".equals(purpose) ? 3 : null,
+                login.userId(), UUID.randomUUID());
+        Map<String, Object> profileBody = new java.util.HashMap<>(Map.of(
+                "providerConnectionId", connectionId,
+                "purpose", purpose,
+                "modelName", label,
+                "capabilities", List.of(purpose),
+                "contextWindow", 8192,
+                "maxOutputTokens", 1024,
+                "usageReporting", "LOCAL_ESTIMATE",
+                "status", "PUBLISHED"));
+        if ("EMBEDDING".equals(purpose)) {
+            profileBody.put("embeddingDimension", 3);
+        }
         MvcResult result = mvc.perform(post("/api/v1/spaces/{spaceId}/model-profiles", spaceId)
                         .cookie(login.cookie())
                         .header("X-CSRF-Token", login.csrfToken())
                         .header("Idempotency-Key", label.replace(' ', '-') + "-profile")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "providerConnectionId", connectionId,
-                                "purpose", purpose,
-                                "modelName", label,
-                                "capabilities", List.of(purpose),
-                                "contextWindow", 8192,
-                                "maxOutputTokens", 1024,
-                                "usageReporting", "LOCAL_ESTIMATE",
-                                "status", "PUBLISHED"))))
+                        .content(objectMapper.writeValueAsString(profileBody)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return uuid(result, "modelProfileId");
