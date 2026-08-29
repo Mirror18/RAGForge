@@ -2,7 +2,7 @@
 
 RAGForge 是一个面向企业内部、单租户多用户场景的通用 RAG 知识助手学习型工程。仓库的首要目标不是快速堆出一个聊天页面，而是完整实践商业项目从产品定义、架构决策、研发、测试、安全、交付到运维复盘的全过程。
 
-当前阶段为 **Phase 6 Complete; Phase 7 Ready**：工程骨架、Provider/Prompt/Run、版本化摄取、索引检索、带引用问答、评估/安全/观测/恢复均已完成阶段验收；真实 Web 业务闭环证据见 [`business-loop-e2e.v1.json`](tests/evidence/business-loop-e2e.v1.json)。下一阶段为 Linux 交付与可公开准备。
+当前阶段为 **Phase 7 In Progress**：Phase 0–6 已完成阶段验收（Phase 6 含明确记录的人工评审豁免），Phase 7 已进入 Linux 交付与可公开准备。应用容器、首次使用业务流和知识导入/问答正确性修复已进入 `main`；干净 Ubuntu 部署、升级/回滚、发布级镜像与公共化门禁仍未完成，不能宣称可发布。阶段进度见 [`PHASE_7_CHECKLIST.md`](docs/03-delivery/PHASE_7_CHECKLIST.md)。
 
 当前可运行范围：本地环境可启动基础设施、Server、Worker 与 Web；用户可在浏览器注册测试账号、创建空间、发布本地 Ollama 配置和 Prompt、上传 Markdown、等待真实摄取/索引、执行带结构化引用的 LOCAL_ONLY 问答，并查看 Run/Step/usage。常用本地 notes 目录通过显式文件夹选择接入，个人内容不会自动读取。实际运行状态和验收证据以[项目状态](docs/08-records/PROJECT_STATUS.md)为准。
 

@@ -127,3 +127,10 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - 新增 `R-037`：本轮完成 API/构建/集成安全回归，但尚未替代真实浏览器对用户管理、空间归档和时区显示的视觉验收。P=2、I=3、Score=6，Product / Web，MITIGATING；已增加清晰入口、错误提示和浏览器时区显示，下一轮用真实测试账号执行 Web smoke。
 - `R-033` 继续保持 MITIGATING：MiMo 凭据只存在本地 ignored 配置，且曾在对话中暴露；使用后仍应轮换，生产必须使用 Secret 管理。
 - `R-004` 的云端出境边界未放宽：Chat 默认优先 MiMo 仅是前端选择策略，仍必须经过空间授权和 typed authorization context；Embedding/Rerank 保持本地，不允许静默 fallback。
+
+## 12. Phase 7 进入复审（2026-08-29）
+
+- 新增 `R-040`：Phase 7 应用镜像与本地业务修复已进入 `main`，但尚无当前头提交的远程 Linux CI、干净 Ubuntu 部署和完整 smoke 证据。P=3、I=5、Score=15，Operations / Delivery，OPEN；必须按 [`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) 固定环境、执行部署/健康/业务 smoke，并保存不可变证据后才能关闭。
+- 新增 `R-041`：Compose 基础依赖仍允许 tag 默认值，应用镜像仍使用 `:local`，非 root、只读文件系统、capability 收敛和资源限额尚未形成发布级证据。P=3、I=5、Score=15，Security / Compliance / Operations，OPEN；发布前固定 digest、生成目标镜像 SBOM/Grype 结果并验证运行时最小权限。
+- 新增 `R-042`：Phase 7 尚未证明从上一兼容版本升级并在定义窗口内回滚；Flyway 为向前迁移，应用回滚必须受 schema 兼容矩阵约束。P=3、I=5、Score=15，Operations / Data，OPEN；使用合成数据执行备份、升级、业务校验和兼容回滚演练，禁止对生产数据库试跑。
+- `R-005` 与 `R-012` 保持 `ACCEPTED`：本轮 retrieval/answer 相关性逻辑有变更，已增加 material-backed 与误拒回归测试，但这不自动撤销 Phase 6 的人工/red-team 豁免事实；Phase 7 发布候选形成后仍需按清单重新评估是否触发独立复核。

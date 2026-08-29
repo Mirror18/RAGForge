@@ -1,8 +1,9 @@
 # 项目状态
 
-- Updated: 2026-08-24
+- Updated: 2026-08-29
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
-- Current stage: Phase 6 评估、观测、安全与恢复已完成（`completed-with-explicit-waiver`）；Phase 5 已闭环，ADR-0010 已接受并采用方案 A typed authorization context，复用既有 provider connection，由 revision/artifact service 提供 material，用户授权本地 Ollama `LOCAL_ONLY` route 完成真实 RAG E2E
+- Current stage: Phase 7 Linux 交付与可公开准备进行中（`in-progress`）；Phase 6 已以 `completed-with-explicit-waiver` 闭环。Phase 7 已合入应用容器启动、首次使用入口、空间级 candidate index、长文 child chunk 拆分，以及 Linux 查询/证据 material 相关性修复；干净 Ubuntu 部署、升级/回滚、发布级镜像与公共化门禁尚未闭环。
+- 文档核对时的 Phase 7 功能基线：`f6b016840e946ea314cdaf4812c196dcea8ca491`；当时 `main` 比 `origin/main`（`9fdd94e0e12afae1c3843d0680fb48017e00669f`）领先 16 个提交。该功能基线尚无对应远程 CI 证据，不得用历史 Phase 6 CI 运行替代。
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - 当前权威状态（覆盖本文档中的历史基线行）：功能验证基线为 `bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`，其 GitHub Actions quality Run [`32586867110`](https://github.com/Mirror18/RAGForge/actions/runs/32586867110) 全绿；随后记录提交 `6ec5d9d` 的 quality Run [`32587259456`](https://github.com/Mirror18/RAGForge/actions/runs/32587259456) 亦全绿。两次运行均覆盖静态、契约、SBOM/Grype、Maven、Phase 3–5、评估、安全、性能、Web 门禁；旧 SHA/旧 CI 行仅保留为历史记录。
@@ -128,3 +129,10 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 前端业务入口已整理为“空间 → 成员/用户 → 云端 Chat 配置 → 知识导入/索引 → 问答追踪”；账号与空间页显示浏览器 IANA 时区，日期时间统一按浏览器时区格式化；`selectedPromptTemplateId` 已在控制台声明并由 TypeScript/构建门禁覆盖。
 - Chat 模型默认优先选择云端 MiMo；云端调用仍需要空间显式授权和 typed authorization context，不允许静默云端回退。Embedding/Rerank 继续保持本地能力边界，避免把用户对 Chat 的云端选择扩大成未经授权的全链路出境。
 - 代码与证据：`V16__user_lifecycle_management.sql`、`UserAdminController/Service`、`SpaceController/Service`、`PersonalSpaceView.vue`、`format.ts`、OpenAPI v1 增量；`ServerIntegrationTest` 新增用户管理与空间管理安全回归。验证结果为服务端 `ServerIntegrationTest` 7/7、服务端 Java 21 compile、Web format/build、OpenAPI JSON contract test 通过。
+
+## 10. Phase 7 进入与当前修复基线（2026-08-29）
+
+- Phase 7 已从 `ready` 转为 `in-progress`。当前执行入口为 [`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) 与 [`PHASE_7_EXECUTION_PLAN.md`](phase-7/PHASE_7_EXECUTION_PLAN.md)。
+- `00432a9` 修复 ingestion worker 容器可执行启动；`dd6902f` 修复首次使用配置入口；`0d399c0` 将 candidate index 构建从单文档修正为空间级 active 文档汇总；`7e23ae5` 对长文 child chunk 继续拆分，避免 embedding 输入超限。
+- `012010c` 与 `12eaf94` 修复 Linux 关键词查询误拒、无关证据回答及 material 相关性判断。相关逻辑继续以当前空间的真实 evidence material 和结构化 citation/provenance 为边界，不允许用生成文本伪造引用。
+- Phase 7 功能基线 `f6b0168` 尚未推送到 `origin/main`，没有同 SHA 的 GitHub Actions、发布镜像 SBOM/Grype 或干净 Ubuntu runtime 证据。因此 Phase 7 不能标记完成，也不能创建 release。

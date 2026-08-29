@@ -116,6 +116,16 @@
 | RF-BIZ-004 | 本地文件/文件夹、受支持文档格式和网页 URL 进入当前知识空间 | BusinessIngestionService、WebSourceIngestionService、V17 相关摄取契约、BusinessFlowView.vue、WebSourceIngestionServiceTest | 文件复用 revision/artifact/job；网页入口有云端授权、域名白名单、DNS 公网地址、大小和媒体类型保护；服务端编译、契约和 Web 构建通过 | 真实网页白名单 smoke 待部署配置后执行；RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS 为空时 fail-closed |
 | RF-BIZ-005 | 模型选择、历史问答、连续追问和归档 | RunExecutionService、ConversationRepository、RunRepository、AnswerView.vue、answer.ts、V17 migration | active conversation 可连续创建 run；历史可按空间读取，回答 projection 可查看，归档保留历史并拒绝新 run | 尚未完成真实浏览器视觉验收；历史回答须已持久化 answer projection |
 
+## Phase 7 Linux 交付追溯（进行中）
+
+| 需求 ID | 需求 | 当前实现与验证 | 当前结果 | 未闭环项 |
+|---|---|---|---|---|
+| P7-APP-001 | Server、Worker、Web 使用统一容器构建并由 `app` profile 启动 | [`Dockerfile`](../../deploy/docker/Dockerfile)、[`compose.yaml`](../../deploy/compose/compose.yaml)、[`deploy/README.md`](../../deploy/README.md)；worker 可执行镜像修复提交 `00432a9` | 容器入口与 Compose wiring 已实现 | 当前头提交的 Linux build/up/health/smoke 证据待生成 |
+| P7-BIZ-001 | 新空间首次使用可完成配置、导入、索引和引用问答 | `ragSetup.ts`、`SpaceCandidateIndexBuilder`、长文 child chunk 拆分、material-backed relevance 校验；修复提交 `dd6902f`、`0d399c0`、`012010c`、`7e23ae5`、`12eaf94` | 定向回归测试随实现提交；修复保持 `space_id`、revision/artifact 与 citation provenance 边界 | 干净 Ubuntu 容器业务 smoke 与发布候选全量门禁待执行 |
+| P7-OPS-001 | 干净 Ubuntu 24.04 可按文档部署、健康检查和验收 | [`DEPLOYMENT.md`](../05-operations/DEPLOYMENT.md)、[`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) | 运行入口和验收条件已定义 | 尚无当前版本的干净环境不可变证据 |
+| P7-UPGRADE-001 | 上一兼容版本可升级并在定义窗口内回滚 | [`DEPLOYMENT.md`](../05-operations/DEPLOYMENT.md)、[`BACKUP_RESTORE.md`](../05-operations/BACKUP_RESTORE.md) | 原则与恢复基线已存在 | 兼容矩阵、升级/回滚演练和证据待完成 |
+| P7-SUPPLY-001 | 发布镜像固定、最小权限运行并具备 SBOM/漏洞扫描证据 | Compose/Dockerfile、现有 quality workflow、[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) | 开发构建与历史 Syft/Grype 门禁存在 | 目标镜像 digest、运行时加固、发布级 SBOM/Grype 和 Notice 复核待完成 |
+
 | 证据 ID | 验收内容 | 实现与验证 | 结果 | 后续 |
 |---|---|---|---|---|
 | P6-EVAL-001 | 版本化 120+ 评估与确定性 candidate runner | [`phase6-evaluation-dataset.v1.json`](../../tests/evaluation/phase6-evaluation-dataset.v1.json)、[`evaluation_runner.py`](../../scripts/phase6/evaluation_runner.py)、[`phase6-evaluation-report.v1.json`](../../tests/evidence/phase6-evaluation-report.v1.json) | 128 cases；runner validation、7/7 unit；candidate 指标 1.0；人工/red-team 门槛按用户明确批准记录为 `PASS_WITH_EXPLICIT_WAIVER`，不声称真实模型人工质量结论 | 后续模型/prompt/retrieval 变更必须重新开启人工/red-team 复核 |
