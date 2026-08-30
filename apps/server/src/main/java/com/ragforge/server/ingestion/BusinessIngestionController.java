@@ -7,6 +7,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -68,6 +69,16 @@ public class BusinessIngestionController {
     @GetMapping("/sources/{sourceId}")
     public GitSourceService.SourceView source(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
                                               @AuthenticationPrincipal SessionPrincipal principal) {
+        return gitSources.get(spaceId, sourceId, principal);
+    }
+
+    @PutMapping("/sources/{sourceId}")
+    public GitSourceService.SourceView updateSource(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                    @jakarta.validation.Valid @RequestBody BusinessIngestionService.SourceUpdateRequest request,
+                                                    @RequestHeader("If-Match") String ifMatch,
+                                                    @AuthenticationPrincipal SessionPrincipal principal,
+                                                    HttpServletRequest servletRequest) {
+        service.updateSource(spaceId, sourceId, request, ifMatch, principal, servletRequest);
         return gitSources.get(spaceId, sourceId, principal);
     }
 
@@ -256,6 +267,32 @@ public class BusinessIngestionController {
     public List<IngestionRepository.SourceDocument> documents(@PathVariable UUID spaceId,
                                                               @AuthenticationPrincipal SessionPrincipal principal) {
         return service.documents(spaceId, principal);
+    }
+
+    @GetMapping("/documents")
+    public CursorPage<IngestionRepository.SourceDocument> documentPage(@PathVariable UUID spaceId,
+                                                                        @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.documentPage(spaceId, principal);
+    }
+
+    @GetMapping("/documents/{documentId}")
+    public IngestionRepository.SourceDocument document(@PathVariable UUID spaceId, @PathVariable UUID documentId,
+                                                       @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.document(spaceId, documentId, principal);
+    }
+
+    @GetMapping("/documents/{documentId}/revisions")
+    public CursorPage<IngestionRepository.DocumentRevision> revisionPage(@PathVariable UUID spaceId,
+                                                                          @PathVariable UUID documentId,
+                                                                          @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.revisionPage(spaceId, documentId, principal);
+    }
+
+    @GetMapping("/documents/{documentId}/revisions/{revisionId}")
+    public IngestionRepository.DocumentRevision revision(@PathVariable UUID spaceId, @PathVariable UUID documentId,
+                                                         @PathVariable UUID revisionId,
+                                                         @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.revision(spaceId, documentId, revisionId, principal);
     }
 
     @GetMapping("/ingestion-jobs")

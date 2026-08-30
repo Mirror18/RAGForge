@@ -92,6 +92,20 @@ public class ProviderRepository {
     }
 
     @Transactional
+    public Optional<ProviderConnection> updateConnection(UUID spaceId, UUID id, long expectedVersion,
+                                                         NewProviderConnection input) {
+        int updated = jdbc.update("""
+                        UPDATE provider_connections
+                        SET display_name = ?, provider_type = ?, endpoint_uri = ?, credential_ref = ?,
+                            status = ?, egress_policy = ?, updated_at = ?, correlation_id = ?, version = version + 1
+                        WHERE id = ? AND space_id = ? AND version = ?
+                        """, input.displayName(), input.providerType().name(), input.endpointUri(), input.credentialRef(),
+                input.status().name(), input.egressPolicy().name(), timestamp(input.now()), input.correlationId(),
+                id, spaceId, expectedVersion - 1);
+        return updated == 1 ? findConnectionInSpace(spaceId, id) : Optional.empty();
+    }
+
+    @Transactional
     public ModelProfileVersion createProfileVersion(NewModelProfileVersion input) {
         assertConnectionAvailable(input.spaceId(), input.providerConnectionId());
         jdbc.update("""

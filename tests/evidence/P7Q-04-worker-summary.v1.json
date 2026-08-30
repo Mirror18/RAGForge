@@ -1,0 +1,49 @@
+{
+  "card_id": "P7Q-04",
+  "schema_version": "P7Q-04-worker-summary.v1",
+  "summary": {
+    "total": 4,
+    "passed": 3,
+    "failed": 1,
+    "failed_cases": [
+      "contract coverage: 8 OpenAPI operations lack a Controller mapping and 6 Controller mappings lack an OpenAPI operation"
+    ],
+    "duration_ms": 0
+  },
+  "coverage": {
+    "contract_operations": 96,
+    "contract_matched": 88,
+    "controller_mappings": 94,
+    "controller_matched": 88
+  },
+  "results": [
+    {
+      "name": "contract coverage test",
+      "passed": 2,
+      "failed": 1,
+      "details": "Fixture deletion tests passed; current repository bidirectional coverage failed on the documented path differences."
+    },
+    {
+      "name": "contract test",
+      "passed": 52,
+      "failed": 0,
+      "details": "52/52 tests passed; 22 contract artifacts checked."
+    },
+    {
+      "name": "secret scan",
+      "passed": 1,
+      "failed": 0,
+      "details": "No supported credential pattern found in tracked text files."
+    },
+    {
+      "name": "workflow static inspection",
+      "passed": 1,
+      "failed": 0,
+      "details": "quality.yml contains coverage_test and contract_coverage integration."
+    }
+  ],
+  "raw_output_stored": true,
+  "raw_output_files": [
+    "tests/evidence/P7Q-04-contract-test.log"
+  ]
+}

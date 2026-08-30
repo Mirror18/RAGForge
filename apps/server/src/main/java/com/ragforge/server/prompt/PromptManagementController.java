@@ -8,6 +8,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -70,5 +72,21 @@ public class PromptManagementController {
             @AuthenticationPrincipal SessionPrincipal principal,
             HttpServletRequest servletRequest) {
         return service.publishVersion(spaceId, promptTemplateId, promptVersion, principal, servletRequest);
+    }
+
+    @GetMapping("/prompt-bindings")
+    public PromptManagementService.PromptBindingView getBinding(
+            @PathVariable UUID spaceId, @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.getBinding(spaceId, principal);
+    }
+
+    @PutMapping("/prompt-bindings")
+    public PromptManagementService.PromptBindingView updateBinding(
+            @PathVariable UUID spaceId,
+            @Valid @RequestBody PromptManagementService.PromptBindingUpdateRequest request,
+            @RequestHeader("If-Match") String ifMatch,
+            @AuthenticationPrincipal SessionPrincipal principal,
+            HttpServletRequest servletRequest) {
+        return service.updateBinding(spaceId, request, ifMatch, principal, servletRequest);
     }
 }

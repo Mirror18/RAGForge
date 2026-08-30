@@ -98,6 +98,29 @@ jobs:
           fi
           exit "$status"
 
+      - name: Check OpenAPI and controller coverage
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          set +e
+          # coverage_test.py is the strict bidirectional contract gate.
+          python -m unittest tests.contract.coverage_test -v 2>&1 | tee tests/evidence/ci-logs/coverage_test.log
+          unit_status=${PIPESTATUS[0]}
+          python scripts/ci/contract_coverage.py --output tests/evidence/ci-logs/contract-coverage.json 2>&1 | tee tests/evidence/ci-logs/contract-coverage.log
+          coverage_status=${PIPESTATUS[0]}
+          if [[ "$unit_status" -ne 0 || "$coverage_status" -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Upload contract coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-contract-coverage-${{ github.run_id }}
+          path: tests/evidence/ci-logs/contract-coverage.json
+          if-no-files-found: error
+
       - name: Run deterministic Phase 2 cloud, concurrency, and egress gates
         shell: bash
         run: |
