@@ -11,6 +11,15 @@
 - 本地 dependency inventory 和 SBOM/dependency 命令的可审计退出码；
 - 每次运行将 preflight、contract、Maven、Phase 门禁和 npm 长日志连同结构化 `quality-summary.json` 上传为 `ragforge-quality-logs-*` artifact（保留 14 天）。
 
+## Actions 运行时版本依据
+
+工作流中的 JavaScript Actions 已统一到官方 Node.js 24 兼容版本，并通过顶层 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` 显式声明目标运行时：
+
+- GitHub 官方 Actions：`actions/checkout@v5`、`actions/setup-python@v6`、`actions/cache@v5`、`actions/setup-java@v5`、`actions/setup-node@v6`、`actions/upload-artifact@v7`；各版本的官方说明/发行记录标注 Node.js 24，并要求 Actions Runner `v2.327.1` 或更高版本。
+- Anchore Actions：`anchore/sbom-action@v0.24.0` 的 [tag action.yml](https://raw.githubusercontent.com/anchore/sbom-action/v0.24.0/action.yml) 声明 `using: node24`；`anchore/scan-action@v7` 的 [tag action.yml](https://raw.githubusercontent.com/anchore/scan-action/v7/action.yml) 声明 `using: node24`。
+
+这里的 Actions 运行时版本与工作流设置的项目工具链版本分开：项目仍使用 JDK 21、Python 3.12 和 Node.js 22，未改变测试语义。
+
 ## Job 与前置条件
 
 当前 workflow 使用一个 `quality` job，在 `ubuntu-latest` 上按顺序执行环境检查、静态/契约门禁、依赖安全扫描、Maven 回归、Phase 验收和可选 Web 门禁。

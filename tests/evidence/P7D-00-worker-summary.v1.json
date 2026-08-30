@@ -1,0 +1,97 @@
+{
+  "schema_version": "P7D-00-worker-summary.v1",
+  "card_id": "P7D-00",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 2300
+  },
+  "raw_output_stored": false,
+  "checks": [
+    {
+      "name": "workflow format check",
+      "status": "passed",
+      "exit_code": 0,
+      "details": "821 tracked files checked for whitespace, Python and JSON syntax"
+    },
+    {
+      "name": "secret scan",
+      "status": "passed",
+      "exit_code": 0,
+      "details": "No supported credential pattern found in tracked text files"
+    },
+    {
+      "name": "workflow action runtime audit",
+      "status": "passed",
+      "exit_code": 0,
+      "details": "Node 24 override, setup-java v5, and corrected legacy-action rejection rules passed"
+    }
+  ],
+  "runtime_targets": [
+    {
+      "action": "actions/checkout",
+      "version": "v5",
+      "runtime": "node24",
+      "basis": "Official checkout v5 changelog states the action uses Node 24",
+      "source": "https://github.com/actions/checkout/blob/main/CHANGELOG.md"
+    },
+    {
+      "action": "actions/setup-python",
+      "version": "v6",
+      "runtime": "node24",
+      "basis": "Official README and v6 release notes state the action was upgraded to Node 24",
+      "source": "https://github.com/actions/setup-python/releases"
+    },
+    {
+      "action": "actions/cache",
+      "version": "v5",
+      "runtime": "node24",
+      "basis": "Official README states cache v5 runs on Node 24",
+      "source": "https://github.com/actions/cache"
+    },
+    {
+      "action": "actions/setup-java",
+      "version": "v5",
+      "runtime": "node24",
+      "basis": "Official README states setup-java v5 was upgraded from Node 20 to Node 24",
+      "source": "https://github.com/actions/setup-java"
+    },
+    {
+      "action": "actions/setup-node",
+      "version": "v6",
+      "runtime": "node24",
+      "basis": "Official setup-node action.yml for v6 declares using node24",
+      "source": "https://raw.githubusercontent.com/actions/setup-node/v6/action.yml"
+    },
+    {
+      "action": "actions/upload-artifact",
+      "version": "v7",
+      "runtime": "node24",
+      "basis": "Official upload-artifact action.yml for v7 declares using node24",
+      "source": "https://raw.githubusercontent.com/actions/upload-artifact/v7/action.yml"
+    },
+    {
+      "action": "anchore/sbom-action",
+      "version": "v0.24.0",
+      "runtime": "node24",
+      "basis": "Official v0.24.0 tag action.yml declares using node24",
+      "source": "https://raw.githubusercontent.com/anchore/sbom-action/v0.24.0/action.yml"
+    },
+    {
+      "action": "anchore/scan-action",
+      "version": "v7",
+      "runtime": "node24",
+      "basis": "Official v7 tag action.yml declares using node24",
+      "source": "https://raw.githubusercontent.com/anchore/scan-action/v7/action.yml"
+    }
+  ],
+  "acceptance": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true,
+    "A5": true
+  }
+}

@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -19,17 +22,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Cache Python dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
@@ -37,14 +40,14 @@ jobs:
             pip-${{ runner.os }}-
 
       - name: Set up Java 21 and Maven cache
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
 
@@ -117,7 +120,7 @@ jobs:
 
       - name: Upload contract coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-contract-coverage-${{ github.run_id }}
           path: tests/evidence/ci-logs/contract-coverage.json
@@ -138,7 +141,7 @@ jobs:
 
       - name: Upload Phase 7 RAG evaluation evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-phase7-evaluation-${{ github.run_id }}
           path: tests/evidence/phase7-evaluation-*.v1.json
@@ -159,7 +162,7 @@ jobs:
         run: python scripts/ci/dependency_inventory.py --require-lockfiles
 
       - name: Generate SBOM with Syft action
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@v0.24.0
         with:
           path: .
           format: cyclonedx-json
@@ -168,14 +171,14 @@ jobs:
           upload-artifact: false
 
       - name: Publish SBOM job artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-sbom-cyclonedx
           path: sbom.cdx.json
           if-no-files-found: error
 
       - name: Scan repository dependencies with Grype action
-        uses: anchore/scan-action@v6
+        uses: anchore/scan-action@v7
         id: scan
         with:
           path: "."
@@ -184,7 +187,7 @@ jobs:
 
       - name: Upload Grype SARIF evidence
         if: always() && steps.scan.outputs.sarif != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-grype-sarif
           path: ${{ steps.scan.outputs.sarif }}
@@ -224,7 +227,7 @@ jobs:
         run: python scripts/phase5/security_evaluation.py
 
       - name: Upload Phase 5 evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-phase5-evidence
           path: |
@@ -256,7 +259,7 @@ jobs:
           } 2>&1 | tee tests/evidence/ci-logs/phase4-retrieval.log
 
       - name: Upload Phase 4 retrieval evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-phase4-retrieval-evidence
           path: tests/evidence/phase4-retrieval-benchmark.json
@@ -264,7 +267,7 @@ jobs:
 
       - name: Upload Phase 3 JVM evidence
         if: always() && hashFiles('**/target/surefire-reports/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-phase3-jvm-evidence
           path: |
@@ -274,7 +277,7 @@ jobs:
 
       - name: Cache apps/web npm dependencies
         if: ${{ hashFiles('apps/web/package.json') != '' }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.npm
           key: npm-web-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json', 'apps/web/package.json') }}
@@ -344,7 +347,7 @@ jobs:
 
       - name: Upload quality logs and summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ragforge-quality-logs-${{ github.run_id }}
           path: |
