@@ -1,0 +1,114 @@
+meta:
+  card_id: P7C-02
+  title: 来源与任务中心前端 UI
+  priority: P0
+  agent_slug: a4
+  branch: codex/p7-source-task-ui-a4
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-source-task-ui-a4
+  base_sha: 1100919
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7C-01]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - apps/web/src/BusinessFlowView.vue
+    - apps/web/src/api.ts
+    - apps/web/src/TaskCenterView.vue
+    - apps/web/src/SourceLibraryView.vue
+    - tests/evidence/P7C-02-worker-summary.v1.json
+  read_only:
+    - apps/web/src/BusinessFlowView.vue
+    - apps/web/src/api.ts
+    - apps/web/src/format.ts
+    - apps/web/src/App.vue
+    - apps/web/package.json
+    - apps/web/tsconfig.json
+    - contracts/openapi/ragforge-api-v1.yaml
+    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
+    - apps/server/src/main/java/com/ragforge/server/index/BusinessIndexController.java
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md
+    - MEMORY.md
+    - apps/server/
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - contracts/
+    - pom.xml
+    - deploy/
+    - .github/workflows/
+    - apps/web/src/AnswerView.vue
+    - apps/web/src/ControlCenterView.vue
+    - apps/web/package.json
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 普通用户在不手填 UUID 的情况下完成来源提交、处理中轮询、终态展示，并能看到逐项任务状态与错误详情。
+    - id: A2
+      text: 来源/任务列表支持 cursor 分页与筛选，合成超过 100 个资源时无 slice(0,5) 或 limit=100 静默截断。
+    - id: A3
+      text: 失败任务支持重试/重放/重新同步，来源支持归档/删除；所有 mutation 复用 api.ts 的 CSRF、Idempotency-Key、If-Match 与 space_id 路径保护。
+    - id: A4
+      text: 轮询、分页、空态、错误态、权限拒绝均有可理解的中文反馈，刷新后保留当前来源/任务筛选与 cursor 状态。
+    - id: A5
+      text: Web format:check 与 build 通过；不得修改服务端、契约或 P7C-03 共享之外的文件。
+
+budget:
+  token_limit: 7000
+
+tests:
+  must_run:
+    - name: Web format check
+      command: npm ci --prefix apps/web; npm --prefix apps/web run format:check
+      expected: 0 errors
+    - name: Web build
+      command: npm --prefix apps/web run build
+      expected: build success
+  evidence_file: tests/evidence/P7C-02-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: false
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: 7000
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string

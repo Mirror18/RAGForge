@@ -109,7 +109,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | AGENT-OPT-01 | Agent 效率文档骨架落地 | P0 | ✅ completed | Orchestrator | main | RAGForge | 8,000 | 未记录 | 609ef5c9a1284bef71ed9295910aeb9c48d383cb | 已由主线提交完成；历史实际 token 未记录，不重复执行 |
 | P7C-04 | durable BM25 ADR + 实现（R-023） | P0 | ⏳ pending | — | — | — | 10,000 | — | — | 等待用户明确批准接受 ADR-0012；不擅自执行高风险动作 |
 | P7C-01 | 来源任务中心后端 API | P0 | ✅ completed | A3 | codex/p7-source-task-api-a3 | RAGForge-worktrees/codex-p7-source-task-api-a3 | 8,000 | 5,800 | e4a9481710aabe31a6271adbcac9a30b7c7dfc08 | 已合并至 d35eb8e；V21 追加迁移；A1–A5 通过 |
-| P7C-02 | 来源任务中心前端 UI | P0 | ⏳ pending | — | — | — | 7,000 | — | — | P7C-01 已完成，可开始分派 |
+| P7C-02 | 来源任务中心前端 UI | P0 | 🚧 in_progress | A4 | codex/p7-source-task-ui-a4 | RAGForge-worktrees/codex-p7-source-task-ui-a4 | 7,000 | — | — | P7C-01 已完成；唯一 active Web worker |
 | P7C-03 | 索引生命周期 UI | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-01 已完成，可开始分派 |
 | P7C-05 | 真实 RERANK adapter | P0 | ⏳ blocked | — | — | — | 8,000 | — | — | 依赖 P7C-04 |
 | P7C-06 | 可核验问答 Web | P0 | ⏳ blocked | — | — | — | 9,000 | — | — | 依赖 P7C-01 / P7C-03 |
