@@ -9,7 +9,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-001 | 本机 8GB VRAM 无法支撑并发生成 | 5 | 3 | 15 | 本地仅功能验收；云/Mock 做 20 并发；Provider 可替换 | Architecture | MITIGATING |
 | R-002 | Obsidian YAML/标题/wikilink/路径解析失真 | 4 | 4 | 16 | 自有 Connector/contract corpus；Chunk Studio；Windows/Linux 测试 | Ingestion | OPEN |
 | R-003 | 跨空间数据泄漏 | 3 | 5 | 15 | space_id 不变量、RBAC、Qdrant filter、零容忍安全测试 | Security | OPEN |
-| R-004 | 云端 fallback 未授权出境 | 3 | 5 | 15 | 默认 local-only；route policy；provider spy tests；审计 | Security | OPEN |
+| R-004 | 云端 fallback 未授权出境 | 3 | 5 | 15 | 默认 local-only；route policy；provider spy tests；审计 | Security | CLOSED |
 | R-005 | 低质量引用导致“看似可信”答案 | 4 | 5 | 20 | server citation validation、evidence provenance、120-case eval；Phase 6 人工/red-team 门槛按用户明确决定豁免，后续 RAG 变更必须重新复核 | RAG | ACCEPTED |
 | R-006 | Parser/OCR 恶意文件造成 RCE/DoS | 3 | 5 | 15 | quarantine、AV、sandbox、limits、malicious corpus | Security | OPEN |
 | R-007 | 消息重投造成重复索引或成本 | 4 | 4 | 16 | Outbox、幂等 key、attempt/ledger dedupe、fault tests | Platform | OPEN |
@@ -180,3 +180,10 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - 生产检索已由 `ProviderReranker` 接管 RERANK：只解析目标 `space_id` 下 ACTIVE binding、PUBLISHED route/profile 和 LOCAL_ONLY AI runtime connection；未配置、未发布、跨空间、超时、非法响应和未支持能力均 fail-closed，不静默回退 `LexicalReranker`。
 - `apps/ai-runtime` 新增无第三方依赖的 bounded `/v1/rerank` loopback seam；Provider connection test 对 RERANK 写入 verified capability，并保留 success、failed、`UNSUPPORTED_CAPABILITY` 三类结果路径。主线验证：AI runtime 4/4、RERANK adapter 5/5、Provider/Model/Binding 15/15、RetrievalService 9/9、Provider HTTP 33/33、contract 52/52。
 - 未新增数据库迁移、未开启云出境、未提交凭据。R-054 跟踪默认确定性 scorer 在模型替换前仍需离线评估；R-053 的部署网络 egress 防护继续有效。
+
+## 19. Phase 7 P2 入口风险复核（2026-08-30）
+
+- `R-040` 从 `OPEN` 调整为 `MITIGATING`：统一 preflight 已验证 Java 21.0.7、Maven 3.9.6、Node 22.22.2、npm 10.9.7 和 Docker 29.7.2；当前候选 Maven 307 tests、Web unit/E2E、契约、RAG 与静态门禁本地全绿。远程同 SHA Linux CI 仍缺失，因此风险不能关闭，P2 保持阻塞。
+- `R-004` 顶层状态与 Phase 2 关闭证据完成对齐：LOCAL_ONLY 默认、逐次云授权和调用前拒绝仍有效，本轮未开启任何空间云出境。
+- `R-054` 保持 `MITIGATING`：128-case synthetic gate 证明当前确定性 seam 没有回归，但不构成真实 rerank 模型质量证据；替换 scorer 前仍需版本化离线评估。
+- `R-041`、`R-042` 继续 `OPEN`，分别由 P7D-01/02 的容器与供应链加固、P7D-05 的升级/回滚演练关闭。

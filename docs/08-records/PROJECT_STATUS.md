@@ -14,17 +14,17 @@
 >
 > 若 `AGENT_STATE_CARD.md` 与本文件存在冲突，**以本文件为准**，并立即通知 Orchestrator Agent 回写修正状态卡。
 
-- Updated: 2026-08-29
+- Updated: 2026-08-30
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
-- Current stage: Phase 7 实现对齐（`implementation-reconciliation`）。代码审计推翻了“只剩 Linux 交付”的任务假设：平台管理员 bootstrap、Provider 实测发布闸门和真实 generation streaming 已闭环；P7-CORE-04 Git 来源接线已闭环；durable BM25/真实 rerank、反馈/审计管理、Web 自动化和工具链 preflight 仍未闭环；完成这些断点后才进入发布验收。
-- 文档核对时的 Phase 7 功能基线：`f6b016840e946ea314cdaf4812c196dcea8ca491`；当时 `main` 比 `origin/main`（`9fdd94e0e12afae1c3843d0680fb48017e00669f`）领先 16 个提交。该功能基线尚无对应远程 CI 证据，不得用历史 Phase 6 CI 运行替代。
+- Current stage: Phase 7 P2 入口待远程 CI（`p2-entry-remote-ci-pending`）。P7C-01~08、P7C-05R 与 P7Q-01~06 已完成，本地产品闭环与回归门禁已对齐；容器、Ubuntu、观测、升级和供应链 P2 卡片尚未启动。
+- 当前 Phase 7 功能候选：`f695936594834f8a870fa95dca5ff0c6634441a1`；本地同候选门禁全绿，`origin/main` 仍为 `9fdd94e0e12afae1c3843d0680fb48017e00669f`。该候选尚无远程 CI 证据，不得用历史 Phase 6/7 CI 运行替代。
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - 当前权威状态（覆盖本文档中的历史基线行）：功能验证基线为 `bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`，其 GitHub Actions quality Run [`32586867110`](https://github.com/Mirror18/RAGForge/actions/runs/32586867110) 全绿；随后记录提交 `6ec5d9d` 的 quality Run [`32587259456`](https://github.com/Mirror18/RAGForge/actions/runs/32587259456) 亦全绿。两次运行均覆盖静态、契约、SBOM/Grype、Maven、Phase 3–5、评估、安全、性能、Web 门禁；旧 SHA/旧 CI 行仅保留为历史记录。
 - 本轮记录：功能合并基线为 `07f973c84fa60dd239ed5c60a443e1edbb801eed`，包含真实 RAG graph stream 与本地并发成本证据；阶段记录提交及其 CI/SBOM/Grype 结果已在下方补记。上方历史远端行保留为上一已知 CI 基线，不能作为本轮提交验证。
 - 本轮 CI 已补记：GitHub Actions quality Run [`32579989036`](https://github.com/Mirror18/RAGForge/actions/runs/32579989036) 对提交 `4481bef34cdeed59068b45d03f8a5abbc48bb379` 全绿；SBOM `9477533715`、Grype SARIF `9477541287`、Phase 3 JVM `9477586833`、Phase 4 retrieval `9477586457`、Phase 5 evidence `9477579925` 均已生成。
 - 最新功能/阶段证据基线：`462c7a5fded50e4a39e9ee99c26f5254da5c8788`；其 GitHub Actions quality Run [`32580715731`](https://github.com/Mirror18/RAGForge/actions/runs/32580715731) 全绿，SBOM `9477714534`、Grype SARIF `9477725361`、Phase 3 JVM `9477775662`、Phase 4 retrieval `9477775256`、Phase 5 evidence `9477766441` 已生成。后续仅记录性提交不改变该功能验证基线。
-- External remote: `origin` configured；当前 `main`/`origin/main` 为 `a80321a5507181cbf3ebb5554781522431fe5dff`；GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 全绿（4m52s），SBOM artifact `9477027172`、Grype SARIF `9477036384`、Phase 3 JVM `9477081726`、Phase 4 retrieval `9477081302`、Phase 5 evidence `9477073334` 已生成。历史 Phase 3 OCR、SBOM 和 Grype artifact 仍按各自阶段记录保留；尚未创建 release。
+- External remote: `origin` configured；`origin/main` 当前为 `9fdd94e0e12afae1c3843d0680fb48017e00669f`。GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 是历史全绿记录（4m52s），不能证明当前候选 `f695936`；尚未创建 release。
 
 ## 1. 已完成
 
@@ -194,3 +194,11 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 每次 answer 在生成前获得稳定 `answerId`。delta 进入既有 durable run-event store，因此 live SSE 与 `Last-Event-ID` replay 读取同一序列；终态不重复发送完整正文。失败、拒答或取消时 Web 清空暂态正文，不能把未验证 delta 留作答案。
 - Cancel 先把 Run/event stream 标为 `CANCELLED`，阻止后续 delta，再取消同一生成 token 和 HTTP body。生成实例还订阅共享 run-event fan-out，cancel 落到其他 Server 实例时也能关闭上游流。
 - 验证：Provider HTTP、generation bridge、RAG service、Answer API 和 Provider loopback integration 共 63/63 通过，覆盖两类流协议、分块结构化 JSON 解码、durable delta 不重复、同 token cancel、远端 fan-out cancellation event、上游 body 关闭和真实 loopback CHAT streaming probe；另有事件持久化/多实例 fan-out 回归 6/6 通过。本轮未部署、未调用真实 Ollama/MiMo，真实 TTFT/吞吐需在发布候选复测。
+
+## 16. Phase 7 P0/P1 对齐与 P2 入口复核（2026-08-30）
+
+- 功能候选 `f695936594834f8a870fa95dca5ff0c6634441a1` 已包含 P7C-01~08、P7Q-01~06，以及恢复卡 P7C-05R。恢复卡修复 test profile 中 fake/production `AI_RUNTIME` adapter 重复注册；默认 profile 仍注册真实 AI Runtime adapter，registry 重复检测未被弱化。
+- 本地同候选验证：preflight 6/6；JDK 21 + Docker Maven reactor 307 tests（306 passed、0 failed、0 errors、1 skipped）；contract 52/52；OpenAPI/Controller 102/102；Web Vitest 10/10、Playwright 10/10、TypeScript/Vite build；128-case RAG gate；format、architecture、Markdown links、secret scan、dependency inventory 与 Compose static validation 全绿。
+- 评估证据为公共 synthetic fixture，candidate retrieval/generation 指标均为 1.0，cross-space、Evidence 外引用、prompt-injection tool 和 unauthorized cloud 违规均为 0；这不替代真实模型质量、容量或人工/red-team 结论，R-005/R-012 的既有豁免与 R-054 残余风险继续保留。
+- P2 入口仍为 `BLOCKED`：当前候选尚未推送，因而没有同 SHA GitHub Actions Linux 结果。只有推送后远程全绿，才能派发 P7D-01；本次没有创建 release、接受许可证、执行生产迁移或开启云出境。
+- 结构化汇总见 [`phase7-p2-entry-local-gates.v1.json`](../../tests/evidence/phase7-p2-entry-local-gates.v1.json)，详细 RAG 证据见 [`phase7-evaluation-f695936.v1.json`](../../tests/evidence/phase7-evaluation-f695936.v1.json)。

@@ -12,23 +12,23 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：aa8e2b7
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应功能基线 SHA：f695936
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
-- **阶段**：Phase 7（`implementation-reconciliation`）
-- **主线基线 SHA（main）**：`aa8e2b7`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
-- **最近已通过 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（4m52s，全绿）
+- **阶段**：Phase 7（`p2-entry-remote-ci-pending`）
+- **主线功能基线 SHA（main）**：`f695936594834f8a870fa95dca5ff0c6634441a1`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
+- **最近已通过远程 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（历史基线，全绿）；`f695936` 尚未推送，不能复用该运行作为 P2 入口证据
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
 - **当前工作包完成度（P7-A..H）**：
   - ✅ P7-A 审计与任务冻结
   - ✅ P7-B 首次设置与协作（bootstrap + 成员加入 + Provider 实测闸门）
-  - ⏳ P7-C 来源/任务/索引维护（C-01/02/03/04/05 完成；C-05R 回归恢复中）
+  - ✅ P7-C 来源/任务/索引维护（C-01/02/03/04/05/05R 完成）
   - ✅ P7-D 问答与上下文工具（C-06/07/08 完成）
-  - ⏳ P7-E 管理与 Web 自动化
+  - ✅ P7-E 管理与 Web 自动化（C-08、Q-01~06 完成）
   - ⏳ P7-F 镜像与 Compose 加固
   - ⏳ P7-G Ubuntu/观测/升级验收
   - ⏳ P7-H 供应链与阶段闭环
@@ -64,7 +64,7 @@ P7-B（已完成）
 ├─► P7C-04 durable BM25（ADR + 实现）  ◄── **可并行，ownership: docs/adr + server**
 │    └─► P7C-05 真实 RERANK adapter（apps/ai-runtime + server）
 P7C-06 ─► P7E 卡片（P7Q-01~06，见 TASK_BOARD.md）
-P7Q-01~06 全部通过 → 进入 P7-F 容器加固
+P7Q-01~06 全部通过 + 当前候选远程 CI 全绿 → 进入 P7-F 容器加固
 P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户显式批准 release）
 ```
 
@@ -94,8 +94,9 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 - Phase 6 证据：`tests/evidence/phase6-*.v1.json`（8 类：evaluation / security / capacity / recovery / cost / observability / multi-instance / real-RAG）
 - Phase 7 最新证据：`docs/08-records/2026-08-23-business-loop-e2e.md`、`2026-08-23-mimo-notes-business-loop.md`
 - 契约测试命令：`python scripts/ci/contract_test.py`（本轮 52/52 通过）
-- 全量 Maven（JDK 21，需 Docker）：Server + Worker，CI 最新 238 tests 0 failures
-- Web 构建：`npm --prefix apps/web run typecheck` 与 `npm --prefix apps/web run build` 通过
+- 当前候选本地全量 Maven（JDK 21 + Docker）：307 tests，306 passed / 0 failed / 0 errors / 1 skipped
+- 当前候选 Web：Vitest 10/10、Playwright 10/10、TypeScript 与 Vite build 通过
+- 当前候选评估：128-case RAG gate 通过，安全违规 0；证据 `tests/evidence/phase7-evaluation-f695936.v1.json`
 - RAG 评估数据集：`tests/evaluation/phase6-evaluation-dataset.v1.json`（128 cases）
 
 ---
@@ -112,18 +113,18 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7C-02 | 来源任务中心前端 UI | P0 | ✅ completed | A4 | codex/p7-source-task-ui-a4 | RAGForge-worktrees/codex-p7-source-task-ui-a4 | 7,000 | 6,900 | d4bd103cc9ebb2f1b7fe9d74397c703957b00ebf | 已合并至 42b75aa；Web format:check/build 通过 |
 | P7C-03 | 索引生命周期 UI | P0 | ✅ completed | A5 | codex/p7-index-lifecycle-a5 | RAGForge-worktrees/codex-p7-index-lifecycle-a5 | 6,000 | 5,200 | fa44580c0988c2d2a9fbb5f991cbf246d9314bab | 已合并至 04683e8；candidate/active/retired、发布/回滚/退役通过 |
 | P7C-05 | 真实 RERANK adapter | P0 | ✅ completed | A16 | codex/p7-rerank-adapter-a16 | RAGForge-worktrees/codex-p7-rerank-adapter-a16 | 8,000 | 7,400 | a09207e19aa86133ccf94996c06421be8815d410 | 已合并至 e46d090；runtime/adapter/probe/retrieval 全部通过，contract 52/52，未新增迁移或云出境 |
-| P7C-05R | RERANK test-profile adapter 冲突修复 | P0 | 🚧 in_progress | A17 | codex/p7-rerank-profile-fix-a17 | RAGForge-worktrees/codex-p7-rerank-profile-fix-a17 | 4,000 | — | — | 全 reactor 发现 AI_RUNTIME adapter 在 test profile 重复注册；修复后重跑失败用例与全量门禁 |
+| P7C-05R | RERANK test-profile adapter 冲突修复 | P0 | ✅ completed | A17 | codex/p7-rerank-profile-fix-a17 | RAGForge-worktrees/codex-p7-rerank-profile-fix-a17 | 4,000 | 3,900 | f32497ff295961871c0ca43176ee1622b3d67f5c | 已合并至 f695936；test profile 仅注册 fake adapter，默认 profile 保留 production adapter；原失败用例与全 reactor 307 tests 通过 |
 | P7C-06 | 可核验问答 Web | P0 | ✅ completed | A6 | codex/p7-verifiable-answer-web-a6 | RAGForge-worktrees/codex-p7-verifiable-answer-web-a6 | 9,000 | 8,200 | b2ac6027c731cd32111b97fb1f1d2ad548940abc | 已合并至 67a18f8；历史/citation/反馈/会话控制通过 |
 | P7C-07 | 上下文跳转 | P0 | ✅ completed | A7 | codex/p7-context-jump-a7 | RAGForge-worktrees/codex-p7-context-jump-a7 | 6,000 | 5,900 | a04de03ba8fb36a880104d53e2029ab41c784838 | 已合并至 d7505e7；lookup 空间隔离、结构化 provenance 跳转、刷新恢复、无 queryVector 生产 UI 通过 |
 | P7C-08 | 管理闭环（反馈/审计/成本） | P0 | ✅ completed | A8 | codex/p7-management-loop-a8 | RAGForge-worktrees/codex-p7-management-loop-a8 | 6,000 | 6,800 | 82a7899564cfa7a87526e173eca006426aaa013b | 已合并至 d35ebda；health/cost/feedback/audit 聚合、权限隔离、脱敏分页与 Control Center 视图通过；主线补跑 Web 依赖后全绿 |
 | P7Q-01 | 统一 preflight | P1 | ✅ completed | A9 | codex/p7-preflight-a9 | RAGForge-worktrees/codex-p7-preflight-a9 | 3,000 | 2,700 | a997aff82eaff6a87dee3abd49142df02f3b0c53 | 已合并至 002cb63；跨平台工具检查、JSON/strict、9/9 单测与 secret scan 通过 |
 | P7Q-02 | 全量 Maven 回归 CI 配方 | P1 | ✅ completed | A10 | codex/p7-maven-ci-a10 | RAGForge-worktrees/codex-p7-maven-ci-a10 | 2,000 | 2,000 | 9a097645e5746104dac116316780a54806bd82ad | 已合并至 9d74821；JDK21、preflight strict、Maven 全量回归 297/297 与 CI artifact 归档通过 |
 | P7Q-03 | Web 自动化测试（8 条旅程） | P1 | ✅ completed | A11 | codex/p7-web-e2e-a11 | RAGForge-worktrees/codex-p7-web-e2e-a11 | 15,000 | 9,800 | f74c89fc2f209e2363e045c48d382732d01ce3a3 | 已合并至 65f1cdc；Vitest 8/8、Playwright 8/8、format/build/secret scan 通过；npm audit 有 2 high、1 critical 待后续 BOM 评估 |
-| P7Q-04 | 契约-实现一致性门禁 | P1 | ✅ completed | A12 | codex/p7-contract-coverage-a12 | RAGForge-worktrees/codex-p7-contract-coverage-a12 | 4,000 | 3,300 | cf509aec... | 初始检查识别 8+6 个真实缺口；门禁代码随 P7Q-04R 修复分支合并，当前严格双向覆盖 102/102 |
+| P7Q-04 | 契约-实现一致性门禁 | P1 | ✅ completed | A12 | codex/p7-contract-coverage-a12 | RAGForge-worktrees/codex-p7-contract-coverage-a12 | 4,000 | 3,300 | cf509aec19e963d1b7517644149a9354f7c1d1ee | 初始检查识别 8+6 个真实缺口；门禁代码随 P7Q-04R 修复分支合并，当前严格双向覆盖 102/102 |
 | P7Q-04R | 契约/Controller 对齐修复 | P1 | ✅ completed | A13 | codex/p7-contract-alignment-a13 | RAGForge-worktrees/codex-p7-contract-alignment-a13 | 12,000 | 11,000 | ac0d94815ea437805bbb91a67847bc5dab02a133 | 已合并至 b718c40；8+6 缺口修复，覆盖 102/102、定向后端 13/13、contract 52/52、secret scan 通过 |
 | P7Q-05 | RAG 变更强制评估触发脚本 | P1 | ✅ completed | A14 | codex/p7-rag-eval-gate-a14 | RAGForge-worktrees/codex-p7-rag-eval-gate-a14 | 5,000 | 4,600 | 04de92a5f583b71c0198b1ffccddf8147a21f891 | 已合并至 f738719；RAG 路径变更强制 Phase 6 128-case 评估，真实 retrieval/answer 变更范围触发通过；无关变更 skipped，失败阻断 |
 | P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | ✅ completed | A15 | codex/p7-web-router-pagination-a15 | RAGForge-worktrees/codex-p7-web-router-pagination-a15 | 11,000 | 8,600 | 370ccaf19ba093a2ba67d0a074e6b5d26ba1e7d1 | 已合并至 c5c12bc；URL/space/provenance/run 状态恢复，cursor 分页覆盖 120 sources、7 jobs、6 indexes，Vitest 10/10、Playwright 10/10、format/build/secret scan 通过；npm audit 仍有 3 个漏洞 |
-| P7D-01~07 | Linux 交付与发布（7 张） | P2 | ⏳ blocked | — | — | — | 60,000 | — | — | P0+P1 全通过后进入 |
+| P7D-01~07 | Linux 交付与发布（7 张） | P2 | ⏳ blocked | — | — | — | 60,000 | — | — | P0+P1 本地验收已通过；等待当前 main 候选推送并取得同 SHA GitHub Actions 全绿后进入 |
 
 ---
 

@@ -1,0 +1,89 @@
+{
+  "evidence_version": "phase7-p2-entry-local-gates.v1",
+  "recorded_at": "2026-08-30T18:17:30+08:00",
+  "functional_candidate_sha": "f695936594834f8a870fa95dca5ff0c6634441a1",
+  "base_ref": "f738719",
+  "status": "LOCAL_PASS_REMOTE_PENDING",
+  "passed": true,
+  "p2_entry_eligible": false,
+  "preflight": {
+    "passed": true,
+    "checks": 6,
+    "tool_versions": {
+      "java": "21.0.7",
+      "maven": "3.9.6",
+      "node": "22.22.2",
+      "npm": "10.9.7",
+      "docker": "29.7.2"
+    },
+    "evidence": "tests/evidence/phase7-p2-entry-preflight-f695936.json"
+  },
+  "maven_reactor": {
+    "passed": true,
+    "report_files": 84,
+    "tests": 307,
+    "passed_tests": 306,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "duration_ms": 130000,
+    "modules": {
+      "apps/server": "SUCCESS",
+      "apps/ingestion-worker": "SUCCESS"
+    }
+  },
+  "web": {
+    "typecheck": "PASS",
+    "build": "PASS",
+    "vitest": {
+      "passed": 10,
+      "failed": 0
+    },
+    "playwright": {
+      "passed": 10,
+      "failed": 0
+    }
+  },
+  "contracts": {
+    "contract_tests": {
+      "passed": 52,
+      "failed": 0
+    },
+    "openapi_controller_coverage": {
+      "matched": 102,
+      "total": 102
+    }
+  },
+  "rag_evaluation": {
+    "passed": true,
+    "triggered": true,
+    "dataset_cases": 128,
+    "candidate_recall_at_10": 1.0,
+    "candidate_mrr_at_10": 1.0,
+    "candidate_citation_precision": 1.0,
+    "candidate_claim_faithfulness": 1.0,
+    "candidate_abstention_accuracy": 1.0,
+    "security_violations": 0,
+    "cloud_egress_enabled": false,
+    "evidence": "tests/evidence/phase7-evaluation-f695936.v1.json"
+  },
+  "static_gates": {
+    "format": "PASS",
+    "architecture": "PASS",
+    "markdown_links": "PASS",
+    "secret_scan": "PASS",
+    "dependency_inventory": "PASS",
+    "compose_validation": "PASS"
+  },
+  "remote_ci": {
+    "status": "PENDING_PUSH",
+    "origin_main_sha": "9fdd94e0e12afae1c3843d0680fb48017e00669f",
+    "same_candidate_run": null,
+    "blocking_reason": "P2 requires a green GitHub Actions run for the current candidate SHA; historical runs cannot satisfy this gate."
+  },
+  "limitations": [
+    "RAG evaluation uses the versioned public synthetic fixture and does not establish production model quality or capacity.",
+    "The default AI Runtime rerank scorer remains a deterministic integration seam tracked by R-054.",
+    "No release, production migration, license acceptance, cloud egress enablement, or remote push was performed."
+  ]
+}

@@ -1,8 +1,8 @@
 # Phase 7 执行计划：实现对齐与 Linux 交付
 
-- Version: `phase7-plan.v5`
-- Status: `implementation-reconciliation`
-- Code baseline: `f6b016840e946ea314cdaf4812c196dcea8ca491`
+- Version: `phase7-plan.v6`
+- Status: `p2-entry-remote-ci-pending`
+- Functional candidate baseline: `f695936594834f8a870fa95dca5ff0c6634441a1`
 - Checklist: [`PHASE_7_CHECKLIST.md`](../../03-delivery/PHASE_7_CHECKLIST.md)
 
 ## 目标与边界
@@ -13,29 +13,29 @@
 
 | 区域 | 已实现代码 | 未实现或不一致 | 结论 |
 |---|---|---|---|
-| 身份/空间 | Session、CSRF、成员角色、用户/空间管理、一次性平台管理员 bootstrap、按精确邮箱加入成员 | 首次 Provider 配置之后仍缺少完整 RAG 一键绑定与真实 RERANK | 干净数据库可进入平台管理、成员协作和可验证 Provider 配置 |
-| Provider | space-scoped connection/profile/route/binding、production adapter、connection probe 与 verified publish gate | RERANK adapter 尚未实现；Provider/配置退役与回滚仍不完整 | 权限、CHAT/EMBEDDING 实测和 `PUBLISHED` 闸门已对齐；不得把 CHAT 探测冒充 RERANK |
-| 摄取 | 上传、网页、revision/artifact/job、Worker pipeline | Git/local connector 未接 Server/Web/调度 | 不能宣称 Git 知识源用户旅程完成 |
-| 问答 | material-backed retrieval、Provider 原生 streaming、结构化 citation、durable answer/event、Last-Event-ID、同/多实例 cancel | citation 正文、历史 citation、反馈和上下文导航仍未闭环 | 流式生成与取消已真实接线，但完整普通用户核验旅程仍属于 P7-D |
-| Retrieval | Qdrant dense、RRF、parent expansion、lexical rerank | BM25 进程内；RERANK route 未调用；AI Runtime 空壳 | 重启与配置语义不满足部署要求 |
-| 管理 | 用户/空间/模型/Prompt 页面、raw health link | feedback、审计/成本/聚合健康页面缺失 | PRD 管理闭环不完整 |
-| 测试 | Java/contract/安全/评估资产丰富 | Web 无测试脚本；契约未校验 Controller 覆盖；本机 preflight 不可靠 | 当前候选不可据此判定全绿 |
+| 身份/空间 | Session、CSRF、成员角色、用户/空间管理、一次性平台管理员 bootstrap、按精确邮箱加入成员 | P2 仍需干净 Ubuntu 部署复验 | P0 产品路径与 `space_id` 权限回归已闭环 |
+| Provider | space-scoped connection/profile/route/binding、production adapter、真实 connection probe 与 verified publish gate | 部署层 DNS TOCTOU/egress 防护仍由 R-053 跟踪 | CHAT/EMBEDDING/RERANK 独立实测并 fail-closed，不以 CHAT 探测冒充 RERANK |
+| 摄取 | 上传、网页、Git 配置/同步、revision/artifact/job、Worker pipeline、任务中心与索引生命周期 | Ubuntu runtime 与升级/回滚尚未验收 | 来源维护、失败恢复、发布/回滚产品路径已闭环 |
+| 问答 | material-backed retrieval、Provider 原生 streaming、结构化 citation、历史/预览/反馈、durable event、replay/cancel、上下文跳转 | 真实发布候选模型性能仍需 P2 复测 | 普通用户可完成可核验问答，不再依赖手填内部标识 |
+| Retrieval | Qdrant dense、durable BM25、RRF、parent expansion、LOCAL_ONLY AI Runtime rerank | 默认确定性 scorer 是模型接线 seam，残余风险 R-054 | 重启持久性、空间路由和配置执行语义已对齐 |
+| 管理 | 用户/空间/模型/Prompt、feedback、audit/cost、aggregate health、Run/correlation 页面 | P2 仍需 observability profile 与生产脱敏验收 | P0 管理闭环完成，普通用户访问拒绝 |
+| 测试 | preflight、Maven reactor、Web unit/E2E、contract coverage、RAG gate、安全与静态门禁 | 当前候选尚无同 SHA 远程 Linux CI | 本地候选全绿；P2 入口只被远程 CI 硬门禁阻塞 |
 | 部署 | core/app Compose、Server/Worker 非 root | Web root；应用 health/资源/capability/digest/Secret 仍不足 | 只能作为开发部署资产 |
 
 ### 前端实用性结论
 
-现有浏览器证据和自动化门禁仍不能证明产品闭环。成员按精确邮箱加入空间、平台管理员 bootstrap、Provider 实测发布闸门和真实回答 streaming/cancel 已完成；但多文件没有逐项终态，来源/任务/索引缺少维护和恢复，Citation 不显示来源正文，Chunk Studio、Playground 与 Run 依赖手填内部 ID，列表仍有静默截断且 Web 没有自动化测试。因此 Web 的当前定位仍是工程控制台，部署验收暂停到下列可用性工作包完成。
+P7C-01~08 与 P7Q-01~06 已把初始审计发现的产品断点和自动化缺口闭环：来源/任务/索引可维护，Citation 可核验，Studio/Playground/Run 可从业务上下文进入，URL 与分页可恢复，Web 有 Vitest/Playwright 回归。当前部署验收暂停的唯一入口硬门禁是候选 SHA 尚无远程 Linux CI；这不等于 P2 容器、Ubuntu、观测、升级或供应链工作已经完成。
 
 ## 执行顺序
 
 | 工作包 | 状态 | 主要产物 | 完成条件 | 依赖 |
 |---|---|---|---|---|
 | P7-A 审计与任务冻结 | completed | 本计划、checklist、风险/追溯更新 | 任务由代码事实驱动，历史声明不作为完成证据 | 无 |
-| P7-B 首次设置与协作 | completed | admin bootstrap、成员加入、connection test、verified publish | 干净数据库可通过 Web 完成平台初始化、空间协作和可核验 Provider 配置；完整 RAG 一键绑定仍受 P7-D 真实 RERANK 约束 | P7-A |
-| P7-C 来源、任务与索引维护 | pending | 来源库、Git source、多任务终态、重试/同步/归档、索引发布/回滚 | 增长中的知识库可持续维护，失败不需要 API/DB 修复 | P7-B |
-| P7-D 问答与上下文工具 | in_progress | ~~streaming/cancel~~、citation 正文、历史 citation、新会话/反馈、Studio/Playground 上下文跳转、durable lexical、rerank adapter | 普通用户不手填内部标识即可完成可核验问答；运行时与配置语义一致 | P7-C |
-| P7-E 管理与 Web 自动化 | pending | Provider/Prompt 生命周期、Run/audit/cost/health 查询、Router/pagination、Web tests、contract-implementation gate、preflight | 关键 UI/API/失败/规模/权限路径可自动回归 | P7-B/P7-C/P7-D |
-| P7-F 镜像与 Compose 加固 | pending | non-root Web、health、limits、digest、Secret | Definition of Done 可部署能力满足 | P7-E |
+| P7-B 首次设置与协作 | completed | admin bootstrap、成员加入、connection test、verified publish | 干净数据库可通过 Web 完成平台初始化、空间协作和可核验 Provider 配置；完整 RAG 绑定已由后续 P7-C/P7-D 闭环 | P7-A |
+| P7-C 来源、任务与索引维护 | completed | 来源库、Git source、多任务终态、重试/同步/归档、索引发布/回滚、durable BM25、RERANK adapter | 增长中的知识库可持续维护；全 reactor 暴露的 test-profile adapter 冲突已由 P7C-05R 修复 | P7-B |
+| P7-D 问答与上下文工具 | completed | streaming/cancel、citation 正文、历史 citation、新会话/反馈、Studio/Playground 上下文跳转 | 普通用户不手填内部标识即可完成可核验问答；运行时与配置语义一致 | P7-C |
+| P7-E 管理与 Web 自动化 | completed | Run/audit/cost/health 查询、Router/pagination、Web tests、contract-implementation gate、preflight、RAG gate | 本地候选关键 UI/API/失败/规模/权限路径全绿 | P7-B/P7-C/P7-D |
+| P7-F 镜像与 Compose 加固 | blocked | non-root Web、health、limits、digest、Secret | 当前候选同 SHA 远程 CI 全绿后才可启动 | P7-E + remote CI |
 | P7-G Ubuntu/观测/升级验收 | pending | clean deploy、smoke、observability、upgrade/rollback evidence | 同一候选 SHA 和镜像 digest 可追溯 | P7-F |
 | P7-H 供应链与阶段闭环 | pending | SBOM/Grype、public audit、retrospective、状态记录 | checklist 全满足；release 仍需单独批准 | P7-G |
 
@@ -47,6 +47,14 @@
 - NOT RUN：容器 build/up/health、真实业务 smoke、SBOM/Grype target image、Ubuntu、升级/回滚。
 
 当前状态更正：后续已通过显式 JDK 21 完成 streaming 定向 Java 63/63，并在可用 Docker/Testcontainers 上完成事件持久化/多实例 fan-out 6/6；Node/npm 也已完成 Web 类型检查与构建。由于统一 preflight 和当前候选的 Server + Worker 全 reactor 仍未执行，P7-TEST-01/02 继续保持未完成；上述历史失败不得再表述为当前环境事实。
+
+## 2026-08-30 P0/P1 对齐与 P2 入口复核
+
+- P7C-01~08、P7C-05R 与 P7Q-01~06 已完成；功能候选为 `f695936594834f8a870fa95dca5ff0c6634441a1`。
+- 首次全 reactor 暴露 test profile 同时注册 fake 与 production `AI_RUNTIME` adapter；P7C-05R 以 `@Profile("!test")` 修复，保留 registry 的重复检测和默认 production 注册。
+- 当前候选本地门禁：preflight 6/6；Maven 307 tests（306 passed、0 failed、0 errors、1 skipped）；contract 52/52；OpenAPI/Controller 102/102；Vitest 10/10；Playwright 10/10；128-case RAG gate、format、architecture、links、secret、dependency inventory、Compose static validation 全部通过。
+- P2 尚未启动。`origin/main` 仍为 `9fdd94e0e12afae1c3843d0680fb48017e00669f`，当前候选没有同 SHA GitHub Actions 结果；必须推送并等待远程全绿后才能解除 P7-F/P7D-01 阻塞。
+- 本地 RAG 证据使用公共 synthetic fixture；默认 AI Runtime scorer 仍是确定性 seam，不能外推真实模型质量，继续由 R-054 跟踪。
 
 ## 2026-08-29 执行增量
 
