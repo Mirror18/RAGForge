@@ -1,0 +1,22 @@
+{
+  "card_id": "P7Q-06",
+  "version": "v1",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 21000
+  },
+  "raw_output_stored": true,
+  "checks": {
+    "web_format": { "passed": true, "detail": "npm --prefix apps/web run format:check; tsc --noEmit passed" },
+    "web_unit": { "passed": true, "detail": "1 test file; 10 tests passed" },
+    "web_e2e": { "passed": true, "detail": "10/10 passed: original 8 journeys, >100 collections, six page refresh recovery" },
+    "web_build": { "passed": true, "detail": "vite production build passed" },
+    "hard_truncation_scan": { "passed": true, "detail": "no slice(0,5), limit=100 or limit%3D100 matches" },
+    "secret_scan": { "passed": true, "detail": "no supported credential pattern found" }
+  },
+  "synthetic_collections": { "sources": 120, "jobs": 7, "indexes": 6 },
+  "acceptance": { "A1": true, "A2": true, "A3": true, "A4": true, "A5": true }
+}

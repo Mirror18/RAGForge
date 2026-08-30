@@ -30,19 +30,21 @@ const actionReason = ref("");
 const canManage = computed(() => props.currentRole === "SPACE_ADMIN" || props.currentRole === "PLATFORM_ADMIN" || props.currentRole === "EDITOR");
 const storageKey = computed(() => `ragforge:source-library:${props.selectedSpaceId}`);
 
-type SourceLibraryState = { cursor: string | null; connectorType: string; sourceState: string };
+type SourceLibraryState = { cursor: string | null; previousCursors: string[]; connectorType: string; sourceState: string };
+const previousCursors = ref<string[]>([]);
 function restoreState(): void {
   try {
     const saved = JSON.parse(sessionStorage.getItem(storageKey.value) ?? "null") as Partial<SourceLibraryState> | null;
     if (saved) {
       cursor.value = saved.cursor ?? null;
+      previousCursors.value = saved.previousCursors ?? [];
       connectorType.value = saved.connectorType ?? "";
       sourceState.value = saved.sourceState ?? "";
-    }
+    } else { cursor.value = null; previousCursors.value = []; connectorType.value = ""; sourceState.value = ""; }
   } catch { /* sessionStorage is optional and never part of the security boundary. */ }
 }
 function persistState(): void {
-  try { sessionStorage.setItem(storageKey.value, JSON.stringify({ cursor: cursor.value, connectorType: connectorType.value, sourceState: sourceState.value } satisfies SourceLibraryState)); } catch { /* private browsing may reject storage. */ }
+  try { sessionStorage.setItem(storageKey.value, JSON.stringify({ cursor: cursor.value, previousCursors: previousCursors.value, connectorType: connectorType.value, sourceState: sourceState.value } satisfies SourceLibraryState)); } catch { /* private browsing may reject storage. */ }
 }
 function describeError(value: unknown): string {
   if (!(value instanceof ApiError)) return "来源读取失败，请稍后重试。";
@@ -58,9 +60,11 @@ function sourceStateLabel(source: SourceRecord): string { return source.sourceSt
 
 async function load(): Promise<void> {
   if (!props.selectedSpaceId) return;
+  const spaceIdAtStart = props.selectedSpaceId;
   loading.value = true; error.value = "";
   try {
-    const page = await listSources(props.selectedSpaceId, { cursor: cursor.value, limit: 20, connectorType: connectorType.value, sourceState: sourceState.value });
+    const page = await listSources(spaceIdAtStart, { cursor: cursor.value, limit: 20, connectorType: connectorType.value, sourceState: sourceState.value });
+    if (props.selectedSpaceId !== spaceIdAtStart) return;
     sources.value = page.items;
     nextCursor.value = page.nextCursor;
     emit("sources-loaded", page.items);
@@ -68,9 +72,9 @@ async function load(): Promise<void> {
   } catch (value) { error.value = describeError(value); }
   finally { loading.value = false; }
 }
-function applyFilters(): void { cursor.value = null; persistState(); void load(); }
-function nextPage(): void { if (!nextCursor.value) return; cursor.value = nextCursor.value; persistState(); void load(); }
-function firstPage(): void { if (!cursor.value) return; cursor.value = null; persistState(); void load(); }
+function applyFilters(): void { cursor.value = null; previousCursors.value = []; persistState(); void load(); }
+function nextPage(): void { if (!nextCursor.value) return; previousCursors.value.push(cursor.value ?? ""); cursor.value = nextCursor.value; persistState(); void load(); }
+function previousPage(): void { if (!cursor.value) return; cursor.value = previousCursors.value.pop() || null; persistState(); void load(); }
 
 async function save(): Promise<void> {
   if (!canManage.value) { error.value = "当前角色没有来源写权限。"; return; }
@@ -107,7 +111,7 @@ onMounted(() => { if (props.selectedSpaceId) { restoreState(); void load(); } })
     <div class="filter-row"><div class="field"><label for="source-connector-filter">连接器</label><select id="source-connector-filter" v-model="connectorType" @change="applyFilters"><option value="">全部连接器</option><option value="GIT">Git</option></select></div><div class="field"><label for="source-state-filter">状态</label><select id="source-state-filter" v-model="sourceState" @change="applyFilters"><option value="">全部状态</option><option value="ACTIVE">ACTIVE</option><option value="PAUSED">PAUSED</option></select></div><div class="field reason-field"><label for="source-action-reason">操作说明（可选）</label><input id="source-action-reason" v-model="actionReason" maxlength="500" placeholder="记录本次操作原因" /></div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
     <div v-if="sources.length" class="source-list"><article v-for="item in sources" :key="item.source.sourceId" class="source-row"><div class="source-main"><strong>{{ sourceLabel(item.source) }}</strong><span>{{ item.source.rootRef }} · {{ item.source.gitBranch || "默认分支" }}</span><small>状态 {{ sourceStateLabel(item.source) }} · 版本 {{ sourceVersion(item) }} · checkpoint {{ item.checkpoint?.cursor || "未同步" }}</small><small v-if="item.checkpoint">checkpoint 更新于 {{ formatDateTime(item.checkpoint.updatedAt) }}</small></div><div class="button-row"><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'RETRY')">重试</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'REPLAY')">重放</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'RESYNC')">重新同步</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'ARCHIVE')">归档</button><button type="button" class="danger-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'DELETE')">删除</button></div></article></div><div v-else-if="!loading" class="empty-state"><strong>暂无来源</strong><span>提交 Git 来源后，服务端会在当前空间创建来源记录。</span></div>
-    <div class="pagination"><button type="button" class="quiet-button" :disabled="loading || !cursor" @click="firstPage">回到第一页</button><span>当前页 {{ cursor ? "（cursor）" : "（首页）" }} · {{ sources.length }} 条</span><button type="button" class="quiet-button" :disabled="loading || !nextCursor" @click="nextPage">下一页</button></div>
+    <div class="pagination"><button type="button" class="quiet-button" :disabled="loading || !cursor" @click="previousPage">上一页</button><span>当前页 {{ cursor ? "（cursor）" : "（首页）" }} · {{ sources.length }} 条</span><button type="button" class="quiet-button" :disabled="loading || !nextCursor" @click="nextPage">下一页</button></div>
   </section>
 </template>
 

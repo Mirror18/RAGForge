@@ -61,7 +61,7 @@ const answer = (status = "COMPLETED"): object => ({
   createdAt: now,
 });
 
-export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: boolean } = {}): SyntheticApi {
+export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: boolean; largeCollections?: boolean } = {}): SyntheticApi {
   const role = options.role ?? "SPACE_ADMIN";
   let authenticated = false;
   let hasSpace = options.hasSpace ?? true;
@@ -72,6 +72,16 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
   let jobPolls = 0;
   const requests: SyntheticRequest[] = [];
   const conversations = [{ id: SYNTHETIC.conversationId, title: "Synthetic conversation", status: "ACTIVE", version: 1, createdAt: now, updatedAt: now }];
+  const page = <T>(items: T[], url: URL): { items: T[]; nextCursor: string | null } => {
+    const size = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20) || 20, 1), 20);
+    const cursor = url.searchParams.get("cursor");
+    const start = cursor?.startsWith("synthetic-") ? Number(cursor.slice("synthetic-".length)) || 0 : 0;
+    const result = items.slice(start, start + size);
+    return { items: result, nextCursor: start + result.length < items.length ? `synthetic-${start + result.length}` : null };
+  };
+  const largeSources = Array.from({ length: 120 }, (_, index) => ({ source: { sourceId: `0190f5c2-7c1e-7abc-8def-${String(2000 + index).padStart(12, "0")}`, spaceId: SYNTHETIC.spaceId, displayName: `Synthetic source ${index + 1}`, connectorType: "GIT", rootRef: `synthetic/source/${index + 1}`, gitBranch: "main", versionNo: 1, sourceState: "ACTIVE" }, checkpoint: null }));
+  const largeJobs = Array.from({ length: 7 }, (_, index) => ({ ...job("SUCCEEDED"), job: { ...job("SUCCEEDED").job, id: `0190f5c2-7c1e-7abc-8def-${String(3000 + index).padStart(12, "0")}` } }));
+  const largeIndexes = Array.from({ length: 6 }, (_, index) => ({ indexVersionId: `0190f5c2-7c1e-7abc-8def-${String(4000 + index).padStart(12, "0")}`, spaceId: SYNTHETIC.spaceId, versionNo: index + 1, state: index === 0 && published ? "ACTIVE" : "READY", childChunkCount: 1, validationVectorDimension: 3 }));
   const fulfill = async (route: Route, status: number, body: object | string, contentType = "application/json"): Promise<void> => {
     await route.fulfill({ status, contentType, headers: { "X-Correlation-Id": SYNTHETIC.correlationId }, body: typeof body === "string" ? body : JSON.stringify(body) });
   };
@@ -106,14 +116,14 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
     if (path.endsWith("/prompt-templates")) return fulfill(route, 200, { items: [{ promptTemplateId: SYNTHETIC.promptTemplateId, name: "Synthetic template", purpose: "CHAT", currentVersion: 1 }] });
     if (path.includes("/prompt-templates/") && path.endsWith("/versions/1")) return fulfill(route, 200, { promptTemplateId: SYNTHETIC.promptTemplateId, promptVersionId: SYNTHETIC.promptVersionId, version: 1, state: "PUBLISHED", contentHash: SYNTHETIC.configHash, messages: [], variableSchema: {}, outputContract: {} });
     if (path.endsWith("/indexes/active")) return fulfill(route, 200, published ? { pointer: { activeIndexVersionId: SYNTHETIC.indexId }, index: { indexVersionId: SYNTHETIC.indexId, versionNo: 1, state: "ACTIVE", childChunkCount: 1, validationVectorDimension: 3 }, datasetHash: SYNTHETIC.datasetHash } : null);
-    if (path.endsWith("/indexes") && request.method() === "GET") return fulfill(route, 200, { items: uploaded ? [{ indexVersionId: SYNTHETIC.indexId, versionNo: 1, state: published ? "ACTIVE" : "READY", childChunkCount: 1, validationVectorDimension: 3 }] : [], nextCursor: null });
+    if (path.endsWith("/indexes") && request.method() === "GET") return fulfill(route, 200, page(options.largeCollections ? (uploaded ? largeIndexes : []) : (uploaded ? [{ indexVersionId: SYNTHETIC.indexId, versionNo: 1, state: published ? "ACTIVE" : "READY", childChunkCount: 1, validationVectorDimension: 3 }] : []), url));
     if (path.includes("/indexes/" + SYNTHETIC.indexId + "/publish") && request.method() === "POST") { published = true; return fulfill(route, 200, { activeIndexVersionId: SYNTHETIC.indexId }); }
     if (path.endsWith("/sources/uploads") && request.method() === "POST") { uploaded = true; jobPolls = 0; return fulfill(route, 201, { jobId: SYNTHETIC.jobId, documentRevisionId: SYNTHETIC.revisionId, sourceId: SYNTHETIC.sourceId }); }
     if (path.includes("/ingestion-jobs/") && request.method() === "GET") { jobPolls += 1; return fulfill(route, 200, job(jobPolls > 0 ? "SUCCEEDED" : "RUNNING")); }
     if (path.endsWith("/ingestion-jobs") && request.method() === "GET") return fulfill(route, 200, uploaded ? [job("SUCCEEDED")] : []);
     if (path.includes("/document-revisions/") && path.endsWith("/parse-report")) return fulfill(route, 200, { spaceId: SYNTHETIC.spaceId, documentRevisionId: SYNTHETIC.revisionId, status: "SUCCEEDED", parserName: "synthetic-parser", parserVersion: "1", characterCount: 10, tokenCount: 3, errors: null });
-    if (path.endsWith("/sources") && request.method() === "GET") return fulfill(route, 200, { items: [], nextCursor: null });
-    if (path.endsWith("/jobs") && request.method() === "GET") return fulfill(route, 200, { items: [], nextCursor: null });
+    if (path.endsWith("/sources") && request.method() === "GET") return fulfill(route, 200, page(options.largeCollections ? largeSources : [], url));
+    if (path.endsWith("/jobs") && request.method() === "GET") return fulfill(route, 200, page(options.largeCollections ? (uploaded ? largeJobs : []) : [], url));
     if (path.endsWith("/space-bindings") && request.method() === "GET") return fulfill(route, 200, { version: 1, chatRouteId: SYNTHETIC.routeId, embeddingRouteId: null, rerankRouteId: null, promptVersionId: SYNTHETIC.promptVersionId, cloudEgressEnabled: false, cloudEgressAuthorization: null });
     if (path.endsWith("/conversations") && request.method() === "GET") return fulfill(route, 200, { items: conversationStatus === "ARCHIVED" && url.searchParams.get("includeArchived") !== "true" ? [] : conversations.map((item) => ({ ...item, status: conversationStatus })), nextCursor: null });
     if (path.endsWith("/conversations") && request.method() === "POST") return fulfill(route, 201, { id: SYNTHETIC.conversationId, conversationId: SYNTHETIC.conversationId, title: "Synthetic conversation", status: "ACTIVE", version: 1, createdAt: now, updatedAt: now, spaceId: SYNTHETIC.spaceId });

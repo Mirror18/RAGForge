@@ -112,3 +112,53 @@ test.describe("P7Q-03 Web 8 journeys", () => {
     expect(api.requests.at(-1)?.path).toContain(SYNTHETIC.otherSpaceId);
   });
 });
+
+test("[P7Q-06 URL + 分页] restores route state and traverses all large synthetic collections", async ({ page }) => {
+  const api = createSyntheticApi({ largeCollections: true });
+  await login(page, api);
+  await page.getByRole("button", { name: "Chunk Studio" }).click();
+  await expect(page).toHaveURL(/view=studio/);
+  await page.reload();
+  await expect(page.locator("#chunk-studio-heading")).toBeVisible();
+
+  const collect = async (path: string): Promise<number> => page.evaluate(async ({ path }) => {
+    let cursor: string | null = null;
+    let count = 0;
+    do {
+      const url = new URL(path, window.location.origin);
+      url.searchParams.set("limit", "20");
+      if (cursor) url.searchParams.set("cursor", cursor);
+      const response = await fetch(url, { credentials: "include" });
+      const body = await response.json() as { items: unknown[]; nextCursor: string | null };
+      count += body.items.length;
+      cursor = body.nextCursor;
+    } while (cursor);
+    return count;
+  }, { path });
+  await page.evaluate(async (spaceId) => {
+    await fetch(`/api/v1/spaces/${spaceId}/sources/uploads`, { method: "POST", credentials: "include", body: "synthetic" });
+  }, SYNTHETIC.spaceId);
+  expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/sources`)).toBe(120);
+  expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/jobs`)).toBe(7);
+  expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/indexes`)).toBe(6);
+  expect(api.requests.filter((request) => request.path.endsWith("/sources")).length).toBeGreaterThan(1);
+});
+
+test("[P7Q-06 刷新恢复] restores five shareable workbench pages", async ({ page }) => {
+  const api = create();
+  await login(page, api);
+  const pages = [
+    ["flow", "#business-flow-heading"],
+    ["answer", "#answer-heading"],
+    ["studio", "#chunk-studio-heading"],
+    ["playground", "#retrieval-playground-heading"],
+    ["control", "#control-center-heading"],
+    ["profile", "#personal-space-heading"],
+  ] as const;
+  for (const [view, heading] of pages) {
+    await page.goto(`/?view=${view}&spaceId=${SYNTHETIC.spaceId}`);
+    await page.reload();
+    await expect(page.locator(heading)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`view=${view}`));
+  }
+});
