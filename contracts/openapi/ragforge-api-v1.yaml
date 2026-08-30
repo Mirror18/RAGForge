@@ -779,6 +779,17 @@
         "responses": {"201": {"description": "Source created", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Source"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
     },
+    "/api/v1/spaces/{spaceId}/sources/git": {
+      "x-ragforge-implementation-status": "phase7-legacy-compatible",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "post": {
+        "tags": ["sources"], "operationId": "configureGitSource", "summary": "Configure a Git source connector",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SourceCreateRequest"}}}},
+        "responses": {"200": {"description": "Git source configured", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Source"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}}
+      }
+    },
     "/api/v1/spaces/{spaceId}/sources/{sourceId}": {
       "x-ragforge-implementation-status": "phase3-contract",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/SourceId"}],
@@ -808,6 +819,16 @@
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SyncJobRequest"}}}},
         "responses": {"202": {"description": "Sync job accepted", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SyncJob"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/sources/{sourceId}/sync": {
+      "x-ragforge-implementation-status": "phase7-legacy-compatible",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/SourceId"}],
+      "post": {
+        "tags": ["ingestion"], "operationId": "syncGitSource", "summary": "Synchronize a Git source",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "responses": {"200": {"description": "Synchronization requested", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SyncJob"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}}
       }
     },
     "/api/v1/spaces/{spaceId}/sync-jobs": {
@@ -1103,7 +1124,23 @@
       "post": {"tags": ["ingestion"], "operationId": "operateSourceTask", "summary": "Retry, replay, resync or archive a source task", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}, {"$ref": "#/components/parameters/IfMatch"}], "requestBody": {"$ref": "#/components/requestBodies/TaskAction"}, "responses": {"202": {"description": "Action accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskAction"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}, "428": {"$ref": "#/components/responses/PreconditionRequired"}}}
     },
     "/api/v1/spaces/{spaceId}/jobs/{jobId}": {
+      "get": {"tags": ["ingestion"], "operationId": "getSourceTask", "summary": "Get one source task", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/JobId"}, {"$ref": "#/components/parameters/CorrelationId"}], "responses": {"200": {"description": "Source task", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessJobView"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}},
       "delete": {"tags": ["ingestion"], "operationId": "deleteSourceTask", "summary": "Delete a source task", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/JobId"}, {"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}, {"$ref": "#/components/parameters/IfMatch"}], "requestBody": {"$ref": "#/components/requestBodies/TaskAction"}, "responses": {"200": {"description": "Task deleted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskAction"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}, "428": {"$ref": "#/components/responses/PreconditionRequired"}}}
+    },
+    "/api/v1/spaces/{spaceId}/jobs/{jobId}/replay": {
+      "x-ragforge-implementation-status": "phase7-legacy-compatible",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/JobId"}],
+      "post": {"tags": ["ingestion"], "operationId": "replaySourceJob", "summary": "Replay a source job", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}, {"$ref": "#/components/parameters/IfMatch"}], "requestBody": {"$ref": "#/components/requestBodies/TaskAction"}, "responses": {"202": {"description": "Action accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskAction"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}, "428": {"$ref": "#/components/responses/PreconditionRequired"}}}
+    },
+    "/api/v1/spaces/{spaceId}/jobs/{jobId}/resync": {
+      "x-ragforge-implementation-status": "phase7-legacy-compatible",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/JobId"}],
+      "post": {"tags": ["ingestion"], "operationId": "resyncSourceJob", "summary": "Resynchronize a source job", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}, {"$ref": "#/components/parameters/IfMatch"}], "requestBody": {"$ref": "#/components/requestBodies/TaskAction"}, "responses": {"202": {"description": "Action accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskAction"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}, "428": {"$ref": "#/components/responses/PreconditionRequired"}}}
+    },
+    "/api/v1/spaces/{spaceId}/jobs/{jobId}/archive": {
+      "x-ragforge-implementation-status": "phase7-legacy-compatible",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/JobId"}],
+      "post": {"tags": ["ingestion"], "operationId": "archiveSourceJob", "summary": "Archive a source job", "security": [{"cookieAuth": []}, {"serviceToken": []}], "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}, {"$ref": "#/components/parameters/IfMatch"}], "requestBody": {"$ref": "#/components/requestBodies/TaskAction"}, "responses": {"200": {"description": "Job archived", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskAction"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}, "428": {"$ref": "#/components/responses/PreconditionRequired"}}}
     },
     "/api/v1/spaces/{spaceId}/indexes/{indexVersionId}/archive": {
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/IndexVersionId"}],

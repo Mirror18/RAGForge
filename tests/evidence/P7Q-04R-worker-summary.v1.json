@@ -1,0 +1,19 @@
+{
+  "schema_version": "P7Q-04R-worker-summary.v1",
+  "passed": true,
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0
+  },
+  "checks": [
+    {"name": "contract coverage", "passed": 3, "failed": 0, "details": "双向 102/102；两个故意缺口夹具均保持失败。"},
+    {"name": "contract test", "passed": 52, "failed": 0, "details": "52/52 contract tests passed。"},
+    {"name": "server targeted tests", "passed": 3, "failed": 0, "details": "JDK 21 Maven BUILD SUCCESS；新增三个 Controller 测试通过。"},
+    {"name": "secret scan", "passed": 1, "failed": 0, "details": "tracked text files 未发现支持的凭据模式。"},
+    {"name": "coverage workflow static check", "passed": 1, "failed": 0, "details": "quality.yml 已接入 contract_coverage.py 与 coverage_test.py。"}
+  ],
+  "raw_output_stored": true
+}

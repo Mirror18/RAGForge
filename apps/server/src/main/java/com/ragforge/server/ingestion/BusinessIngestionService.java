@@ -171,6 +171,53 @@ public class BusinessIngestionService {
         return ingestion.listSourceDocuments(spaceId);
     }
 
+    @Transactional
+    public IngestionRepository.SourceVersion updateSource(UUID spaceId, UUID sourceId, SourceUpdateRequest request,
+                                                          String ifMatch, SessionPrincipal principal,
+                                                          HttpServletRequest servletRequest) {
+        authorization.requireWrite(spaceId, principal);
+        requireVersion(request.version(), ifMatch);
+        IngestionRepository.SourceVersion current = ingestion.findCurrentSourceVersion(spaceId, sourceId)
+                .orElseThrow(() -> notFound("Source not found"));
+        if (current.versionNo() != request.version()) {
+            throw new ApiException(HttpStatus.PRECONDITION_FAILED, "source_version_conflict",
+                    "Source version conflict", "The source version is stale");
+        }
+        return ingestion.createSourceVersion(new IngestionRepository.NewSourceVersion(
+                UuidV7.random(), spaceId, sourceId, current.versionNo() + 1, current.connectorType(),
+                request.displayName().trim(), sourceState(request.sourceState()), request.rootRef().trim(),
+                jsonArray(request.include()), jsonArray(request.exclude()), current.credentialConfigured(),
+                UUID.fromString(CorrelationIdFilter.current(servletRequest)), Instant.now(), current.gitBranch()));
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<IngestionRepository.SourceDocument> documentPage(UUID spaceId, SessionPrincipal principal) {
+        authorization.requireMember(spaceId, principal);
+        return new CursorPage<>(ingestion.listSourceDocuments(spaceId), null);
+    }
+
+    @Transactional(readOnly = true)
+    public IngestionRepository.SourceDocument document(UUID spaceId, UUID documentId, SessionPrincipal principal) {
+        authorization.requireMember(spaceId, principal);
+        return ingestion.findSourceDocument(spaceId, documentId)
+                .orElseThrow(() -> notFound("Source document not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<IngestionRepository.DocumentRevision> revisionPage(UUID spaceId, UUID documentId,
+                                                                          SessionPrincipal principal) {
+        document(spaceId, documentId, principal);
+        return new CursorPage<>(ingestion.listDocumentRevisions(spaceId, documentId), null);
+    }
+
+    @Transactional(readOnly = true)
+    public IngestionRepository.DocumentRevision revision(UUID spaceId, UUID documentId, UUID revisionId,
+                                                         SessionPrincipal principal) {
+        document(spaceId, documentId, principal);
+        return ingestion.findDocumentRevision(spaceId, documentId, revisionId)
+                .orElseThrow(() -> notFound("Document revision not found"));
+    }
+
     @Transactional(readOnly = true)
     public JobView job(UUID spaceId, UUID jobId, SessionPrincipal principal) {
         authorization.requireMember(spaceId, principal);
@@ -277,6 +324,45 @@ public class BusinessIngestionService {
     }
     private static ApiException invalid(String field, String detail) { return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "validation_failed", "Validation failed", field + ": " + detail); }
     private static ApiException notFound(String detail) { return new ApiException(HttpStatus.NOT_FOUND, "resource_not_found", "Resource not found", detail); }
+
+    private static void requireVersion(int version, String ifMatch) {
+        if (version < 1 || ifMatch == null || ifMatch.isBlank()) {
+            throw new ApiException(HttpStatus.PRECONDITION_REQUIRED, "source_version_required",
+                    "Version precondition required", "A matching version and If-Match header are required");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("\"") && value.endsWith("\"") && value.length() > 1) {
+            value = value.substring(1, value.length() - 1);
+        }
+        try {
+            if (Integer.parseInt(value) != version) throw new ApiException(HttpStatus.PRECONDITION_FAILED,
+                    "source_version_conflict", "Source version conflict", "If-Match does not match the request version");
+        } catch (NumberFormatException exception) {
+            throw new ApiException(HttpStatus.PRECONDITION_FAILED, "source_version_conflict",
+                    "Source version conflict", "If-Match must contain the source version");
+        }
+    }
+
+    private static IngestionRepository.SourceState sourceState(String value) {
+        try {
+            return IngestionRepository.SourceState.valueOf(value);
+        } catch (RuntimeException exception) {
+            throw invalid("sourceState", "must be ACTIVE, PAUSED or ERROR");
+        }
+    }
+
+    private static String jsonArray(List<String> values) {
+        return values.stream().map(value -> "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
+                .collect(java.util.stream.Collectors.joining(",", "[", "]"));
+    }
+
+    public record SourceUpdateRequest(
+            @jakarta.validation.constraints.Min(1) int version,
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 120) String displayName,
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 512) String rootRef,
+            @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Size(max = 100) List<@jakarta.validation.constraints.NotBlank String> include,
+            @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Size(max = 100) List<@jakarta.validation.constraints.NotBlank String> exclude,
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "ACTIVE|PAUSED|ERROR") String sourceState) {}
 
     public record UploadView(UUID spaceId, UUID sourceId, UUID sourceDocumentId, UUID documentRevisionId,
                              UUID jobId, UUID attemptId, String displayName, String status) {}

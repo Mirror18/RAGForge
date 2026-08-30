@@ -70,6 +70,30 @@ public class IngestionRepository {
         }
     }
 
+    public Optional<SourceVersion> findCurrentSourceVersion(UUID spaceId, UUID sourceId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT id, space_id, source_id, version_no, connector_type, display_name,
+                           source_state, root_ref, include_rules::text, exclude_rules::text,
+                           credential_configured, correlation_id, created_at, updated_at, git_branch
+                    FROM source_versions
+                    WHERE space_id = ? AND source_id = ?
+                    ORDER BY version_no DESC, id DESC
+                    LIMIT 1
+                    """, (rs, row) -> new SourceVersion(
+                    rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                    rs.getObject("source_id", UUID.class), rs.getInt("version_no"),
+                    ConnectorType.valueOf(rs.getString("connector_type")), rs.getString("display_name"),
+                    SourceState.valueOf(rs.getString("source_state")), rs.getString("root_ref"),
+                    rs.getString("include_rules"), rs.getString("exclude_rules"),
+                    rs.getBoolean("credential_configured"), rs.getObject("correlation_id", UUID.class),
+                    instant(rs, "created_at"), instant(rs, "updated_at"), rs.getString("git_branch")),
+                    spaceId, sourceId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     @Transactional
     public SourceCheckpoint createCheckpoint(NewSourceCheckpoint input) {
         jdbc.update("""
@@ -166,6 +190,39 @@ public class IngestionRepository {
                 DocumentState.valueOf(rs.getString("current_state")), rs.getObject("active_revision_id", UUID.class),
                 rs.getObject("correlation_id", UUID.class), instant(rs, "created_at"), instant(rs, "updated_at")),
                 spaceId);
+    }
+
+    public List<DocumentRevision> listDocumentRevisions(UUID spaceId, UUID documentId) {
+        return jdbc.query("""
+                SELECT id, space_id, source_document_id, revision_no, source_version,
+                       canonical_source_path, content_hash, revision_state, immutable,
+                       git_commit_sha, discovered_at, created_at
+                FROM document_revisions
+                WHERE space_id = ? AND source_document_id = ?
+                ORDER BY revision_no DESC, id DESC
+                """, (rs, row) -> mapRevision(rs), spaceId, documentId);
+    }
+
+    public Optional<DocumentRevision> findDocumentRevision(UUID spaceId, UUID documentId, UUID revisionId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT id, space_id, source_document_id, revision_no, source_version,
+                           canonical_source_path, content_hash, revision_state, immutable,
+                           git_commit_sha, discovered_at, created_at
+                    FROM document_revisions
+                    WHERE space_id = ? AND source_document_id = ? AND id = ?
+                    """, (rs, row) -> mapRevision(rs), spaceId, documentId, revisionId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private static DocumentRevision mapRevision(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new DocumentRevision(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                rs.getObject("source_document_id", UUID.class), rs.getInt("revision_no"),
+                rs.getString("source_version"), rs.getString("canonical_source_path"),
+                rs.getString("content_hash"), rs.getString("revision_state"), rs.getBoolean("immutable"),
+                rs.getString("git_commit_sha"), instant(rs, "discovered_at"), instant(rs, "created_at"));
     }
 
     public List<SourceVersion> listCurrentSources(UUID spaceId) {
@@ -589,6 +646,10 @@ public class IngestionRepository {
     public record SourceDocument(UUID id, UUID spaceId, UUID sourceId, String stableSourceObjectId,
                                  String canonicalSourcePath, String basename, int versionNo, DocumentState state,
                                  UUID activeRevisionId, UUID correlationId, Instant createdAt, Instant updatedAt) {}
+    public record DocumentRevision(UUID id, UUID spaceId, UUID sourceDocumentId, int revisionNo,
+                                   String sourceVersion, String canonicalSourcePath, String contentHash,
+                                   String revisionState, boolean immutable, String gitCommitSha,
+                                   Instant discoveredAt, Instant createdAt) {}
     public record NewPipelineVersion(UUID id, UUID spaceId, int versionNo, String pipelineName, String parserName,
                                      String parserVersion, String configurationHash, UUID correlationId, Instant createdAt) {}
     public record PipelineVersion(UUID id, UUID spaceId, int versionNo, String pipelineName, String parserName,

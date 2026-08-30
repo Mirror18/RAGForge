@@ -104,6 +104,7 @@ jobs:
           set -o pipefail
           mkdir -p tests/evidence/ci-logs
           set +e
+          # coverage_test.py is the strict bidirectional contract gate.
           python -m unittest tests.contract.coverage_test -v 2>&1 | tee tests/evidence/ci-logs/coverage_test.log
           unit_status=${PIPESTATUS[0]}
           python scripts/ci/contract_coverage.py --output tests/evidence/ci-logs/contract-coverage.json 2>&1 | tee tests/evidence/ci-logs/contract-coverage.log

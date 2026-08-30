@@ -33,6 +33,7 @@ import java.util.UUID;
 /** Application service for real prompt templates, immutable versions, and the V4 DB state machine. */
 @Service
 public class PromptManagementService {
+    private static final String SPACE_BINDING_KEY = "RAG_ANSWER";
     private final PromptRepository prompts;
     private final SpaceAuthorization authorization;
     private final JdbcTemplate jdbc;
@@ -132,6 +133,38 @@ public class PromptManagementService {
         return toView(promptTemplateId, prompts.findVersion(spaceId, version.id()).orElseThrow());
     }
 
+    public PromptBindingView getBinding(UUID spaceId, SessionPrincipal principal) {
+        authorization.requireMember(spaceId, principal);
+        return prompts.findLatestBinding(spaceId, SPACE_BINDING_KEY)
+                .map(PromptManagementService::toBindingView)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "prompt_binding_not_found",
+                        "Prompt binding not found", "No prompt binding exists in the requested space"));
+    }
+
+    @Transactional
+    public PromptBindingView updateBinding(UUID spaceId, PromptBindingUpdateRequest request, String ifMatch,
+                                           SessionPrincipal principal, HttpServletRequest servletRequest) {
+        authorization.requireWrite(spaceId, principal);
+        requireVersion(request.version(), ifMatch);
+        PromptRepository.SpacePromptBinding current = prompts.findLatestBinding(spaceId, SPACE_BINDING_KEY)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "prompt_binding_not_found",
+                        "Prompt binding not found", "Create a binding before updating it"));
+        if (current.versionNo() != request.version()) {
+            throw versionConflict();
+        }
+        PromptRepository.PromptVersion prompt = prompts.findVersion(spaceId, request.promptVersionId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "prompt_version_not_found",
+                        "Prompt version not found", "Prompt version not found in the requested space"));
+        if (prompt.status() != PromptRepository.PromptStatus.PUBLISHED) {
+            throw new ApiException(HttpStatus.CONFLICT, "prompt_version_not_published",
+                    "Prompt version cannot be bound", "Only a published prompt version can be bound");
+        }
+        PromptRepository.SpacePromptBinding updated = prompts.bind(new PromptRepository.NewSpacePromptBinding(
+                UuidV7.random(), spaceId, SPACE_BINDING_KEY, current.versionNo() + 1, request.promptVersionId(),
+                PromptRepository.BindingStatus.ACTIVE, Instant.now(), correlationId(servletRequest)));
+        return toBindingView(updated);
+    }
+
     private PromptRepository.PromptVersion findVersion(UUID spaceId, UUID promptTemplateId, int promptVersion) {
         try {
             UUID id = jdbc.queryForObject("""
@@ -176,6 +209,32 @@ public class PromptManagementService {
                 object(version.outputContractJson()), version.templateHash(), true,
                 version.status() == PromptRepository.PromptStatus.DRAFT ? null : version.updatedAt(),
                 version.createdAt());
+    }
+
+    private static PromptBindingView toBindingView(PromptRepository.SpacePromptBinding binding) {
+        return new PromptBindingView(binding.id(), binding.spaceId(), binding.versionNo(), binding.promptVersionId(),
+                binding.createdAt(), binding.updatedAt());
+    }
+
+    private static void requireVersion(int version, String ifMatch) {
+        if (version < 1 || ifMatch == null || ifMatch.isBlank()) {
+            throw new ApiException(HttpStatus.PRECONDITION_REQUIRED, "prompt_binding_version_required",
+                    "Version precondition required", "A matching version and If-Match header are required");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("\"") && value.endsWith("\"") && value.length() > 1) {
+            value = value.substring(1, value.length() - 1);
+        }
+        try {
+            if (Integer.parseInt(value) != version) throw versionConflict();
+        } catch (NumberFormatException exception) {
+            throw versionConflict();
+        }
+    }
+
+    private static ApiException versionConflict() {
+        return new ApiException(HttpStatus.PRECONDITION_FAILED, "prompt_binding_version_conflict",
+                "Prompt binding version conflict", "If-Match does not match the current binding version");
     }
 
     private List<PromptMessage> messages(String template) {
@@ -255,5 +314,14 @@ public class PromptManagementService {
                                     String state, List<PromptMessage> messages, Map<String, Object> variableSchema,
                                     Map<String, Object> outputContract, String contentHash,
                                     boolean immutableAfterPublish, Instant publishedAt, Instant createdAt) {
+    }
+
+    public record PromptBindingUpdateRequest(
+            @jakarta.validation.constraints.Min(1) int version,
+            @jakarta.validation.constraints.NotNull UUID promptVersionId) {
+    }
+
+    public record PromptBindingView(UUID promptBindingId, UUID spaceId, int version, UUID promptVersionId,
+                                    Instant createdAt, Instant updatedAt) {
     }
 }

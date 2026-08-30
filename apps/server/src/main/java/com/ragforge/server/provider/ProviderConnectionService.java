@@ -202,6 +202,32 @@ public class ProviderConnectionService {
                 .orElseThrow(() -> notFound("Provider connection not found"));
     }
 
+    @Transactional
+    public ProviderConnectionView update(UUID spaceId, UUID providerConnectionId,
+                                         ProviderConnectionUpdateRequest request, String ifMatch,
+                                         SessionPrincipal principal, HttpServletRequest servletRequest) {
+        authorization.requirePlatformAdmin(spaceId, principal);
+        requireVersion(request.version(), ifMatch);
+        ProviderRepository.ProviderConnection current = providers.findConnectionInSpace(spaceId, providerConnectionId)
+                .orElseThrow(() -> notFound("Provider connection not found"));
+        if (current.version() + 1 != request.version()) {
+            throw new ApiException(HttpStatus.PRECONDITION_FAILED, "provider_connection_version_conflict",
+                    "Provider connection version conflict", "The provider connection version is stale");
+        }
+        ProviderRepository.ProviderConnection updated = providers.updateConnection(spaceId, providerConnectionId,
+                request.version(), new ProviderRepository.NewProviderConnection(providerConnectionId, spaceId,
+                        current.providerKey(), request.displayName().trim(), providerType(request.providerType()),
+                        request.endpoint(), request.credentialRef(), current.credentialHash(), current.authScheme(),
+                        current.nonSecretHeadersJson(), providerStatus(request.status()), egressPolicy(request.egressClass()),
+                        Instant.now(), correlationId(servletRequest))).orElseThrow(() -> new ApiException(
+                        HttpStatus.PRECONDITION_FAILED, "provider_connection_version_conflict",
+                        "Provider connection version conflict", "The provider connection version is stale"));
+        audit.record("provider.connection.updated.v1", principal.userId(), spaceId, providerConnectionId,
+                correlationId(servletRequest), Map.of("providerConnectionId", providerConnectionId,
+                        "version", request.version()));
+        return toView(updated);
+    }
+
     private static ProviderConnectionView toView(ProviderRepository.ProviderConnection connection) {
         return new ProviderConnectionView(connection.id(), connection.spaceId(), connection.version() + 1,
                 connection.providerType().name(), connection.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY
@@ -371,6 +397,26 @@ public class ProviderConnectionService {
                 detail);
     }
 
+    private static void requireVersion(int version, String ifMatch) {
+        if (version < 1 || ifMatch == null || ifMatch.isBlank()) {
+            throw new ApiException(HttpStatus.PRECONDITION_REQUIRED, "provider_connection_version_required",
+                    "Version precondition required", "A matching version and If-Match header are required");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("\"") && value.endsWith("\"") && value.length() > 1) {
+            value = value.substring(1, value.length() - 1);
+        }
+        try {
+            if (Integer.parseInt(value) != version) {
+                throw new ApiException(HttpStatus.PRECONDITION_FAILED, "provider_connection_version_conflict",
+                        "Provider connection version conflict", "If-Match does not match the request version");
+            }
+        } catch (NumberFormatException exception) {
+            throw new ApiException(HttpStatus.PRECONDITION_FAILED, "provider_connection_version_conflict",
+                    "Provider connection version conflict", "If-Match must contain the public version");
+        }
+    }
+
     public record ProviderConnectionRequest(
             @jakarta.validation.constraints.NotBlank
             @jakarta.validation.constraints.Size(min = 1, max = 160)
@@ -390,6 +436,20 @@ public class ProviderConnectionService {
             @jakarta.validation.constraints.NotBlank
             @jakarta.validation.constraints.Pattern(regexp = "DRAFT|ACTIVE|DISABLED")
             String status) {
+    }
+
+    public record ProviderConnectionUpdateRequest(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(min = 1, max = 160)
+            String displayName,
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Pattern(regexp = "OLLAMA|OPENAI_COMPATIBLE|MIMO|AI_RUNTIME") String providerType,
+            @jakarta.validation.constraints.Pattern(regexp = "LOCAL|CLOUD") String egressClass,
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 2048) String endpoint,
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(min = 2, max = 128)
+            @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z][A-Za-z0-9._:-]{1,127}$") String credentialRef,
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Pattern(regexp = "DRAFT|ACTIVE|DISABLED") String status,
+            @jakarta.validation.constraints.Min(1) int version) {
     }
 
     public record ProviderConnectionView(UUID providerConnectionId, UUID spaceId, long version,

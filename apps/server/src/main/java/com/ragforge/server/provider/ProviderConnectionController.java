@@ -8,7 +8,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -56,6 +58,17 @@ public class ProviderConnectionController {
             @PathVariable UUID providerConnectionId,
             @AuthenticationPrincipal SessionPrincipal principal) {
         return service.get(spaceId, providerConnectionId, principal);
+    }
+
+    @PutMapping("/{providerConnectionId}")
+    public ProviderConnectionService.ProviderConnectionView update(
+            @PathVariable UUID spaceId,
+            @PathVariable UUID providerConnectionId,
+            @Valid @RequestBody ProviderConnectionService.ProviderConnectionUpdateRequest request,
+            @RequestHeader("If-Match") String ifMatch,
+            @AuthenticationPrincipal SessionPrincipal principal,
+            HttpServletRequest servletRequest) {
+        return service.update(spaceId, providerConnectionId, request, ifMatch, principal, servletRequest);
     }
 
     @PostMapping("/{providerConnectionId}/test")

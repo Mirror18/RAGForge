@@ -177,6 +177,26 @@ public class PromptRepository {
         }
     }
 
+    public Optional<SpacePromptBinding> findLatestBinding(UUID spaceId, String bindingKey) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                            SELECT id, space_id, binding_key, version_no, prompt_version_id, status,
+                                   created_at, updated_at, correlation_id
+                            FROM space_prompt_bindings
+                            WHERE space_id = ? AND binding_key = ?
+                            ORDER BY version_no DESC, id DESC
+                            LIMIT 1
+                            """, (rs, rowNum) -> new SpacePromptBinding(
+                    rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                    rs.getString("binding_key"), rs.getInt("version_no"),
+                    rs.getObject("prompt_version_id", UUID.class), BindingStatus.valueOf(rs.getString("status")),
+                    instant(rs, "created_at"), instant(rs, "updated_at"),
+                    rs.getObject("correlation_id", UUID.class)), spaceId, bindingKey));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     private static Timestamp timestamp(Instant value) {
         return Timestamp.from(value);
     }
