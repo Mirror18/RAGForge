@@ -214,6 +214,31 @@ class ModelProfileRouteApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("MODEL_PROFILE_NOT_FOUND"));
     }
 
+    @Test
+    void legacyCapabilityMapRemainsReadable() throws Exception {
+        register("model-legacy@example.test", "correct horse battery", "Legacy");
+        promoteToPlatformAdmin("model-legacy@example.test");
+        Login admin = login("model-legacy@example.test", "correct horse battery");
+        UUID spaceId = createSpace(admin, "Legacy Space");
+        UUID connection = createConnection(admin, spaceId, "LOCAL", "legacy-capability");
+        UUID profile = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO model_profile_versions
+                    (id, space_id, provider_connection_id, profile_key, version_no, model_name,
+                     capabilities, declared_capabilities, verified_capabilities, context_window,
+                     max_output_tokens, status, created_at, updated_at, correlation_id)
+                VALUES (?, ?, ?, 'legacy-profile', 1, 'legacy-profile', '[\"CHAT\"]'::jsonb,
+                        '{\"purpose\":\"CHAT\",\"usageReporting\":\"LOCAL_ESTIMATE\"}'::jsonb,
+                        '{\"CHAT\":true,\"STREAMING\":true}'::jsonb, 8192, 1024,
+                        'DRAFT', NOW(), NOW(), ?)
+                """, profile, spaceId, connection, UUID.randomUUID());
+
+        mvc.perform(get("/api/v1/spaces/{spaceId}/model-profiles", spaceId).cookie(admin.cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].verifiedCapabilities[0]").value("CHAT"))
+                .andExpect(jsonPath("$.items[0].verifiedCapabilities[1]").value("STREAMING"));
+    }
+
     private UUID createConnection(Login login, UUID spaceId, String egressClass, String key) throws Exception {
         MvcResult result = mvc.perform(post("/api/v1/spaces/{spaceId}/provider-connections", spaceId)
                         .cookie(login.cookie)

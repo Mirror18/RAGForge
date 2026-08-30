@@ -236,8 +236,22 @@ public class ModelProfileRouteService {
 
     private List<String> strings(String value) {
         try {
-            return objectMapper.readValue(value == null || value.isBlank() ? "[]" : value,
-                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+            JsonNode node = objectMapper.readTree(value == null || value.isBlank() ? "[]" : value);
+            if (node.isArray()) {
+                List<String> result = new java.util.ArrayList<>();
+                node.elements().forEachRemaining(item -> {
+                    if (item.isTextual()) result.add(item.asText());
+                });
+                return result;
+            }
+            if (node.isObject()) {
+                List<String> result = new java.util.ArrayList<>();
+                node.fields().forEachRemaining(entry -> {
+                    if (entry.getValue().asBoolean(false)) result.add(entry.getKey());
+                });
+                return result;
+            }
+            throw new JsonProcessingException("Expected a JSON array or capability map") { };
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Stored capabilities are not valid JSON", exception);
         }
