@@ -116,7 +116,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7C-07 | 上下文跳转 | P0 | ✅ completed | A7 | codex/p7-context-jump-a7 | RAGForge-worktrees/codex-p7-context-jump-a7 | 6,000 | 5,900 | a04de03ba8fb36a880104d53e2029ab41c784838 | 已合并至 d7505e7；lookup 空间隔离、结构化 provenance 跳转、刷新恢复、无 queryVector 生产 UI 通过 |
 | P7C-08 | 管理闭环（反馈/审计/成本） | P0 | ✅ completed | A8 | codex/p7-management-loop-a8 | RAGForge-worktrees/codex-p7-management-loop-a8 | 6,000 | 6,800 | 82a7899564cfa7a87526e173eca006426aaa013b | 已合并至 d35ebda；health/cost/feedback/audit 聚合、权限隔离、脱敏分页与 Control Center 视图通过；主线补跑 Web 依赖后全绿 |
 | P7Q-01 | 统一 preflight | P1 | ✅ completed | A9 | codex/p7-preflight-a9 | RAGForge-worktrees/codex-p7-preflight-a9 | 3,000 | 2,700 | a997aff82eaff6a87dee3abd49142df02f3b0c53 | 已合并至 002cb63；跨平台工具检查、JSON/strict、9/9 单测与 secret scan 通过 |
-| P7Q-02 | 全量 Maven 回归 CI 配方 | P1 | ⏳ pending | — | — | — | 2,000 | — | — | |
+| P7Q-02 | 全量 Maven 回归 CI 配方 | P1 | 🚧 in_progress | A10 | codex/p7-maven-ci-a10 | RAGForge-worktrees/codex-p7-maven-ci-a10 | 2,000 | — | — | 已建立 Ticket；workflow 将接入 JDK21、preflight、全量 Maven 与证据归档 |
 | P7Q-03 | Web 自动化测试（8 条旅程） | P1 | ⏳ pending | — | — | — | 15,000 | — | — | Playwright/Vitest，package.json 补脚本 |
 | P7Q-04 | 契约-实现一致性门禁 | P1 | ⏳ pending | — | — | — | 4,000 | — | — | |
 | P7Q-05 | RAG 变更强制评估触发脚本 | P1 | ⏳ pending | — | — | — | 5,000 | — | — | |
