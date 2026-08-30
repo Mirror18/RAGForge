@@ -1,0 +1,15 @@
+{
+  "card_id": "P7Q-03",
+  "status": "PASS",
+  "merge_commit": "65f1cdc",
+  "worker_commit": "f74c89fc2f209e2363e045c48d382732d01ce3a3",
+  "tests": {
+    "unit": "8/8",
+    "e2e": "8/8 synthetic journeys",
+    "format_check": "passed",
+    "build": "passed",
+    "secret_scan": "passed"
+  },
+  "acceptance_met": {"A1": true, "A2": true, "A3": true, "A4": true, "A5": true},
+  "risk": "npm audit reported 2 high and 1 critical; no out-of-scope dependency upgrade performed."
+}
