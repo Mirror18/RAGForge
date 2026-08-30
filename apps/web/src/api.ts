@@ -223,9 +223,46 @@ export interface SourceDocument {
 }
 
 export interface IngestionJobView {
-  job: { id: string; spaceId: string; sourceId: string; sourceDocumentId: string | null; documentRevisionId: string | null; status: string; createdAt: string; updatedAt: string };
+  job: { id: string; spaceId: string; sourceId: string; sourceDocumentId: string | null; documentRevisionId: string | null; status: string; version?: number; versionNo?: number; error?: { code?: string | null; message?: string | null; detail?: string | null } | null; createdAt: string; updatedAt: string };
   attempts: Array<{ id: string; attemptNo: number; status: string; startedAt: string; finishedAt: string | null }>;
-  steps: Array<{ id: string; stepName: string; status: string; errorCode: string | null; startedAt: string; finishedAt: string | null }>;
+  steps: Array<{ id: string; stepName: string; status: string; errorCode: string | null; errorMessage?: string | null; errorDetail?: string | null; startedAt: string; finishedAt: string | null }>;
+}
+
+export interface CursorPage<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+export interface SourceRecord {
+  sourceId: string;
+  spaceId?: string;
+  displayName: string;
+  connectorType?: string;
+  rootRef: string;
+  gitBranch: string | null;
+  versionNo: number;
+  version?: number;
+  sourceState?: string;
+  state?: string;
+}
+
+export type GitSourceView = { source: SourceRecord; checkpoint: { cursorType: string; cursor: string | null; updatedAt: string } | null };
+
+export type TaskActionOperation = "RETRY" | "REPLAY" | "RESYNC" | "ARCHIVE" | "DELETE";
+
+export interface TaskActionView {
+  actionId: string;
+  spaceId: string;
+  resourceType: "SOURCE" | "JOB" | "INDEX";
+  resourceId: string;
+  operation: TaskActionOperation;
+  status: "REQUESTED" | "ACCEPTED" | "ARCHIVED" | "DELETED";
+  idempotencyKey: string;
+  expectedVersion: number;
+  resultVersion?: number | null;
+  reason?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ParseReportView {
@@ -644,8 +681,19 @@ export function ingestWebSource(spaceId: string, url: string, allowCloudEgress: 
   });
 }
 
-export type GitSourceView = { source: { sourceId: string; displayName: string; rootRef: string; gitBranch: string | null; versionNo: number }; checkpoint: { cursorType: string; cursor: string | null; updatedAt: string } | null };
-export function listGitSources(spaceId: string): Promise<GitSourceView[]> { return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources`); }
+function queryString(values: Record<string, string | number | null | undefined>): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) if (value !== undefined && value !== null && String(value) !== "") query.set(key, String(value));
+  const encoded = query.toString();
+  return encoded ? `?${encoded}` : "";
+}
+
+export function listSources(spaceId: string, options: { cursor?: string | null; limit?: number; connectorType?: string; sourceState?: string } = {}): Promise<CursorPage<GitSourceView>> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources${queryString(options)}`);
+}
+
+/** @deprecated Use listSources so cursor and filters are preserved. */
+export function listGitSources(spaceId: string): Promise<CursorPage<GitSourceView>> { return listSources(spaceId, { limit: 20 }); }
 export function configureGitSource(spaceId: string, body: { sourceId?: string; displayName: string; remote: string; branch: string; include: string[]; exclude: string[] }): Promise<GitSourceView> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources/git`, { method: "POST", body });
 }
@@ -657,6 +705,26 @@ export function listIngestionJobs(spaceId: string): Promise<IngestionJobView[]> 
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs`);
 }
 
+export function listTaskJobs(spaceId: string, options: { cursor?: string | null; limit?: number; status?: string; sourceId?: string } = {}): Promise<CursorPage<IngestionJobView>> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/jobs${queryString(options)}`);
+}
+
+export function getTaskJob(spaceId: string, jobId: string): Promise<IngestionJobView> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/jobs/${encodeURIComponent(jobId)}`);
+}
+
+export function operateSourceTask(spaceId: string, resourceType: "SOURCE" | "JOB", resourceId: string, operation: TaskActionOperation, version: number, reason = ""): Promise<TaskActionView> {
+  const resourcePath = resourceType === "SOURCE" ? "sources" : "jobs";
+  const method = operation === "DELETE" ? "DELETE" : "POST";
+  const body: { version: number; reason?: string } = { version };
+  if (reason.trim()) body.reason = reason.trim();
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/${resourcePath}/${encodeURIComponent(resourceId)}${operation === "DELETE" ? "" : `/${operation.toLowerCase()}`}`, {
+    method,
+    headers: { "If-Match": `"${version}"` },
+    body,
+  });
+}
+
 export function getIngestionJob(spaceId: string, jobId: string): Promise<IngestionJobView> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs/${encodeURIComponent(jobId)}`);
 }
@@ -665,8 +733,8 @@ export function getParseReport(spaceId: string, revisionId: string): Promise<Par
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/document-revisions/${encodeURIComponent(revisionId)}/parse-report`);
 }
 
-export function listIndexes(spaceId: string): Promise<IndexView[]> {
-  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes`);
+export function listIndexes(spaceId: string, options: { cursor?: string | null; limit?: number; state?: string } = {}): Promise<CursorPage<IndexView>> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes${queryString(options)}`);
 }
 
 export function getActiveIndex(spaceId: string): Promise<ActiveIndexView | null> {
