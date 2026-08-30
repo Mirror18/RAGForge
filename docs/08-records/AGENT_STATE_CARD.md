@@ -113,7 +113,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7C-03 | 索引生命周期 UI | P0 | ✅ completed | A5 | codex/p7-index-lifecycle-a5 | RAGForge-worktrees/codex-p7-index-lifecycle-a5 | 6,000 | 5,200 | fa44580c0988c2d2a9fbb5f991cbf246d9314bab | 已合并至 04683e8；candidate/active/retired、发布/回滚/退役通过 |
 | P7C-05 | 真实 RERANK adapter | P0 | ⏳ blocked | — | — | — | 8,000 | — | — | 依赖 P7C-04 |
 | P7C-06 | 可核验问答 Web | P0 | ✅ completed | A6 | codex/p7-verifiable-answer-web-a6 | RAGForge-worktrees/codex-p7-verifiable-answer-web-a6 | 9,000 | 8,200 | b2ac6027c731cd32111b97fb1f1d2ad548940abc | 已合并至 67a18f8；历史/citation/反馈/会话控制通过 |
-| P7C-07 | 上下文跳转 | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-06 已完成，可开始分派 |
+| P7C-07 | 上下文跳转 | P0 | 🚧 in_progress | A7 | codex/p7-context-jump-a7 | RAGForge-worktrees/codex-p7-context-jump-a7 | 6,000 | — | — | 已建立 Ticket，依赖 P7C-06 满足；等待实现与定向验证 |
 | P7C-08 | 管理闭环（反馈/审计/成本） | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-06 已完成，可开始分派 |
 | P7Q-01 | 统一 preflight | P1 | ⏳ pending | — | — | — | 3,000 | — | — | JDK 绑定、Node PATH、Docker daemon |
 | P7Q-02 | 全量 Maven 回归 CI 配方 | P1 | ⏳ pending | — | — | — | 2,000 | — | — | |
