@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { ApiError, addSpaceMember, archiveSpace, createManagedUser, disableManagedUser, listSpaceMembers, listUsers, removeSpaceMember, updateManagedUser, updateSpace, updateSpaceMember, type CurrentSession, type ManagedUser, type PlatformRole, type Space, type SpaceMember, type SpaceRole } from "./api";
+import { ApiError, addSpaceMember, archiveSpace, createManagedUser, disableManagedUser, listAllCursorPages, removeSpaceMember, updateManagedUser, updateSpace, updateSpaceMember, type CurrentSession, type ManagedUser, type PlatformRole, type Space, type SpaceMember, type SpaceRole } from "./api";
 import { currentTimeZone, formatDateTime } from "./format";
 
 type PersonalAction = "home" | "providers" | "models" | "prompts" | "runs";
@@ -49,9 +49,9 @@ async function loadManagementData(): Promise<void> {
   if (!canManageSpace.value && !isPlatformAdmin.value) { members.value = []; return; }
   managementLoading.value = true; managementError.value = "";
   try {
-    if (props.selectedSpaceId && canManageSpace.value) members.value = (await listSpaceMembers(props.selectedSpaceId)).items;
+    if (props.selectedSpaceId && canManageSpace.value) members.value = await listAllCursorPages<SpaceMember>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/members`, { limit: 20 });
     else members.value = [];
-    if (isPlatformAdmin.value) users.value = (await listUsers()).items;
+    if (isPlatformAdmin.value) users.value = await listAllCursorPages<ManagedUser>("/api/v1/users", { limit: 20 });
   } catch (value) { managementError.value = describeManagementError(value, "管理数据加载失败。"); }
   finally { managementLoading.value = false; }
 }

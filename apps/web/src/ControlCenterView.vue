@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, exportManagementAudit, getManagementCostUsage, getManagementHealth, listManagementFeedback, type ManagementAuditItem, type ManagementFeedbackItem, type ManagementHealth, type ManagementUsageCost, type ModelProfile, type ModelRoute, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type ProviderConnectionTestResult, type RunSnapshot, type SpaceRole, apiFetch } from "./api";
+import { ApiError, exportManagementAudit, getManagementCostUsage, getManagementHealth, listAllCursorPages, type ManagementAuditItem, type ManagementFeedbackItem, type ManagementHealth, type ManagementUsageCost, type ModelProfile, type ModelRoute, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type ProviderConnectionTestResult, type RunSnapshot, type SpaceRole, apiFetch } from "./api";
 import { formatDateTime } from "./format";
 
 type ControlSection = "spaces" | "health" | "cost" | "feedback" | "audit" | "providers" | "models" | "prompts" | "runs";
@@ -92,26 +92,26 @@ async function loadSection(): Promise<void> {
   loading.value = true;
   try {
     if (section.value === "providers") {
-      const response = await apiFetch<{ items: ProviderConnection[] }>(path("/provider-connections?limit=100"));
-      providerConnections.value = response.items;
-      if (!profileForm.value.providerConnectionId) profileForm.value.providerConnectionId = response.items[0]?.providerConnectionId ?? "";
+      const response = await listAllCursorPages<ProviderConnection>(path("/provider-connections"), { limit: 20 });
+      providerConnections.value = response;
+      if (!profileForm.value.providerConnectionId) profileForm.value.providerConnectionId = response[0]?.providerConnectionId ?? "";
     } else if (section.value === "models") {
       const [profiles, routes, connections] = await Promise.all([
-        apiFetch<{ items: ModelProfile[] }>(path("/model-profiles?limit=100")),
-        apiFetch<{ items: ModelRoute[] }>(path("/model-routes?limit=100")),
-        apiFetch<{ items: ProviderConnection[] }>(path("/provider-connections?limit=100")),
+        listAllCursorPages<ModelProfile>(path("/model-profiles"), { limit: 20 }),
+        listAllCursorPages<ModelRoute>(path("/model-routes"), { limit: 20 }),
+        listAllCursorPages<ProviderConnection>(path("/provider-connections"), { limit: 20 }),
       ]);
-      modelProfiles.value = profiles.items;
-      modelRoutes.value = routes.items;
-      providerConnections.value = connections.items;
+      modelProfiles.value = profiles;
+      modelRoutes.value = routes;
+      providerConnections.value = connections;
       if (!profileForm.value.providerConnectionId) profileForm.value.providerConnectionId = providerConnections.value[0]?.providerConnectionId ?? "";
-      if (!routeForm.value.modelProfileId) routeForm.value.modelProfileId = profiles.items[0]?.modelProfileId ?? "";
+      if (!routeForm.value.modelProfileId) routeForm.value.modelProfileId = profiles[0]?.modelProfileId ?? "";
     } else if (section.value === "prompts") {
-      const response = await apiFetch<{ items: PromptTemplate[] }>(path("/prompt-templates"));
-      promptTemplates.value = response.items;
-      if (!response.items.some((item) => item.promptTemplateId === selectedPromptTemplateId.value)) {
-        selectedPromptTemplateId.value = response.items.find((item) => item.purpose === "CHAT")?.promptTemplateId
-          ?? response.items[0]?.promptTemplateId ?? "";
+      const response = await listAllCursorPages<PromptTemplate>(path("/prompt-templates"), { limit: 20 });
+      promptTemplates.value = response;
+      if (!response.some((item) => item.promptTemplateId === selectedPromptTemplateId.value)) {
+        selectedPromptTemplateId.value = response.find((item) => item.purpose === "CHAT")?.promptTemplateId
+          ?? response[0]?.promptTemplateId ?? "";
         promptVersionDetails.value = null;
       }
     } else if (section.value === "health") {
@@ -119,11 +119,9 @@ async function loadSection(): Promise<void> {
     } else if (section.value === "cost") {
       managementCost.value = await getManagementCostUsage(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value });
     } else if (section.value === "feedback") {
-      const response = await listManagementFeedback(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value, limit: 50 });
-      managementFeedback.value = response.items;
+      managementFeedback.value = await listAllCursorPages<ManagementFeedbackItem>(path("/management/feedback"), { from: managementFrom.value, to: managementTo.value, limit: 20 });
     } else if (section.value === "audit") {
-      const response = await exportManagementAudit(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value, limit: 50 });
-      managementAudit.value = response.items;
+      managementAudit.value = await listAllCursorPages<ManagementAuditItem>(path("/management/audit/export"), { from: managementFrom.value, to: managementTo.value, limit: 20 });
     }
   } catch (value) {
     error.value = describeError(value, "功能中心数据加载失败。");

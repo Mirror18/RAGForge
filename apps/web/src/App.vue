@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { ApiError, type AnswerDefaults, type CurrentSession, type PlatformAdminBootstrapStatus, type ProvenanceContext, type Space, apiFetch, bootstrapPlatformAdmin, getCurrentSession, getPlatformAdminBootstrapStatus, loginUser, logoutCurrentSession, registerUser } from "./api";
+import { ApiError, listAllCursorPages, type AnswerDefaults, type CurrentSession, type PlatformAdminBootstrapStatus, type ProvenanceContext, type Space, apiFetch, bootstrapPlatformAdmin, getCurrentSession, getPlatformAdminBootstrapStatus, loginUser, logoutCurrentSession, registerUser } from "./api";
 import AnswerView from "./AnswerView.vue";
 import ChunkStudioView from "./ChunkStudioView.vue";
 import RetrievalPlaygroundView from "./RetrievalPlaygroundView.vue";
@@ -9,26 +9,15 @@ import AuthView from "./AuthView.vue";
 import PersonalSpaceView from "./PersonalSpaceView.vue";
 import BusinessFlowView from "./BusinessFlowView.vue";
 import { currentTimeZone, formatDateTime } from "./format";
+import { readRoute, routeSearch, type ControlSection, type RouteState, type View } from "./router";
 
-type View = "home" | "flow" | "studio" | "playground" | "answer" | "control" | "profile";
-type ControlSection = "spaces" | "providers" | "models" | "prompts" | "runs";
-function readRouteContext(): ProvenanceContext | null {
-  if (typeof window === "undefined") return null;
-  const params = new URLSearchParams(window.location.search);
-  const target = params.get("tool"); const spaceId = params.get("spaceId");
-  if ((target !== "studio" && target !== "playground") || !spaceId) return null;
-  const context: ProvenanceContext = { target, spaceId };
-  for (const key of ["childChunkId", "documentRevisionId", "contentRef", "textHash", "indexVersionId", "profileId"] as const) {
-    const value = params.get(key); if (value) context[key] = value;
-  }
-  const profileVersion = Number(params.get("profileVersion")); if (Number.isInteger(profileVersion) && profileVersion > 0) context.profileVersion = profileVersion;
-  return context;
-}
-const routeContext = ref<ProvenanceContext | null>(readRouteContext());
-const view = ref<View>(routeContext.value?.target ?? "flow");
-const controlSection = ref<ControlSection>("providers");
+const initialRoute: RouteState = readRoute();
+const routeContext = ref<ProvenanceContext | null>(initialRoute.provenance);
+const view = ref<View>(initialRoute.view);
+const controlSection = ref<ControlSection>(initialRoute.controlSection);
 const answerDefaults = ref<AnswerDefaults | null>(null);
-const lastRunId = ref("");
+const lastRunId = ref(initialRoute.runId);
+const conversationId = ref(initialRoute.conversationId);
 const apiStatus = ref<"checking" | "ready" | "unavailable" | "unauthenticated">("checking");
 const checkedAt = ref("");
 const session = ref<CurrentSession | null>(null);
@@ -67,17 +56,9 @@ const pageMeta = computed(() => {
 });
 function persistRoute(): void {
   if (typeof window === "undefined") return;
-  const params = new URLSearchParams();
-  if (view.value === "studio" || view.value === "playground") params.set("tool", view.value);
-  if (selectedSpaceId.value) params.set("spaceId", selectedSpaceId.value);
-  const context = routeContext.value;
-  if (context && context.target === view.value) {
-    for (const key of ["childChunkId", "documentRevisionId", "contentRef", "textHash", "indexVersionId", "profileId"] as const) if (context[key]) params.set(key, context[key] as string);
-    if (context.profileVersion) params.set("profileVersion", String(context.profileVersion));
-  }
-  const queryString = params.toString();
-  window.history.replaceState(null, "", queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname);
+  window.history.replaceState(null, "", `${window.location.pathname}${routeSearch({ view: view.value, spaceId: selectedSpaceId.value, controlSection: controlSection.value, conversationId: conversationId.value, runId: lastRunId.value, provenance: routeContext.value })}`);
 }
+function openView(nextView: View): void { view.value = nextView; if (nextView !== "studio" && nextView !== "playground") routeContext.value = null; }
 function openProvenanceContext(context: ProvenanceContext): void {
   routeContext.value = context; selectedSpaceId.value = context.spaceId; view.value = context.target;
 }
@@ -90,16 +71,16 @@ function describeError(error: unknown, fallback: string): string {
 }
 function openControl(section: ControlSection): void {
   controlSection.value = section;
-  view.value = "control";
+  openView("control");
 }
 
 async function checkApiHealth(): Promise<void> {
   apiStatus.value = "checking";
   workspaceError.value = "";
   try {
-    const [current, page] = await Promise.all([getCurrentSession(), apiFetch<{ items: Space[]; nextCursor: string | null }>("/api/v1/spaces?limit=100")]);
+    const [current, visibleSpaces] = await Promise.all([getCurrentSession(), listAllCursorPages<Space>("/api/v1/spaces", { limit: 20 })]);
     session.value = current;
-    spaces.value = page.items;
+    spaces.value = visibleSpaces;
     if (!selectedSpaceId.value || !spaces.value.some((space) => space.spaceId === selectedSpaceId.value)) selectedSpaceId.value = spaces.value[0]?.spaceId ?? "";
     apiStatus.value = "ready";
   } catch (error) {
@@ -168,16 +149,19 @@ async function createSpace(payload: { name: string; description: string }): Prom
   spaceCreating.value = true;
   try {
     const created = await apiFetch<Space>("/api/v1/spaces", { method: "POST", body: payload });
-    spaces.value = [...spaces.value, created]; selectedSpaceId.value = created.spaceId; view.value = "profile";
+    spaces.value = [...spaces.value, created]; selectedSpaceId.value = created.spaceId; openView("profile");
   } catch (error) { workspaceError.value = describeError(error, "知识空间创建失败。"); }
   finally { spaceCreating.value = false; }
 }
 function openPersonalAction(action: "home" | "providers" | "models" | "prompts" | "runs"): void {
-  if (action === "home") { view.value = "flow"; return; }
+  if (action === "home") { openView("flow"); return; }
   openControl(action);
 }
 
 watch([view, selectedSpaceId, routeContext], persistRoute, { deep: true });
+watch(selectedSpaceId, (next, previous) => {
+  if (next !== previous) { conversationId.value = ""; lastRunId.value = ""; if (routeContext.value && routeContext.value.spaceId !== next) routeContext.value = null; }
+});
 onMounted(checkApiHealth);
 </script>
 
@@ -187,24 +171,24 @@ onMounted(checkApiHealth);
 
     <div v-else class="app-frame">
       <aside class="app-sidebar" aria-label="产品导航">
-        <button type="button" class="brand-lockup" aria-label="返回业务闭环" @click="view = 'flow'"><span class="brand-symbol">R</span><span><strong>RAGForge</strong><small>Knowledge workspace</small></span></button>
-        <div class="sidebar-section"><span class="sidebar-label">工作台</span><button id="flow-tab" type="button" class="side-nav-item" :class="{ active: view === 'flow' }" :aria-current="view === 'flow' ? 'page' : undefined" @click="view = 'flow'"><span class="nav-icon">⌂</span><span><strong>业务闭环</strong><small>知识库 → 答案</small></span></button><button id="answer-tab" type="button" class="side-nav-item" :class="{ active: view === 'answer' }" :aria-current="view === 'answer' ? 'page' : undefined" @click="view = 'answer'"><span class="nav-icon">✦</span><span><strong>带引用问答</strong><small>运行一次可核验回答</small></span></button></div>
-        <div class="sidebar-section"><span class="sidebar-label">工具</span><button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="view = 'studio'"><span class="nav-icon">▦</span><span><strong>Chunk Studio</strong><small>内容与 provenance</small></span></button><button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="view = 'playground'"><span class="nav-icon">⌁</span><span><strong>Retrieval Playground</strong><small>只读检索实验</small></span></button></div>
-        <div class="sidebar-section"><span class="sidebar-label">管理</span><button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' }" :aria-current="view === 'control' ? 'page' : undefined" @click="openControl('spaces')"><span class="nav-icon">⚙</span><span><strong>配置中心</strong><small>Provider · Prompt · Run</small></span></button><button id="personal-space-tab" type="button" class="side-nav-item" :class="{ active: view === 'profile' }" :aria-current="view === 'profile' ? 'page' : undefined" @click="view = 'profile'"><span class="nav-icon">◎</span><span><strong>个人空间</strong><small>账号与空间</small></span></button></div>
+        <button type="button" class="brand-lockup" aria-label="返回业务闭环" @click="openView('flow')"><span class="brand-symbol">R</span><span><strong>RAGForge</strong><small>Knowledge workspace</small></span></button>
+        <div class="sidebar-section"><span class="sidebar-label">工作台</span><button id="flow-tab" type="button" class="side-nav-item" :class="{ active: view === 'flow' }" :aria-current="view === 'flow' ? 'page' : undefined" @click="openView('flow')"><span class="nav-icon">⌂</span><span><strong>业务闭环</strong><small>知识库 → 答案</small></span></button><button id="answer-tab" type="button" class="side-nav-item" :class="{ active: view === 'answer' }" :aria-current="view === 'answer' ? 'page' : undefined" @click="openView('answer')"><span class="nav-icon">✦</span><span><strong>带引用问答</strong><small>运行一次可核验回答</small></span></button></div>
+        <div class="sidebar-section"><span class="sidebar-label">工具</span><button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="openView('studio')"><span class="nav-icon">▦</span><span><strong>Chunk Studio</strong><small>内容与 provenance</small></span></button><button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="openView('playground')"><span class="nav-icon">⌁</span><span><strong>Retrieval Playground</strong><small>只读检索实验</small></span></button></div>
+        <div class="sidebar-section"><span class="sidebar-label">管理</span><button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' }" :aria-current="view === 'control' ? 'page' : undefined" @click="openControl('spaces')"><span class="nav-icon">⚙</span><span><strong>配置中心</strong><small>Provider · Prompt · Run</small></span></button><button id="personal-space-tab" type="button" class="side-nav-item" :class="{ active: view === 'profile' }" :aria-current="view === 'profile' ? 'page' : undefined" @click="openView('profile')"><span class="nav-icon">◎</span><span><strong>个人空间</strong><small>账号与空间</small></span></button></div>
         <div class="sidebar-footer"><div class="sidebar-user"><span class="user-avatar">{{ session.user.displayName.slice(0, 1).toUpperCase() }}</span><span><strong>{{ session.user.displayName }}</strong><small>{{ currentRole }}</small></span></div><button type="button" class="sidebar-logout" @click="logout">退出登录</button></div>
       </aside>
 
       <section class="app-main">
         <header class="topbar"><div class="page-heading"><span class="eyebrow">{{ pageMeta.kicker }}</span><h1>{{ pageMeta.title }}</h1><p>{{ pageMeta.description }}</p></div><div class="topbar-actions"><div class="status-chip" :class="apiStatus" aria-live="polite"><span class="status-dot" aria-hidden="true"></span>{{ statusText }}</div><button type="button" class="icon-button" :disabled="apiStatus === 'checking'" aria-label="刷新工作区状态" title="刷新工作区状态" @click="checkApiHealth">↻</button></div></header>
-        <section class="workspace-context" aria-label="当前工作空间上下文"><div class="space-switcher"><span class="context-label">当前空间</span><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }}</option></select><small class="timezone-note">时间显示：{{ currentTimeZone() }}</small></div><div class="context-stat"><span class="context-label">角色</span><strong>{{ currentRole }}</strong></div><div class="context-stat"><span class="context-label">版本</span><strong>v{{ selectedSpace?.version ?? "—" }}</strong></div><div class="context-id"><span class="context-label">space_id</span><code>{{ selectedSpaceId || "尚未创建空间" }}</code></div><button type="button" class="secondary-button context-profile" @click="view = 'profile'">管理空间</button></section>
+        <section class="workspace-context" aria-label="当前工作空间上下文"><div class="space-switcher"><span class="context-label">当前空间</span><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }}</option></select><small class="timezone-note">时间显示：{{ currentTimeZone() }}</small></div><div class="context-stat"><span class="context-label">角色</span><strong>{{ currentRole }}</strong></div><div class="context-stat"><span class="context-label">版本</span><strong>v{{ selectedSpace?.version ?? "—" }}</strong></div><div class="context-id"><span class="context-label">space_id</span><code>{{ selectedSpaceId || "尚未创建空间" }}</code></div><button type="button" class="secondary-button context-profile" @click="openView('profile')">管理空间</button></section>
         <p v-if="workspaceError" class="alert error" role="alert">{{ workspaceError }}</p>
-        <PersonalSpaceView v-if="spaces.length === 0 || view === 'profile'" :session="session" :spaces="spaces" :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-creating="spaceCreating" @select-space="(spaceId) => { selectedSpaceId = spaceId; view = 'flow'; }" @create-space="createSpace" @open-action="openPersonalAction" @logout="logout" @refresh="checkApiHealth" />
-        <BusinessFlowView v-else-if="view === 'flow'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :current-user-id="session.user.userId" @start-answer="(config) => { answerDefaults = config; view = 'answer'; }" @open-control="openControl" />
+        <PersonalSpaceView v-if="spaces.length === 0 || view === 'profile'" :session="session" :spaces="spaces" :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-creating="spaceCreating" @select-space="(spaceId) => { selectedSpaceId = spaceId; openView('flow'); }" @create-space="createSpace" @open-action="openPersonalAction" @logout="logout" @refresh="checkApiHealth" />
+        <BusinessFlowView v-else-if="view === 'flow'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :current-user-id="session.user.userId" @start-answer="(config) => { answerDefaults = config; openView('answer'); }" @open-control="openControl" />
 
         <ChunkStudioView v-else-if="view === 'studio'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :initial-context="routeContext" />
         <RetrievalPlaygroundView v-else-if="view === 'playground'" :selected-space-id="selectedSpaceId" :initial-context="routeContext" @open-context="openProvenanceContext" />
         <ControlCenterView v-else-if="view === 'control'" role="tabpanel" aria-labelledby="control-center-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :initial-section="controlSection" :initial-run-id="lastRunId" />
-        <AnswerView v-else-if="view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" :defaults="answerDefaults" @run-created="lastRunId = $event" @open-context="openProvenanceContext" />
+        <AnswerView v-else-if="view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" :defaults="answerDefaults" :initial-conversation-id="conversationId" :initial-run-id="lastRunId" @conversation-created="conversationId = $event" @run-created="lastRunId = $event" @open-context="openProvenanceContext" />
       </section>
     </div>
   </main>

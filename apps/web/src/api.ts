@@ -681,8 +681,8 @@ export async function getCurrentSession(): Promise<CurrentSession> {
   return fetchCurrentSession();
 }
 
-export function listUsers(): Promise<{ items: ManagedUser[]; nextCursor: string | null }> {
-  return apiFetch("/api/v1/users?limit=100");
+export function listUsers(options: { cursor?: string | null; limit?: number } = {}): Promise<CursorPage<ManagedUser>> {
+  return apiFetch(`/api/v1/users${queryString(options)}`);
 }
 
 export function createManagedUser(payload: { email: string; displayName: string; password: string }): Promise<ManagedUser> {
@@ -697,8 +697,8 @@ export function disableManagedUser(userId: string): Promise<ManagedUser> {
   return apiFetch(`/api/v1/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
 }
 
-export function listSpaceMembers(spaceId: string): Promise<{ items: SpaceMember[] }> {
-  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/members`);
+export function listSpaceMembers(spaceId: string, options: { cursor?: string | null; limit?: number } = {}): Promise<CursorPage<SpaceMember>> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/members${queryString(options)}`);
 }
 
 export function addSpaceMember(spaceId: string, payload: { email: string; role: SpaceRole }): Promise<Pick<SpaceMember, "spaceId" | "userId" | "role" | "version">> {
@@ -723,6 +723,22 @@ export function removeSpaceMember(spaceId: string, userId: string): Promise<void
 
 export function clearCsrfToken(): void {
   csrfToken = null;
+}
+
+export async function listAllCursorPages<T>(path: string, options: Record<string, string | number | null | undefined> = {}): Promise<T[]> {
+  const items: T[] = [];
+  let cursor: string | null = null;
+  const seen = new Set<string>();
+  do {
+    const query = queryString({ ...options, cursor });
+    const separator = path.includes("?") ? "&" : "?";
+    const page = await apiFetch<CursorPage<T>>(`${path}${query ? `${separator}${query.slice(1)}` : ""}`);
+    items.push(...(page.items ?? []));
+    cursor = page.nextCursor ?? null;
+    if (cursor && seen.has(cursor)) break;
+    if (cursor) seen.add(cursor);
+  } while (cursor);
+  return items;
 }
 
 export async function uploadMarkdown(spaceId: string, file: File, relativePath?: string): Promise<{ jobId: string; documentRevisionId: string; sourceId: string }> {

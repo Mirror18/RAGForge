@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, listAllCursorPages } from "./api";
 
 export type AnswerEventType =
   | "answer.delta"
@@ -349,13 +349,11 @@ export async function createAnswerConversation(spaceId: string, idempotencyKey: 
 }
 
 export async function listAnswerConversations(spaceId: string, includeArchived = false): Promise<ConversationHistoryItem[]> {
-  const result = await apiFetch<{ items: ConversationHistoryItem[] }>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations?includeArchived=" + includeArchived);
-  return result.items ?? [];
+  return listAllCursorPages<ConversationHistoryItem>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations", { includeArchived: String(includeArchived), limit: 20 });
 }
 
 export async function listConversationRuns(spaceId: string, conversationId: string): Promise<ConversationRunItem[]> {
-  const result = await apiFetch<{ items: ConversationRunItem[] }>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations/" + encodeURIComponent(conversationId) + "/runs");
-  return result.items ?? [];
+  return listAllCursorPages<ConversationRunItem>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations/" + encodeURIComponent(conversationId) + "/runs", { limit: 20 });
 }
 
 export async function archiveAnswerConversation(spaceId: string, conversationId: string, idempotencyKey: string): Promise<ConversationHistoryItem> {

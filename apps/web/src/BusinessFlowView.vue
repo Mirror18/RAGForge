@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, configureGitSource, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listGitSources, listIndexes, listIngestionJobs, publishIndex, rollbackIndex, retireIndex, syncGitSource, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type GitSourceView, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "./api";
+import { ApiError, configureGitSource, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listAllCursorPages, publishIndex, rollbackIndex, retireIndex, syncGitSource, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type GitSourceView, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "./api";
 import SourceLibraryView from "./SourceLibraryView.vue";
 import TaskCenterView from "./TaskCenterView.vue";
 import IndexLifecycleView from "./IndexLifecycleView.vue";
@@ -166,32 +166,32 @@ async function loadFlow(): Promise<void> {
   try {
     const failures: string[] = [];
     const [providers, profiles, routes, prompts, active, currentJobs, indexPage, currentGitSources] = await Promise.all([
-      readWithTimeout("Provider connection", apiFetch<{ items: ProviderConnection[] }>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/provider-connections?limit=100`), { items: [] }, failures),
-      readWithTimeout("Model profile", apiFetch<{ items: ModelProfile[] }>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-profiles?limit=100`), { items: [] }, failures),
-      readWithTimeout("Model route", apiFetch<{ items: ModelRoute[] }>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-routes?limit=100`), { items: [] }, failures),
-      readWithTimeout("Prompt template", apiFetch<{ items: PromptTemplate[] }>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/prompt-templates`), { items: [] }, failures),
+      readWithTimeout("Provider connection", listAllCursorPages<ProviderConnection>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/provider-connections`, { limit: 20 }), [], failures),
+      readWithTimeout("Model profile", listAllCursorPages<ModelProfile>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-profiles`, { limit: 20 }), [], failures),
+      readWithTimeout("Model route", listAllCursorPages<ModelRoute>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-routes`, { limit: 20 }), [], failures),
+      readWithTimeout("Prompt template", listAllCursorPages<PromptTemplate>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/prompt-templates`, { limit: 20 }), [], failures),
       readWithTimeout("Active index", getActiveIndex(props.selectedSpaceId), null, failures),
-      readWithTimeout("Ingestion jobs", listIngestionJobs(props.selectedSpaceId), [], failures),
-      readWithTimeout("Index versions", listIndexes(props.selectedSpaceId), { items: [], nextCursor: null }, failures),
-      readWithTimeout("Git sources", listGitSources(props.selectedSpaceId), { items: [], nextCursor: null }, failures),
+      readWithTimeout("Ingestion jobs", listAllCursorPages<IngestionJobView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/jobs`, { limit: 20 }), [], failures),
+      readWithTimeout("Index versions", listAllCursorPages<IndexView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/indexes`, { limit: 20 }), [], failures),
+      readWithTimeout("Git sources", listAllCursorPages<GitSourceView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/sources`, { limit: 20 }), [], failures),
     ]);
-    providerConnections.value = providers.items;
-    modelProfiles.value = profiles.items;
-    modelRoutes.value = routes.items;
-    promptTemplates.value = prompts.items;
+    providerConnections.value = providers;
+    modelProfiles.value = profiles;
+    modelRoutes.value = routes;
+    promptTemplates.value = prompts;
     activeIndex.value = active;
     jobs.value = currentJobs;
-    indexes.value = indexPage.items;
-    gitSources.value = currentGitSources.items;
+    indexes.value = indexPage;
+    gitSources.value = currentGitSources;
     indexVersionId.value = active?.pointer.activeIndexVersionId ?? "";
     datasetHash.value = active?.datasetHash ?? "";
-    if (!selectedRouteId.value || !routes.items.some((item) => item.modelRouteId === selectedRouteId.value)) selectedRouteId.value = routes.items.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE" && item.egressClass === "CLOUD")?.modelRouteId ?? routes.items.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE")?.modelRouteId ?? routes.items[0]?.modelRouteId ?? "";
-    const route = routes.items.find((item) => item.modelRouteId === selectedRouteId.value);
+    if (!selectedRouteId.value || !routes.some((item) => item.modelRouteId === selectedRouteId.value)) selectedRouteId.value = routes.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE" && item.egressClass === "CLOUD")?.modelRouteId ?? routes.find((item) => item.purpose === "CHAT" && item.status === "ACTIVE")?.modelRouteId ?? routes[0]?.modelRouteId ?? "";
+    const route = routes.find((item) => item.modelRouteId === selectedRouteId.value);
     runtimeMode.value = route?.egressClass === "CLOUD" ? "MIMO" : "LOCAL";
-    if (!selectedProfileId.value || !route?.candidates.some((candidate) => candidate.modelProfileId === selectedProfileId.value)) selectedProfileId.value = route?.candidates[0]?.modelProfileId ?? profiles.items.find((item) => item.purpose === "CHAT" && item.status === "PUBLISHED")?.modelProfileId ?? "";
-    if (!selectedPromptTemplateId.value || !prompts.items.some((item) => item.promptTemplateId === selectedPromptTemplateId.value)) selectedPromptTemplateId.value = prompts.items.find((item) => item.purpose === "CHAT" && item.currentVersion !== null)?.promptTemplateId ?? prompts.items[0]?.promptTemplateId ?? "";
-    model.value = profiles.items.find((item) => item.modelProfileId === selectedProfileId.value)?.modelName ?? "mimo-v2.5";
-    void loadPromptVersion(prompts.items.find((item) => item.promptTemplateId === selectedPromptTemplateId.value)).catch((value) => {
+    if (!selectedProfileId.value || !route?.candidates.some((candidate) => candidate.modelProfileId === selectedProfileId.value)) selectedProfileId.value = route?.candidates[0]?.modelProfileId ?? profiles.find((item) => item.purpose === "CHAT" && item.status === "PUBLISHED")?.modelProfileId ?? "";
+    if (!selectedPromptTemplateId.value || !prompts.some((item) => item.promptTemplateId === selectedPromptTemplateId.value)) selectedPromptTemplateId.value = prompts.find((item) => item.purpose === "CHAT" && item.currentVersion !== null)?.promptTemplateId ?? prompts[0]?.promptTemplateId ?? "";
+    model.value = profiles.find((item) => item.modelProfileId === selectedProfileId.value)?.modelName ?? "mimo-v2.5";
+    void loadPromptVersion(prompts.find((item) => item.promptTemplateId === selectedPromptTemplateId.value)).catch((value) => {
       error.value = describeError(value);
     });
     if (failures.length) error.value = `部分真实状态读取失败：${failures.join("；")}`;
