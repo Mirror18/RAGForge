@@ -341,6 +341,49 @@ class ServerIntegrationTest {
     }
 
     @Test
+    void sourceTaskApiRejectsUnauthenticatedPrincipal() throws Exception {
+        mvc.perform(get("/api/v1/spaces/{spaceId}/sources", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void sourceTaskApiRejectsCrossSpaceNonMember() throws Exception {
+        register("source-owner@example.test", "correct horse battery", "Source Owner");
+        Login owner = login("source-owner@example.test", "correct horse battery", "/sessions");
+        MvcResult created = mvc.perform(post("/api/v1/spaces").cookie(owner.cookie)
+                        .header("X-CSRF-Token", owner.csrfToken)
+                        .header("Idempotency-Key", "source-space-create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Source Space\",\"description\":\"private\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        UUID spaceId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
+                .get("spaceId").asText());
+
+        register("source-outsider@example.test", "correct horse battery", "Source Outsider");
+        Login outsider = login("source-outsider@example.test", "correct horse battery", "/sessions");
+        mvc.perform(get("/api/v1/spaces/{spaceId}/sources", spaceId).cookie(outsider.cookie))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void sourceTaskApiRejectsDisabledUser() throws Exception {
+        register("source-disabled@example.test", "correct horse battery", "Source Disabled");
+        Login disabled = login("source-disabled@example.test", "correct horse battery", "/sessions");
+        MvcResult created = mvc.perform(post("/api/v1/spaces").cookie(disabled.cookie)
+                        .header("X-CSRF-Token", disabled.csrfToken)
+                        .header("Idempotency-Key", "source-disabled-space")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Disabled Source Space\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        UUID spaceId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
+                .get("spaceId").asText());
+        jdbc.update("UPDATE users SET status = 'DISABLED' WHERE id = ?", disabled.userId);
+
+        mvc.perform(get("/api/v1/spaces/{spaceId}/sources", spaceId).cookie(disabled.cookie))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void activeSessionAuthenticationSourceIsValkey() throws Exception {
         register("valkey@example.test", "correct horse battery", "Valkey");
         Login login = login("valkey@example.test", "correct horse battery", "/auth/login");
