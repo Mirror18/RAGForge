@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 19000
+  },
+  "raw_output_stored": false,
+  "checks": {
+    "contract": "python scripts/ci/contract_test.py: 52/52 passed",
+    "index": "mvn -q -pl apps/server -am test -Dtest=IndexStateTransitionsTest,CandidateIndexServiceTest,CandidateIndexServiceIntegrationTest: BUILD SUCCESS with JDK 21.0.7",
+    "web_format": "npm ci --prefix apps/web; npm --prefix apps/web run format:check: passed",
+    "web_build": "npm --prefix apps/web run build: passed"
+  },
+  "notes": [
+    "首次 Maven 尝试使用 Maven 的旧 JAVA_HOME（JDK 8）而失败；在同一命令进程切换到现有 JDK 21 后重跑通过。",
+    "Web 最终验证按顺序串行执行，避免 npm ci 与 build 共享 node_modules。"
+  ]
+}

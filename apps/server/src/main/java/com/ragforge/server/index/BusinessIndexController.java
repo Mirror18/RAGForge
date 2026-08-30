@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -99,6 +100,26 @@ public class BusinessIndexController {
         return candidateIndexes.publish(spaceId, indexVersionId, Instant.now());
     }
 
+    @PostMapping("/{indexVersionId}/rollback")
+    public IndexRepository.ActiveIndexPointer rollback(@PathVariable UUID spaceId, @PathVariable UUID indexVersionId,
+                                                       @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                       @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                       @AuthenticationPrincipal SessionPrincipal principal) {
+        authorization.requireWrite(spaceId, principal);
+        requireIdempotencyKey(key);
+        return indexes.rollback(spaceId, indexVersionId, pointerVersion(ifMatch), Instant.now());
+    }
+
+    @PostMapping("/{indexVersionId}/retire")
+    public IndexView retire(@PathVariable UUID spaceId, @PathVariable UUID indexVersionId,
+                            @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                            @AuthenticationPrincipal SessionPrincipal principal) {
+        authorization.requireWrite(spaceId, principal);
+        requireIdempotencyKey(key);
+        return map(indexes.retire(spaceId, indexVersionId, pointerVersion(ifMatch), Instant.now()));
+    }
+
     @PostMapping("/{indexVersionId}/archive")
     public SourceTaskCenterService.TaskActionView archive(@PathVariable UUID spaceId, @PathVariable UUID indexVersionId,
                                                            @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
@@ -130,7 +151,36 @@ public class BusinessIndexController {
                 (Boolean) rs.getObject("validation_sample_retrieval_passed"),
                 (Boolean) rs.getObject("validation_space_filter_passed"), instant(rs, "activated_at"), instant(rs, "created_at"));
     }
+    private static IndexView map(IndexRepository.IndexVersion index) {
+        IndexValidation validation = index.validation();
+        return new IndexView(index.id(), index.spaceId(), index.versionNo(), index.state().name(), index.candidateCollection(),
+                index.embeddingProfileVersion(), index.chunkingStrategyVersion(), index.documentRevisionCount(),
+                index.childChunkCount(), validation == null ? null : validation.vectorDimension(),
+                validation == null ? null : validation.sampleRetrievalPassed(),
+                validation == null ? null : validation.spaceFilterPassed(), index.activatedAt(), index.createdAt());
+    }
     private static Instant instant(java.sql.ResultSet rs, String column) throws java.sql.SQLException { Timestamp value = rs.getTimestamp(column); return value == null ? null : value.toInstant(); }
+
+    private static int pointerVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.PRECONDITION_REQUIRED, "If-Match pointer version is required");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("\"") && value.endsWith("\"") && value.length() > 1) {
+            value = value.substring(1, value.length() - 1);
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException exception) {
+            throw new ResponseStatusException(HttpStatus.PRECONDITION_FAILED, "If-Match must contain the pointer version", exception);
+        }
+    }
+
+    private static void requireIdempotencyKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Idempotency-Key is required");
+        }
+    }
 
     private record IndexRow(IndexView index, Instant sortTime) { }
 

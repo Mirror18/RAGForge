@@ -132,6 +132,48 @@ public class IndexRepository {
         return findActivePointer(spaceId).orElseThrow();
     }
 
+    /**
+     * Restores the previous pointer atomically. Repeating a request after the
+     * switch is a safe no-op when the requested version is already active.
+     */
+    @Transactional
+    public ActiveIndexPointer rollback(UUID spaceId, UUID indexVersionId, int expectedPointerVersion, Instant now) {
+        ActiveIndexPointer pointer = findActivePointer(spaceId)
+                .orElseThrow(() -> new IllegalStateException("space has no active index pointer"));
+        if (pointer.activeIndexVersionId().equals(indexVersionId)) {
+            return pointer;
+        }
+        if (pointer.versionNo() != expectedPointerVersion) {
+            throw new IllegalStateException("active index pointer changed; refresh before retrying rollback");
+        }
+        if (!indexVersionId.equals(pointer.previousIndexVersionId())) {
+            throw new IllegalArgumentException("rollback target is not the previous index for this space");
+        }
+        IndexVersion current = findVersion(spaceId, pointer.activeIndexVersionId()).orElseThrow();
+        IndexVersion target = findVersion(spaceId, indexVersionId).orElseThrow();
+        if (current.state() != IndexState.ACTIVE || target.state() != IndexState.ACTIVE) {
+            throw new IllegalStateException("rollback requires current and previous indexes to be ACTIVE");
+        }
+        IndexStateTransitions.requireActivationEligible(target.validation());
+        IndexStateTransitions.requireTransition(current.state(), IndexState.RETIRED);
+        Instant retentionDeadline = now.plus(RETENTION);
+        jdbc.update("""
+                UPDATE index_versions
+                SET index_state = 'RETIRED', retired_at = ?, retention_deadline = ?
+                WHERE space_id = ? AND id = ? AND index_state = 'ACTIVE'
+                """, timestamp(now), timestamp(retentionDeadline), spaceId, current.id());
+        int updated = jdbc.update("""
+                UPDATE active_index_pointers
+                SET active_index_version_id = ?, previous_index_version_id = ?,
+                    version_no = version_no + 1, updated_at = ?
+                WHERE space_id = ? AND version_no = ?
+                """, target.id(), current.id(), timestamp(now), spaceId, expectedPointerVersion);
+        if (updated != 1) {
+            throw new IllegalStateException("active index pointer changed; refresh before retrying rollback");
+        }
+        return findActivePointer(spaceId).orElseThrow();
+    }
+
     /** Retires an ACTIVE index (kept for retention; cleanup happens after the deadline). */
     @Transactional
     public IndexVersion retire(UUID spaceId, UUID indexVersionId, Instant now) {
@@ -140,6 +182,31 @@ public class IndexRepository {
         IndexStateTransitions.requireTransition(current.state(), IndexState.RETIRED);
         jdbc.update("UPDATE index_versions SET index_state = 'RETIRED', retired_at = ? WHERE space_id = ? AND id = ?",
                 timestamp(now), spaceId, indexVersionId);
+        return findVersion(spaceId, indexVersionId).orElseThrow();
+    }
+
+    /** Retires a non-current ACTIVE version with a pointer-version precondition. */
+    @Transactional
+    public IndexVersion retire(UUID spaceId, UUID indexVersionId, int expectedPointerVersion, Instant now) {
+        IndexVersion current = findVersion(spaceId, indexVersionId)
+                .orElseThrow(() -> new IllegalArgumentException("index version not found in space " + spaceId));
+        if (current.state() == IndexState.RETIRED) {
+            return current;
+        }
+        ActiveIndexPointer pointer = findActivePointer(spaceId)
+                .orElseThrow(() -> new IllegalStateException("space has no active index pointer"));
+        if (pointer.versionNo() != expectedPointerVersion) {
+            throw new IllegalStateException("active index pointer changed; refresh before retrying retire");
+        }
+        if (pointer.activeIndexVersionId().equals(indexVersionId)) {
+            throw new IllegalArgumentException("the current active index cannot be retired");
+        }
+        IndexStateTransitions.requireTransition(current.state(), IndexState.RETIRED);
+        jdbc.update("""
+                UPDATE index_versions
+                SET index_state = 'RETIRED', retired_at = ?, retention_deadline = ?
+                WHERE space_id = ? AND id = ? AND index_state = 'ACTIVE'
+                """, timestamp(now), timestamp(now.plus(RETENTION)), spaceId, indexVersionId);
         return findVersion(spaceId, indexVersionId).orElseThrow();
     }
 

@@ -744,3 +744,17 @@ export function getActiveIndex(spaceId: string): Promise<ActiveIndexView | null>
 export function publishIndex(spaceId: string, indexVersionId: string): Promise<{ activeIndexVersionId: string }> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/${encodeURIComponent(indexVersionId)}/publish`, { method: "POST" });
 }
+
+export function rollbackIndex(spaceId: string, indexVersionId: string, pointerVersion: number): Promise<ActiveIndexView["pointer"]> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/${encodeURIComponent(indexVersionId)}/rollback`, {
+    method: "POST",
+    headers: { "If-Match": `"${pointerVersion}"` },
+  });
+}
+
+export function retireIndex(spaceId: string, indexVersionId: string, pointerVersion: number): Promise<IndexView> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/${encodeURIComponent(indexVersionId)}/retire`, {
+    method: "POST",
+    headers: { "If-Match": `"${pointerVersion}"` },
+  });
+}
