@@ -7,7 +7,7 @@ meta:
   agent_slug: a22
   branch: codex/p7-supply-chain-remediation-a22
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7-supply-chain-remediation-a22
-  base_sha: 20c7f87
+  base_sha: 20c7f879e9a579ac520016f17ce8a0668153c8b9
   updated_at: "2026-08-30"
   dependencies_satisfied: true
   depends_on_cards: [P7D-02]
