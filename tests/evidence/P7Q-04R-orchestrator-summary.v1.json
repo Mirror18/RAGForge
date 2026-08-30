@@ -1,0 +1,22 @@
+{
+  "schema_version": "P7Q-04R-orchestrator-summary.v1",
+  "card_id": "P7Q-04R",
+  "passed": true,
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0
+  },
+  "checks": [
+    {"name": "contract coverage", "passed": 1, "failed": 0, "details": "严格双向 102/102；coverage 单测 3/3，故意删除 Controller 与 operation 的夹具均保持失败。", "evidence": "tests/evidence/P7Q-04R-orchestrator-coverage.json"},
+    {"name": "contract test", "passed": 1, "failed": 0, "details": "52/52。", "evidence": "tests/evidence/P7Q-04R-orchestrator-contract.log"},
+    {"name": "server targeted tests", "passed": 13, "failed": 0, "details": "Java 21 定向 Maven 测试报告 13/13，无 failures/errors/skipped。", "evidence": "tests/evidence/P7Q-04R-orchestrator-server-jdk21.log"},
+    {"name": "secret scan", "passed": 1, "failed": 0, "details": "未发现受支持的凭据模式。", "evidence": "tests/evidence/P7Q-04R-orchestrator-secret-scan.log"},
+    {"name": "coverage workflow static check", "passed": 1, "failed": 0, "details": "quality workflow 已接入 contract_coverage.py 与 coverage_test.py。"},
+    {"name": "diff check", "passed": 1, "failed": 0, "details": "git diff --check 通过。"}
+  ],
+  "merge_commit": "b718c40",
+  "worker_commit": "ac0d94815ea437805bbb91a67847bc5dab02a133"
+}

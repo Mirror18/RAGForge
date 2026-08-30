@@ -12,14 +12,14 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：67a18f8
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：b718c40
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`implementation-reconciliation`）
-- **主线基线 SHA（main）**：`65f1cdc`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
+- **主线基线 SHA（main）**：`b718c40`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
 - **最近已通过 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（4m52s，全绿）
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
@@ -118,8 +118,8 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7Q-01 | 统一 preflight | P1 | ✅ completed | A9 | codex/p7-preflight-a9 | RAGForge-worktrees/codex-p7-preflight-a9 | 3,000 | 2,700 | a997aff82eaff6a87dee3abd49142df02f3b0c53 | 已合并至 002cb63；跨平台工具检查、JSON/strict、9/9 单测与 secret scan 通过 |
 | P7Q-02 | 全量 Maven 回归 CI 配方 | P1 | ✅ completed | A10 | codex/p7-maven-ci-a10 | RAGForge-worktrees/codex-p7-maven-ci-a10 | 2,000 | 2,000 | 9a097645e5746104dac116316780a54806bd82ad | 已合并至 9d74821；JDK21、preflight strict、Maven 全量回归 297/297 与 CI artifact 归档通过 |
 | P7Q-03 | Web 自动化测试（8 条旅程） | P1 | ✅ completed | A11 | codex/p7-web-e2e-a11 | RAGForge-worktrees/codex-p7-web-e2e-a11 | 15,000 | 9,800 | f74c89fc2f209e2363e045c48d382732d01ce3a3 | 已合并至 65f1cdc；Vitest 8/8、Playwright 8/8、format/build/secret scan 通过；npm audit 有 2 high、1 critical 待后续 BOM 评估 |
-| P7Q-04 | 契约-实现一致性门禁 | P1 | ⏳ pending | A12 | codex/p7-contract-coverage-a12 | RAGForge-worktrees/codex-p7-contract-coverage-a12 | 4,000 | 3,300 | — | 未合并：真实发现 8 个 OpenAPI 操作缺少 Controller、6 个 Controller mapping 缺少 OpenAPI；转由 P7Q-04R 协调修复 |
-| P7Q-04R | 契约/Controller 对齐修复 | P1 | 🚧 in_progress | A13 | codex/p7-contract-alignment-a13 | RAGForge-worktrees/codex-p7-contract-alignment-a13 | 12,000 | — | — | 从 P7Q-04 覆盖检查分支继续；修复后再合并严格门禁 |
+| P7Q-04 | 契约-实现一致性门禁 | P1 | ✅ completed | A12 | codex/p7-contract-coverage-a12 | RAGForge-worktrees/codex-p7-contract-coverage-a12 | 4,000 | 3,300 | cf509aec... | 初始检查识别 8+6 个真实缺口；门禁代码随 P7Q-04R 修复分支合并，当前严格双向覆盖 102/102 |
+| P7Q-04R | 契约/Controller 对齐修复 | P1 | ✅ completed | A13 | codex/p7-contract-alignment-a13 | RAGForge-worktrees/codex-p7-contract-alignment-a13 | 12,000 | 11,000 | ac0d94815ea437805bbb91a67847bc5dab02a133 | 已合并至 b718c40；8+6 缺口修复，覆盖 102/102、定向后端 13/13、contract 52/52、secret scan 通过 |
 | P7Q-05 | RAG 变更强制评估触发脚本 | P1 | ⏳ pending | — | — | — | 5,000 | — | — | |
 | P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | ⏳ pending | — | — | — | 11,000 | — | — | P7C-06 已完成，可开始排期 |
 | P7D-01~07 | Linux 交付与发布（7 张） | P2 | ⏳ blocked | — | — | — | 60,000 | — | — | P0+P1 全通过后进入 |

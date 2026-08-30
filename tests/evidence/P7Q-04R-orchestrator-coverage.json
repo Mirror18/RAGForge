@@ -1,0 +1,16 @@
+{
+  "schema_version": "contract-coverage.v1",
+  "passed": true,
+  "contract": {
+    "operations": 102,
+    "matched": 102,
+    "missing_controller": [],
+    "duplicates": []
+  },
+  "implementation": {
+    "mappings": 102,
+    "matched": 102,
+    "missing_contract": [],
+    "duplicates": []
+  }
+}
