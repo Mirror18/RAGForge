@@ -12,14 +12,14 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：0d17939
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：8499e82
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`implementation-reconciliation`）
-- **主线基线 SHA（main）**：`0d17939`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
+- **主线基线 SHA（main）**：`8499e82`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
 - **最近已通过 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（4m52s，全绿）
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
