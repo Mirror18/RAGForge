@@ -1,6 +1,6 @@
 # Phase 7 Checklist：实现对齐与 Linux 交付
 
-- 状态：`p2-entry-remote-ci-pending`
+- 状态：`p2-ready`
 - 最近复核：2026-08-30
 - 功能候选基线：`f695936594834f8a870fa95dca5ff0c6634441a1`
 - 审计方法：直接检查 production code、OpenAPI、迁移、测试、Dockerfile/Compose，并运行当前可用门禁；不采信历史完成声明作为实现证据
@@ -51,4 +51,4 @@
 
 ## 5. 退出条件
 
-P0/P1 的本地实现与回归验收已在功能候选 `f695936` 完成；P2 仍需该候选推送后取得同 SHA GitHub Actions 全绿，当前不得用历史 CI 替代。实用性验收要求普通用户不借助数据库 seed、API 客户端或手填内部 UUID/hash 完成首次设置、协作、来源维护、失败恢复、索引生命周期和可核验问答。创建 release、接受根级许可证、执行生产迁移不在本清单的自动授权范围内。
+P0/P1 的本地实现与回归验收已在功能候选 `f695936` 完成；quality Run [33307092918](https://github.com/Mirror18/RAGForge/actions/runs/33307092918) 对主线 `f0ce7d2` 同 SHA 全绿，P2 入口前置已满足，可从 P7-DEPLOY-01 开始。实用性验收要求普通用户不借助数据库 seed、API 客户端或手填内部 UUID/hash 完成首次设置、协作、来源维护、失败恢复、索引生命周期和可核验问答。创建 release、接受根级许可证、执行生产迁移不在本清单的自动授权范围内。

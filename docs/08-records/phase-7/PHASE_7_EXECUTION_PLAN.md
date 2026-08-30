@@ -1,7 +1,7 @@
 # Phase 7 执行计划：实现对齐与 Linux 交付
 
 - Version: `phase7-plan.v6`
-- Status: `p2-entry-remote-ci-pending`
+- Status: `p2-ready`
 - Functional candidate baseline: `f695936594834f8a870fa95dca5ff0c6634441a1`
 - Checklist: [`PHASE_7_CHECKLIST.md`](../../03-delivery/PHASE_7_CHECKLIST.md)
 
@@ -35,7 +35,7 @@ P7C-01~08 与 P7Q-01~06 已把初始审计发现的产品断点和自动化缺�
 | P7-C 来源、任务与索引维护 | completed | 来源库、Git source、多任务终态、重试/同步/归档、索引发布/回滚、durable BM25、RERANK adapter | 增长中的知识库可持续维护；全 reactor 暴露的 test-profile adapter 冲突已由 P7C-05R 修复 | P7-B |
 | P7-D 问答与上下文工具 | completed | streaming/cancel、citation 正文、历史 citation、新会话/反馈、Studio/Playground 上下文跳转 | 普通用户不手填内部标识即可完成可核验问答；运行时与配置语义一致 | P7-C |
 | P7-E 管理与 Web 自动化 | completed | Run/audit/cost/health 查询、Router/pagination、Web tests、contract-implementation gate、preflight、RAG gate | 本地候选关键 UI/API/失败/规模/权限路径全绿 | P7-B/P7-C/P7-D |
-| P7-F 镜像与 Compose 加固 | blocked | non-root Web、health、limits、digest、Secret | 当前候选同 SHA 远程 CI 全绿后才可启动 | P7-E + remote CI |
+| P7-F 镜像与 Compose 加固 | ready | non-root Web、health、limits、digest、Secret | quality Run 33307092918 已满足同 SHA 远程 CI 前置；从 P7D-01 启动 | P7-E + remote CI |
 | P7-G Ubuntu/观测/升级验收 | pending | clean deploy、smoke、observability、upgrade/rollback evidence | 同一候选 SHA 和镜像 digest 可追溯 | P7-F |
 | P7-H 供应链与阶段闭环 | pending | SBOM/Grype、public audit、retrospective、状态记录 | checklist 全满足；release 仍需单独批准 | P7-G |
 
@@ -55,6 +55,7 @@ P7C-01~08 与 P7Q-01~06 已把初始审计发现的产品断点和自动化缺�
 - 当前候选本地门禁：preflight 6/6；Maven 307 tests（306 passed、0 failed、0 errors、1 skipped）；contract 52/52；OpenAPI/Controller 102/102；Vitest 10/10；Playwright 10/10；128-case RAG gate、format、architecture、links、secret、dependency inventory、Compose static validation 全部通过。
 - P2 尚未启动。`origin/main` 仍为 `9fdd94e0e12afae1c3843d0680fb48017e00669f`，当前候选没有同 SHA GitHub Actions 结果；必须推送并等待远程全绿后才能解除 P7-F/P7D-01 阻塞。
 - 本地 RAG 证据使用公共 synthetic fixture；默认 AI Runtime scorer 仍是确定性 seam，不能外推真实模型质量，继续由 R-054 跟踪。
+- 远程复验：quality Run [33307092918](https://github.com/Mirror18/RAGForge/actions/runs/33307092918) 对 `f0ce7d2318ec16da8a70626c0f646d4a47a1227d` 全绿（5m48s），P7-F/P7D-01 入口解除阻塞。
 
 ## 2026-08-29 执行增量
 

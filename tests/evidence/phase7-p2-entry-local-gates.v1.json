@@ -3,9 +3,9 @@
   "recorded_at": "2026-08-30T18:17:30+08:00",
   "functional_candidate_sha": "f695936594834f8a870fa95dca5ff0c6634441a1",
   "base_ref": "f738719",
-  "status": "LOCAL_PASS_REMOTE_PENDING",
+  "status": "PASS",
   "passed": true,
-  "p2_entry_eligible": false,
+  "p2_entry_eligible": true,
   "preflight": {
     "passed": true,
     "checks": 6,
@@ -76,12 +76,12 @@
     "compose_validation": "PASS"
   },
   "remote_ci": {
-    "status": "FAILED_RECOVERY_PENDING",
-    "origin_main_sha": "4ade90f5ed543ad09f1df01f802b623936ede702",
-    "same_candidate_run": 33306553953,
-    "failure": "actions/checkout shallow history did not contain github.event.before; RAG gate failed closed with fatal: bad object",
+    "status": "PASS",
+    "origin_main_sha": "f0ce7d2318ec16da8a70626c0f646d4a47a1227d",
+    "same_candidate_run": 33307092918,
+    "duration_seconds": 348,
     "recovery_merge_sha": "2b961f2832c83c247914a74276e89fd71f79c1eb",
-    "blocking_reason": "P7Q-05R is merged, but P2 still requires a green GitHub Actions run for the newly pushed current main SHA."
+    "blocking_reason": null
   },
   "limitations": [
     "RAG evaluation uses the versioned public synthetic fixture and does not establish production model quality or capacity.",
