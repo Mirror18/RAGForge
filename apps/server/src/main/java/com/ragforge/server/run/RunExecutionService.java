@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ragforge.server.common.ApiException;
 import com.ragforge.server.identity.SessionPrincipal;
+import com.ragforge.server.ingestion.CursorPage;
 import com.ragforge.server.provider.ProviderRepository;
 import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.provider.adapter.CancellationToken;
@@ -108,12 +109,29 @@ public class RunExecutionService {
         return conversations.list(spaceId, includeArchived);
     }
 
+    public CursorPage<ConversationRepository.ConversationRecord> listConversations(UUID spaceId,
+                                                                                     SessionPrincipal principal,
+                                                                                     boolean includeArchived,
+                                                                                     String cursor, Integer limit) {
+        requireRole(spaceId, principal, false);
+        return conversations.list(spaceId, includeArchived, cursor, limit);
+    }
+
     public List<RunRepository.RunRecord> listConversationRuns(UUID spaceId, UUID conversationId,
                                                                SessionPrincipal principal) {
         requireRole(spaceId, principal, false);
         conversations.find(spaceId, conversationId)
                 .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
         return runs.findRuns(spaceId, conversationId);
+    }
+
+    public CursorPage<RunRepository.RunRecord> listConversationRuns(UUID spaceId, UUID conversationId,
+                                                                      SessionPrincipal principal,
+                                                                      String cursor, Integer limit) {
+        requireRole(spaceId, principal, false);
+        conversations.find(spaceId, conversationId)
+                .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
+        return runs.findRuns(spaceId, conversationId, cursor, limit);
     }
 
     @Transactional
@@ -279,6 +297,13 @@ public class RunExecutionService {
     public List<RunRepository.StepRecord> getSteps(UUID spaceId, UUID runId, SessionPrincipal principal) {
         getRun(spaceId, runId, principal);
         return runs.findSteps(spaceId, runId);
+    }
+
+    public CursorPage<RunRepository.StepRecord> getStepsPage(UUID spaceId, UUID runId,
+                                                               SessionPrincipal principal,
+                                                               String cursor, Integer limit) {
+        getRun(spaceId, runId, principal);
+        return runs.findSteps(spaceId, runId, cursor, limit);
     }
 
     private void execute(RunRepository.RunRecord run, RunRequest request, ValidatedRoute route,

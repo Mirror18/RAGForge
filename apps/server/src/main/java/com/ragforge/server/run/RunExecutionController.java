@@ -2,6 +2,7 @@ package com.ragforge.server.run;
 
 import com.ragforge.server.common.CorrelationIdFilter;
 import com.ragforge.server.identity.SessionPrincipal;
+import com.ragforge.server.ingestion.CursorPage;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -59,16 +60,24 @@ public class RunExecutionController {
     @GetMapping("/conversations")
     public ConversationPageResponse listConversations(@PathVariable UUID spaceId,
                                                       @RequestParam(defaultValue = "false") boolean includeArchived,
+                                                      @RequestParam(required = false) String cursor,
+                                                      @RequestParam(required = false) Integer limit,
                                                       Authentication authentication) {
-        return new ConversationPageResponse(service.listConversations(spaceId, principal(authentication), includeArchived)
-                .stream().map(ConversationResponse::from).toList());
+        CursorPage<ConversationRepository.ConversationRecord> page = service.listConversations(
+                spaceId, principal(authentication), includeArchived, cursor, limit);
+        return new ConversationPageResponse(page.items().stream().map(ConversationResponse::from).toList(),
+                page.nextCursor());
     }
 
     @GetMapping("/conversations/{conversationId}/runs")
     public RunPageResponse listConversationRuns(@PathVariable UUID spaceId, @PathVariable UUID conversationId,
+                                                @RequestParam(required = false) String cursor,
+                                                @RequestParam(required = false) Integer limit,
                                                 Authentication authentication) {
-        return new RunPageResponse(service.listConversationRuns(spaceId, conversationId, principal(authentication))
-                .stream().map(run -> RunResponse.from(run, jdbc)).toList());
+        CursorPage<RunRepository.RunRecord> page = service.listConversationRuns(
+                spaceId, conversationId, principal(authentication), cursor, limit);
+        return new RunPageResponse(page.items().stream().map(run -> RunResponse.from(run, jdbc)).toList(),
+                page.nextCursor());
     }
 
     @PostMapping("/conversations/{conversationId}/archive")
@@ -140,9 +149,12 @@ public class RunExecutionController {
 
     @GetMapping("/runs/{runId}/steps")
     public StepPageResponse getSteps(@PathVariable UUID spaceId, @PathVariable UUID runId,
+                                     @RequestParam(required = false) String cursor,
+                                     @RequestParam(required = false) Integer limit,
                                      Authentication authentication) {
-        return new StepPageResponse(service.getSteps(spaceId, runId, principal(authentication)).stream()
-                .map(StepResponse::from).toList(), null);
+        CursorPage<RunRepository.StepRecord> page = service.getStepsPage(
+                spaceId, runId, principal(authentication), cursor, limit);
+        return new StepPageResponse(page.items().stream().map(StepResponse::from).toList(), page.nextCursor());
     }
 
     private static SessionPrincipal principal(Authentication authentication) {
@@ -176,10 +188,10 @@ public class RunExecutionController {
         }
     }
 
-    public record ConversationPageResponse(List<ConversationResponse> items) {
+    public record ConversationPageResponse(List<ConversationResponse> items, String nextCursor) {
     }
 
-    public record RunPageResponse(List<RunResponse> items) {
+    public record RunPageResponse(List<RunResponse> items, String nextCursor) {
     }
 
     @JsonInclude(JsonInclude.Include.ALWAYS)

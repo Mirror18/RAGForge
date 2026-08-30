@@ -118,6 +118,27 @@ class RunExecutionControllerIntegrationTest {
     }
 
     @Test
+    void conversationHistoryUsesSpaceScopedCursorPagination() throws Exception {
+        createConversation(space, "First conversation");
+        createConversation(space, "Second conversation");
+        createConversation(space, "Third conversation");
+
+        MvcResult first = withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/conversations", space)
+                        .with(auth()).param("limit", "1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.nextCursor").isString())
+                .andReturn();
+        String cursor = objectMapper.readTree(first.getResponse().getContentAsString()).get("nextCursor").asText();
+
+        withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/conversations", space)
+                        .with(auth()).param("limit", "1").param("cursor", cursor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].title").value(org.hamcrest.Matchers.not("Third conversation")));
+    }
+
+    @Test
     void mockMvcCreatesConversationAndExecutesSuccessfulFakeRunWithDedupedUsage() throws Exception {
         UUID conversation = createConversation(space, "No RAG chat");
         MvcResult created = withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",

@@ -1,5 +1,7 @@
 package com.ragforge.server.run;
 
+import com.ragforge.server.ingestion.CursorCodec;
+import com.ragforge.server.ingestion.CursorPage;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -10,9 +12,12 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.List;
 import java.util.UUID;
+import java.util.ArrayList;
 
 @Repository
 public class ConversationRepository {
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
     private final JdbcTemplate jdbc;
 
     public ConversationRepository(JdbcTemplate jdbc) {
@@ -49,13 +54,41 @@ public class ConversationRepository {
     }
 
     public List<ConversationRecord> list(UUID spaceId, boolean includeArchived) {
+        return list(spaceId, includeArchived, null, null).items();
+    }
+
+    public CursorPage<ConversationRecord> list(UUID spaceId, boolean includeArchived,
+                                               String cursor, Integer limit) {
+        int pageSize = pageSize(limit);
+        CursorCodec.Position position = cursor == null ? null : CursorCodec.decode(cursor);
         String statusClause = includeArchived ? "" : " AND status = 'ACTIVE'";
-        return jdbc.query("""
+        StringBuilder sql = new StringBuilder("""
                         SELECT id, space_id, actor_user_id, title, status, archived_at, archived_by,
                                created_at, updated_at, version
                         FROM conversations
-                        WHERE space_id = ?""" + statusClause + " ORDER BY updated_at DESC, id DESC",
-                (rs, rowNum) -> map(rs), spaceId);
+                        WHERE space_id = ?""" + statusClause);
+        List<Object> args = new ArrayList<>(List.of(spaceId));
+        if (position != null) {
+            sql.append(" AND (updated_at, id) < (?, ?)");
+            args.add(Timestamp.from(position.sortTime()));
+            args.add(position.id());
+        }
+        sql.append(" ORDER BY updated_at DESC, id DESC LIMIT ?");
+        args.add(pageSize + 1);
+        List<ConversationRecord> rows = jdbc.query(sql.toString(),
+                (rs, rowNum) -> map(rs), args.toArray());
+        boolean hasMore = rows.size() > pageSize;
+        if (hasMore) rows = rows.subList(0, pageSize);
+        String nextCursor = hasMore
+                ? CursorCodec.encode(new CursorCodec.Position(rows.getLast().updatedAt(), rows.getLast().id()))
+                : null;
+        return new CursorPage<>(rows, nextCursor);
+    }
+
+    private static int pageSize(Integer limit) {
+        if (limit == null) return DEFAULT_PAGE_SIZE;
+        if (limit < 1 || limit > MAX_PAGE_SIZE) throw new IllegalArgumentException("limit is invalid");
+        return limit;
     }
 
     @Transactional

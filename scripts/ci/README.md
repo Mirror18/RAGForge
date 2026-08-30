@@ -10,8 +10,9 @@ python scripts/ci/preflight.py --json
 python scripts/ci/preflight.py --json --strict
 ```
 
-检查项固定为 `JAVA_HOME`、Java、Maven、Node、npm 和 Docker daemon。命令只在本机执行
-版本查询与 `docker info`，不会下载依赖、启动服务或修改仓库。`--json` 输出稳定的
+检查项固定为 `JAVA_HOME`、Java、Maven、Node、npm 和 Docker daemon。除检查 Java 外，Maven
+检查会解析 `mvn --version` 报告的实际 Java 版本；Java 低于 21 或无法确认绑定 JDK 时失败。
+命令只在本机执行版本查询与 `docker info`，不会下载依赖、启动服务或修改仓库。`--json` 输出稳定的
 `passed`、`checks`、`tool_versions`、`remediation` 四个字段；`tool_versions` 固定包含
 Java、Maven、Node、npm、Docker 的版本键（不可用时为 `null`）；每个失败项含稳定的
 `result_code`，修复提示不包含环境变量值、命令输出或可疑凭证。默认模式即使检查失败也

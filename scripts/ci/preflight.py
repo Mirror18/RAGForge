@@ -16,6 +16,8 @@ from typing import Callable, Mapping, Sequence
 
 TIMEOUT_SECONDS = 8
 VERSION_PATTERN = re.compile(r"\d+(?:\.\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?")
+MAVEN_JAVA_VERSION_PATTERN = re.compile(r"Java version:\s*(?:1\.)?(\d+)", re.IGNORECASE)
+REQUIRED_JAVA_MAJOR = 21
 
 
 @dataclass(frozen=True)
@@ -111,6 +113,48 @@ def _check_command(
     return CheckResult(check_code, True, True, "ok", f"{executable} is available on PATH.", version)
 
 
+def _check_maven(which: Which, runner: Runner) -> CheckResult:
+    """Check Maven and the JDK used by Maven's own launcher."""
+
+    executable_path = which("mvn")
+    if executable_path is None:
+        return CheckResult(
+            "maven", False, True, "maven_not_found",
+            "mvn was not found on PATH; install Maven and add it to PATH.",
+        )
+    try:
+        completed = runner((executable_path, "--version"))
+    except (OSError, subprocess.TimeoutExpired):
+        return CheckResult(
+            "maven", False, True, "maven_failed",
+            "mvn could not be executed; verify the local installation and PATH.",
+        )
+    output = f"{completed.stdout}\n{completed.stderr}"
+    version = _extract_version(output)
+    if completed.returncode != 0:
+        return CheckResult(
+            "maven", False, True, "maven_failed",
+            "mvn returned a failure; verify the local installation and PATH.", version,
+        )
+    java_match = MAVEN_JAVA_VERSION_PATTERN.search(output)
+    if java_match is None:
+        return CheckResult(
+            "maven", False, True, "maven_java_version_unknown",
+            "Maven did not report the JDK it is using; configure Maven with a JDK 21 JAVA_HOME.", version,
+        )
+    java_major = int(java_match.group(1))
+    if java_major < REQUIRED_JAVA_MAJOR:
+        return CheckResult(
+            "maven", False, True, "maven_jdk_too_old",
+            f"Maven is bound to Java {java_major}; set JAVA_HOME to JDK {REQUIRED_JAVA_MAJOR} or newer before running Maven.",
+            version,
+        )
+    return CheckResult(
+        "maven", True, True, "ok",
+        f"mvn is available on PATH and is bound to Java {java_major}.", version,
+    )
+
+
 def _check_docker(which: Which, runner: Runner) -> CheckResult:
     executable_path = which("docker")
     if executable_path is None:
@@ -162,7 +206,7 @@ def run_preflight(
     checks: list[CheckResult] = [
         _check_java_home(environment),
         _check_command("java", "java", ("java", "-version"), which, runner),
-        _check_command("maven", "mvn", ("mvn", "--version"), which, runner),
+        _check_maven(which, runner),
         _check_command("node", "node", ("node", "--version"), which, runner),
         _check_command("npm", "npm", ("npm", "--version"), which, runner),
         _check_docker(which, runner),

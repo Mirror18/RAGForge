@@ -21,11 +21,13 @@ class PreflightTests(unittest.TestCase):
         result = Mock(returncode=0, stdout="tool 21.0.1", stderr="")
         if command[-2:] == ("java", "-version"):
             result.stderr = 'openjdk version "21.0.1"'
+        if command[-1:] == ("--version",) and command[0].endswith("/mvn"):
+            result.stdout = "Apache Maven 3.9.6\nJava version: 21.0.1, vendor: Eclipse Adoptium\nJava home: /jdk-21"
         return result
 
     @staticmethod
-    def all_tools(_: str) -> str:
-        return "/tool"
+    def all_tools(executable: str) -> str:
+        return "/" + executable
 
     def test_java_home_success(self) -> None:
         result = preflight._check_java_home(self.env)
@@ -54,6 +56,29 @@ class PreflightTests(unittest.TestCase):
         result = preflight._check_command("node", "node", ("node", "--version"), lambda _: None, self.successful_runner)
         self.assertFalse(result.passed)
         self.assertEqual(result.result_code, "node_not_found")
+
+    def test_maven_rejects_jdk_8_binding(self) -> None:
+        def old_maven(_: tuple[str, ...]) -> Mock:
+            return Mock(returncode=0, stdout="Apache Maven 3.9.6\nJava version: 1.8.0_472", stderr="")
+
+        result = preflight._check_maven(self.all_tools, old_maven)
+        self.assertFalse(result.passed)
+        self.assertEqual(result.result_code, "maven_jdk_too_old")
+        self.assertNotIn("JAVA_HOME=", result.message)
+
+    def test_maven_requires_reported_java_version(self) -> None:
+        def missing_java_version(_: tuple[str, ...]) -> Mock:
+            return Mock(returncode=0, stdout="Apache Maven 3.9.6", stderr="")
+
+        result = preflight._check_maven(self.all_tools, missing_java_version)
+        self.assertFalse(result.passed)
+        self.assertEqual(result.result_code, "maven_java_version_unknown")
+
+    def test_maven_success_reports_jdk_binding(self) -> None:
+        result = preflight._check_maven(self.all_tools, self.successful_runner)
+        self.assertTrue(result.passed)
+        self.assertEqual(result.result_code, "ok")
+        self.assertEqual(result.version, "3.9.6")
 
     def test_docker_daemon_success(self) -> None:
         result = preflight._check_docker(self.all_tools, self.successful_runner)

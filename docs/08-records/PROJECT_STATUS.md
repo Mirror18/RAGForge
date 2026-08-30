@@ -245,3 +245,10 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - P7D-03 已按 P7D-02R 完成创建票据 [`P7D-03-a23.yaml`](tickets/P7D-03-a23.yaml)，基线为 `6fa7f48`，预算 18,000 tokens；ownership 限定为部署文档、Compose 运行入口、`tests/e2e/` 与 Ubuntu smoke 证据，不允许修改业务源码、契约、迁移或 release。
 - 只读环境检查显示 WSL 仅有运行中的 `docker-desktop`，没有独立 Ubuntu 24.04 发行版；Docker Engine 运行在 Docker Desktop。由于本卡验收条件要求“干净 Ubuntu 24.04 + 无继承卷”，不能将当前 Windows/共享 Compose 环境冒充通过，A23 暂不创建 worker worktree。
 - 按 AGENTS.md E6，P7D-03 标记为 BLOCKED，阻塞条件是外部 Ubuntu 24.04 执行环境缺失；获得独立 Ubuntu 24.04 WSL/VM 后可从 `6fa7f48` 重新分派，P7D-04~07 保持等待。
+
+## 23. 本地功能审计与回归修复（2026-08-30）
+
+- 本地审计发现统一 preflight 只检查 `JAVA_HOME` 是否为目录，未检查 Maven 实际绑定的 Java；在本机复现为 PATH 上 Java 21、Maven 使用 Java 8，原门禁错误地报告 6/6 通过。现已让 preflight 解析 `mvn --version` 的 Java 版本，低于 Java 21 或无法确认绑定 JDK 时 fail-closed，并补充对应单元测试。
+- 问答历史的会话、运行和步骤列表已补齐有界 cursor 分页；每个查询继续强制 `space_id`，服务端按稳定时间/UUID 游标排序，默认 20、最大 100，OpenAPI 响应统一返回 `nextCursor`。Web 原有的自动翻页逻辑可直接消费该响应；新增集成测试覆盖跨页读取。
+- 本地验证：preflight 单测 12/12、RunExecutionControllerIntegrationTest 9/9、OpenAPI contract 52/52、Controller coverage 102/102；JDK 21 + Docker 全 reactor 308 tests，307 passed、0 failed、0 errors、1 skipped（唯一 skipped 为环境依赖的真实 Ollama RAG 用例）。Web Vitest 10/10、Playwright 10/10、TypeScript、Vite build 和既有静态门禁继续通过。
+- 第 10–11 节保留为当时的历史审计记录，不表示当前实现仍缺少第 12–23 节已关闭的能力。当前仍未宣称独立 Ubuntu 24.04 部署验收通过，也未创建 release、执行生产迁移、接受根许可证或开启云出境。

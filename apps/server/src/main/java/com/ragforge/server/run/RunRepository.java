@@ -1,5 +1,7 @@
 package com.ragforge.server.run;
 
+import com.ragforge.server.ingestion.CursorCodec;
+import com.ragforge.server.ingestion.CursorPage;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -10,10 +12,13 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.ArrayList;
 
 /** Persistence boundary for Run, Step, Model Invocation and Usage Ledger records. */
 @Repository
 public class RunRepository {
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
     private final JdbcTemplate jdbc;
 
     public RunRepository(JdbcTemplate jdbc) {
@@ -50,14 +55,34 @@ public class RunRepository {
     }
 
     public List<RunRecord> findRuns(UUID spaceId, UUID conversationId) {
-        return jdbc.query("""
+        return findRuns(spaceId, conversationId, null, null).items();
+    }
+
+    public CursorPage<RunRecord> findRuns(UUID spaceId, UUID conversationId, String cursor, Integer limit) {
+        int pageSize = pageSize(limit);
+        CursorCodec.Position position = cursor == null ? null : CursorCodec.decode(cursor);
+        StringBuilder sql = new StringBuilder("""
                         SELECT id, space_id, conversation_id, actor_user_id, correlation_id, request_kind, status,
                                model_route_version_id, prompt_version_id, input_hash, output_hash,
                                error_class, error_code, started_at, completed_at, created_at, updated_at, version
                         FROM runs
                         WHERE space_id = ? AND conversation_id = ?
-                        ORDER BY created_at DESC, id DESC
-                        """, (rs, rowNum) -> mapRun(rs), spaceId, conversationId);
+                        """);
+        List<Object> args = new ArrayList<>(List.of(spaceId, conversationId));
+        if (position != null) {
+            sql.append(" AND (created_at, id) < (?, ?)");
+            args.add(Timestamp.from(position.sortTime()));
+            args.add(position.id());
+        }
+        sql.append(" ORDER BY created_at DESC, id DESC LIMIT ?");
+        args.add(pageSize + 1);
+        List<RunRecord> rows = jdbc.query(sql.toString(), (rs, rowNum) -> mapRun(rs), args.toArray());
+        boolean hasMore = rows.size() > pageSize;
+        if (hasMore) rows = rows.subList(0, pageSize);
+        String nextCursor = hasMore
+                ? CursorCodec.encode(new CursorCodec.Position(rows.getLast().createdAt(), rows.getLast().id()))
+                : null;
+        return new CursorPage<>(rows, nextCursor);
     }
 
     @Transactional
@@ -112,12 +137,38 @@ public class RunRepository {
     }
 
     public List<StepRecord> findSteps(UUID spaceId, UUID runId) {
-        return jdbc.query("""
+        return findSteps(spaceId, runId, null, null).items();
+    }
+
+    public CursorPage<StepRecord> findSteps(UUID spaceId, UUID runId, String cursor, Integer limit) {
+        int pageSize = pageSize(limit);
+        CursorCodec.Position position = cursor == null ? null : CursorCodec.decode(cursor);
+        StringBuilder sql = new StringBuilder("""
                         SELECT id, space_id, run_id, step_key, step_type, attempt, sequence_no,
                                status, error_class, error_code, created_at, updated_at, correlation_id
                         FROM run_steps WHERE run_id = ? AND space_id = ?
-                        ORDER BY sequence_no, attempt, created_at, id
-                        """, (rs, rowNum) -> mapStep(rs), runId, spaceId);
+                        """);
+        List<Object> args = new ArrayList<>(List.of(runId, spaceId));
+        if (position != null) {
+            sql.append(" AND (created_at, id) > (?, ?)");
+            args.add(Timestamp.from(position.sortTime()));
+            args.add(position.id());
+        }
+        sql.append(" ORDER BY created_at, id LIMIT ?");
+        args.add(pageSize + 1);
+        List<StepRecord> rows = jdbc.query(sql.toString(), (rs, rowNum) -> mapStep(rs), args.toArray());
+        boolean hasMore = rows.size() > pageSize;
+        if (hasMore) rows = rows.subList(0, pageSize);
+        String nextCursor = hasMore
+                ? CursorCodec.encode(new CursorCodec.Position(rows.getLast().createdAt(), rows.getLast().id()))
+                : null;
+        return new CursorPage<>(rows, nextCursor);
+    }
+
+    private static int pageSize(Integer limit) {
+        if (limit == null) return DEFAULT_PAGE_SIZE;
+        if (limit < 1 || limit > MAX_PAGE_SIZE) throw new IllegalArgumentException("limit is invalid");
+        return limit;
     }
 
     @Transactional

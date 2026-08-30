@@ -33,8 +33,8 @@
 
 ## 3. P1：建立可信的开发与回归基线
 
-- [x] P7-TEST-01 统一 preflight：跨平台脚本检查 JAVA_HOME、Java、Maven、Node/npm 与 Docker daemon；当前候选 6/6 通过。
-- [x] P7-TEST-02 全量 JVM 回归：JDK 21 + Docker 下 Server/Worker 全 reactor 307 tests，306 passed、0 failed、0 errors、1 skipped。
+- [x] P7-TEST-01 统一 preflight：跨平台脚本检查 JAVA_HOME、Java、Maven 实际绑定的 Java 版本、Node/npm 与 Docker daemon；JDK 低于 21 或无法确认 Maven 绑定时失败。
+- [x] P7-TEST-02 全量 JVM 回归：JDK 21 + Docker 下 Server/Worker 全 reactor 308 tests，307 passed、0 failed、0 errors、1 skipped；唯一 skipped 为环境依赖的真实 Ollama RAG 用例。
 - [x] P7-TEST-03 Web 自动化：Vitest 与 Playwright 已接入；当前候选 10/10 unit、10/10 E2E，覆盖 8 条核心旅程及路由/分页恢复。
 - [x] P7-TEST-04 契约-实现一致性：OpenAPI operation 与 Controller mapping 严格双向覆盖 102/102，contract 52/52。
 - [x] P7-TEST-05 RAG 变更评估：变更触发脚本已接入；当前候选对 128-case 数据集执行并通过，跨空间、Evidence 外引用、提示注入工具违规和未授权云调用均为 0。
@@ -42,13 +42,13 @@
 
 ## 4. P2：产品闭环后执行 Linux 交付
 
-- [ ] P7-DEPLOY-01 容器加固：Web 改为非 root；为 Server/Worker 增加 Compose health/readiness；三类应用统一 capability、只读文件系统/受控写路径、资源限额、优雅关闭和日志验证。
-- [ ] P7-SUPPLY-01 发布镜像：基础与应用镜像固定 immutable digest；使用目标镜像生成 SBOM/Grype 结果；生产 Secret 不使用 Compose 默认占位值，也不进入展开配置、镜像或日志。
-- [ ] P7-DEPLOY-02 干净 Ubuntu 24.04：从文档构建并启动 core + app，以公共合成 fixture 完成平台初始化、Provider test、空间/成员、Git/文件摄取、active index、streaming 引用问答、反馈、审计及跨空间/未授权出境拒绝。
+- [x] P7-DEPLOY-01 容器加固：Web 改为非 root；为 Server/Worker 增加 Compose health/readiness；三类应用统一 capability、只读文件系统/受控写路径、资源限额、优雅关闭和日志验证。证据见 [`phase7-container-hardening.v1.json`](../../tests/evidence/phase7-container-hardening.v1.json)。
+- [x] P7-SUPPLY-01 发布镜像：基础与应用镜像固定 immutable digest；使用目标镜像生成 SBOM/Grype 结果；生产 Secret 不使用 Compose 默认占位值，也不进入展开配置、镜像或日志。P7D-02R 已在 `--fail-on high` 下重新验收通过，证据见 [`P7D-02R-worker-summary.v1.json`](../../tests/evidence/P7D-02R-worker-summary.v1.json)。
+- [ ] P7-DEPLOY-02 干净 Ubuntu 24.04：从文档构建并启动 core + app，以公共合成 fixture 完成平台初始化、Provider test、空间/成员、Git/文件摄取、active index、streaming 引用问答、反馈、审计及跨空间/未授权出境拒绝。当前阻塞：本机没有独立 Ubuntu 24.04 WSL/VM，不能以 Docker Desktop/共享卷替代。
 - [ ] P7-OBS-01 叠加 observability profile，验证 Dashboard、trace/log 脱敏、告警和 Runbook 可定位规定故障。
 - [ ] P7-UPGRADE-01 从上一兼容基线升级并在兼容矩阵允许范围内回滚；验证 PostgreSQL、对象、Qdrant、BM25/rebuild 和 citation 一致性，只使用合成数据。
 - [ ] P7-PUBLIC-01 执行 secret、个人信息、Obsidian 内容、生产数据、raw prompt、许可证、Notice、历史和大文件检查。根许可证、release 版本和生产迁移仍需用户单独批准。
 
 ## 5. 退出条件
 
-P0/P1 的本地实现与回归验收已在功能候选 `f695936` 完成；quality Run [33307092918](https://github.com/Mirror18/RAGForge/actions/runs/33307092918) 对主线 `f0ce7d2` 同 SHA 全绿，P2 入口前置已满足，可从 P7-DEPLOY-01 开始。实用性验收要求普通用户不借助数据库 seed、API 客户端或手填内部 UUID/hash 完成首次设置、协作、来源维护、失败恢复、索引生命周期和可核验问答。创建 release、接受根级许可证、执行生产迁移不在本清单的自动授权范围内。
+P0/P1 的本地实现与回归验收、P7-DEPLOY-01 和 P7-SUPPLY-01 已完成；当前继续等待独立 Ubuntu 24.04 环境以执行 P7-DEPLOY-02，不能以本地 Windows/Docker Desktop 结果替代。实用性验收要求普通用户不借助数据库 seed、API 客户端或手填内部 UUID/hash 完成首次设置、协作、来源维护、失败恢复、索引生命周期和可核验问答。创建 release、接受根级许可证、执行生产迁移不在本清单的自动授权范围内。
