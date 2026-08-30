@@ -5,7 +5,7 @@ meta:
   agent_slug: a13
   branch: codex/p7-contract-alignment-a13
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7-contract-alignment-a13
-  base_sha: cf509aec19e963d1b7517644149a9354f7c1d1ee
+  base_sha: 69a0721
   updated_at: "2026-08-30"
   dependencies_satisfied: true
   depends_on_cards: [P7Q-04]
