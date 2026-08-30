@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ApiError, type AnswerDefaults } from "./api";
-import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "./answer";
+import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, deleteAnswerConversation, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, renameAnswerConversation, submitAnswerFeedback, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "./answer";
 import { type RunProjection } from "./answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null }>();
@@ -71,7 +71,10 @@ const notice = ref("");
 const formError = ref("");
 const cancelError = ref("");
 const previewNotice = ref("");
+const previewResult = ref<CitationPreviewResult | null>(null);
 const previewingEvidenceId = ref<string | null>(null);
+const feedbackNotice = ref("");
+const feedbackBusy = ref<string | null>(null);
 const cancelRequested = ref(false);
 const streamAttempts = ref(0);
 const history = ref<ConversationHistoryItem[]>([]);
@@ -245,6 +248,9 @@ function resetAnswer(): void {
   formError.value = "";
   cancelError.value = "";
   previewNotice.value = "";
+  previewResult.value = null;
+  feedbackNotice.value = "";
+  feedbackBusy.value = null;
   cancelRequested.value = false;
   streamAttempts.value = 0;
 }
@@ -272,6 +278,7 @@ async function loadHistoricalRun(run: ConversationRunItem): Promise<void> {
     conversationId.value = run.conversationId;
     runContext.value = { spaceId: answer.spaceId, runId: answer.runId, correlationId: answer.correlationId };
     answerText.value = answer.answerText ?? "";
+    citations.value = (answer.citations ?? []).filter((citation) => citation.spaceId === props.selectedSpaceId && citation.runId === run.runId && citation.citationAllowed === true);
     status.value = answer.status === "COMPLETED" ? "completed" : answer.status === "ABSTAINED" ? "abstained" : answer.status === "CANCELLED" ? "cancelled" : "failed";
     notice.value = "已载入历史回答 · " + new Date(answer.createdAt).toLocaleString();
   } catch (error) { historyError.value = safeApiError(error, "历史回答尚未生成或无法读取。"); }
@@ -284,6 +291,24 @@ async function archiveHistory(item: ConversationHistoryItem): Promise<void> {
     if (conversationId.value === item.id) { resetAnswer(); conversationId.value = ""; }
     await loadHistory();
   } catch (error) { historyError.value = safeApiError(error, "会话归档失败。"); }
+}
+
+async function renameHistory(item: ConversationHistoryItem): Promise<void> {
+  const title = window.prompt("重命名会话", item.title)?.trim();
+  if (!title || title === item.title) return;
+  try {
+    await renameAnswerConversation(props.selectedSpaceId, item.id, title, item.version ?? 0, createKey("rename-conversation"));
+    await loadHistory();
+  } catch (error) { historyError.value = safeApiError(error, "会话重命名失败；版本可能已变化，请刷新后重试。"); }
+}
+
+async function deleteHistory(item: ConversationHistoryItem): Promise<void> {
+  if (!window.confirm("删除会话会将其从默认历史列表移除，并保留审计记录。继续吗？")) return;
+  try {
+    await deleteAnswerConversation(props.selectedSpaceId, item.id, item.version ?? 0, createKey("delete-conversation"));
+    if (conversationId.value === item.id) { resetAnswer(); conversationId.value = ""; }
+    await loadHistory();
+  } catch (error) { historyError.value = safeApiError(error, "会话删除失败；版本可能已变化，请刷新后重试。"); }
 }
 
 function validateStart(): string | null {
@@ -416,12 +441,38 @@ async function openCitation(citation: AnswerCitation): Promise<void> {
   if (!runContext.value || previewingEvidenceId.value) return;
   previewingEvidenceId.value = citation.evidenceId;
   previewNotice.value = "";
+  previewResult.value = null;
   try {
     const result: CitationPreviewResult = await previewCitation(runContext.value.spaceId, runContext.value.runId, citation.evidenceId);
-    previewNotice.value = result.available ? "服务端已重新鉴权该引用；正文预览不在此客户端渲染。" : "引用暂不可打开；服务端预览接口不存在或当前权限不足。";
+    previewResult.value = result;
+    previewNotice.value = "服务端已重新鉴权该引用；以下仅显示结构化 provenance，不渲染正文。";
+  } catch (error) {
+    previewNotice.value = safeApiError(error, "引用暂不可打开；当前权限或证据版本不允许预览。");
   } finally {
     previewingEvidenceId.value = null;
   }
+}
+
+async function submitFeedback(citation: AnswerCitation, sentiment: "HELPFUL" | "NOT_HELPFUL"): Promise<void> {
+  const context = runContext.value;
+  if (!context || context.spaceId !== props.selectedSpaceId || feedbackBusy.value) return;
+  feedbackBusy.value = citation.evidenceId;
+  feedbackNotice.value = "";
+  try {
+    await submitAnswerFeedback(context.spaceId, context.runId, { evidenceId: citation.evidenceId, sentiment }, createKey("answer-feedback"));
+    feedbackNotice.value = "反馈已保存到当前空间的该次回答与证据。";
+  } catch (error) {
+    feedbackNotice.value = safeApiError(error, "反馈未保存；服务端会拒绝跨空间或不存在的证据。");
+  } finally { feedbackBusy.value = null; }
+}
+
+function newConversation(): void {
+  if (isActive.value) return;
+  resetAnswer();
+  conversationId.value = "";
+  historyRuns.value = [];
+  question.value = "";
+  notice.value = "已开启新会话；提交问题后服务端会创建会话。";
 }
 
 watch(() => props.selectedSpaceId, (next, previous) => {
@@ -433,7 +484,7 @@ onBeforeUnmount(() => abortController?.abort());
 </script>
 
 <template>
-  <aside class="card answer-history" aria-label="问答历史"><div class="card-title"><div><span class="card-label">历史与归档</span><h3>继续已有会话</h3></div><label class="history-toggle"><input v-model="includeArchived" type="checkbox" />显示已归档</label></div><p v-if="historyError" class="alert error">{{ historyError }}</p><p v-if="historyLoading" class="muted">读取历史记录中…</p><div v-else-if="!history.length" class="muted">还没有问答历史。提交第一个问题后，会话会自动出现在这里。</div><div v-else class="history-list"><article v-for="item in history" :key="item.id" class="history-item" :class="{ selected: conversationId === item.id }"><button type="button" class="history-select" @click="selectHistory(item)"><strong>{{ item.title }}</strong><small>{{ item.status === "ARCHIVED" ? "已归档" : "进行中" }} · {{ new Date(item.updatedAt).toLocaleString() }}</small></button><div class="history-actions"><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="archiveHistory(item)">归档</button></div><div v-if="conversationId === item.id && historyRuns.length" class="history-runs"><button v-for="run in historyRuns" :key="run.runId" type="button" class="run-history-row" @click="loadHistoricalRun(run)"><span>{{ run.status }}</span><small>{{ run.createdAt ? new Date(run.createdAt).toLocaleString() : run.runId }}</small></button></div></article></div></aside>
+  <aside class="card answer-history" aria-label="问答历史"><div class="card-title"><div><span class="card-label">历史与归档</span><h3>继续已有会话</h3></div><div class="history-actions"><button type="button" class="secondary-button" :disabled="isActive" @click="newConversation">新会话</button><label class="history-toggle"><input v-model="includeArchived" type="checkbox" />显示已归档</label></div></div><p v-if="historyError" class="alert error">{{ historyError }}</p><p v-if="historyLoading" class="muted">读取历史记录中…</p><div v-else-if="!history.length" class="muted">还没有问答历史。点击“新会话”后提交第一个问题，会话会自动出现在这里。</div><div v-else class="history-list"><article v-for="item in history" :key="item.id" class="history-item" :class="{ selected: conversationId === item.id }"><button type="button" class="history-select" @click="selectHistory(item)"><strong>{{ item.title }}</strong><small>{{ item.status === "ARCHIVED" ? "已归档" : "进行中" }} · {{ new Date(item.updatedAt).toLocaleString() }}</small></button><div class="history-actions"><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="archiveHistory(item)">归档</button><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="renameHistory(item)">重命名</button><button type="button" class="danger-button" @click="deleteHistory(item)">删除</button></div><div v-if="conversationId === item.id && historyRuns.length" class="history-runs"><button v-for="run in historyRuns" :key="run.runId" type="button" class="run-history-row" @click="loadHistoricalRun(run)"><span>{{ run.status }}</span><small>{{ run.createdAt ? new Date(run.createdAt).toLocaleString() : run.runId }}</small></button></div></article></div></aside>
   <section class="view-section answer-view" aria-labelledby="answer-heading">
     <div class="section-heading"><div><p class="eyebrow">03 · Verifiable answer</p><h2 id="answer-heading">带引用问答</h2><p>回答增量、结构化 Citation 和运行状态来自当前空间的 SSE；模型提供的文件名、URL 和正文不会被当作引用。</p></div><div class="read-only-note" :class="{ warning: status === 'degraded' || status === 'timeout' }">{{ statusLabel }}</div></div>
     <form class="card answer-form" @submit.prevent="startAnswer">
@@ -450,8 +501,8 @@ onBeforeUnmount(() => abortController?.abort());
     <article v-if="status === 'degraded' || status === 'reconnecting'" class="answer-state warning-state"><strong>服务降级</strong><span>{{ notice || "事件连接正在恢复；已有事件将按 sequence 与 event_id 去重。" }}</span></article>
     <article v-if="status === 'cancelled'" class="answer-state"><strong>回答已取消</strong><span>服务端已确认取消；取消后的 answer delta 会被丢弃。</span></article>
 
-    <div v-if="citations.length" class="citation-section"><div class="card-title"><h3>可核验引用</h3><span class="muted">{{ citations.length }} 条 · 仅服务端 Citation 投影</span></div><div class="citation-grid"><article v-for="citation in citations" :key="citation.evidenceId" class="card citation-card"><div class="citation-title"><strong>{{ citation.evidenceId }}</strong><button type="button" class="secondary-button citation-open" :disabled="previewingEvidenceId === citation.evidenceId" @click="openCitation(citation)">{{ previewingEvidenceId === citation.evidenceId ? "鉴权中…" : "请求引用预览" }}</button></div><dl class="citation-details"><dt>revision</dt><dd><code>{{ citation.documentRevisionId }}</code></dd><dt>parent / child</dt><dd><code>{{ citation.parentChunkId }}</code><code>{{ citation.childChunkId }}</code></dd><dt>contentRef</dt><dd><code>{{ citation.contentRef }}</code></dd><dt>textHash</dt><dd><code>{{ citation.textHash }}</code></dd><dt>anchor</dt><dd>{{ anchorLabel(citation.anchor) }}</dd></dl></article></div></div>
-    <p v-if="previewNotice" class="alert" :class="previewNotice.startsWith('引用暂不可') ? 'error' : 'success'" role="status">{{ previewNotice }}</p>
+    <div v-if="citations.length" class="citation-section"><div class="card-title"><h3>可核验引用</h3><span class="muted">{{ citations.length }} 条 · 仅服务端 Citation 投影</span></div><div class="citation-grid"><article v-for="citation in citations" :key="citation.evidenceId" class="card citation-card"><div class="citation-title"><strong>{{ citation.evidenceId }}</strong><button type="button" class="secondary-button citation-open" :disabled="previewingEvidenceId === citation.evidenceId" @click="openCitation(citation)">{{ previewingEvidenceId === citation.evidenceId ? "鉴权中…" : "请求引用预览" }}</button></div><dl class="citation-details"><dt>revision</dt><dd><code>{{ citation.documentRevisionId }}</code></dd><dt>parent / child</dt><dd><code>{{ citation.parentChunkId }}</code><code>{{ citation.childChunkId }}</code></dd><dt>contentRef</dt><dd><code>{{ citation.contentRef }}</code></dd><dt>textHash</dt><dd><code>{{ citation.textHash }}</code></dd><dt>anchor</dt><dd>{{ anchorLabel(citation.anchor) }}</dd></dl><div class="feedback-actions"><span>这条证据是否有帮助？</span><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'HELPFUL')">有帮助</button><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'NOT_HELPFUL')">需改进</button></div></article></div></div>
+    <p v-if="previewNotice" class="alert" :class="previewResult ? 'success' : 'error'" role="status">{{ previewNotice }}</p><article v-if="previewResult" class="card citation-preview" aria-live="polite"><div class="card-title"><h3>结构化 Citation preview</h3><span class="state-pill">citationAllowed: {{ previewResult.citationAllowed ? "true" : "false" }}</span></div><dl class="citation-details"><dt>evidence / run</dt><dd><code>{{ previewResult.evidenceId }} · {{ previewResult.runId }}</code></dd><dt>revision</dt><dd><code>{{ previewResult.documentRevisionId }}</code></dd><dt>contentRef</dt><dd><code>{{ previewResult.contentRef }}</code></dd><dt>textHash</dt><dd><code>{{ previewResult.textHash }}</code></dd><dt>anchor</dt><dd>{{ anchorLabel(previewResult.anchor) }}</dd></dl></article><p v-if="feedbackNotice" class="alert success" role="status">{{ feedbackNotice }}</p>
 
     <div v-if="tools.length || usage || errorState || eventLog.length" class="answer-observability two-column"><article class="card"><div class="card-title"><h3>事件状态</h3><span class="muted">sequence 单调、event_id 去重</span></div><div class="event-list"><div v-for="event in eventLog" :key="event.eventId" class="event-row"><span class="state-pill">{{ eventLabel(event.eventType) }}</span><span>#{{ event.sequence }}</span><code>{{ event.eventId }}</code></div></div></article><article class="card"><div class="card-title"><h3>工具与用量</h3><span class="muted">服务端结构化记录</span></div><div v-for="tool in tools" :key="tool.payload.toolCallId" class="tool-row"><span>{{ tool.payload.toolName }}</span><strong>{{ tool.payload.status }}</strong></div><dl v-if="usage" class="details usage-details"><dt>tokens</dt><dd>{{ usage.payload.inputTokens }} in · {{ usage.payload.outputTokens }} out · {{ usage.payload.totalTokens }} total</dd><dt>tools</dt><dd>{{ usage.payload.toolCallCount }}</dd><dt>provider reported</dt><dd>{{ usage.payload.providerReported ? "是" : "否" }}</dd></dl><p v-if="errorState" class="permission-hint">{{ safeErrorLabel(errorState.code) }} · {{ errorState.retryable ? "可重试" : "请检查配置或权限" }}</p><p v-if="!tools.length && !usage && !errorState" class="muted">尚无工具或用量事件。</p></article></div>
 
@@ -461,6 +512,7 @@ onBeforeUnmount(() => abortController?.abort());
 
 <style scoped>
 .answer-history { margin-bottom: 15px; }.history-toggle { display: flex; align-items: center; gap: 6px; color: #687893; font-size: .76rem; }.history-list { display: grid; gap: 8px; margin-top: 12px; }.history-item { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 10px; border: 1px solid #e1e9f4; border-radius: 9px; background: #f8fbff; }.history-item.selected { border-color: #8eadd3; background: #f1f7ff; }.history-select { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; border: 0; background: transparent; color: #284c87; text-align: left; cursor: pointer; }.history-select small, .run-history-row small { color: #71809a; font-size: .72rem; }.history-actions { display: flex; align-items: start; }.history-runs { grid-column: 1 / -1; display: grid; gap: 5px; padding-top: 8px; border-top: 1px solid #e2eaf4; }.run-history-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border: 0; border-radius: 6px; background: #fff; color: #526b92; cursor: pointer; text-align: left; }.run-history-row:hover { background: #e9f2ff; }
+.feedback-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; color: #687893; font-size: .78rem; }.feedback-actions button { padding: 7px 10px; font-size: .74rem; }.citation-preview { margin-top: 15px; }.citation-preview .citation-details { margin-bottom: 0; }
 .answer-form { display: block; }
 .answer-form > .wide { margin-bottom: 14px; }
 .answer-config { margin-top: 14px; padding: 13px 15px; border: 1px solid #dce5f2; border-radius: 10px; background: #fafcff; }

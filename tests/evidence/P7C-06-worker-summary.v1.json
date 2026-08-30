@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0
+  },
+  "raw_output_stored": true,
+  "commands": {
+    "contract": {"result": "52/52 passed", "evidence": "tests/evidence/P7C-06-contract.log"},
+    "server": {"result": "Maven exit 0 / BUILD SUCCESS with 25 tests run", "java_home": "C:\\Program Files\\Java\\jdk-21", "evidence": "tests/evidence/P7C-06-maven.log"},
+    "web_format": {"result": "tsc --noEmit exit 0", "evidence": "tests/evidence/P7C-06-web-format.log"},
+    "web_build": {"result": "vite build exit 0", "evidence": "tests/evidence/P7C-06-web-build.log"}
+  },
+  "notes": [
+    "Maven first reported a test-only Mockito setup error; the test was corrected and the required command was rerun successfully.",
+    "Conversation DELETE is implemented as space-scoped soft archive to preserve immutable answer and citation audit history."
+  ]
+}

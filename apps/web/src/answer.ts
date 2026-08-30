@@ -144,6 +144,7 @@ export interface ConversationHistoryItem {
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  version?: number;
 }
 
 export interface ConversationRunItem extends RunProjection {
@@ -179,8 +180,8 @@ export interface StartAnswerRequest {
   correlationId?: string;
 }
 
-export interface CitationPreviewResult {
-  available: boolean;
+export interface CitationPreviewResult extends AnswerCitation {
+  available: true;
 }
 
 type RawRecord = Record<string, unknown>;
@@ -365,6 +366,20 @@ export async function archiveAnswerConversation(spaceId: string, conversationId:
   });
 }
 
+export function renameAnswerConversation(spaceId: string, conversationId: string, title: string,
+                                         version: number, idempotencyKey: string): Promise<ConversationHistoryItem> {
+  return apiFetch<ConversationHistoryItem>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/conversations/${encodeURIComponent(conversationId)}`, {
+    method: "PUT", body: { title, version }, headers: { "If-Match": `"${version}"` }, idempotencyKey,
+  });
+}
+
+export function deleteAnswerConversation(spaceId: string, conversationId: string, version: number,
+                                         idempotencyKey: string): Promise<ConversationHistoryItem> {
+  return apiFetch<ConversationHistoryItem>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/conversations/${encodeURIComponent(conversationId)}`, {
+    method: "DELETE", body: { version }, headers: { "If-Match": `"${version}"` }, idempotencyKey,
+  });
+}
+
 export interface AnswerHistoryProjection {
   answerText: string | null;
   status: string;
@@ -372,6 +387,7 @@ export interface AnswerHistoryProjection {
   runId: string;
   correlationId: string;
   createdAt: string;
+  citations?: AnswerCitation[];
 }
 
 export function getAnswerProjection(spaceId: string, runId: string): Promise<AnswerHistoryProjection> {
@@ -409,13 +425,32 @@ export async function cancelAnswerRun(spaceId: string, runId: string, idempotenc
 
 export async function previewCitation(spaceId: string, runId: string, evidenceId: string): Promise<CitationPreviewResult> {
   // This is the server re-authorization seam. It intentionally accepts only server-issued IDs;
-  // contentRef is never treated as a browser URL and any preview body is not rendered here.
-  try {
-    await apiFetch<unknown>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/runs/${encodeURIComponent(runId)}/citations/${encodeURIComponent(evidenceId)}/preview`);
-    return { available: true };
-  } catch {
-    return { available: false };
-  }
+  // contentRef is never treated as a browser URL and the response contains provenance only.
+  const preview = await apiFetch<Omit<CitationPreviewResult, "available">>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/runs/${encodeURIComponent(runId)}/citations/${encodeURIComponent(evidenceId)}/preview`);
+  return { ...preview, available: true };
+}
+
+export interface AnswerFeedbackRequest {
+  evidenceId: string;
+  sentiment: "HELPFUL" | "NOT_HELPFUL";
+  reason?: string;
+  version?: number;
+}
+
+export interface AnswerFeedbackResponse extends AnswerFeedbackRequest {
+  id: string;
+  spaceId: string;
+  runId: string;
+  actorUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function submitAnswerFeedback(spaceId: string, runId: string, request: AnswerFeedbackRequest, idempotencyKey: string): Promise<AnswerFeedbackResponse> {
+  return apiFetch<AnswerFeedbackResponse>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/answers/${encodeURIComponent(runId)}/feedback`, {
+    method: "POST", body: request, idempotencyKey,
+    headers: request.version === undefined ? undefined : { "If-Match": `"${request.version}"` },
+  });
 }
 
 export interface AnswerStreamOptions {

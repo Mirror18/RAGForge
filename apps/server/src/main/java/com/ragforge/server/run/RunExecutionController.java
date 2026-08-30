@@ -11,10 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,8 +49,10 @@ public class RunExecutionController {
     @ResponseStatus(HttpStatus.CREATED)
     public ConversationResponse createConversation(@PathVariable UUID spaceId,
                                                    @Valid @RequestBody CreateConversationRequest request,
+                                                   @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
                                                    Authentication authentication) {
-        var conversation = service.createConversation(spaceId, principal(authentication), request.title());
+        var conversation = service.createConversation(spaceId, principal(authentication), request.title(),
+                commandKey(idempotencyKey));
         return ConversationResponse.from(conversation);
     }
 
@@ -68,8 +73,35 @@ public class RunExecutionController {
 
     @PostMapping("/conversations/{conversationId}/archive")
     public ConversationResponse archiveConversation(@PathVariable UUID spaceId, @PathVariable UUID conversationId,
+                                                    @RequestBody(required = false) ConversationCommandRequest request,
+                                                    @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
                                                     Authentication authentication) {
-        return ConversationResponse.from(service.archiveConversation(spaceId, conversationId, principal(authentication)));
+        if (request == null) {
+            return ConversationResponse.from(service.archiveConversation(spaceId, conversationId, principal(authentication)));
+        }
+        return ConversationResponse.from(service.archiveConversation(spaceId, conversationId, principal(authentication),
+                request.version(), commandKey(idempotencyKey), "ARCHIVE"));
+    }
+
+    @DeleteMapping("/conversations/{conversationId}")
+    public ConversationResponse deleteConversation(@PathVariable UUID spaceId, @PathVariable UUID conversationId,
+                                                   @RequestBody(required = false) ConversationCommandRequest request,
+                                                   @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                                   Authentication authentication) {
+        if (request == null) {
+            return ConversationResponse.from(service.archiveConversation(spaceId, conversationId, principal(authentication)));
+        }
+        return ConversationResponse.from(service.archiveConversation(spaceId, conversationId, principal(authentication),
+                request.version(), commandKey(idempotencyKey), "DELETE"));
+    }
+
+    @PutMapping("/conversations/{conversationId}")
+    public ConversationResponse renameConversation(@PathVariable UUID spaceId, @PathVariable UUID conversationId,
+                                                   @Valid @RequestBody RenameConversationRequest request,
+                                                   @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                                   Authentication authentication) {
+        return ConversationResponse.from(service.renameConversation(spaceId, conversationId, principal(authentication),
+                request.title(), request.version(), commandKey(idempotencyKey)));
     }
 
     @PostMapping("/conversations/{conversationId}/runs")
@@ -121,6 +153,13 @@ public class RunExecutionController {
     public record CreateConversationRequest(@NotBlank @Size(max = 200) String title) {
     }
 
+    public record RenameConversationRequest(@NotBlank @Size(max = 200) String title,
+                                            @NotNull Long version) {
+    }
+
+    public record ConversationCommandRequest(@NotNull Long version) {
+    }
+
     public record CreateRunRequest(@NotNull UUID routeVersionId, @NotNull UUID profileVersionId,
                                    @NotNull UUID providerConnectionId, @NotNull UUID promptVersionId,
                                    @NotBlank @Size(max = 32_000) String message,
@@ -130,10 +169,10 @@ public class RunExecutionController {
 
     public record ConversationResponse(UUID id, UUID spaceId, UUID actorUserId, String title, String status,
                                        java.time.Instant archivedAt, java.time.Instant createdAt,
-                                       java.time.Instant updatedAt) {
+                                       java.time.Instant updatedAt, long version) {
         static ConversationResponse from(ConversationRepository.ConversationRecord value) {
             return new ConversationResponse(value.id(), value.spaceId(), value.actorUserId(), value.title(),
-                    value.status(), value.archivedAt(), value.createdAt(), value.updatedAt());
+                    value.status(), value.archivedAt(), value.createdAt(), value.updatedAt(), value.version());
         }
     }
 
@@ -246,5 +285,14 @@ public class RunExecutionController {
                         """, (rs, rowNum) -> rs.getObject("id", UUID.class),
                 value.spaceId(), value.spaceId(), value.id());
         return ids.isEmpty() ? null : ids.getFirst();
+    }
+
+    private static String commandKey(String value) {
+        if (value == null || value.isBlank()) return "legacy-" + UUID.randomUUID();
+        if (!value.matches("^[A-Za-z0-9._:-]{16,255}$")) {
+            throw new com.ragforge.server.common.ApiException(HttpStatus.BAD_REQUEST, "invalid_idempotency_key",
+                    "Invalid request", "Idempotency-Key is invalid");
+        }
+        return value;
     }
 }
