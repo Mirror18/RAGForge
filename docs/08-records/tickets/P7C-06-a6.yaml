@@ -1,0 +1,142 @@
+meta:
+  card_id: P7C-06
+  title: 可核验问答 Web
+  priority: P0
+  agent_slug: a6
+  branch: codex/p7-verifiable-answer-web-a6
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-verifiable-answer-web-a6
+  base_sha: 3e93a2e
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7C-01, P7C-03]
+  migration_owner: true
+  migration_next: V22
+
+scope:
+  ownership:
+    - apps/web/src/AnswerView.vue
+    - apps/web/src/answer.ts
+    - apps/web/src/api.ts
+    - apps/web/src/App.vue
+    - apps/web/src/ConversationHistoryView.vue
+    - apps/server/src/main/java/com/ragforge/server/answer/
+    - apps/server/src/main/java/com/ragforge/server/run/RunExecutionController.java
+    - apps/server/src/main/java/com/ragforge/server/run/RunExecutionService.java
+    - apps/server/src/main/java/com/ragforge/server/run/ConversationRepository.java
+    - apps/server/src/test/java/com/ragforge/server/answer/
+    - apps/server/src/test/java/com/ragforge/server/run/
+    - apps/server/src/main/resources/db/migration/V22__phase7_answer_feedback_and_conversation_controls.sql
+    - contracts/openapi/ragforge-api-v1.yaml
+    - tests/evidence/P7C-06-worker-summary.v1.json
+  read_only:
+    - apps/web/src/AnswerView.vue
+    - apps/web/src/answer.ts
+    - apps/web/src/api.ts
+    - apps/web/src/App.vue
+    - apps/web/src/format.ts
+    - apps/web/package.json
+    - apps/web/tsconfig.json
+    - apps/server/src/main/java/com/ragforge/server/answer/api/AnswerApiController.java
+    - apps/server/src/main/java/com/ragforge/server/answer/api/AnswerApiProjectionStore.java
+    - apps/server/src/main/java/com/ragforge/server/answer/AnswerPersistencePort.java
+    - apps/server/src/main/java/com/ragforge/server/answer/persistence/JdbcAnswerPersistence.java
+    - apps/server/src/main/java/com/ragforge/server/run/RunExecutionController.java
+    - apps/server/src/main/java/com/ragforge/server/run/RunExecutionService.java
+    - apps/server/src/main/java/com/ragforge/server/run/ConversationRepository.java
+    - apps/server/src/test/java/com/ragforge/server/answer/api/AnswerApiControllerTest.java
+    - apps/server/src/test/java/com/ragforge/server/run/RunExecutionControllerIntegrationTest.java
+    - apps/server/src/test/java/com/ragforge/server/run/Phase5PersistenceIntegrationTest.java
+    - apps/server/src/main/resources/db/migration/V12__phase5_answer_history.sql
+    - apps/server/src/main/resources/db/migration/V17__conversation_archive_and_history.sql
+    - apps/server/src/main/resources/db/migration/V21__phase7_source_task_center.sql
+    - contracts/answer/answer.v1.schema.json
+    - contracts/answer/citation.v1.schema.json
+    - contracts/openapi/ragforge-api-v1.yaml
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md
+    - MEMORY.md
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - deploy/
+    - .github/workflows/
+    - apps/web/src/BusinessFlowView.vue
+    - apps/web/src/SourceLibraryView.vue
+    - apps/web/src/TaskCenterView.vue
+    - apps/web/src/IndexLifecycleView.vue
+    - apps/server/src/main/resources/db/migration/V21__phase7_source_task_center.sql
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 普通用户无需手填 UUID，可从明确的新会话入口发起问答，并在刷新后恢复历史会话、历史回答与结构化 citations。
+    - id: A2
+      text: Citation preview 展示服务端返回的结构化 provenance 与受权预览状态，不丢弃响应；不得把自由文本或不受权正文伪装成 citation。
+    - id: A3
+      text: 提供反馈 API 与 UI，反馈按 space_id/run/evidence 绑定并保留幂等与权限边界。
+    - id: A4
+      text: 支持会话重命名、删除/归档，操作后历史列表和当前视图一致；跨空间访问被拒绝。
+    - id: A5
+      text: Streaming 文案使用规范的临时增量/最终答案描述；Web format:check/build、契约 52/52、服务端历史/反馈定向测试通过。
+
+budget:
+  token_limit: 9000
+
+tests:
+  must_run:
+    - name: contract test
+      command: python scripts/ci/contract_test.py
+      expected: "52/52"
+    - name: Answer/history/feedback server tests
+      command: mvn -q -pl apps/server -am test -Dtest="AnswerApiControllerTest,RunExecutionControllerIntegrationTest,Phase5PersistenceIntegrationTest,*Feedback*"
+      expected: BUILD SUCCESS with at least 3 new history/feedback tests
+    - name: Web format check
+      command: npm ci --prefix apps/web; npm --prefix apps/web run format:check
+      expected: 0 errors
+    - name: Web build
+      command: npm --prefix apps/web run build
+      expected: build success
+  evidence_file: tests/evidence/P7C-06-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: false
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: 9000
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string

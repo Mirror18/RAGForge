@@ -112,7 +112,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7C-02 | 来源任务中心前端 UI | P0 | ✅ completed | A4 | codex/p7-source-task-ui-a4 | RAGForge-worktrees/codex-p7-source-task-ui-a4 | 7,000 | 6,900 | d4bd103cc9ebb2f1b7fe9d74397c703957b00ebf | 已合并至 42b75aa；Web format:check/build 通过 |
 | P7C-03 | 索引生命周期 UI | P0 | ✅ completed | A5 | codex/p7-index-lifecycle-a5 | RAGForge-worktrees/codex-p7-index-lifecycle-a5 | 6,000 | 5,200 | fa44580c0988c2d2a9fbb5f991cbf246d9314bab | 已合并至 04683e8；candidate/active/retired、发布/回滚/退役通过 |
 | P7C-05 | 真实 RERANK adapter | P0 | ⏳ blocked | — | — | — | 8,000 | — | — | 依赖 P7C-04 |
-| P7C-06 | 可核验问答 Web | P0 | ⏳ pending | — | — | — | 9,000 | — | — | P7C-01/P7C-03 已完成，可开始分派 |
+| P7C-06 | 可核验问答 Web | P0 | 🚧 in_progress | A6 | codex/p7-verifiable-answer-web-a6 | RAGForge-worktrees/codex-p7-verifiable-answer-web-a6 | 9,000 | — | — | P7C-01/P7C-03 已完成；唯一 active Answer worker |
 | P7C-07 | 上下文跳转 | P0 | ⏳ blocked | — | — | — | 6,000 | — | — | 依赖 P7C-06 |
 | P7C-08 | 管理闭环（反馈/审计/成本） | P0 | ⏳ blocked | — | — | — | 6,000 | — | — | 依赖 P7C-06 |
 | P7Q-01 | 统一 preflight | P1 | ⏳ pending | — | — | — | 3,000 | — | — | JDK 绑定、Node PATH、Docker daemon |
