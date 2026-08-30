@@ -12,14 +12,14 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应功能基线 SHA：1d18a99
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应功能基线 SHA：3efab02
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`p2-execution`）
-- **主线功能基线 SHA**：`1d18a99`；最近远程全绿候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`（本地集成后尚未推送）
+- **主线功能基线 SHA**：`3efab02`；最近远程全绿候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`（本地功能审计修复尚未推送）
 - **当前远程 CI**：quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对 `00bee66` 全绿；P7D-00/P7D-01 本地与远程验收通过，检查 annotations 为空
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
@@ -94,7 +94,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 - Phase 6 证据：`tests/evidence/phase6-*.v1.json`（8 类：evaluation / security / capacity / recovery / cost / observability / multi-instance / real-RAG）
 - Phase 7 最新证据：`docs/08-records/2026-08-23-business-loop-e2e.md`、`2026-08-23-mimo-notes-business-loop.md`
 - 契约测试命令：`python scripts/ci/contract_test.py`（本轮 52/52 通过）
-- 当前候选本地全量 Maven（JDK 21 + Docker）：307 tests，306 passed / 0 failed / 0 errors / 1 skipped
+- 当前候选本地全量 Maven（JDK 21 + Docker）：308 tests，307 passed / 0 failed / 0 errors / 1 skipped；preflight 已校验 Maven 实际绑定 Java 版本
 - 当前候选 Web：Vitest 10/10、Playwright 10/10、TypeScript 与 Vite build 通过
 - 当前候选评估：128-case RAG gate 通过，安全违规 0；证据 `tests/evidence/phase7-evaluation-f695936.v1.json`
 - RAG 评估数据集：`tests/evaluation/phase6-evaluation-dataset.v1.json`（128 cases）
