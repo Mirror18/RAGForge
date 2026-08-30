@@ -19,7 +19,7 @@
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`p2-execution`）
-- **主线功能基线 SHA**：`3efab02`；最近远程全绿候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`（本地功能审计修复尚未推送）
+- **主线功能基线 SHA**：`3efab02`；最近远程全绿候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`（本地功能审计修复已推送至 `origin/main`）
 - **当前远程 CI**：quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对 `00bee66` 全绿；P7D-00/P7D-01 本地与远程验收通过，检查 annotations 为空
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
