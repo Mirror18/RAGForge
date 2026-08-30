@@ -1,0 +1,14 @@
+{
+  "card_id": "P7C-08",
+  "status": "PASS",
+  "merge_commit": "d35ebda",
+  "worker_commit": "82a7899564cfa7a87526e173eca006426aaa013b",
+  "tests": {
+    "contract": "52/52",
+    "server_jdk21": "exit 0",
+    "web_format_check": "exit 0",
+    "web_build": "exit 0"
+  },
+  "acceptance_met": {"A1": true, "A2": true, "A3": true, "A4": true, "A5": true},
+  "note": "Worker 初次 Web 门禁因独立 worktree 缺少现有 node_modules 受阻；主线 npm ci 后复验通过，未修改依赖文件。"
+}
