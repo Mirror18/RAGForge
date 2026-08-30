@@ -1,0 +1,93 @@
+meta:
+  card_id: P7Q-05R
+  title: RAG gate 浅克隆恢复
+  priority: P1
+  agent_slug: a18
+  branch: codex/p7-rag-gate-fetch-a18
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-rag-gate-fetch-a18
+  base_sha: 4ade90f5ed543ad09f1df01f802b623936ede702
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7Q-05]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - .github/workflows/quality.yml
+    - tests/evidence/P7Q-05R-worker-summary.v1.json
+  read_only:
+    - scripts/ci/rag_evaluation_gate.py
+    - scripts/ci/test_rag_evaluation_gate.py
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - apps/
+    - contracts/
+    - deploy/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: quality checkout 保证 push 事件的 github.event.before 与 github.sha 均可被 git rev-parse 和 git diff 解析
+    - id: A2
+      text: pull_request base/head 同样可解析，不依赖仅存在于本地 clone 的偶然历史
+    - id: A3
+      text: RAG gate 对 bad object 继续失败，不改为 skipped 或静默放行
+    - id: A4
+      text: workflow YAML、format、secret scan 通过；不修改 workflow 之外的生产代码
+    - id: A5
+      text: 说明对 checkout 时间/仓库体积的影响与回滚方式
+
+budget:
+  token_limit: 4000
+
+tests:
+  must_run:
+    - name: shallow failure reproduction
+      command: git clone --no-local --depth 1 . <temp-repo> && git -C <temp-repo> diff --name-only 9fdd94e0e12afae1c3843d0680fb48017e00669f HEAD
+      expected: 修复前 bad object；修复策略能保证 base/head 可解析
+    - name: RAG gate unit tests
+      command: python scripts/ci/test_rag_evaluation_gate.py
+      expected: 全部通过
+    - name: format
+      command: python scripts/ci/format_check.py
+      expected: PASS
+    - name: secret scan
+      command: python scripts/ci/secret_scan.py
+      expected: PASS
+  evidence_file: tests/evidence/P7Q-05R-worker-summary.v1.json
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string
+  warnings: [string]
+  risks: [string]
+  integration_notes: string
+  acceptance_met:
+    A1: true
+    A2: true
+    A3: true
+    A4: true
+    A5: true
+  evidence_file: string

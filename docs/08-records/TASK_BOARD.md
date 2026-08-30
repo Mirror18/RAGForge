@@ -44,7 +44,7 @@ P7C-04（可并行） ─► P7C-05
 
 ---
 
-## 2. P1：建立可信的开发与回归基线（6 张卡片，预算合计 ≈40,000 tokens）
+## 2. P1：建立可信的开发与回归基线（7 张卡片，预算合计 ≈44,000 tokens）
 
 > 这些卡片不影响产品功能，但如果不完成，P2 的部署验收无法「同一候选 SHA 的全量证据」要求。
 
@@ -56,13 +56,14 @@ P7C-04（可并行） ─► P7C-05
 | **P7Q-04** | **契约-实现一致性门禁**：脚本校验 OpenAPI 的每个 `operationId` 都有对应 `@RequestMapping` Controller；反向检查 Server 暴露的端点都在 OpenAPI 中。捕获 P7 审计时遇到的「provider-connections/{id}/test 契约存在、实现缺失」类缺口。 | 无（独立） | `scripts/ci/`、`.github/workflows/` | **4,000** | contract 目录新增 1 个 `coverage_test.py`；CI 接入；遗漏项显式列出 operationId 名 | 脚本对当前代码无 false positive；故意删除一个 operation 对应 controller 能让脚本失败 |
 | **P7Q-04R** | **契约/Controller 对齐修复**：修正 P7Q-04 发现的 8 个 OpenAPI→Controller 缺口与 6 个 Controller→OpenAPI 缺口；保持既有安全边界与公开语义，不通过忽略规则掩盖漂移。 | P7Q-04 分析结果 | `contracts/openapi/`、`apps/server/`、`scripts/ci/`、`.github/workflows/` | **12,000** | 严格双向 coverage 通过；缺口修复有定向测试；contract 52/52；CI 门禁可阻断故意缺口 | 所有 operationId 与 mapping 双向匹配；无 false positive |
 | **P7Q-05** | **RAG 变更强制评估触发**：识别 git diff 涉及 retrieval/answer/prompt/chunk/embedding/rerank/parser 文件时，自动要求重跑 128-case 评估，生成 baseline/candidate 对比报告；Phase 6 的人工评审豁免不得自动覆盖新候选。 | 无（独立） | `scripts/ci/`、`.github/workflows/` | **5,000** | CI 新增评估触发 gate；评估失败时阻断合并；评估报告保存在 `tests/evidence/phase7-evaluation-*.v1.json` | 对一段 retrieval 逻辑变更的合成 commit，确实触发评估执行；无变更时跳过 |
+| **P7Q-05R** | **RAG gate 浅克隆恢复**：quality Run 33306553953 在 push 跨 101 commits 时因 checkout 不含 `github.event.before`，`git diff` 报 `fatal: bad object` | P7Q-05 | `.github/workflows/quality.yml`、workflow 回归测试/证据 | **4,000** | checkout 必须保证 push/PR 的 base/head commit 均可解析；RAG gate 继续 fail-closed，不允许把 bad object 当作 skipped | 本地复现 shallow failure + 完整历史/显式 fetch 修复验证 + YAML/format/secret gate |
 | **P7Q-06** | **Web 导航与规模门禁**：引入 URL Router；所有列表都要有 cursor 分页或增量加载；在 >100 个资源、>5 个任务 / 索引的合成 fixture 下验证；任何 `slice(0, 5)` 或 `limit=100` 的硬截断必须移除；刷新页面后回到同状态。 | P7C-06 | `apps/web/`（Router + 通用分页组件） | **11,000** | 所有列表 >100 的数据能正确翻页；刷新 5 个典型页面都能回到同状态；Playwright 有一条「>100 sources 分页 + 状态恢复」E2E | Web typecheck/build + P7Q-03 的相关 E2E 扩展通过 |
 
 ---
 
 ## 3. P2：Linux 交付与发布准备（7 张卡片，预算合计 ≈60,000 tokens）
 
-> **硬性前置**：P0 的 9 张卡片（含 P7C-05R）+ P1 的 6 张卡片全部验收通过，且同一候选 SHA 的 CI 全绿。
+> **硬性前置**：P0 的 9 张卡片（含 P7C-05R）+ P1 的 7 张卡片（含 P7Q-05R）全部验收通过，且同一候选 SHA 的 CI 全绿。
 > 发布前的「根许可证选择 / 版本号 / 生产迁移执行」仍需用户单独批准（AGENTS.md Non-negotiable rules 高风险审批点）。
 
 | 卡片 ID | 标题 | 前置 | Ownership | Token 预算 | 验收输出 | 必跑测试/门禁 |
@@ -82,9 +83,9 @@ P7C-04（可并行） ─► P7C-05
 | 优先级 | 卡片数 | 预算合计 | 说明 |
 |---|---:|---:|---|
 | P0 | 9 | 64,000 | 含 P7C-05R 回归恢复；全部通过后，Web 才从「工程控制台」变成普通用户可用产品 |
-| P1 | 6 | 40,000 | 全部通过后，部署验收有同一 SHA 的真实全量门禁 |
+| P1 | 7 | 44,000 | 含 P7Q-05R 浅克隆恢复；全部通过后，部署验收有同一 SHA 的真实全量门禁 |
 | P2 | 7 | 60,000 | 含 Ubuntu 真实机、观测叠加、升级回滚、公共化清理、release 治理 |
-| **合计** | **22** | **164,000** | 实际执行若 <144k = 高效；>196.8k（超预算 20%）= 必须中途拆卡复盘 |
+| **合计** | **23** | **168,000** | 实际执行若 <148k = 高效；>201.6k（超预算 20%）= 必须中途拆卡复盘 |
 
 ---
 

@@ -19,8 +19,8 @@
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`p2-entry-remote-ci-pending`）
-- **主线功能基线 SHA（main）**：`f695936594834f8a870fa95dca5ff0c6634441a1`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
-- **最近已通过远程 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（历史基线，全绿）；`f695936` 尚未推送，不能复用该运行作为 P2 入口证据
+- **主线功能基线 SHA**：`f695936594834f8a870fa95dca5ff0c6634441a1`；当前 `main`/`origin/main`：`4ade90f5ed543ad09f1df01f802b623936ede702`
+- **当前远程 CI**：quality Run [33306553953](https://github.com/Mirror18/RAGForge/actions/runs/33306553953) 失败；checkout 浅克隆不含 push base `9fdd94e`，RAG gate 因 `fatal: bad object` fail-closed，P7Q-05R 恢复中
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
 - **当前工作包完成度（P7-A..H）**：
@@ -124,7 +124,8 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7Q-04R | 契约/Controller 对齐修复 | P1 | ✅ completed | A13 | codex/p7-contract-alignment-a13 | RAGForge-worktrees/codex-p7-contract-alignment-a13 | 12,000 | 11,000 | ac0d94815ea437805bbb91a67847bc5dab02a133 | 已合并至 b718c40；8+6 缺口修复，覆盖 102/102、定向后端 13/13、contract 52/52、secret scan 通过 |
 | P7Q-05 | RAG 变更强制评估触发脚本 | P1 | ✅ completed | A14 | codex/p7-rag-eval-gate-a14 | RAGForge-worktrees/codex-p7-rag-eval-gate-a14 | 5,000 | 4,600 | 04de92a5f583b71c0198b1ffccddf8147a21f891 | 已合并至 f738719；RAG 路径变更强制 Phase 6 128-case 评估，真实 retrieval/answer 变更范围触发通过；无关变更 skipped，失败阻断 |
 | P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | ✅ completed | A15 | codex/p7-web-router-pagination-a15 | RAGForge-worktrees/codex-p7-web-router-pagination-a15 | 11,000 | 8,600 | 370ccaf19ba093a2ba67d0a074e6b5d26ba1e7d1 | 已合并至 c5c12bc；URL/space/provenance/run 状态恢复，cursor 分页覆盖 120 sources、7 jobs、6 indexes，Vitest 10/10、Playwright 10/10、format/build/secret scan 通过；npm audit 仍有 3 个漏洞 |
-| P7D-01~07 | Linux 交付与发布（7 张） | P2 | ⏳ blocked | — | — | — | 60,000 | — | — | P0+P1 本地验收已通过；等待当前 main 候选推送并取得同 SHA GitHub Actions 全绿后进入 |
+| P7Q-05R | RAG gate 浅克隆恢复 | P1 | 🚧 in_progress | A18 | codex/p7-rag-gate-fetch-a18 | RAGForge-worktrees/codex-p7-rag-gate-fetch-a18 | 4,000 | — | — | Run 33306553953 证明 checkout 无法解析 github.event.before；修复后重推并等待同 SHA CI |
+| P7D-01~07 | Linux 交付与发布（7 张） | P2 | ⏳ blocked | — | — | — | 60,000 | — | — | P7Q-05R 与当前 main 同 SHA GitHub Actions 全绿后进入 |
 
 ---
 
