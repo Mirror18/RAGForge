@@ -3,7 +3,7 @@
 > 本看板与 [`AGENT_STATE_CARD.md`](AGENT_STATE_CARD.md) §6 的分派表一一对应，是 Agent 执行任务的预算与验收真源。
 > 每张卡片有独立 Token 预算、依赖、归属目录、必跑测试；**超预算 20% 必须停下汇报**。
 >
-> 版本：`board.v1` | 生效基线：Phase 7 `implementation-reconciliation` | 生成日期：2026-08-30
+> 版本：`board.v2` | 生效基线：Phase 7 `implementation-reconciliation` | 生成日期：2026-08-30
 
 ---
 
@@ -18,7 +18,7 @@
 
 ---
 
-## 1. P0：阻断 MVP 的实现断点（8 张卡片，预算合计 ≈60,000 tokens）
+## 1. P0：阻断 MVP 的实现断点（9 张卡片，预算合计 ≈64,000 tokens）
 
 > 这些卡片若不完成，「Web 是工程控制台，不是可交付产品」的结论就无法推翻。
 > 部署验收在 P0、P1 完成前暂停，不得把任务重心收缩为「只做部署」。
@@ -37,6 +37,7 @@ P7C-04（可并行） ─► P7C-05
 | **P7C-03** | **索引生命周期 UI**：candidate 的构建/验证依据展示 → 发布 → active → 回滚上一版 → retired；文案不得把 candidate 描述为 active | P7C-01 | `apps/web/`、`apps/server/index/`（若 API 缺少回滚/退役端点则补少量） | **6,000** | UI 显示 candidate/active/retired 三种状态；回滚产生 previous pointer；≥2 个索引版本的数据能正确切换 | 定向 UI 路由测试（若无自动化就写手工复现脚本并留 JSON 证据）+ contract 52/52 |
 | **P7C-04** | **Durable BM25（R-023 关闭）**：选型 ADR + 替换 `InMemoryBm25CandidateStore`，重启后 lexical 重建持久化 | 无（可与 P7C-01 并行） | `docs/02-architecture/adr/`（ADR-0012）、`apps/server/retrieval/`、`apps/ingestion-worker/`（若重建任务放 Worker） | **10,000** | ADR-0012 状态 Accepted；新 Provider 有 space/index 作用域；重启 + 重建集成测试通过；R-023 在风险表标记 CLOSED | RetrievalServiceTest + 新增「重启后 lexical index 命中」集成测试 + contract 52/52 |
 | **P7C-05** | **真实 RERANK adapter 接线**：把声明 `RERANK` route 接到真实 adapter（`apps/ai-runtime`）；Provider connection test 对 RERANK 能真实返回 verified capability；不再允许 `LexicalReranker` 冒充 | P7C-04 | `apps/ai-runtime/`、`apps/server/provider/`、`apps/server/retrieval/` | **8,000** | RERANK connection test 有独立 success/failed/UNSUPPORTED_CAPABILITY 路径；Profile PUBLISHED 闸门对 RERANK 同样生效 | Provider/Model/Binding 14/14 + 新增 RERANK loopback 探针用例 4/4 + contract 52/52 |
+| **P7C-05R** | **RERANK test-profile adapter 冲突修复**：全 reactor 中 `FakeProviderAdapter` 与 production AI runtime adapter 重复注册 `AI_RUNTIME`，导致两个 Spring context 无法启动 | P7C-05 | `apps/server/provider/adapter/`、对应 adapter tests | **4,000** | test profile 只保留 fake adapter；默认 production profile 仍注册真实 AI runtime adapter；registry 不再重复 | 两条原失败 Spring 测试 + AI runtime adapter/Provider probe 回归 + contract 52/52 |
 | **P7C-06** | **可核验问答 Web**：明确新会话入口；历史 answer + citation 恢复；可阅读来源预览或受权原文跳转；反馈 API + UI；会话重命名/删除；真实 streaming 时「回答增量」文案改为规范描述 | P7C-01、P7C-03 | `apps/web/`（AnswerView / 新组件）、`apps/server/answer/`（若历史 citation API 缺失） | **9,000** | 普通用户不手填 UUID 可完成：新会话 → 问答 → 查看 citation 原文 → 反馈 → 看历史回答；citation preview 不再丢弃响应内容 | Web typecheck/build + 新增历史/反馈 ServerIntegrationTest 3/3 + contract 52/52 |
 | **P7C-07** | **上下文工具跳转**：来源/Revision/Chunk → Chunk Studio；检索命中 / Citation → Retrieval Playground；普通路径不要求手填 `childChunkId`、`contentRef`、hash、index/profile UUID/version；生产 UI 不暴露 `queryVector` | P7C-06 | `apps/web/`（Studio 两页 + 跳转参数）、`apps/server/studio/`（补 lookup API，如 GET /studios/lookup-by-doc） | **6,000** | 文档列表 → Chunk Studio；引用 → Playground；Studio / Playground 两页刷新后仍能恢复原上下文 | Web typecheck/build + 新增 lookup 端点单元 3/3 + contract |
 | **P7C-08** | **管理闭环**：用户反馈聚合查询 API/UI、Provider/依赖健康聚合、受权的审计 / 成本视图（不再只有 raw actuator 链接与内部 `Phase6OperationsService`） | P7C-06 | `apps/server/ops/`、`apps/server/agent/`（审计投影）、`apps/web/`（ControlCenter 新增子视图） | **6,000** | 平台管理员可查看 aggregate health、cost by space、feedback list、audit export（space-scoped）；普通用户看不到 | 权限集成 4/4、聚合查询单元 4/4 + contract 52/52 |
@@ -80,10 +81,10 @@ P7C-04（可并行） ─► P7C-05
 
 | 优先级 | 卡片数 | 预算合计 | 说明 |
 |---|---:|---:|---|
-| P0 | 8 | 60,000 | 全部通过后，Web 才从「工程控制台」变成普通用户可用产品 |
+| P0 | 9 | 64,000 | 含 P7C-05R 回归恢复；全部通过后，Web 才从「工程控制台」变成普通用户可用产品 |
 | P1 | 6 | 40,000 | 全部通过后，部署验收有同一 SHA 的真实全量门禁 |
 | P2 | 7 | 60,000 | 含 Ubuntu 真实机、观测叠加、升级回滚、公共化清理、release 治理 |
-| **合计** | **21** | **160,000** | 实际执行若 <140k = 高效；>192k（超预算 20%）= 必须中途拆卡复盘 |
+| **合计** | **22** | **164,000** | 实际执行若 <144k = 高效；>196.8k（超预算 20%）= 必须中途拆卡复盘 |
 
 ---
 
