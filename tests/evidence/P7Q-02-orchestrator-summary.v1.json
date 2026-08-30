@@ -1,0 +1,13 @@
+{
+  "card_id": "P7Q-02",
+  "status": "PASS",
+  "merge_commit": "9d74821",
+  "worker_commit": "9a097645e5746104dac116316780a54806bd82ad",
+  "tests": {
+    "workflow_static": "passed",
+    "preflight_unit": "9/9",
+    "maven_jdk21": "297 passed, 2 skipped",
+    "secret_scan": "passed"
+  },
+  "acceptance_met": {"A1": true, "A2": true, "A3": true, "A4": true, "A5": true}
+}
