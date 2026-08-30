@@ -1,0 +1,156 @@
+# RAGForge Worker Agent Ticket — P7D-02R
+
+meta:
+  card_id: P7D-02R
+  title: P7D-02 供应链漏洞修复与重新验收
+  priority: P2
+  agent_slug: a22
+  branch: codex/p7-supply-chain-remediation-a22
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-supply-chain-remediation-a22
+  base_sha: 20c7f87
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7D-02]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - pom.xml
+    - apps/server/pom.xml
+    - apps/ingestion-worker/pom.xml
+    - deploy/docker/Dockerfile
+    - deploy/compose/
+    - scripts/ci/
+    - tests/ci/
+    - tests/evidence/P7D-02R-worker-summary.v1.json
+  read_only:
+    - docs/08-records/tickets/P7D-02R-a22.yaml
+    - tests/evidence/P7D-02-worker-summary.v1.json
+    - deploy/compose/IMAGE_DIGESTS.md
+    - deploy/compose/compose.yaml
+    - deploy/docker/Dockerfile
+    - .github/workflows/quality.yml
+    - pom.xml
+    - apps/server/pom.xml
+    - apps/ingestion-worker/pom.xml
+    - apps/web/package.json
+    - apps/web/package-lock.json
+    - scripts/ci/secret_audit.py
+    - scripts/ci/secret_scan.py
+    - scripts/ci/validate_compose.py
+    - scripts/ci/format_check.py
+    - tests/ci/test_supply_chain_gates.py
+    - docs/06-security-compliance/SECURITY_BASELINE.md
+    - docs/07-research/UPSTREAM_REUSE_REGISTER.md
+    - THIRD_PARTY_NOTICES.md
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - MEMORY.md
+    - apps/server/src/main/
+    - apps/server/src/test/
+    - apps/ingestion-worker/src/main/
+    - apps/ingestion-worker/src/test/
+    - apps/web/src/
+    - contracts/
+    - db/
+    - production/
+    - .env.local
+    - release/
+    - .github/workflows/quality.yml
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 基于 P7D-02 的三项目标镜像报告重新扫描并建立 CVE/package/severity/fix-version 清单；所有 Critical/High 均有修复结果或明确标注为不可修复并上报，不得静默忽略。
+    - id: A2
+      text: 在本卡 ownership 内升级存在修复版本的 Java 直接/传递依赖与 Dockerfile/Compose 基础镜像 digest；保持 Java 21、Web 构建和运行时兼容，不引入未登记的第三方源码或未审查依赖。
+    - id: A3
+      text: server、worker、web 目标镜像均以 immutable reference 生成 SBOM，并以 `grype --fail-on high` 扫描通过；不得降低阈值、添加无 owner/期限/补偿控制的 ignore 或 continue-on-error。
+    - id: A4
+      text: P7D-02 的 Compose/镜像 Secret 审计继续通过；Maven Server/Worker、Web typecheck/build、供应链单测、format、tracked-file secret gates 全部通过。
+    - id: A5
+      text: 仅使用合成/本地凭据和公共 registry；不执行生产迁移、不创建 release、不推送生产镜像、不启用云出境；若仍有不可修复 Critical/High，状态必须 BLOCKED 并给出精确的外部修复依赖。
+
+budget:
+  token_limit: 10000
+
+tests:
+  must_run:
+    - name: Compose validation
+      command: python scripts/ci/validate_compose.py
+      expected: exit 0
+    - name: Supply-chain unit tests
+      command: python -m unittest discover -s tests/ci -p "test_supply_chain_gates.py" -v
+      expected: all supply-chain tests pass
+    - name: Format gate
+      command: python scripts/ci/format_check.py
+      expected: exit 0
+    - name: Tracked-file secret scan
+      command: python scripts/ci/secret_scan.py
+      expected: exit 0
+    - name: Server and Worker regression
+      command: mvn -q -pl apps/server,apps/ingestion-worker -am test
+      expected: BUILD SUCCESS with zero failures/errors
+    - name: Web typecheck and build
+      command: npm --prefix apps/web run typecheck; npm --prefix apps/web run build
+      expected: both commands exit 0
+    - name: Target-image build
+      command: docker compose -f deploy/compose/compose.yaml --profile app build server worker web
+      expected: build succeeds and image RepoDigests are recorded
+    - name: Target-image Secret audit
+      command: python scripts/ci/secret_audit.py --image ragforge/server:local --image ragforge/ingestion-worker:local --image ragforge/web:local
+      expected: exit 0 with no findings
+    - name: Target-image Grype server
+      command: grype --fail-on high ragforge/server:local
+      expected: exit 0
+    - name: Target-image Grype worker
+      command: grype --fail-on high ragforge/ingestion-worker:local
+      expected: exit 0
+    - name: Target-image Grype web
+      command: grype --fail-on high ragforge/web:local
+      expected: exit 0
+  evidence_file: tests/evidence/P7D-02R-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: true
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: 10000
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: tests/evidence/P7D-02R-worker-summary.v1.json
