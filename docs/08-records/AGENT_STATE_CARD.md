@@ -12,14 +12,14 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：f738719
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：7f01452
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`implementation-reconciliation`）
-- **主线基线 SHA（main）**：`f738719`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
+- **主线基线 SHA（main）**：`7f01452`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
 - **最近已通过 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（4m52s，全绿）
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
@@ -121,7 +121,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7Q-04 | 契约-实现一致性门禁 | P1 | ✅ completed | A12 | codex/p7-contract-coverage-a12 | RAGForge-worktrees/codex-p7-contract-coverage-a12 | 4,000 | 3,300 | cf509aec... | 初始检查识别 8+6 个真实缺口；门禁代码随 P7Q-04R 修复分支合并，当前严格双向覆盖 102/102 |
 | P7Q-04R | 契约/Controller 对齐修复 | P1 | ✅ completed | A13 | codex/p7-contract-alignment-a13 | RAGForge-worktrees/codex-p7-contract-alignment-a13 | 12,000 | 11,000 | ac0d94815ea437805bbb91a67847bc5dab02a133 | 已合并至 b718c40；8+6 缺口修复，覆盖 102/102、定向后端 13/13、contract 52/52、secret scan 通过 |
 | P7Q-05 | RAG 变更强制评估触发脚本 | P1 | ✅ completed | A14 | codex/p7-rag-eval-gate-a14 | RAGForge-worktrees/codex-p7-rag-eval-gate-a14 | 5,000 | 4,600 | 04de92a5f583b71c0198b1ffccddf8147a21f891 | 已合并至 f738719；RAG 路径变更强制 Phase 6 128-case 评估，真实 retrieval/answer 变更范围触发通过；无关变更 skipped，失败阻断 |
-| P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | ⏳ pending | — | — | — | 11,000 | — | — | P7C-06 已完成，可开始排期 |
+| P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | 🚧 in_progress | A15 | codex/p7-web-router-pagination-a15 | RAGForge-worktrees/codex-p7-web-router-pagination-a15 | 11,000 | — | — | 已建立 ticket；覆盖 URL 状态恢复、cursor 分页与 >100 资源合成旅程 |
 | P7D-01~07 | Linux 交付与发布（7 张） | P2 | ⏳ blocked | — | — | — | 60,000 | — | — | P0+P1 全通过后进入 |
 
 ---
