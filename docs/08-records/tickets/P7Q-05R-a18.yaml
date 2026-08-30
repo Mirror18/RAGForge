@@ -5,7 +5,7 @@ meta:
   agent_slug: a18
   branch: codex/p7-rag-gate-fetch-a18
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7-rag-gate-fetch-a18
-  base_sha: 4ade90f5ed543ad09f1df01f802b623936ede702
+  base_sha: c3a559afcf91de1286b9385305b518adfc26dda9
   updated_at: "2026-08-30"
   dependencies_satisfied: true
   depends_on_cards: [P7Q-05]
@@ -18,7 +18,7 @@ scope:
     - tests/evidence/P7Q-05R-worker-summary.v1.json
   read_only:
     - scripts/ci/rag_evaluation_gate.py
-    - scripts/ci/test_rag_evaluation_gate.py
+    - tests/ci/test_rag_evaluation_gate.py
   forbidden:
     - docs/08-records/AGENT_STATE_CARD.md
     - docs/08-records/PROJECT_STATUS.md
@@ -52,7 +52,7 @@ tests:
       command: git clone --no-local --depth 1 . <temp-repo> && git -C <temp-repo> diff --name-only 9fdd94e0e12afae1c3843d0680fb48017e00669f HEAD
       expected: 修复前 bad object；修复策略能保证 base/head 可解析
     - name: RAG gate unit tests
-      command: python scripts/ci/test_rag_evaluation_gate.py
+      command: python tests/ci/test_rag_evaluation_gate.py
       expected: 全部通过
     - name: format
       command: python scripts/ci/format_check.py
