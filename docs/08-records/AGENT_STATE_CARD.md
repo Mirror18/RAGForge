@@ -12,22 +12,22 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：04683e89159508551f22f37282d5deb564c01b0e
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：67a18f8
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`implementation-reconciliation`）
-- **主线基线 SHA（main）**：`04683e89159508551f22f37282d5deb564c01b0e`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
+- **主线基线 SHA（main）**：`67a18f8`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
 - **最近已通过 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（4m52s，全绿）
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
 - **当前工作包完成度（P7-A..H）**：
   - ✅ P7-A 审计与任务冻结
   - ✅ P7-B 首次设置与协作（bootstrap + 成员加入 + Provider 实测闸门）
-  - ⏳ P7-C 来源/任务/索引维护（WEB-02/03 未完成）
-  - 🚧 P7-D 问答与上下文工具（streaming/cancel 已完成，CORE-05/WEB-04/05 未完成）
+  - ⏳ P7-C 来源/任务/索引维护（C-01/02/03 完成；C-04 等待 ADR 批准；C-05 依赖 C-04）
+  - 🚧 P7-D 问答与上下文工具（C-06 完成；C-07/08 待执行）
   - ⏳ P7-E 管理与 Web 自动化
   - ⏳ P7-F 镜像与 Compose 加固
   - ⏳ P7-G Ubuntu/观测/升级验收
@@ -112,15 +112,15 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7C-02 | 来源任务中心前端 UI | P0 | ✅ completed | A4 | codex/p7-source-task-ui-a4 | RAGForge-worktrees/codex-p7-source-task-ui-a4 | 7,000 | 6,900 | d4bd103cc9ebb2f1b7fe9d74397c703957b00ebf | 已合并至 42b75aa；Web format:check/build 通过 |
 | P7C-03 | 索引生命周期 UI | P0 | ✅ completed | A5 | codex/p7-index-lifecycle-a5 | RAGForge-worktrees/codex-p7-index-lifecycle-a5 | 6,000 | 5,200 | fa44580c0988c2d2a9fbb5f991cbf246d9314bab | 已合并至 04683e8；candidate/active/retired、发布/回滚/退役通过 |
 | P7C-05 | 真实 RERANK adapter | P0 | ⏳ blocked | — | — | — | 8,000 | — | — | 依赖 P7C-04 |
-| P7C-06 | 可核验问答 Web | P0 | 🚧 in_progress | A6 | codex/p7-verifiable-answer-web-a6 | RAGForge-worktrees/codex-p7-verifiable-answer-web-a6 | 9,000 | — | — | P7C-01/P7C-03 已完成；唯一 active Answer worker |
-| P7C-07 | 上下文跳转 | P0 | ⏳ blocked | — | — | — | 6,000 | — | — | 依赖 P7C-06 |
-| P7C-08 | 管理闭环（反馈/审计/成本） | P0 | ⏳ blocked | — | — | — | 6,000 | — | — | 依赖 P7C-06 |
+| P7C-06 | 可核验问答 Web | P0 | ✅ completed | A6 | codex/p7-verifiable-answer-web-a6 | RAGForge-worktrees/codex-p7-verifiable-answer-web-a6 | 9,000 | 8,200 | b2ac6027c731cd32111b97fb1f1d2ad548940abc | 已合并至 67a18f8；历史/citation/反馈/会话控制通过 |
+| P7C-07 | 上下文跳转 | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-06 已完成，可开始分派 |
+| P7C-08 | 管理闭环（反馈/审计/成本） | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-06 已完成，可开始分派 |
 | P7Q-01 | 统一 preflight | P1 | ⏳ pending | — | — | — | 3,000 | — | — | JDK 绑定、Node PATH、Docker daemon |
 | P7Q-02 | 全量 Maven 回归 CI 配方 | P1 | ⏳ pending | — | — | — | 2,000 | — | — | |
 | P7Q-03 | Web 自动化测试（8 条旅程） | P1 | ⏳ pending | — | — | — | 15,000 | — | — | Playwright/Vitest，package.json 补脚本 |
 | P7Q-04 | 契约-实现一致性门禁 | P1 | ⏳ pending | — | — | — | 4,000 | — | — | |
 | P7Q-05 | RAG 变更强制评估触发脚本 | P1 | ⏳ pending | — | — | — | 5,000 | — | — | |
-| P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | ⏳ blocked | — | — | — | 11,000 | — | — | 依赖 P7C-06 |
+| P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | ⏳ pending | — | — | — | 11,000 | — | — | P7C-06 已完成，可开始排期 |
 | P7D-01~07 | Linux 交付与发布（7 张） | P2 | ⏳ blocked | — | — | — | 60,000 | — | — | P0+P1 全通过后进入 |
 
 ---
