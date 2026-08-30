@@ -110,7 +110,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7C-04 | durable BM25 ADR + 实现（R-023） | P0 | ⏳ pending | — | — | — | 10,000 | — | — | 等待用户明确批准接受 ADR-0012；不擅自执行高风险动作 |
 | P7C-01 | 来源任务中心后端 API | P0 | ✅ completed | A3 | codex/p7-source-task-api-a3 | RAGForge-worktrees/codex-p7-source-task-api-a3 | 8,000 | 5,800 | e4a9481710aabe31a6271adbcac9a30b7c7dfc08 | 已合并至 d35eb8e；V21 追加迁移；A1–A5 通过 |
 | P7C-02 | 来源任务中心前端 UI | P0 | ✅ completed | A4 | codex/p7-source-task-ui-a4 | RAGForge-worktrees/codex-p7-source-task-ui-a4 | 7,000 | 6,900 | d4bd103cc9ebb2f1b7fe9d74397c703957b00ebf | 已合并至 42b75aa；Web format:check/build 通过 |
-| P7C-03 | 索引生命周期 UI | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-01 已完成，可开始分派 |
+| P7C-03 | 索引生命周期 UI | P0 | 🚧 in_progress | A5 | codex/p7-index-lifecycle-a5 | RAGForge-worktrees/codex-p7-index-lifecycle-a5 | 6,000 | — | — | P7C-01/P7C-02 已完成；唯一 active Web worker |
 | P7C-05 | 真实 RERANK adapter | P0 | ⏳ blocked | — | — | — | 8,000 | — | — | 依赖 P7C-04 |
 | P7C-06 | 可核验问答 Web | P0 | ⏳ blocked | — | — | — | 9,000 | — | — | 依赖 P7C-01 / P7C-03 |
 | P7C-07 | 上下文跳转 | P0 | ⏳ blocked | — | — | — | 6,000 | — | — | 依赖 P7C-06 |
