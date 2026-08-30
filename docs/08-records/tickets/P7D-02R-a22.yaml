@@ -98,8 +98,8 @@ tests:
       command: mvn -q -pl apps/server,apps/ingestion-worker -am test
       expected: BUILD SUCCESS with zero failures/errors
     - name: Web typecheck and build
-      command: npm --prefix apps/web run typecheck; npm --prefix apps/web run build
-      expected: both commands exit 0
+      command: npm ci --prefix apps/web; npm --prefix apps/web run format:check; npm --prefix apps/web run build
+      expected: npm ci、format:check 和 build 均 exit 0
     - name: Target-image build
       command: docker compose -f deploy/compose/compose.yaml --profile app build server worker web
       expected: build succeeds and image RepoDigests are recorded
