@@ -68,3 +68,26 @@ CI 和公开仓库只使用合成/授权样本。真实 Obsidian 仓库仅作为
 多 Agent 采用“主 Agent 编排 + 一任务一分支一 worktree + 主分支顺序集成”。主 Agent 不把存在共享契约、迁移序号或同一文件写冲突的任务强行并行化。执行规则以根目录 [AGENTS.md](../../AGENTS.md) 为准，可直接使用 [多 Agent 循环执行提示词](MULTI_AGENT_LOOP_PROMPT.md)。
 
 每个执行 Agent 在独立 worktree 中完成一个有验收边界的任务，运行相关测试并以中文 Conventional Commit 提交。主 Agent 审查后按依赖顺序合并，每批合并运行仓库级验证；一个 Phase 的全部退出条件满足后，再提交中文阶段验收记录。
+
+## 8. Windows 本地开发启动
+
+本地启动统一使用 [`scripts/dev/start-local.bat`](../../scripts/dev/start-local.bat)。默认项目名为
+`ragforge-p1-local`，用于避开可能已运行的 `ragforge-p1` 项目；源码 Server/Web 分别监听
+`18084` 和 `5176`。基础设施端口由项目名稳定派生：PostgreSQL `43052`、Qdrant
+`43953/43954`、RabbitMQ `43292/43293`、Valkey `43999`、MinIO `46620/46621`。
+
+```powershell
+.\scripts\dev\start-local.bat
+Invoke-RestMethod http://127.0.0.1:18084/actuator/health
+Invoke-WebRequest http://127.0.0.1:5176/
+```
+
+如需切换实例，必须同时使用新的 `-ProjectName`，并确认 `-ServerPort`、`-WebPort` 未被占用：
+
+```powershell
+.\scripts\dev\start-local.bat -ProjectName ragforge-p1-review -ServerPort 18085 -WebPort 5177
+```
+
+停止时使用对应项目名执行 `python scripts/dev/core.py --project-name ragforge-p1-local down`；
+宿主机启动的 Server、Worker 和 Web 进程需按 `tmp/local-run/*.pid` 停止。不要为了释放端口
+停止其他项目的 Compose 服务。

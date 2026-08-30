@@ -32,10 +32,12 @@ python scripts/dev/core.py --profile app ps
 python scripts/dev/core.py --profile app down
 ```
 
-默认 app profile 入口为 Web `http://localhost:25174`、Server
-`http://localhost:25082`。项目名、端口、网络和卷前缀仍由统一入口派生；切换
-`--project-name` 时必须在同一组命令中保持一致。应用容器内部只通过 Compose 服务名
-访问 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO。
+通过统一入口启动时，默认项目 `ragforge-p1-local` 的 app profile 入口为 Web
+`http://localhost:42794`、Server `http://localhost:42702`；Windows 宿主机源码入口则是
+Web `http://localhost:5176`、Server `http://localhost:18084`。项目名、端口、网络和卷前缀
+仍由统一入口派生；切换 `--project-name` 时必须在同一组命令中保持一致。若直接运行
+未设置隔离环境的 Compose 文件，才会使用 `25082/25174` 这组基准 app 端口。应用容器
+内部只通过 Compose 服务名访问 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO。
 
 `--project-name` 会同步派生独立资源和稳定端口 block：默认 `ragforge-p1` 保留基准端口；
 其他 project 使用 SHA-256 派生的固定偏移（20 的倍数），并限制在 `[20000, 50000)`。

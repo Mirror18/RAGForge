@@ -31,6 +31,6 @@ npm ci
 npm run dev
 ```
 
-Vite 默认将 `/api` 与 `/actuator` 代理到 `http://127.0.0.1:18083`，可通过 `VITE_SERVER_TARGET` 覆盖。页面启动时读取当前 session 与可见空间；未登录时显示本地账号入口，登录后若没有可见空间则引导创建第一个空间。Session 继续使用后端 HttpOnly Cookie，密码不会写入 URL、日志或浏览器存储。
+Vite 默认将 `/api` 与 `/actuator` 代理到 `http://127.0.0.1:18084`，可通过 `VITE_SERVER_TARGET` 覆盖。页面启动时读取当前 session 与可见空间；未登录时显示本地账号入口，登录后若没有可见空间则引导创建第一个空间。Session 继续使用后端 HttpOnly Cookie，密码不会写入 URL、日志或浏览器存储。
 
 页面中的日期时间统一使用浏览器时区，并在账号与空间页显示当前 IANA 时区；服务端仍以 UTC 持久化。业务操作建议按“先选空间 → 管理成员/用户 → 配置云端 Chat → 导入并发布索引 → 问答与追踪”顺序执行。
