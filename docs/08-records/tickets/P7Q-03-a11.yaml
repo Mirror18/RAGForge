@@ -1,0 +1,121 @@
+meta:
+  card_id: P7Q-03
+  title: Web 自动化测试（8 条旅程）
+  priority: P1
+  agent_slug: a11
+  branch: codex/p7-web-e2e-a11
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-web-e2e-a11
+  base_sha: b264f8e
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7C-06, P7Q-01]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - apps/web/package.json
+    - apps/web/package-lock.json
+    - apps/web/playwright.config.ts
+    - apps/web/vitest.config.ts
+    - apps/web/tests/
+    - tests/evidence/P7Q-03-worker-summary.v1.json
+  read_only:
+    - apps/web/src/App.vue
+    - apps/web/src/AuthView.vue
+    - apps/web/src/BusinessFlowView.vue
+    - apps/web/src/AnswerView.vue
+    - apps/web/src/ControlCenterView.vue
+    - apps/web/src/SourceLibraryView.vue
+    - apps/web/src/TaskCenterView.vue
+    - apps/web/src/api.ts
+    - apps/web/package.json
+    - apps/web/package-lock.json
+    - contracts/openapi/ragforge-api-v1.yaml
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - AGENTS.md
+    - docs/08-records/TASK_BOARD.md
+    - docs/08-records/tickets/
+    - apps/server/
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - .github/workflows/
+    - pom.xml
+    - deploy/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: package.json 提供 test:unit（vitest run）与 test:e2e（playwright test）脚本，lockfile 与依赖可复现；不修改生产源码绕过真实行为
+    - id: A2
+      text: 以隔离 synthetic fixture 覆盖登录→首次设置、上传/轮询、索引发布、问答、取消、历史/归档、权限、跨空间拒绝共 8 条旅程
+    - id: A3
+      text: 测试断言结构化 API 请求的 space_id、权限拒绝、citation/provenance 与状态恢复，不把真实凭证、个人内容、raw prompt 或生产数据写入 fixture
+    - id: A4
+      text: Vitest 单测与 Playwright E2E 可在无外部服务环境下运行；必要的 mock/fixture 只在 tests 目录，失败信息带 journey 名称
+    - id: A5
+      text: 运行 test:unit、test:e2e、format:check、build、secret scan；生成 tests/evidence/phase7-web-e2e.v1.json，记录 8/8 结果与环境说明
+
+budget:
+  token_limit: 15000
+
+tests:
+  must_run:
+    - name: Web unit tests
+      command: npm --prefix apps/web run test:unit
+      expected: exit 0
+    - name: Web E2E tests
+      command: npm --prefix apps/web run test:e2e
+      expected: 8 journeys passed in isolated synthetic fixture
+    - name: Web format check
+      command: npm --prefix apps/web run format:check
+      expected: 0 errors
+    - name: Web build
+      command: npm --prefix apps/web run build
+      expected: exit 0
+    - name: secret scan
+      command: python scripts/ci/secret_scan.py
+      expected: passed
+  evidence_file: tests/evidence/P7Q-03-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: true
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string
