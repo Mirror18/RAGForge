@@ -5,7 +5,7 @@ meta:
   agent_slug: a8
   branch: codex/p7-management-loop-a8
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7-management-loop-a8
-  base_sha: 2378f3a
+  base_sha: dfa795a
   updated_at: "2026-08-30"
   dependencies_satisfied: true
   depends_on_cards: [P7C-06]
