@@ -34,6 +34,25 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-
 
+      - name: Set up Java 21 and Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run CI preflight --strict
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          python scripts/ci/preflight.py --json --strict 2>&1 | tee tests/evidence/ci-logs/preflight.json
+
       - name: Check formatting and syntax
         run: python scripts/ci/format_check.py
 
@@ -59,14 +78,20 @@ jobs:
         run: python -m unittest discover -s scripts/phase0 -p "test_*.py" -v
 
       - name: Run contract test seam
-        run: python scripts/ci/contract_test.py
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          python scripts/ci/contract_test.py 2>&1 | tee tests/evidence/ci-logs/contract-test.log
 
       - name: Run contract unit tests
         shell: bash
         run: |
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
           set +e
-          python -m unittest discover -s tests/contract -p "test_*.py" -v
-          status=$?
+          python -m unittest discover -s tests/contract -p "test_*.py" -v 2>&1 | tee tests/evidence/ci-logs/contract-unit.log
+          status=${PIPESTATUS[0]}
           if [[ "$status" -eq 5 ]] && ! compgen -G "tests/contract/test_*.py" >/dev/null; then
             echo "::notice title=Contract tests::tests/contract is empty in the current scaffold; exit 5 is treated as an explicit placeholder."
             exit 0
@@ -74,10 +99,15 @@ jobs:
           exit "$status"
 
       - name: Run deterministic Phase 2 cloud, concurrency, and egress gates
+        shell: bash
         run: |
-          python -m unittest discover -s tests/integration -p "test_phase2_cloud_*.py" -v
-          python -m unittest discover -s tests/performance -p "test_phase2_*.py" -v
-          python -m unittest discover -s tests/security -p "test_phase2_*.py" -v
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          {
+            python -m unittest discover -s tests/integration -p "test_phase2_cloud_*.py" -v
+            python -m unittest discover -s tests/performance -p "test_phase2_*.py" -v
+            python -m unittest discover -s tests/security -p "test_phase2_*.py" -v
+          } 2>&1 | tee tests/evidence/ci-logs/phase2-gates.log
 
       - name: Check dependency manifest and lockfile inventory
         run: python scripts/ci/dependency_inventory.py --require-lockfiles
@@ -117,28 +147,25 @@ jobs:
       - name: Verify local SBOM/dependency command seam
         run: python scripts/ci/sbom_dependency_scan.py --mode auto
 
-      - name: Set up Java when Maven exists
-        if: ${{ hashFiles('**/pom.xml') != '' }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: Install Tesseract OCR runtime when Maven exists
-        if: ${{ hashFiles('**/pom.xml') != '' }}
+      - name: Install Tesseract OCR runtime
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng
           tesseract --version
 
-      - name: Maven build when Maven exists
-        if: ${{ hashFiles('**/pom.xml') != '' }}
-        run: mvn --batch-mode --no-transfer-progress -DskipTests compile
+      - name: Maven compile on JDK 21
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          mvn --batch-mode --no-transfer-progress -DskipTests compile 2>&1 | tee tests/evidence/ci-logs/maven-compile.log
 
-      - name: Maven unit and architecture tests when Maven exists
-        if: ${{ hashFiles('**/pom.xml') != '' }}
-        run: mvn --batch-mode --no-transfer-progress test
+      - name: Full Maven unit and architecture regression on JDK 21
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          mvn --batch-mode --no-transfer-progress test 2>&1 | tee tests/evidence/ci-logs/maven-test.log
 
       - name: Run Phase 5 generation evaluation
         run: python scripts/phase5/generation_evaluation.py
@@ -162,15 +189,25 @@ jobs:
 
       - name: Run Phase 3 cross-platform and parser acceptance gates
         if: ${{ hashFiles('**/pom.xml') != '' }}
+        shell: bash
         run: |
-          python -m unittest discover -s tests/acceptance -p "test_phase3_*.py" -v
-          python -m unittest discover -s tests/security -p "test_phase3_fault_*.py" -v
-          python -m unittest discover -s tests/performance -p "test_phase3_*.py" -v
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          {
+            python -m unittest discover -s tests/acceptance -p "test_phase3_*.py" -v
+            python -m unittest discover -s tests/security -p "test_phase3_fault_*.py" -v
+            python -m unittest discover -s tests/performance -p "test_phase3_*.py" -v
+          } 2>&1 | tee tests/evidence/ci-logs/phase3-gates.log
 
       - name: Run deterministic Phase 4 retrieval quality and reference-scale gates
+        shell: bash
         run: |
-          python -m unittest discover -s scripts/phase4 -p "test_*.py" -v
-          python scripts/phase4/retrieval_benchmark.py
+          set -o pipefail
+          mkdir -p tests/evidence/ci-logs
+          {
+            python -m unittest discover -s scripts/phase4 -p "test_*.py" -v
+            python scripts/phase4/retrieval_benchmark.py
+          } 2>&1 | tee tests/evidence/ci-logs/phase4-retrieval.log
 
       - name: Upload Phase 4 retrieval evidence
         uses: actions/upload-artifact@v4
@@ -189,12 +226,6 @@ jobs:
             apps/ingestion-worker/target/surefire-reports/**
           if-no-files-found: error
 
-      - name: Set up Node when apps/web exists
-        if: ${{ hashFiles('apps/web/package.json') != '' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
       - name: Cache apps/web npm dependencies
         if: ${{ hashFiles('apps/web/package.json') != '' }}
         uses: actions/cache@v4
@@ -212,11 +243,67 @@ jobs:
       - name: npm format/build when apps/web exists
         if: ${{ hashFiles('apps/web/package.json') != '' }}
         working-directory: apps/web
+        shell: bash
         run: |
-          npm run --if-present format:check
-          npm run --if-present build
+          set -o pipefail
+          mkdir -p ../../tests/evidence/ci-logs
+          {
+            npm run --if-present format:check
+            npm run --if-present build
+          } 2>&1 | tee ../../tests/evidence/ci-logs/npm-build.log
 
       - name: npm unit tests when apps/web exists
         if: ${{ hashFiles('apps/web/package.json') != '' }}
         working-directory: apps/web
-        run: npm run --if-present test
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ../../tests/evidence/ci-logs
+          npm run --if-present test 2>&1 | tee ../../tests/evidence/ci-logs/npm-test.log
+
+      - name: Write quality run summary
+        if: always()
+        shell: bash
+        env:
+          QUALITY_JOB_STATUS: ${{ job.status }}
+        run: |
+          mkdir -p tests/evidence/ci-logs
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary = {
+              "schema_version": "P7Q-02.v1",
+              "job_status": os.environ["QUALITY_JOB_STATUS"],
+              "jdk": "21",
+              "node": "22",
+              "evidence": [
+                  "preflight.json",
+                  "contract-test.log",
+                  "contract-unit.log",
+                  "maven-compile.log",
+                  "maven-test.log",
+                  "phase2-gates.log",
+                  "phase3-gates.log",
+                  "phase4-retrieval.log",
+                  "npm-build.log",
+                  "npm-test.log",
+              ],
+          }
+          Path("tests/evidence/ci-logs/quality-summary.json").write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+
+      - name: Upload quality logs and summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-quality-logs-${{ github.run_id }}
+          path: |
+            tests/evidence/ci-logs/**
+            apps/server/target/surefire-reports/**
+            apps/ingestion-worker/target/surefire-reports/**
+          if-no-files-found: warn
+          retention-days: 14
