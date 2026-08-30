@@ -29,6 +29,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-021 | Run retry context 仅保存在进程内，重启后历史失败 Run 无法继续 retry | 3 | 4 | 12 | Phase 2 已验证同进程 timeout/retry；Phase 3/6 设计持久化 retry command/context 和恢复演练 | Platform | OPEN |
 | R-022 | 真实 OCR runtime 不可用导致扫描 PDF 质量门禁无法闭环 | 4 | 4 | 16 | Tesseract 受限子进程、PDFBox 渲染、输入/页数/输出/超时上限；Windows 与 Ubuntu CI 真实 2/2 样本 | Ingestion / Operations | CLOSED |
 | R-023 | BM25 当前为进程内确定性实现，重启后 lexical index 需重建 | 3 | 4 | 12 | ADR-0012；Qdrant 版本化 candidate payload 持久化 searchable text，按 space_id/index_version_id 重建；DurableBm25CandidateStore 重启命中测试 1/1 | Retrieval | CLOSED |
+| R-054 | AI runtime 默认 RERANK scorer 是无第三方依赖的确定性 seam，尚非完成离线评估的模型实现 | 2 | 3 | 6 | P7C-05 已将生产调用固定到本地 AI runtime 协议并保留 candidate identity/space 边界；替换为模型前必须完成版本化离线评估与回归 | Retrieval / AI Runtime | MITIGATING |
 | R-024 | 1M Qdrant 证据使用 8 维合成向量，不能直接外推生产 embedding 维度和混合并发 | 3 | 4 | 12 | Qdrant `v1.11.5` 1M 真实 filter probe p95 1101.3382ms；生产 embedding 维度、并发和索引重建需 Phase 6 复测 | Performance / Retrieval | MITIGATING |
 
 ## 2. 维护规则
@@ -173,3 +174,9 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - R-023 已关闭：用户明确批准接受 ADR-0012；Worker 将 searchable text 与 provenance payload 一起写入版本化 Qdrant candidate collection，Server 生产路径改用 DurableBm25CandidateStore，重启后通过 Qdrant scroll 重建 BM25 状态并命中。
 - 验证：RetrievalServiceTest 9/9、InMemoryBm25CandidateStoreTest 3/3、SpaceCandidateIndexBuilderTest 1/1、BusinessIngestionSideEffectHandlerTest 3/3、DurableBm25CandidateStoreTest 1/1、contract 52/52；未新增数据库迁移。
 - RERANK route 的真实 adapter 仍属于 P7C-05，不因本风险关闭而宣称完成。
+
+## 18. P7-C-05 真实 RERANK adapter 处置（2026-08-30）
+
+- 生产检索已由 `ProviderReranker` 接管 RERANK：只解析目标 `space_id` 下 ACTIVE binding、PUBLISHED route/profile 和 LOCAL_ONLY AI runtime connection；未配置、未发布、跨空间、超时、非法响应和未支持能力均 fail-closed，不静默回退 `LexicalReranker`。
+- `apps/ai-runtime` 新增无第三方依赖的 bounded `/v1/rerank` loopback seam；Provider connection test 对 RERANK 写入 verified capability，并保留 success、failed、`UNSUPPORTED_CAPABILITY` 三类结果路径。主线验证：AI runtime 4/4、RERANK adapter 5/5、Provider/Model/Binding 15/15、RetrievalService 9/9、Provider HTTP 33/33、contract 52/52。
+- 未新增数据库迁移、未开启云出境、未提交凭据。R-054 跟踪默认确定性 scorer 在模型替换前仍需离线评估；R-053 的部署网络 egress 防护继续有效。

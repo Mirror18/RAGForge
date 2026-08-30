@@ -1,0 +1,17 @@
+{
+  "card_id": "P7C-05",
+  "passed": true,
+  "merge_commit": "e46d090",
+  "worker_commit": "a09207e19aa86133ccf94996c06421be8815d410",
+  "summary": {
+    "contract": {"total": 52, "passed": 52, "failed": 0},
+    "ai_runtime_unit": {"total": 4, "passed": 4, "failed": 0},
+    "provider_model_binding": {"total": 15, "passed": 15, "failed": 0},
+    "rerank_adapter": {"total": 5, "passed": 5, "failed": 0},
+    "retrieval_service": {"total": 9, "passed": 9, "failed": 0},
+    "provider_http_regression": {"total": 33, "passed": 33, "failed": 0},
+    "architecture_secret_markdown": "passed"
+  },
+  "migration_count": 0,
+  "cloud_egress_enabled": false
+}
