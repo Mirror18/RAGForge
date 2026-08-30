@@ -1,5 +1,30 @@
 # CI Scripts
 
+## Preflight
+
+统一环境检查可在 Windows PowerShell、Windows cmd 或 Linux shell 中调用：
+
+```text
+python scripts/ci/preflight.py
+python scripts/ci/preflight.py --json
+python scripts/ci/preflight.py --json --strict
+```
+
+检查项固定为 `JAVA_HOME`、Java、Maven、Node、npm 和 Docker daemon。命令只在本机执行
+版本查询与 `docker info`，不会下载依赖、启动服务或修改仓库。`--json` 输出稳定的
+`passed`、`checks`、`tool_versions`、`remediation` 四个字段；`tool_versions` 固定包含
+Java、Maven、Node、npm、Docker 的版本键（不可用时为 `null`）；每个失败项含稳定的
+`result_code`，修复提示不包含环境变量值、命令输出或可疑凭证。默认模式即使检查失败也
+返回 0，便于诊断；`--strict` 在任一必需检查失败时返回非零。
+
+单元测试运行方式：
+
+```text
+python -m unittest scripts.ci.test_preflight -v
+```
+
+执行证据应保存于 `tests/evidence/P7Q-01-worker-summary.v1.json`，供 CI/任务验收引用。
+
 当前 CI 辅助命令均为可执行门禁：
 
 ```text
