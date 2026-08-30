@@ -9,13 +9,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.springframework.stereotype.Component;
-
 /**
  * Deterministic BM25 port used by the modular monolith until a durable lexical
  * index is selected. It is explicitly scoped by space and candidate index.
  */
-@Component
 public final class InMemoryBm25CandidateStore implements Bm25CandidateStore {
     private final ConcurrentMap<Scope, ConcurrentMap<UUID, Document>> documents = new ConcurrentHashMap<>();
 
