@@ -1,0 +1,22 @@
+{
+  "schema_version": "P7Q-06-orchestrator-summary-v1",
+  "card_id": "P7Q-06",
+  "passed": true,
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0
+  },
+  "checks": [
+    {"name": "web format", "passed": 1, "failed": 0, "details": "tsc --noEmit 通过。", "evidence": "tests/evidence/P7Q-06-orchestrator-format.log"},
+    {"name": "web unit", "passed": 10, "failed": 0, "details": "Vitest 10/10。", "evidence": "tests/evidence/P7Q-06-orchestrator-unit.log"},
+    {"name": "web e2e", "passed": 10, "failed": 0, "details": "Playwright 10/10；包含 8 条既有旅程、120 sources/7 jobs/6 indexes 分页和 6 个页面刷新恢复场景。", "evidence": "tests/evidence/P7Q-06-orchestrator-e2e.log"},
+    {"name": "web build", "passed": 1, "failed": 0, "details": "Vite production build 通过。", "evidence": "tests/evidence/P7Q-06-orchestrator-build.log"},
+    {"name": "hard truncation scan", "passed": 1, "failed": 0, "details": "apps/web/src 与 apps/web/tests 无 limit=100、limit%3D100、slice(0,5) 命中。", "evidence": "tests/evidence/P7Q-06-orchestrator-truncation-scan.log"},
+    {"name": "secret scan", "passed": 1, "failed": 0, "details": "未发现受支持的凭据模式。", "evidence": "tests/evidence/P7Q-06-orchestrator-secret-scan.log"}
+  ],
+  "merge_commit": "c5c12bc",
+  "worker_commit": "370ccaf19ba093a2ba67d0a074e6b5d26ba1e7d1"
+}
