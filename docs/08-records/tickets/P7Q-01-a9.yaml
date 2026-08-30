@@ -1,0 +1,109 @@
+meta:
+  card_id: P7Q-01
+  title: 统一 preflight
+  priority: P1
+  agent_slug: a9
+  branch: codex/p7-preflight-a9
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-preflight-a9
+  base_sha: f55ae94
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: []
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - scripts/ci/preflight.py
+    - scripts/ci/test_preflight.py
+    - scripts/ci/README.md
+  read_only:
+    - scripts/ci/README.md
+    - scripts/ci/architecture_check.py
+    - scripts/ci/contract_test.py
+    - .github/workflows/quality.yml
+    - apps/web/package.json
+    - pom.xml
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - AGENTS.md
+    - docs/08-records/TASK_BOARD.md
+    - docs/08-records/tickets/
+    - .github/workflows/
+    - pom.xml
+    - apps/web/package.json
+    - apps/web/package-lock.json
+    - apps/server/
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - deploy/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 提供可在 Windows 与 Linux CI 调用的统一 preflight 命令，检查 Java/JAVA_HOME、Maven、Node/npm PATH 与 Docker daemon；失败项给出稳定 machine-readable code 与人类修复提示
+    - id: A2
+      text: preflight 不读取或输出 secrets、环境变量值中的凭证、个人路径之外的敏感内容，不启动/修改服务，不依赖在线下载
+    - id: A3
+      text: 支持 --json 与 --strict；--json 输出稳定 schema（passed、checks、tool_versions、remediation），--strict 在必需工具失败时返回非零
+    - id: A4
+      text: 单元测试覆盖 Java/JAVA_HOME、Node PATH、Docker daemon 成功/失败分支至少 6/6；README 说明 Windows/Linux 调用方式与证据位置
+    - id: A5
+      text: 运行 preflight 不改变仓库文件，测试通过且无 secrets/架构违规
+
+budget:
+  token_limit: 3000
+
+tests:
+  must_run:
+    - name: preflight unit tests
+      command: python -m unittest scripts.ci.test_preflight -v
+      expected: 全部通过，至少 6 个测试
+    - name: preflight json
+      command: python scripts/ci/preflight.py --json
+      expected: exit 0 或按环境给出可诊断失败，不输出凭证
+    - name: secret scan
+      command: python scripts/ci/secret_scan.py
+      expected: 通过
+  evidence_file: tests/evidence/P7Q-01-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: true
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string
