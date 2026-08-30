@@ -6,7 +6,7 @@ meta:
   agent_slug: a16
   branch: codex/p7-rerank-adapter-a16
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7-rerank-adapter-a16
-  base_sha: 8499e82731b0db42fc1792870686f7221695a3b3
+  base_sha: 1cdeb9cd643d9c88e6cbd9820b6f80615baac893
   updated_at: "2026-08-30"
   dependencies_satisfied: true
   depends_on_cards: [P7C-04]
