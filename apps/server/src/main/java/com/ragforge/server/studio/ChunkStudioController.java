@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
@@ -19,7 +20,7 @@ import java.util.Set;
 
 /** REST adapter for the read-safe Chunk Studio child projection and override workflow. */
 @org.springframework.web.bind.annotation.RestController
-@RequestMapping("/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}")
+@RequestMapping("/api/v1/spaces/{spaceId}/chunk-studio")
 public final class ChunkStudioController {
     private final ChunkStudioService service;
     private final ObjectMapper objectMapper;
@@ -34,14 +35,25 @@ public final class ChunkStudioController {
         this(service, new ObjectMapper().findAndRegisterModules());
     }
 
-    @GetMapping
+    @GetMapping("/children/{childChunkId}")
     public ChunkStudioService.ChunkStudioChildProjection getChild(
             @PathVariable UUID spaceId, @PathVariable UUID childChunkId,
             @AuthenticationPrincipal SessionPrincipal principal) {
         return service.getChild(spaceId, childChunkId, principal);
     }
 
-    @PostMapping("/overrides")
+    @GetMapping("/lookup")
+    public ChunkStudioService.ChunkStudioChildProjection lookup(
+            @PathVariable UUID spaceId,
+            @RequestParam UUID childChunkId,
+            @RequestParam UUID documentRevisionId,
+            @RequestParam String contentRef,
+            @RequestParam String textHash,
+            @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.lookup(spaceId, childChunkId, documentRevisionId, contentRef, textHash, principal);
+    }
+
+    @PostMapping("/children/{childChunkId}/overrides")
     @ResponseStatus(HttpStatus.CREATED)
     public ChunkStudioService.OverrideResponse createOverride(
             @PathVariable UUID spaceId, @PathVariable UUID childChunkId,
@@ -53,7 +65,7 @@ public final class ChunkStudioController {
         return service.createOverride(spaceId, childChunkId, request, principal, correlationId(servletRequest));
     }
 
-    @PostMapping("/overrides/{overrideId}/transitions")
+    @PostMapping("/children/{childChunkId}/overrides/{overrideId}/transitions")
     public ChunkStudioService.OverrideResponse transition(
             @PathVariable UUID spaceId, @PathVariable UUID childChunkId, @PathVariable UUID overrideId,
             @RequestBody JsonNode body,

@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 84000
+  },
+  "raw_output_stored": true,
+  "raw_output_files": [
+    "tests/evidence/P7C-07-contract.raw.txt",
+    "tests/evidence/P7C-07-server.raw.txt",
+    "tests/evidence/P7C-07-web-format.raw.txt",
+    "tests/evidence/P7C-07-web-build.raw.txt"
+  ],
+  "commands": {
+    "contract": {"status": "PASS", "details": "52 contract tests passed (42 phase 4 + 10 phase 5)."},
+    "server": {"status": "PASS", "details": "Maven Studio target command exited 0; lookup success, forbidden and invalid-context tests included."},
+    "web_format": {"status": "PASS", "details": "tsc --noEmit exited 0."},
+    "web_build": {"status": "PASS", "details": "Vite production build exited 0."}
+  }
+}

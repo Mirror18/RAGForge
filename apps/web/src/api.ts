@@ -368,6 +368,18 @@ export interface ChunkStudioProjection {
   };
 }
 
+export interface ProvenanceContext {
+  target: "studio" | "playground";
+  spaceId: string;
+  childChunkId?: string;
+  documentRevisionId?: string;
+  contentRef?: string;
+  textHash?: string;
+  indexVersionId?: string;
+  profileId?: string;
+  profileVersion?: number;
+}
+
 export interface ChunkOverrideResponse {
   spaceId: string;
   documentRevisionId: string;
@@ -457,6 +469,10 @@ export interface RetrievalExperiment {
     profileB: { abstained: boolean; reasonCode: "NO_EVIDENCE" | "LOW_CONFIDENCE" | "POLICY_BLOCKED" | null } | null;
   };
   activeProfileUnchanged: true;
+}
+
+export function lookupChunkStudio(spaceId: string, context: Pick<ProvenanceContext, "childChunkId" | "documentRevisionId" | "contentRef" | "textHash">): Promise<ChunkStudioProjection> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/chunk-studio/lookup${queryString({ childChunkId: context.childChunkId, documentRevisionId: context.documentRevisionId, contentRef: context.contentRef, textHash: context.textHash })}`);
 }
 
 type ApiFetchOptions = Omit<RequestInit, "body" | "headers" | "method"> & {

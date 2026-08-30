@@ -850,6 +850,31 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/chunk-studio/lookup": {
+      "x-ragforge-implementation-status": "phase7-context-jump",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["chunk-studio"],
+        "operationId": "lookupChunkStudioContext",
+        "summary": "Resolve an authorized provenance handoff context",
+        "description": "Resolves structured child chunk provenance for a tool handoff. The space path is mandatory and authoritative; all supplied provenance fields must match the authorized projection. URL context is never trusted as authorization and the response contains no document body or vector.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CorrelationId"},
+          {"$ref": "#/components/parameters/ContextChildChunkId"},
+          {"$ref": "#/components/parameters/ContextDocumentRevisionId"},
+          {"$ref": "#/components/parameters/ContextContentRef"},
+          {"$ref": "#/components/parameters/ContextTextHash"}
+        ],
+        "responses": {
+          "200": {"description": "Authorized Chunk Studio projection", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ChunkStudioChildProjection"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/chunk-studio/children/{childChunkId}/overrides": {
       "x-ragforge-implementation-status": "phase4-contract",
       "parameters": [
@@ -1184,6 +1209,10 @@
         "required": true,
         "schema": {"$ref": "#/components/schemas/UuidV7"}
       },
+      "ContextChildChunkId": {"name": "childChunkId", "in": "query", "required": true, "schema": {"$ref": "#/components/schemas/UuidV7"}},
+      "ContextDocumentRevisionId": {"name": "documentRevisionId", "in": "query", "required": true, "schema": {"$ref": "#/components/schemas/UuidV7"}},
+      "ContextContentRef": {"name": "contentRef", "in": "query", "required": true, "schema": {"type": "string", "minLength": 1, "maxLength": 512}},
+      "ContextTextHash": {"name": "textHash", "in": "query", "required": true, "schema": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}},
       "OverrideId": {
         "name": "overrideId",
         "in": "path",
