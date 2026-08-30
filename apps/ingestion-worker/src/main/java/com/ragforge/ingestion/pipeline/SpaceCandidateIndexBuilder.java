@@ -52,7 +52,7 @@ public final class SpaceCandidateIndexBuilder {
         List<QdrantIndexWriter.Point> points = chunks.stream().map(chunk -> {
             String text = materialize(spaceId, chunk);
             return new QdrantIndexWriter.Point(chunk.childId(), chunk.revisionId(), chunk.parentId(),
-                    chunk.contentRef(), chunk.textHash(), embedding.embed(text));
+                    chunk.contentRef(), chunk.textHash(), embedding.embed(text), text);
         }).toList();
         int dimension = points.get(0).vector().size();
         if (points.stream().anyMatch(point -> point.vector().size() != dimension)) {

@@ -35,7 +35,7 @@ public final class QdrantIndexWriter {
                 "id", point.id().toString(), "vector", point.vector(), "payload", Map.of(
                         "space_id", spaceId.toString(), "index_version_id", indexId.toString(),
                         "document_revision_id", point.revisionId().toString(), "parent_chunk_id", point.parentId().toString(),
-                        "content_ref", point.contentRef(), "text_hash", point.textHash()))).toList();
+                        "content_ref", point.contentRef(), "text_hash", point.textHash(), "text", point.text()))).toList();
         if (!encoded.isEmpty()) request("PUT", "/collections/" + collection + "/points?wait=true", Map.of("points", encoded), false);
         JsonNode info = request("GET", "/collections/" + collection, null, false);
         int actual = info.path("result").path("config").path("params").path("vectors").path("size").asInt(-1);
@@ -111,7 +111,13 @@ public final class QdrantIndexWriter {
         }
     }
 
-    public record Point(UUID id, UUID revisionId, UUID parentId, String contentRef, String textHash, List<Double> vector) { }
+    public record Point(UUID id, UUID revisionId, UUID parentId, String contentRef, String textHash,
+                        List<Double> vector, String text) {
+        public Point(UUID id, UUID revisionId, UUID parentId, String contentRef, String textHash,
+                     List<Double> vector) {
+            this(id, revisionId, parentId, contentRef, textHash, vector, "");
+        }
+    }
 
     public record Validation(boolean sampleRetrievalPassed, boolean spaceFilterPassed) { }
 }

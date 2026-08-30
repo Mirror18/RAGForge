@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "total": 69,
+    "passed": 69,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 50316
+  },
+  "raw_output_stored": false,
+  "commands": {
+    "contract": "52/52",
+    "server_retrieval": "RetrievalServiceTest 9/9; InMemoryBm25CandidateStoreTest 3/3",
+    "worker_lexical": "BusinessIngestionSideEffectHandlerTest 3/3; SpaceCandidateIndexBuilderTest 1/1",
+    "durable_restart": "DurableBm25CandidateStoreTest 1/1"
+  },
+  "environment": {
+    "java": "21.0.7",
+    "note": "Maven commands used JDK 21 because the default JAVA_HOME pointed to JDK 8."
+  }
+}
