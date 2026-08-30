@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, type ModelProfile, type ModelRoute, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type ProviderConnectionTestResult, type RunSnapshot, type SpaceRole, apiFetch } from "./api";
+import { ApiError, exportManagementAudit, getManagementCostUsage, getManagementHealth, listManagementFeedback, type ManagementAuditItem, type ManagementFeedbackItem, type ManagementHealth, type ManagementUsageCost, type ModelProfile, type ModelRoute, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type ProviderConnectionTestResult, type RunSnapshot, type SpaceRole, apiFetch } from "./api";
 import { formatDateTime } from "./format";
 
-type ControlSection = "spaces" | "providers" | "models" | "prompts" | "runs";
+type ControlSection = "spaces" | "health" | "cost" | "feedback" | "audit" | "providers" | "models" | "prompts" | "runs";
 
 const props = defineProps<{
   selectedSpaceId: string;
@@ -25,6 +25,12 @@ const selectedPromptTemplateId = ref("");
 const promptVersionDetails = ref<PromptVersion | null>(null);
 const runId = ref(props.initialRunId ?? "");
 const runSnapshot = ref<RunSnapshot | null>(null);
+const managementHealth = ref<ManagementHealth | null>(null);
+const managementCost = ref<ManagementUsageCost | null>(null);
+const managementFeedback = ref<ManagementFeedbackItem[]>([]);
+const managementAudit = ref<ManagementAuditItem[]>([]);
+const managementFrom = ref(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+const managementTo = ref(new Date().toISOString());
 
 const providerForm = ref({ displayName: "Xiaomi MiMo 云端", providerType: "MIMO", egressClass: "CLOUD", endpoint: "https://api.xiaomimimo.com", credentialRef: "env:XIAOMI_API_KEY", status: "ACTIVE" });
 const providerTestModel = ref("mimo-v2.5");
@@ -45,9 +51,13 @@ const promptVersionForm = ref({
 
 const canManage = computed(() => props.currentRole === "SPACE_ADMIN" || props.platformRole === "PLATFORM_ADMIN");
 const canManageProvider = computed(() => props.platformRole === "PLATFORM_ADMIN");
-const sectionTitle = computed(() => ({ spaces: "空间与运行上下文", providers: "Provider 连接", models: "模型 Profile 与路由", prompts: "Prompt 模板", runs: "Run / Step 追踪" })[section.value]);
+const sectionTitle = computed(() => ({ spaces: "空间与运行上下文", health: "聚合健康", cost: "成本与用量", feedback: "答案反馈", audit: "审计导出", providers: "Provider 连接", models: "模型 Profile 与路由", prompts: "Prompt 模板", runs: "Run / Step 追踪" })[section.value]);
 const sectionDescription = computed(() => ({
   spaces: "创建和切换空间；所有后续入口都在当前 spaceId 边界内工作。",
+  health: "查看当前空间在时间窗内的 Provider 与 Run 健康聚合；不返回请求、回答或文档正文。",
+  cost: "查看当前空间按来源与币种聚合的 token 与估算成本；仅返回统计值。",
+  feedback: "查看当前空间的答案反馈索引；不返回反馈原因、Prompt 或回答正文。",
+  audit: "导出当前空间的脱敏审计索引；只保留标识、时间与 payload 哈希。",
   providers: "登记本地或云端连接。云端出境不会由前端默认开启，最终权限由服务端裁决。",
   models: "创建不可变模型 Profile 和 route candidate；发布与 failover 策略由服务端校验。",
   prompts: "管理版本化 Prompt 模板。发布后不可变，问答入口只引用已发布版本。",
@@ -55,7 +65,7 @@ const sectionDescription = computed(() => ({
 })[section.value]);
 
 function selectSection(value: string): void {
-  if (["spaces", "providers", "models", "prompts", "runs"].includes(value)) {
+  if (["spaces", "health", "cost", "feedback", "audit", "providers", "models", "prompts", "runs"].includes(value)) {
     section.value = value as ControlSection;
   }
 }
@@ -66,7 +76,8 @@ function describeError(value: unknown, fallback: string): string {
   if (value instanceof Error && !(value instanceof ApiError)) return value.message;
   if (!(value instanceof ApiError)) return fallback;
   const permission = value.status === 403 ? "当前角色无权执行此操作。" : value.status === 404 ? "资源不存在或不属于当前空间。" : value.status === 409 ? "资源版本冲突，请刷新后重试。" : "请检查输入并稍后重试。";
-  return `${value.problem?.code ? `${value.problem.code}：` : ""}${value.problem?.detail ?? value.message} ${permission}`;
+  const correlation = value.correlationId ? ` 相关 ID：${value.correlationId}` : "";
+  return `${value.problem?.code ? `${value.problem.code}：` : ""}${value.problem?.detail ?? value.message} ${permission}${correlation}`;
 }
 function ensureSpace(): boolean {
   if (props.selectedSpaceId) return true;
@@ -103,6 +114,16 @@ async function loadSection(): Promise<void> {
           ?? response.items[0]?.promptTemplateId ?? "";
         promptVersionDetails.value = null;
       }
+    } else if (section.value === "health") {
+      managementHealth.value = await getManagementHealth(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value });
+    } else if (section.value === "cost") {
+      managementCost.value = await getManagementCostUsage(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value });
+    } else if (section.value === "feedback") {
+      const response = await listManagementFeedback(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value, limit: 50 });
+      managementFeedback.value = response.items;
+    } else if (section.value === "audit") {
+      const response = await exportManagementAudit(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value, limit: 50 });
+      managementAudit.value = response.items;
     }
   } catch (value) {
     error.value = describeError(value, "功能中心数据加载失败。");
@@ -287,17 +308,33 @@ watch(() => [props.selectedSpaceId, section.value], () => {
       <div class="read-only-note" :class="{ warning: !canManage }">{{ canManage ? "SPACE_ADMIN：可管理配置" : "当前角色：只读入口" }}</div>
     </div>
     <nav class="control-nav" aria-label="配置与运维入口">
-      <button v-for="item in [{ key: 'spaces', label: '空间与健康' }, { key: 'providers', label: 'Provider 连接' }, { key: 'models', label: '模型与路由' }, { key: 'prompts', label: 'Prompt 模板' }, { key: 'runs', label: 'Run 追踪' }]" :key="item.key" type="button" :class="{ active: section === item.key }" @click="selectSection(item.key)">{{ item.label }}</button>
+      <button v-for="item in [{ key: 'spaces', label: '空间上下文' }, { key: 'health', label: '健康' }, { key: 'cost', label: '成本 / 用量' }, { key: 'feedback', label: '反馈' }, { key: 'audit', label: '审计导出' }, { key: 'providers', label: 'Provider 连接' }, { key: 'models', label: '模型与路由' }, { key: 'prompts', label: 'Prompt 模板' }, { key: 'runs', label: 'Run 追踪' }]" :key="item.key" type="button" :class="{ active: section === item.key }" @click="selectSection(item.key)">{{ item.label }}</button>
     </nav>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
 
     <div v-if="section === 'spaces'" class="entry-grid">
       <article class="card entry-card"><span class="card-label">当前空间</span><strong>{{ selectedSpaceId || "未选择" }}</strong><p>空间切换在页面顶部完成；所有内容 API 都必须使用当前 spaceId。</p><button type="button" class="secondary-button" @click="section = 'runs'">查看 Run 追踪</button></article>
-      <article class="card entry-card"><span class="card-label">服务健康</span><strong>Server / API</strong><p>本地开发可通过健康端点检查 server 与基础设施状态。</p><a class="link-button" href="/actuator/health" target="_blank" rel="noreferrer">打开健康检查</a></article>
+      <article class="card entry-card"><span class="card-label">管理健康</span><strong>Space-scoped aggregate</strong><p>健康视图只展示当前空间的 Provider 与 Run 统计，不暴露 actuator 原始响应。</p><button type="button" class="secondary-button" @click="section = 'health'">打开健康聚合</button></article>
       <article class="card entry-card"><span class="card-label">Provider 实测</span><strong>先验证，再发布</strong><p>登记连接后发送固定合成样本实测；模型 Profile 只能声明本次验证通过的能力。云端测试每次都需要明确确认。</p><button type="button" :disabled="loading" @click="section = 'providers'">打开 Provider 验证</button></article>
       <article class="card entry-card"><span class="card-label">完整 RAG 边界</span><strong>等待真实 Rerank 接线</strong><p>CHAT 与 EMBEDDING 可分别验证；RERANK 在 P7-CORE-05 接入适配器前会明确失败，不创建未经验证的一键闭环。</p><button type="button" class="secondary-button" :disabled="loading" @click="section = 'models'">查看模型配置</button></article>
       <article class="card entry-card"><span class="card-label">审计与保留</span><strong>Run / Step 可追踪</strong><p>业务闭环的执行状态、步骤、错误 correlationId 和重试入口均通过当前空间的 Run 追踪页查看。</p><button type="button" class="secondary-button" @click="section = 'runs'">打开 Run 追踪</button></article>
     </div>
+
+    <div v-else-if="section === 'health'" class="entry-grid management-grid">
+      <article class="card entry-card"><span class="card-label">时间窗</span><strong>{{ formatDate(managementFrom) }} — {{ formatDate(managementTo) }}</strong><p>统计严格限定当前 space_id；窗口由服务端再次校验。</p><button type="button" class="secondary-button" :disabled="loading" @click="loadSection">刷新聚合</button></article>
+      <article v-if="managementHealth" class="card entry-card"><span class="card-label">Provider</span><strong>{{ managementHealth.providers.active }} / {{ managementHealth.providers.total }} active</strong><p>Unhealthy {{ managementHealth.providers.unhealthy }} · Disabled {{ managementHealth.providers.disabled }}</p></article>
+      <article v-if="managementHealth" class="card entry-card"><span class="card-label">Run</span><strong>{{ managementHealth.runs.succeeded }} succeeded</strong><p>Failed {{ managementHealth.runs.failed }} · In flight {{ managementHealth.runs.inFlight }} · Total {{ managementHealth.runs.total }}</p></article>
+      <article v-if="!managementHealth && !loading" class="card empty-state"><strong>暂无聚合数据</strong><span>当前账号可能没有管理权限，或时间窗内没有记录。</span></article>
+    </div>
+
+    <div v-else-if="section === 'cost'" class="control-layout management-grid">
+      <article class="card list-card"><div class="card-title"><h3>成本与用量</h3><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><p class="muted">仅显示 usage ledger 聚合值，不返回请求、回答或 Provider payload。</p><p v-if="!managementCost?.items.length" class="empty-state">当前时间窗没有用量记录。</p><div v-for="item in managementCost?.items ?? []" :key="`${item.usageSource}-${item.currency}`" class="list-row"><div><strong>{{ item.usageSource }} · {{ item.currency }}</strong><span>{{ item.ledgerEntries }} entries · {{ item.totalTokens }} tokens</span></div><div class="list-row-actions"><span class="tag">{{ item.inputTokens }} in / {{ item.outputTokens }} out</span><strong>{{ item.estimatedCost }}</strong></div></div></article>
+      <article class="card entry-card"><span class="card-label">统计边界</span><strong>space_id = {{ selectedSpaceId }}</strong><p>{{ formatDate(managementFrom) }} — {{ formatDate(managementTo) }}</p><p class="muted">如需更换时间窗，请由服务端授权的查询参数发起请求。</p></article>
+    </div>
+
+    <div v-else-if="section === 'feedback'" class="card list-card management-list"><div class="card-title"><div><h3>答案反馈索引</h3><p class="muted">只展示反馈标识、情绪与版本；反馈原因和回答正文不会返回。</p></div><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><p v-if="!managementFeedback.length" class="empty-state">当前时间窗没有反馈。</p><div v-for="item in managementFeedback" :key="item.id" class="list-row"><div><strong>{{ item.sentiment }}</strong><span>run {{ item.runId }} · evidence {{ item.evidenceId }}</span></div><div class="list-row-actions"><span class="tag">v{{ item.version }}</span><span class="muted">{{ formatDate(item.createdAt) }}</span></div></div></div>
+
+    <div v-else-if="section === 'audit'" class="card list-card management-list"><div class="card-title"><div><h3>脱敏审计导出</h3><p class="muted">结构化记录保留 correlationId 与 payload SHA-256，不包含原始 payload、Prompt 或正文。</p></div><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><p v-if="!managementAudit.length" class="empty-state">当前时间窗没有审计记录。</p><div v-for="item in managementAudit" :key="item.id" class="list-row"><div><strong>{{ item.eventType }}</strong><span>{{ item.id }} · {{ formatDate(item.occurredAt) }}</span></div><div><span class="tag">correlationId {{ item.correlationId }}</span><span class="audit-hash">payload {{ item.payloadSha256 }}</span></div></div></div>
 
     <div v-else-if="section === 'providers'" class="control-layout">
       <div class="card list-card"><div class="card-title"><h3>已登记连接</h3><button type="button" class="quiet-button" :disabled="loading" @click="loadSection">刷新</button></div><div class="form-grid provider-test-inputs"><div class="field"><label for="provider-test-model">实测模型</label><input id="provider-test-model" v-model="providerTestModel" required /></div><div class="field"><label for="provider-test-purpose">实测用途</label><select id="provider-test-purpose" v-model="providerTestPurpose"><option>CHAT</option><option>EMBEDDING</option><option>RERANK</option></select></div></div><p class="field-hint">测试只发送固定合成样本；云端连接每次测试都需要明确确认。</p><p v-if="!providerConnections.length" class="empty-state">当前空间还没有 Provider connection。</p><article v-for="item in providerConnections" :key="item.providerConnectionId" class="list-row"><div><strong>{{ item.providerType }} · {{ item.endpoint }}</strong><span>{{ item.providerConnectionId }} · v{{ item.version }}</span></div><div class="list-row-actions"><span class="state-pill" :class="item.status.toLowerCase()">{{ item.status }} · {{ item.egressClass }}</span><button v-if="canManageProvider" type="button" class="quiet-button" :disabled="loading" @click="testProvider(item)">测试连接</button></div></article><p v-if="lastProviderTest" class="muted">最近测试：{{ lastProviderTest.outcome }} · {{ lastProviderTest.modelName }} · {{ lastProviderTest.verifiedCapabilities.join(", ") || lastProviderTest.errorClass }}</p></div>
@@ -338,6 +375,9 @@ watch(() => [props.selectedSpaceId, section.value], () => {
 .link-button { display: inline-block; padding: 10px 13px; border-radius: 9px; background: #e7eef9; color: #28518f; font-weight: 700; text-decoration: none; }
 .run-center { display: grid; gap: 16px; }
 .run-card { min-width: 0; }
+.management-grid { align-items: start; }
+.management-list { min-width: 0; }
+.audit-hash { display: block; max-width: 300px; margin-top: 5px; overflow-wrap: anywhere; color: #71809a; font-family: "Cascadia Code", Consolas, monospace; font-size: .72rem; }
 .steps-heading { margin-top: 24px; }
 .field.wide { grid-column: span 2; }
 @media (max-width: 850px) { .control-layout, .entry-grid { grid-template-columns: 1fr; } .field.wide { grid-column: auto; } .list-row { align-items: flex-start; flex-direction: column; } }
