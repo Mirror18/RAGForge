@@ -16,15 +16,15 @@
 
 - Updated: 2026-08-30
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
-- Current stage: Phase 7 P2 入口待远程 CI（`p2-entry-remote-ci-pending`）。P7C-01~08、P7C-05R 与 P7Q-01~06 已完成，本地产品闭环与回归门禁已对齐；容器、Ubuntu、观测、升级和供应链 P2 卡片尚未启动。
-- 当前 Phase 7 功能候选：`f695936594834f8a870fa95dca5ff0c6634441a1`；本地同候选门禁全绿，`origin/main` 仍为 `9fdd94e0e12afae1c3843d0680fb48017e00669f`。该候选尚无远程 CI 证据，不得用历史 Phase 6/7 CI 运行替代。
+- Current stage: Phase 7 P2 入口待远程 CI（`p2-entry-remote-ci-pending`）。P7C-01~08、P7C-05R、P7Q-01~06 与 P7Q-05R 已完成；容器、Ubuntu、观测、升级和供应链 P2 卡片尚未启动。
+- 当前 Phase 7 功能候选：`f695936594834f8a870fa95dca5ff0c6634441a1`；RAG gate 浅克隆恢复集成基线：`2b961f2832c83c247914a74276e89fd71f79c1eb`。本地门禁全绿，仍需重推后取得当前 main 同 SHA 的远程 CI。
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - 当前权威状态（覆盖本文档中的历史基线行）：功能验证基线为 `bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`，其 GitHub Actions quality Run [`32586867110`](https://github.com/Mirror18/RAGForge/actions/runs/32586867110) 全绿；随后记录提交 `6ec5d9d` 的 quality Run [`32587259456`](https://github.com/Mirror18/RAGForge/actions/runs/32587259456) 亦全绿。两次运行均覆盖静态、契约、SBOM/Grype、Maven、Phase 3–5、评估、安全、性能、Web 门禁；旧 SHA/旧 CI 行仅保留为历史记录。
 - 本轮记录：功能合并基线为 `07f973c84fa60dd239ed5c60a443e1edbb801eed`，包含真实 RAG graph stream 与本地并发成本证据；阶段记录提交及其 CI/SBOM/Grype 结果已在下方补记。上方历史远端行保留为上一已知 CI 基线，不能作为本轮提交验证。
 - 本轮 CI 已补记：GitHub Actions quality Run [`32579989036`](https://github.com/Mirror18/RAGForge/actions/runs/32579989036) 对提交 `4481bef34cdeed59068b45d03f8a5abbc48bb379` 全绿；SBOM `9477533715`、Grype SARIF `9477541287`、Phase 3 JVM `9477586833`、Phase 4 retrieval `9477586457`、Phase 5 evidence `9477579925` 均已生成。
 - 最新功能/阶段证据基线：`462c7a5fded50e4a39e9ee99c26f5254da5c8788`；其 GitHub Actions quality Run [`32580715731`](https://github.com/Mirror18/RAGForge/actions/runs/32580715731) 全绿，SBOM `9477714534`、Grype SARIF `9477725361`、Phase 3 JVM `9477775662`、Phase 4 retrieval `9477775256`、Phase 5 evidence `9477766441` 已生成。后续仅记录性提交不改变该功能验证基线。
-- External remote: `origin` configured；`origin/main` 当前为 `9fdd94e0e12afae1c3843d0680fb48017e00669f`。GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976) 是历史全绿记录（4m52s），不能证明当前候选 `f695936`；尚未创建 release。
+- External remote: `origin` configured；`origin/main` 当前为 `4ade90f5ed543ad09f1df01f802b623936ede702`。quality Run [33306553953](https://github.com/Mirror18/RAGForge/actions/runs/33306553953) 因 checkout 浅历史无法解析 push base 而失败；P7Q-05R 已修复并待重推。尚未创建 release。
 
 ## 1. 已完成
 
@@ -202,3 +202,9 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 评估证据为公共 synthetic fixture，candidate retrieval/generation 指标均为 1.0，cross-space、Evidence 外引用、prompt-injection tool 和 unauthorized cloud 违规均为 0；这不替代真实模型质量、容量或人工/red-team 结论，R-005/R-012 的既有豁免与 R-054 残余风险继续保留。
 - P2 入口仍为 `BLOCKED`：当前候选尚未推送，因而没有同 SHA GitHub Actions Linux 结果。只有推送后远程全绿，才能派发 P7D-01；本次没有创建 release、接受许可证、执行生产迁移或开启云出境。
 - 结构化汇总见 [`phase7-p2-entry-local-gates.v1.json`](../../tests/evidence/phase7-p2-entry-local-gates.v1.json)，详细 RAG 证据见 [`phase7-evaluation-f695936.v1.json`](../../tests/evidence/phase7-evaluation-f695936.v1.json)。
+
+## 17. P7Q-05R 远程 RAG 门禁恢复（2026-08-30）
+
+- 首次推送 `4ade90f` 后，quality Run [33306553953](https://github.com/Mirror18/RAGForge/actions/runs/33306553953) 在 RAG evaluation step 失败：`actions/checkout@v4` 默认浅克隆不含 `github.event.before=9fdd94e`，`git diff` 返回 `fatal: bad object`。其他已执行静态、契约和 coverage 步骤均通过；后续步骤因 job fail-fast 跳过。
+- P7Q-05R 在 checkout 设置 `fetch-depth: 0`，确保 push before/head 与 pull request base/head 可解析；RAG gate 对无效 ref 仍 fail-closed，不改为 skipped。浅克隆失败与 unshallow 成功均已复现，RAG gate 单测 4/4、format、secret scan 通过。
+- 修复实现提交 `56bfcef18c01c441d3f1a1ee0e7e6f5b650ef25d`，集成提交 `2b961f2832c83c247914a74276e89fd71f79c1eb`。P2 继续阻塞，直到重推后的当前 main GitHub Actions 全绿。

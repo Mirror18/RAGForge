@@ -187,3 +187,4 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-004` 顶层状态与 Phase 2 关闭证据完成对齐：LOCAL_ONLY 默认、逐次云授权和调用前拒绝仍有效，本轮未开启任何空间云出境。
 - `R-054` 保持 `MITIGATING`：128-case synthetic gate 证明当前确定性 seam 没有回归，但不构成真实 rerank 模型质量证据；替换 scorer 前仍需版本化离线评估。
 - `R-041`、`R-042` 继续 `OPEN`，分别由 P7D-01/02 的容器与供应链加固、P7D-05 的升级/回滚演练关闭。
+- `R-040` 远程复验增量：Run 33306553953 暴露 checkout 浅克隆无法解析 push base，并非质量指标回归；P7Q-05R 已以完整历史 checkout 修复且保持 gate fail-closed。风险仍为 `MITIGATING`，等待重推后同 SHA CI 全绿再关闭。

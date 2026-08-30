@@ -76,10 +76,12 @@
     "compose_validation": "PASS"
   },
   "remote_ci": {
-    "status": "PENDING_PUSH",
-    "origin_main_sha": "9fdd94e0e12afae1c3843d0680fb48017e00669f",
-    "same_candidate_run": null,
-    "blocking_reason": "P2 requires a green GitHub Actions run for the current candidate SHA; historical runs cannot satisfy this gate."
+    "status": "FAILED_RECOVERY_PENDING",
+    "origin_main_sha": "4ade90f5ed543ad09f1df01f802b623936ede702",
+    "same_candidate_run": 33306553953,
+    "failure": "actions/checkout shallow history did not contain github.event.before; RAG gate failed closed with fatal: bad object",
+    "recovery_merge_sha": "2b961f2832c83c247914a74276e89fd71f79c1eb",
+    "blocking_reason": "P7Q-05R is merged, but P2 still requires a green GitHub Actions run for the newly pushed current main SHA."
   },
   "limitations": [
     "RAG evaluation uses the versioned public synthetic fixture and does not establish production model quality or capacity.",
