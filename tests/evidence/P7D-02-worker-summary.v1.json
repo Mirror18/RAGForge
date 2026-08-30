@@ -1,0 +1,41 @@
+{
+  "schema_version": "P7D-02-worker-summary.v1",
+  "card_id": "P7D-02",
+  "status": "BLOCKED",
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 2,
+    "failed_cases": [
+      "Grype fail-on high: server/worker/web returned exit code 2",
+      "Security baseline requires remediation or an explicitly owned exception for Critical/High findings"
+    ],
+    "duration_ms": 0,
+    "raw_output_stored": false
+  },
+  "passed_checks": [
+    "supply-chain unit tests 7/7",
+    "Compose validation",
+    "format gate",
+    "tracked-file secret scan",
+    "target server/worker/web image build",
+    "target image Secret audit",
+    "image-level Syft CycloneDX generation for server/worker/web",
+    "Grype SARIF generation for server/worker/web"
+  ],
+  "target_images": {
+    "server": "ragforge/server@sha256:b42a579db9c159dd90e99d38f9c12e7e4ec2d8158d540fab22c83123b33d044d",
+    "worker": "ragforge/ingestion-worker@sha256:df5f78ec2dc4799a4d1c80ec99a056398782cc2e4583424c2b5c6ef3a2f4ad73",
+    "web": "ragforge/web@sha256:f70e12a53764e297569ffa01f52297a5ae8871e70cf26467d5c849cf0822bd2b"
+  },
+  "grype": {
+    "version": "0.117.0",
+    "policy": "--fail-on high",
+    "server_exit_code": 2,
+    "worker_exit_code": 2,
+    "web_exit_code": 2,
+    "finding_summary": "server/worker include old base and application dependency findings; web includes high Alpine curl/OpenSSL/libpng findings"
+  },
+  "blocking_reason": "P7D-02 cannot be accepted while the configured high-severity scan fails. Remediation includes application dependency files outside this ticket ownership; do not lower the threshold or add an unowned exception.",
+  "evidence_scope": "Synthetic/local images only; no production credentials, release, registry push, migration, or cloud egress used."
+}
