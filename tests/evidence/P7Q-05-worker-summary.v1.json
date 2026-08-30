@@ -1,0 +1,50 @@
+{
+  "schema_version": "P7Q-05-worker-summary-v1",
+  "card_id": "P7Q-05",
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 2450
+  },
+  "checks": [
+    {
+      "name": "gate unit tests",
+      "command": "python -m unittest tests.ci.test_rag_evaluation_gate -v",
+      "passed": 4,
+      "failed": 0,
+      "details": "命中、跳过、评估失败阻断、临时合成变更触发全部通过"
+    },
+    {
+      "name": "phase6 runner regression",
+      "command": "python -m unittest scripts/phase6/evaluation_runner_test.py",
+      "passed": 7,
+      "failed": 0,
+      "details": "7/7 通过"
+    },
+    {
+      "name": "synthetic evaluation gate",
+      "command": "python scripts/ci/rag_evaluation_gate.py --base-ref HEAD~1 --head-ref HEAD --output tests/evidence/phase7-evaluation-worker.v1.json",
+      "passed": 1,
+      "failed": 0,
+      "details": "当前提交范围无 RAG 路径变更，稳定 skipped 且 exit 0；单测真实触发 Phase 6 并验证 128-case 报告"
+    },
+    {
+      "name": "secret scan",
+      "command": "python scripts/ci/secret_scan.py",
+      "passed": 1,
+      "failed": 0,
+      "details": "未发现支持的凭据模式"
+    },
+    {
+      "name": "workflow static check",
+      "command": "python -c workflow gate/artifact assertion",
+      "passed": 1,
+      "failed": 0,
+      "details": "CI gate 与 phase7 artifact 已接入"
+    }
+  ],
+  "raw_output_stored": true,
+  "raw_output_note": "必需命令输出均少于 50 行；结构化摘要保留于本 evidence 文件。"
+}
