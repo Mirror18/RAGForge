@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.yaml"
 HEALTH_PROBE = REPO_ROOT / "scripts" / "ops" / "health_probe.py"
 BACKUP_SMOKE = REPO_ROOT / "scripts" / "ops" / "backup_smoke.py"
-DEFAULT_PROJECT = "ragforge-p1-local"
+DEFAULT_PROJECT = "ragforge-p1"
 
 
 def compose_command(args: argparse.Namespace) -> list[str]:

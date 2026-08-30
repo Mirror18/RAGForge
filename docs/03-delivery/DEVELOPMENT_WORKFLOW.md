@@ -71,23 +71,23 @@ CI 和公开仓库只使用合成/授权样本。真实 Obsidian 仓库仅作为
 
 ## 8. Windows 本地开发启动
 
-本地启动统一使用 [`scripts/dev/start-local.bat`](../../scripts/dev/start-local.bat)。默认项目名为
-`ragforge-p1-local`，用于避开可能已运行的 `ragforge-p1` 项目；源码 Server/Web 分别监听
-`18084` 和 `5176`。基础设施端口由项目名稳定派生：PostgreSQL `43052`、Qdrant
-`43953/43954`、RabbitMQ `43292/43293`、Valkey `43999`、MinIO `46620/46621`。
+本地只保留一套 `ragforge-p1` 环境，统一使用 [`scripts/dev/start-local.bat`](../../scripts/dev/start-local.bat)
+启动当前源码。源码 Server/Web 分别监听 `25082` 和 `25174`；基础设施端口为 PostgreSQL
+`25432`、Qdrant `26333/26334`、RabbitMQ `25672/25673`、Valkey `26379`、MinIO
+`29000/29001`。账号、空间和业务数据均来自同一套数据库和数据卷。
 
 ```powershell
 .\scripts\dev\start-local.bat
-Invoke-RestMethod http://127.0.0.1:18084/actuator/health
-Invoke-WebRequest http://127.0.0.1:5176/
+Invoke-RestMethod http://127.0.0.1:25082/actuator/health
+Invoke-WebRequest http://127.0.0.1:25174/
 ```
 
-如需切换实例，必须同时使用新的 `-ProjectName`，并确认 `-ServerPort`、`-WebPort` 未被占用：
+只有执行隔离测试时才使用新的 `-ProjectName`，日常开发不要再启动第二套环境：
 
 ```powershell
-.\scripts\dev\start-local.bat -ProjectName ragforge-p1-review -ServerPort 18085 -WebPort 5177
+python scripts/dev/core.py --project-name ragforge-p1 config
 ```
 
-停止时使用对应项目名执行 `python scripts/dev/core.py --project-name ragforge-p1-local down`；
+停止时使用 `python scripts/dev/core.py --project-name ragforge-p1 down`；
 宿主机启动的 Server、Worker 和 Web 进程需按 `tmp/local-run/*.pid` 停止。不要为了释放端口
 停止其他项目的 Compose 服务。

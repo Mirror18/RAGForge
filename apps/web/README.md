@@ -17,7 +17,7 @@
 
 一个 SPA 仍覆盖：
 
-- Viewer：空间、搜索、对话、引用、反馈。
+- Viewer：空间、搜索、对话、引用、反馈。来源库、任务中心、问答历史和空间管理页面均提供多数据列表；来源与任务支持跨分页搜索，其他管理列表支持即时关键词过滤。
 - Editor：数据源、任务、Parse Report、Chunk Studio、Retrieval Playground。
 - Space Admin：成员、空间模型/提示词/出境配置。
 - Platform Admin：用户生命周期、Provider、审计、评估和系统健康。平台用户管理仅对 `PLATFORM_ADMIN` 开放；首个管理员需通过受控运维流程授予，普通注册账号不会自动升级。
@@ -31,6 +31,6 @@ npm ci
 npm run dev
 ```
 
-Vite 默认将 `/api` 与 `/actuator` 代理到 `http://127.0.0.1:18084`，可通过 `VITE_SERVER_TARGET` 覆盖。页面启动时读取当前 session 与可见空间；未登录时显示本地账号入口，登录后若没有可见空间则引导创建第一个空间。Session 继续使用后端 HttpOnly Cookie，密码不会写入 URL、日志或浏览器存储。
+Vite 默认将 `/api` 与 `/actuator` 代理到 `http://127.0.0.1:25082`，可通过 `VITE_SERVER_TARGET` 覆盖。页面启动时读取当前 session 与可见空间；未登录时显示本地账号入口，登录后若没有可见空间则引导创建第一个空间。Session 继续使用后端 HttpOnly Cookie，密码不会写入 URL、日志或浏览器存储。
 
 页面中的日期时间统一使用浏览器时区，并在账号与空间页显示当前 IANA 时区；服务端仍以 UTC 持久化。业务操作建议按“先选空间 → 管理成员/用户 → 配置云端 Chat → 导入并发布索引 → 问答与追踪”顺序执行。

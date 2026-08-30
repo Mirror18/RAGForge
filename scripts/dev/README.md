@@ -23,17 +23,17 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 .\scripts\dev\start-local.bat -OpenBrowser
 ```
 
-默认本地项目名为 `ragforge-p1-local`，Server/Web 端口为 `18084` 和 `5176`，用于避开已运行的 `ragforge-p1` 项目；可通过 `-ProjectName`、`-ServerPort`、`-WebPort` 调整。脚本会检查 `qwen3.5:9b` 与 `nomic-embed-text:latest`，并为 Server 显式启用 MinIO、Qdrant、RabbitMQ outbox relay、Valkey run-event fanout 和 Phase 6 运维任务；不会把本地路由静默切换为云路由。
+默认本地项目名为 `ragforge-p1`，Server/Web 端口为 `25082` 和 `25174`；可通过 `-ProjectName`、`-ServerPort`、`-WebPort` 调整。脚本会检查 `qwen3.5:9b` 与 `nomic-embed-text:latest`，并为 Server 显式启用 MinIO、Qdrant、RabbitMQ outbox relay、Valkey run-event fanout 和 Phase 6 运维任务；不会把本地路由静默切换为云路由。
 
 完整的当前应用运行面需要下列 Docker core 服务：
 
 | 服务 | 用途 | 默认宿主机端口 |
 | --- | --- | --- |
-| PostgreSQL | 业务数据、版本与审计真相 | `43052` |
-| Qdrant | dense candidate index | `43953`、`43954` |
-| RabbitMQ | outbox 与摄取事件传输 | `43292`、管理台 `43293` |
-| Valkey | Session、缓存和 run-event fanout | `43999` |
-| MinIO | 原始文件与解析产物 | `46620`、控制台 `46621` |
+| PostgreSQL | 业务数据、版本与审计真相 | `25432` |
+| Qdrant | dense candidate index | `26333`、`26334` |
+| RabbitMQ | outbox 与摄取事件传输 | `25672`、管理台 `25673` |
+| Valkey | Session、缓存和 run-event fanout | `26379` |
+| MinIO | 原始文件与解析产物 | `29000`、控制台 `29001` |
 
 Server 和 Web 默认仍从宿主机源码启动；需要完整容器化运行时可启用 `app` profile。应用镜像统一由 `deploy/docker/Dockerfile` 的 `server`、`worker`、`web` targets 生成。Ollama 默认也是宿主机服务（`11434`），其 Compose `ollama` profile 仅用于明确选择的全容器化 smoke 环境。`observability.yaml` 中的 OTel Collector、Prometheus、Grafana、Loki 和 Tempo 是可选运维观测面，不是应用功能依赖。
 
@@ -41,8 +41,7 @@ Server 和 Web 默认仍从宿主机源码启动；需要完整容器化运行�
 
 启动后可直接打开 Web 完成真实业务闭环：注册/登录 → 创建空间 → 初始化本地 Ollama → 选择 Markdown（或显式选择本地 notes 文件夹）→ 等待摄取和 active index → 带引用问答 → Run/Step/usage → 再次上传修改后的同一文件验证增量 Revision。可复核证据见 [`tests/evidence/business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 不会被服务端自动扫描，云端 route 也不会自动回退。
 
-`--project-name` 是本地隔离边界。默认项目 `ragforge-p1-local` 会强制派生独立的
-`ragforge-p1-local-core` network、独立 volume 和以下稳定端口 block；入口会强制派生
+`--project-name` 是本地隔离边界。日常开发只使用默认项目 `ragforge-p1`；入口会强制派生
 `<project-name>-core` network、`<project-name>_...` volumes，以及稳定的 host-port
 block。基准 project `ragforge-p1` 保留原始端口；其他 project 使用
 `SHA-256(project_name) mod 997 * 20` 作为偏移，所有端口限制在 `[20000, 50000)`，不使用
@@ -52,8 +51,8 @@ block。基准 project `ragforge-p1` 保留原始端口；其他 project 使用
 
 ```text
 .\scripts\dev\start-local.bat
-# Web: http://127.0.0.1:5176
-# Server: http://127.0.0.1:18084
+# Web: http://127.0.0.1:25174
+# Server: http://127.0.0.1:25082
 ```
 
 也可显式指定项目名和应用端口：

@@ -98,7 +98,7 @@ RAGForge/
 .\scripts\dev\start-local.bat -OpenBrowser
 ```
 
-默认访问地址为 `http://127.0.0.1:18084`（Server）和 `http://127.0.0.1:5176`（Web）。默认使用独立 Compose 项目 `ragforge-p1-local`，避免与已运行的 `ragforge-p1` 项目发生端口、网络和数据卷冲突。如需只启动 API，可跳过 Web：
+默认访问地址为 `http://127.0.0.1:25082`（Server）和 `http://127.0.0.1:25174`（Web）。本地只使用一个 `ragforge-p1` Compose 项目，账号、空间和数据统一保存在这一套环境中。如需只启动 API，可跳过 Web：
 
 ```bat
 .\scripts\dev\start-local.bat -SkipWeb
@@ -111,24 +111,24 @@ python scripts/dev/core.py up
 python scripts/dev/core.py health
 ```
 
-Server 使用 Compose 暴露的本地开发端口。以下命令在 PowerShell 中启动一个端口为 `18084` 的实例；如端口被占用，可调整 `SERVER_PORT`：
+Server 使用 Compose 暴露的本地开发端口。以下命令在 PowerShell 中启动一个端口为 `25082` 的实例；如端口被占用，可调整 `SERVER_PORT`：
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Java\jdk-21'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-$env:SERVER_PORT = '18084'
-$env:JDBC_DATABASE_URL = 'jdbc:postgresql://localhost:43052/ragforge'
+$env:SERVER_PORT = '25082'
+$env:JDBC_DATABASE_URL = 'jdbc:postgresql://localhost:25432/ragforge'
 $env:JDBC_DATABASE_USERNAME = 'ragforge'
 $env:JDBC_DATABASE_PASSWORD = 'change-me'
-$env:VALKEY_URL = 'redis://:change-me@localhost:43999'
+$env:VALKEY_URL = 'redis://:change-me@localhost:26379'
 $env:SPRING_RABBITMQ_HOST = 'localhost'
-$env:SPRING_RABBITMQ_PORT = '43292'
+$env:SPRING_RABBITMQ_PORT = '25672'
 $env:SPRING_RABBITMQ_USERNAME = 'ragforge'
 $env:SPRING_RABBITMQ_PASSWORD = 'change-me'
 mvn -pl apps/server spring-boot:run
 ```
 
-启动成功后，可通过 `http://127.0.0.1:18084/actuator/health` 验证 Server。Web 骨架可在另一个终端运行：
+启动成功后，可通过 `http://127.0.0.1:25082/actuator/health` 验证 Server。Web 骨架可在另一个终端运行：
 
 ```powershell
 npm --prefix apps/web run dev
