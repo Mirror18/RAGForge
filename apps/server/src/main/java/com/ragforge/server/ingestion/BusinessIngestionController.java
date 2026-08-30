@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,16 +27,24 @@ public class BusinessIngestionController {
     private final BusinessIngestionService service;
     private final WebSourceIngestionService webSources;
     private final GitSourceService gitSources;
+    private final SourceTaskCenterService taskCenter;
 
-    public BusinessIngestionController(BusinessIngestionService service, WebSourceIngestionService webSources, GitSourceService gitSources) {
+    public BusinessIngestionController(BusinessIngestionService service, WebSourceIngestionService webSources,
+                                       GitSourceService gitSources, SourceTaskCenterService taskCenter) {
         this.service = service;
         this.webSources = webSources;
         this.gitSources = gitSources;
+        this.taskCenter = taskCenter;
     }
 
     @GetMapping("/sources")
-    public List<GitSourceService.SourceView> sources(@PathVariable UUID spaceId, @AuthenticationPrincipal SessionPrincipal principal) {
-        return gitSources.list(spaceId, principal);
+    public CursorPage<GitSourceService.SourceView> sources(@PathVariable UUID spaceId,
+                                                           @RequestParam(required = false) String cursor,
+                                                           @RequestParam(required = false) Integer limit,
+                                                           @RequestParam(required = false) String connectorType,
+                                                           @RequestParam(required = false) String sourceState,
+                                                           @AuthenticationPrincipal SessionPrincipal principal) {
+        return taskCenter.sources(spaceId, cursor, limit, connectorType, sourceState, principal);
     }
 
     @PostMapping("/sources/git")
@@ -81,10 +90,142 @@ public class BusinessIngestionController {
         return gitSources.synchronize(spaceId, sourceId, body == null ? "INCREMENTAL_SYNC" : body.mode(), idempotencyKey, principal, request);
     }
 
+    @PostMapping("/sources/{sourceId}/retry")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public SourceTaskCenterService.TaskActionView retrySource(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                               @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                               @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                               @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                               @AuthenticationPrincipal SessionPrincipal principal,
+                                                               HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.SOURCE, sourceId,
+                SourceTaskCenterService.Operation.RETRY, body, key, ifMatch, principal, request);
+    }
+
+    @PostMapping("/sources/{sourceId}/replay")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public SourceTaskCenterService.TaskActionView replaySource(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                                @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                                @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                                @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                                @AuthenticationPrincipal SessionPrincipal principal,
+                                                                HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.SOURCE, sourceId,
+                SourceTaskCenterService.Operation.REPLAY, body, key, ifMatch, principal, request);
+    }
+
+    @PostMapping("/sources/{sourceId}/resync")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public SourceTaskCenterService.TaskActionView resyncSource(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                                @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                                @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                                @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                                @AuthenticationPrincipal SessionPrincipal principal,
+                                                                HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.SOURCE, sourceId,
+                SourceTaskCenterService.Operation.RESYNC, body, key, ifMatch, principal, request);
+    }
+
+    @PostMapping("/sources/{sourceId}/archive")
+    public SourceTaskCenterService.TaskActionView archiveSource(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                                 @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                                 @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                                 @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                                 @AuthenticationPrincipal SessionPrincipal principal,
+                                                                 HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.SOURCE, sourceId,
+                SourceTaskCenterService.Operation.ARCHIVE, body, key, ifMatch, principal, request);
+    }
+
+    @DeleteMapping("/sources/{sourceId}")
+    public SourceTaskCenterService.TaskActionView deleteSource(@PathVariable UUID spaceId, @PathVariable UUID sourceId,
+                                                                @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                                @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                                @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                                @AuthenticationPrincipal SessionPrincipal principal,
+                                                                HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.SOURCE, sourceId,
+                SourceTaskCenterService.Operation.DELETE, body, key, ifMatch, principal, request);
+    }
+
     @GetMapping("/sync-jobs")
     public List<BusinessIngestionService.JobView> syncJobs(@PathVariable UUID spaceId,
                                                            @AuthenticationPrincipal SessionPrincipal principal) {
         return service.jobs(spaceId, principal).stream().filter(value -> value.job().documentRevisionId() == null).toList();
+    }
+
+    @GetMapping("/jobs")
+    public CursorPage<BusinessIngestionService.JobView> taskJobs(@PathVariable UUID spaceId,
+                                                                 @RequestParam(required = false) String cursor,
+                                                                 @RequestParam(required = false) Integer limit,
+                                                                 @RequestParam(required = false) String status,
+                                                                 @RequestParam(required = false) UUID sourceId,
+                                                                 @AuthenticationPrincipal SessionPrincipal principal) {
+        return taskCenter.jobs(spaceId, cursor, limit, status, sourceId, principal);
+    }
+
+    @GetMapping("/jobs/{jobId}")
+    public BusinessIngestionService.JobView taskJob(@PathVariable UUID spaceId, @PathVariable UUID jobId,
+                                                    @AuthenticationPrincipal SessionPrincipal principal) {
+        return service.job(spaceId, jobId, principal);
+    }
+
+    @PostMapping("/jobs/{jobId}/retry")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public SourceTaskCenterService.TaskActionView retryJob(@PathVariable UUID spaceId, @PathVariable UUID jobId,
+                                                           @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                           @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                           @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                           @AuthenticationPrincipal SessionPrincipal principal,
+                                                           HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.JOB, jobId,
+                SourceTaskCenterService.Operation.RETRY, body, key, ifMatch, principal, request);
+    }
+
+    @PostMapping("/jobs/{jobId}/replay")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public SourceTaskCenterService.TaskActionView replayJob(@PathVariable UUID spaceId, @PathVariable UUID jobId,
+                                                            @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                            @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                            @AuthenticationPrincipal SessionPrincipal principal,
+                                                            HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.JOB, jobId,
+                SourceTaskCenterService.Operation.REPLAY, body, key, ifMatch, principal, request);
+    }
+
+    @PostMapping("/jobs/{jobId}/resync")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public SourceTaskCenterService.TaskActionView resyncJob(@PathVariable UUID spaceId, @PathVariable UUID jobId,
+                                                            @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                            @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                            @AuthenticationPrincipal SessionPrincipal principal,
+                                                            HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.JOB, jobId,
+                SourceTaskCenterService.Operation.RESYNC, body, key, ifMatch, principal, request);
+    }
+
+    @PostMapping("/jobs/{jobId}/archive")
+    public SourceTaskCenterService.TaskActionView archiveJob(@PathVariable UUID spaceId, @PathVariable UUID jobId,
+                                                             @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                             @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                             @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                             @AuthenticationPrincipal SessionPrincipal principal,
+                                                             HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.JOB, jobId,
+                SourceTaskCenterService.Operation.ARCHIVE, body, key, ifMatch, principal, request);
+    }
+
+    @DeleteMapping("/jobs/{jobId}")
+    public SourceTaskCenterService.TaskActionView deleteJob(@PathVariable UUID spaceId, @PathVariable UUID jobId,
+                                                            @RequestBody(required = false) SourceTaskCenterService.ActionRequest body,
+                                                            @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                            @AuthenticationPrincipal SessionPrincipal principal,
+                                                            HttpServletRequest request) {
+        return taskCenter.command(spaceId, SourceTaskCenterService.ResourceType.JOB, jobId,
+                SourceTaskCenterService.Operation.DELETE, body, key, ifMatch, principal, request);
     }
 
     @GetMapping("/sync-jobs/{jobId}")
