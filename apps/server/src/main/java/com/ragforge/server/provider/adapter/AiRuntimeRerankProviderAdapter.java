@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
@@ -26,6 +27,7 @@ import java.util.concurrent.CompletionException;
 
 /** Local-only HTTP adapter for the separately deployable RAGForge AI runtime. */
 @Component
+@Profile("!test")
 public final class AiRuntimeRerankProviderAdapter implements ProviderAdapter {
     private static final int MAX_RESPONSE_BYTES = 64 * 1024;
     private final HttpClient httpClient;
