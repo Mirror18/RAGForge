@@ -19,22 +19,36 @@ RUN npm ci
 COPY apps/web ./
 RUN npm run build
 
-FROM eclipse-temurin:21-jre-jammy AS server
+FROM eclipse-temurin:21-jre-jammy AS java-runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 ragforge \
+    && useradd --system --uid 10001 --gid 10001 --no-create-home ragforge
+
+FROM java-runtime AS server
 WORKDIR /app
-RUN useradd --system --uid 10001 --no-create-home ragforge
 COPY --from=java-build /workspace/apps/server/target/ragforge-server-*.jar /app/ragforge-server.jar
-USER 10001
+USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/ragforge-server.jar"]
 
-FROM eclipse-temurin:21-jre-jammy AS worker
+FROM java-runtime AS worker
 WORKDIR /app
-RUN useradd --system --uid 10001 --no-create-home ragforge
 COPY --from=java-build /workspace/apps/ingestion-worker/target/ragforge-ingestion-worker-*.jar /app/ragforge-ingestion-worker.jar
-USER 10001
+USER 10001:10001
 ENTRYPOINT ["java", "-jar", "/app/ragforge-ingestion-worker.jar"]
 
 FROM nginx:1.27-alpine AS web
 COPY --from=web-build /workspace/apps/web/dist /usr/share/nginx/html
 COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+RUN sed -i -e 's#/var/run/nginx.pid#/tmp/nginx.pid#' \
+    -e 's#/run/nginx.pid#/tmp/nginx.pid#' \
+    -e 's#/var/log/nginx/error.log#/dev/stderr#' \
+    -e 's#/var/log/nginx/access.log#/dev/stdout#' /etc/nginx/nginx.conf \
+    && mkdir -p /var/cache/nginx /var/run \
+    && chown -R 101:101 /etc/nginx /var/cache/nginx /var/run /usr/share/nginx/html
+USER 101:101
+EXPOSE 8080
+ENTRYPOINT ["nginx"]
+CMD ["-g", "daemon off;"]

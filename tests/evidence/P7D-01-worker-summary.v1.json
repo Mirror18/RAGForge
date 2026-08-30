@@ -1,0 +1,28 @@
+{
+  "card_id": "P7D-01",
+  "agent": "a20",
+  "version": "v1",
+  "status": "PASS",
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0,
+    "raw_output_stored": true
+  },
+  "tests": {
+    "compose_validation": {"passed": true, "details": "python scripts/ci/validate_compose.py exit 0"},
+    "unit": {"passed": true, "details": "python -m pytest -q tests/ci/test_container_hardening_check.py：4 passed in 0.03s"},
+    "compose_app_smoke": {"passed": true, "details": "docker compose --profile app up -d --build exit 0；server、worker、web 已启动"},
+    "runtime_inspect": {"passed": true, "details": "container_hardening_check.py exit 0；三类应用 health=healthy"}
+  },
+  "docker": {
+    "available": true,
+    "build": "passed",
+    "runtime_users": {"server": "10001:10001", "worker": "10001:10001", "web": "101:101"},
+    "health": {"server": "healthy", "worker": "healthy", "web": "healthy"}
+  },
+  "evidence": "tests/evidence/phase7-container-hardening.v1.json",
+  "warnings": ["pytest 使用 worktree 外部临时 venv 启用，未新增或提交项目依赖。"]
+}

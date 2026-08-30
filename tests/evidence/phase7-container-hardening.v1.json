@@ -1,0 +1,152 @@
+{
+  "version": "P7D-01.v1",
+  "final_status": "PASS",
+  "passed": true,
+  "docker_available": true,
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "failed_cases": []
+  },
+  "services": {
+    "server": {
+      "container_id": "75890a0c330a82d03c5e9ce4bb2eacc860ab0e6834096778477f43e6e2d23164",
+      "health": "healthy",
+      "runtime": {
+        "user": "10001:10001",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "read_only": true,
+        "tmpfs": [
+          "/tmp"
+        ],
+        "cpu_quota": 0,
+        "nano_cpus": 1000000000,
+        "memory": 805306368,
+        "pids_limit": 256,
+        "stop_timeout": null,
+        "log_config": {
+          "Type": "json-file",
+          "Config": {
+            "max-file": "3",
+            "max-size": "10m"
+          }
+        },
+        "health_log": [
+          {
+            "Start": "2026-08-30T11:25:17.962434705Z",
+            "End": "2026-08-30T11:25:18.021416757Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-30T11:25:28.022080717Z",
+            "End": "2026-08-30T11:25:28.085110363Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-30T11:25:38.085476443Z",
+            "End": "2026-08-30T11:25:38.152995545Z",
+            "ExitCode": 0,
+            "Output": ""
+          }
+        ]
+      }
+    },
+    "worker": {
+      "container_id": "bd44fa0fb914cd0ceb2f47bd84bf4f07a39ea926d3b169a4b9ae56907acc03cf",
+      "health": "healthy",
+      "runtime": {
+        "user": "10001:10001",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "read_only": true,
+        "tmpfs": [
+          "/tmp"
+        ],
+        "cpu_quota": 0,
+        "nano_cpus": 1000000000,
+        "memory": 805306368,
+        "pids_limit": 256,
+        "stop_timeout": null,
+        "log_config": {
+          "Type": "json-file",
+          "Config": {
+            "max-file": "3",
+            "max-size": "10m"
+          }
+        },
+        "health_log": [
+          {
+            "Start": "2026-08-30T11:25:17.24216179Z",
+            "End": "2026-08-30T11:25:17.307576351Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-30T11:25:27.308928394Z",
+            "End": "2026-08-30T11:25:27.373300136Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-30T11:25:37.3741574Z",
+            "End": "2026-08-30T11:25:37.423626748Z",
+            "ExitCode": 0,
+            "Output": ""
+          }
+        ]
+      }
+    },
+    "web": {
+      "container_id": "0690fe47f44c37dabf923c2f65bb346e7b35aee226a1a4acb99a3a426c6fa618",
+      "health": "healthy",
+      "runtime": {
+        "user": "101:101",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "read_only": true,
+        "tmpfs": [
+          "/tmp",
+          "/var/cache/nginx",
+          "/var/log/nginx"
+        ],
+        "cpu_quota": 0,
+        "nano_cpus": 1000000000,
+        "memory": 134217728,
+        "pids_limit": 128,
+        "stop_timeout": null,
+        "log_config": {
+          "Type": "json-file",
+          "Config": {
+            "max-file": "3",
+            "max-size": "10m"
+          }
+        },
+        "health_log": [
+          {
+            "Start": "2026-08-30T11:25:43.256910987Z",
+            "End": "2026-08-30T11:25:43.317759613Z",
+            "ExitCode": 0,
+            "Output": ""
+          }
+        ]
+      }
+    }
+  },
+  "failures": []
+}

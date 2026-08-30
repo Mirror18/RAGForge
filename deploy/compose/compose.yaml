@@ -5,6 +5,26 @@ name: ${COMPOSE_PROJECT_NAME:-ragforge-p1}
 x-ragforge-provider:
   OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
 
+# Runtime hardening is intentionally explicit on each application service so
+# the rendered Compose model and docker inspect output remain auditable.
+x-ragforge-app-hardening: &ragforge-app-hardening
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=64m
+  cpus: 1.0
+  mem_limit: 768m
+  pids_limit: 256
+  stop_grace_period: 30s
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
 # Core infrastructure is always available. The optional app profile adds the
 # server, ingestion worker and static web container from the unified Dockerfile.
 services:
@@ -150,6 +170,7 @@ services:
       start_period: 20s
 
   server:
+    <<: *ragforge-app-hardening
     image: ${RAGFORGE_SERVER_IMAGE:-ragforge/server:local}
     build:
       context: ../..
@@ -180,6 +201,7 @@ services:
       RAGFORGE_OUTBOX_RELAY_ENABLED: "true"
       RAGFORGE_RUN_EVENT_FANOUT_ENABLED: "true"
       RAGFORGE_PHASE6_OPERATIONS_ENABLED: "true"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
     ports:
       - "${APP_SERVER_PORT:-25082}:8080"
     networks:
@@ -195,8 +217,17 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://127.0.0.1:8080/actuator/health | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   worker:
+    <<: *ragforge-app-hardening
     image: ${RAGFORGE_WORKER_IMAGE:-ragforge/ingestion-worker:local}
     build:
       context: ../..
@@ -234,8 +265,19 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    healthcheck:
+      # The worker is a non-HTTP process. PID 1 is the Spring worker itself;
+      # its liveness is the readiness signal after all dependencies are ready.
+      test:
+        - CMD-SHELL
+        - kill -0 1
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
 
   web:
+    <<: *ragforge-app-hardening
     image: ${RAGFORGE_WEB_IMAGE:-ragforge/web:local}
     build:
       context: ../..
@@ -245,15 +287,23 @@ services:
       - app
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-25174}:80"
+      - "${WEB_PORT:-25174}:8080"
+    mem_limit: 128m
+    pids_limit: 128
+    stop_grace_period: 10s
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=32m,uid=101,gid=101,mode=0755
+      - /var/log/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755
     networks:
       - core
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD-SHELL
-        - wget -q -O /dev/null http://127.0.0.1/
+        - wget -q -O /dev/null http://127.0.0.1:8080/
       interval: 10s
       timeout: 5s
       retries: 6
