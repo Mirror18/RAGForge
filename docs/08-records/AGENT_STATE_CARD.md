@@ -114,7 +114,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7C-05 | 真实 RERANK adapter | P0 | ⏳ blocked | — | — | — | 8,000 | — | — | 依赖 P7C-04 |
 | P7C-06 | 可核验问答 Web | P0 | ✅ completed | A6 | codex/p7-verifiable-answer-web-a6 | RAGForge-worktrees/codex-p7-verifiable-answer-web-a6 | 9,000 | 8,200 | b2ac6027c731cd32111b97fb1f1d2ad548940abc | 已合并至 67a18f8；历史/citation/反馈/会话控制通过 |
 | P7C-07 | 上下文跳转 | P0 | ✅ completed | A7 | codex/p7-context-jump-a7 | RAGForge-worktrees/codex-p7-context-jump-a7 | 6,000 | 5,900 | a04de03ba8fb36a880104d53e2029ab41c784838 | 已合并至 d7505e7；lookup 空间隔离、结构化 provenance 跳转、刷新恢复、无 queryVector 生产 UI 通过 |
-| P7C-08 | 管理闭环（反馈/审计/成本） | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-06 已完成，可开始分派 |
+| P7C-08 | 管理闭环（反馈/审计/成本） | P0 | 🚧 in_progress | A8 | codex/p7-management-loop-a8 | RAGForge-worktrees/codex-p7-management-loop-a8 | 6,000 | — | — | 已建立 Ticket，依赖 P7C-06 满足；聚合查询与 Control Center 闭环实现中 |
 | P7Q-01 | 统一 preflight | P1 | ⏳ pending | — | — | — | 3,000 | — | — | JDK 绑定、Node PATH、Docker daemon |
 | P7Q-02 | 全量 Maven 回归 CI 配方 | P1 | ⏳ pending | — | — | — | 2,000 | — | — | |
 | P7Q-03 | Web 自动化测试（8 条旅程） | P1 | ⏳ pending | — | — | — | 15,000 | — | — | Playwright/Vitest，package.json 补脚本 |
