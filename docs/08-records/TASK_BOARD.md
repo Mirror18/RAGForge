@@ -3,7 +3,7 @@
 > 本看板与 [`AGENT_STATE_CARD.md`](AGENT_STATE_CARD.md) §6 的分派表一一对应，是 Agent 执行任务的预算与验收真源。
 > 每张卡片有独立 Token 预算、依赖、归属目录、必跑测试；**超预算 20% 必须停下汇报**。
 >
-> 版本：`board.v3` | 生效基线：Phase 7 `p2-execution` | 生成日期：2026-08-30
+> 版本：`board.v4` | 生效基线：Phase 7 `p2-execution` | 生成日期：2026-08-30
 
 ---
 
@@ -71,7 +71,8 @@ P7C-04（可并行） ─► P7C-05
 | **P7D-00** | **Actions Node.js 24 运行时升级**：升级仍以 Node.js 20 为目标的官方与第三方 Actions；保留完整 git 历史获取，避免 RAG gate 因浅克隆失效；工作流显式启用 Node.js 24 兼容运行时。 | P0 + P1 全绿 | `.github/workflows/quality.yml`、`.github/workflows/README.md`（如涉及） | **4,000** | `setup-java` 升级到 v5；checkout/setup-python/cache/setup-node/upload-artifact/Anchore 扫描动作使用已验证的 Node.js 24 兼容版本；YAML 中无旧版本残留；远程 quality run 无 Node.js 20 deprecation warning | workflow YAML/format/secret gates + 远程 quality run 绿 |
 | **P7D-01** | **容器加固**：Web 改为非 root；Server/Worker 在 Compose 里新增 health/readiness；三类应用统一 capability、只读文件系统 + 受控写路径、资源限额（mem/cpu）、优雅关闭、日志上限。 | P0 + P1 全绿 | `deploy/compose/compose.yaml`、各应用 Dockerfile | **8,000** | `docker compose --profile app up -d` 后 `docker inspect` 三项都为 non-root；healthcheck 状态变成 healthy；日志超限时自动轮转 | 本地脚本化验收（输出到 `tests/evidence/phase7-container-hardening.v1.json`） |
 | **P7D-02** | **发布镜像与供应链硬化**：基础镜像与应用镜像全部锁定 immutable digest；使用目标镜像（不是源码）生成 SBOM/Grype 结果；生产 Secret 不使用 Compose 默认占位值、不进入展开配置、镜像或日志。 | P7D-01 | `deploy/compose/`、`.github/workflows/`、根 `.env.example` | **7,000** | 所有镜像 digest 在 `deploy/compose/` 有清单；镜像级 SBOM 和 Grype SARIF artifact 最新可用；Secret 审计脚本返回 0 | 目标镜像 SBOM/Grype；secret scan 脚本针对镜像执行 |
-| **P7D-03** | **干净 Ubuntu 24.04 完整部署验收**：从 0 文档执行到 RAG 业务闭环 smoke（平台初始化 → Provider test → 空间/成员 → Git/文件摄取 → active index → streaming 引用问答 → 反馈 → 审计 → 跨空间拒绝 → 未授权云出境拒绝）。合成 fixture。 | P7D-02 | `docs/05-operations/DEPLOYMENT.md`、`deploy/compose/`、`tests/e2e/` | **18,000** | Ubuntu 24.04 ISO + Docker + RAGForge 部署脚本；所有 10 条旅程产出结构化证据；RPO=0s 满足 | 独立证据文件 `tests/evidence/phase7-ubuntu-smoke.v1.json`；人工复核清单可勾选 |
+| **P7D-02R** | **P7D-02 漏洞修复与重新验收**：修复目标镜像的 Critical/High 漏洞（基础层与应用依赖），重新生成 SBOM/Grype，并保持 fail-closed；不得通过降低阈值、忽略规则或未审批例外掩盖发现。 | P7D-02（阻塞基线 `20c7f87`） | `pom.xml`、`apps/server/pom.xml`、`apps/ingestion-worker/pom.xml`、`deploy/docker/`、`deploy/compose/`、`scripts/ci/`、`tests/ci/`、`tests/evidence/` | **10,000** | server/worker/web 目标镜像在 `--fail-on high` 下通过；所有修复版本与 digest 可追溯；保留 P7D-02 的 Secret/SBOM/Grype 证据链 | Java/Web 回归 + 目标镜像构建 + 镜像 SBOM/Grype + Secret 审计 + format/secret gates |
+| **P7D-03** | **干净 Ubuntu 24.04 完整部署验收**：从 0 文档执行到 RAG 业务闭环 smoke（平台初始化 → Provider test → 空间/成员 → Git/文件摄取 → active index → streaming 引用问答 → 反馈 → 审计 → 跨空间拒绝 → 未授权云出境拒绝）。合成 fixture。 | P7D-02R | `docs/05-operations/DEPLOYMENT.md`、`deploy/compose/`、`tests/e2e/` | **18,000** | Ubuntu 24.04 ISO + Docker + RAGForge 部署脚本；所有 10 条旅程产出结构化证据；RPO=0s 满足 | 独立证据文件 `tests/evidence/phase7-ubuntu-smoke.v1.json`；人工复核清单可勾选 |
 | **P7D-04** | **Observability overlay 验证**：叠加 observability profile，验证 Dashboard、trace/log 脱敏、告警、Runbook 可定位规定故障。 | P7D-03 | `deploy/compose/observability.yaml`、`docs/05-operations/` runbooks | **8,000** | Grafana dashboard 有数据；OTel trace 的 prompt/正文字段脱敏；4 个 Runbook 演练 4/4 可定位故障 | 证据文件 `tests/evidence/phase7-observability.v1.json` |
 | **P7D-05** | **升级与回滚演练**：从上一兼容基线（Phase 6 闭环的 `462c7a5`）升级到当前版本 → 验证 citation、索引、对象一致性 → 在兼容窗口内回滚。仅用合成数据。 | P7D-03 | `docs/05-operations/DEPLOYMENT.md`（upgrade/rollback 章节） | **9,000** | upgrade / rollback 各执行一次；citation 与 Qdrant 引用一致；所有版本化 migration 兼容 | 证据文件 `tests/evidence/phase7-upgrade-rollback.v1.json` |
 | **P7D-06** | **公共化清理**：执行 secret / 个人信息 / Obsidian 内容 / 生产数据 / raw prompt / 许可证 / Notice / 历史 / 大文件检查。根许可证、release 版本、生产迁移仍需用户单独批准。 | P7D-05（清理是 release 前最后一步） | 仓库根 `.gitignore`、`docs/00-governance/REPOSITORY_LICENSING.md`、根 LICENSE（待用户批准） | **5,000** | secret scan / PII scan / 大文件 scan 全部通过；公共化检查 checkist 有逐项 SHA 证明 | 扫描脚本 + 输出 + `docs/07-research/UPSTREAM_REUSE_REGISTER.md` 与 `THIRD_PARTY_NOTICES.md` 最新核对 |
@@ -85,8 +86,8 @@ P7C-04（可并行） ─► P7C-05
 |---|---:|---:|---|
 | P0 | 9 | 64,000 | 含 P7C-05R 回归恢复；全部通过后，Web 才从「工程控制台」变成普通用户可用产品 |
 | P1 | 7 | 44,000 | 含 P7Q-05R 浅克隆恢复；全部通过后，部署验收有同一 SHA 的真实全量门禁 |
-| P2 | 8 | 64,000 | 含 Actions Node.js 24 兼容、Ubuntu 真实机、观测叠加、升级回滚、公共化清理、release 治理 |
-| **合计** | **24** | **172,000** | 实际执行若 <151.2k = 高效；>206.4k（超预算 20%）= 必须中途拆卡复盘 |
+| P2 | 9 | 74,000 | 含 Actions Node.js 24 兼容、供应链漏洞修复、Ubuntu 真实机、观测叠加、升级回滚、公共化清理、release 治理 |
+| **合计** | **25** | **182,000** | 实际执行若 <159.6k = 高效；>218.4k（超预算 20%）= 必须中途拆卡复盘 |
 
 ---
 
@@ -96,3 +97,5 @@ P7C-04（可并行） ─► P7C-05
 - 删除卡片必须写理由：是完成、合并、还是取消。取消类必须在 `PROJECT_STATUS.md` 留审计记录。
 - 预算调整：单张卡片预算修改 >10% 必须在本看板的「备注」里列出理由，不得在 Ticket 中偷偷放大。
 - 本看板版本化：每次改卡片结构（不是改状态），在页头把 `board.vN` 加 1，记录 SHA。
+
+> board.v4 结构变更：新增 P7D-02R 漏洞修复与重新验收卡，并将 P7D-03 的前置调整为 P7D-02R。
