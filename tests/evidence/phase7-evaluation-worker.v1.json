@@ -1,0 +1,18 @@
+{
+  "base_ref": "HEAD~1",
+  "changed_files": [
+    ".github/workflows/quality.yml",
+    "scripts/ci/rag_evaluation_gate.py",
+    "tests/ci/test_rag_evaluation_gate.py",
+    "tests/evidence/P7Q-05-worker-summary.v1.json"
+  ],
+  "cloud_egress": "disabled",
+  "evidence_version": "phase7-evaluation-gate-v1",
+  "head_ref": "HEAD",
+  "passed": true,
+  "rag_changed_files": [],
+  "reason": "no RAG-relevant path changed",
+  "status": "skipped",
+  "synthetic_only": true,
+  "triggered": false
+}

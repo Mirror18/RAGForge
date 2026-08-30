@@ -1,0 +1,23 @@
+{
+  "schema_version": "P7Q-05-orchestrator-summary-v1",
+  "card_id": "P7Q-05",
+  "passed": true,
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0
+  },
+  "checks": [
+    {"name": "gate unit tests", "passed": 4, "failed": 0, "details": "命中、跳过、评估失败阻断、合成 RAG 路径触发 4/4。", "evidence": "tests/evidence/P7Q-05-orchestrator-gate-unit.log"},
+    {"name": "phase6 runner regression", "passed": 7, "failed": 0, "details": "既有 Phase 6 runner 回归 7/7。", "evidence": "tests/evidence/P7Q-05-orchestrator-phase6-unit.log"},
+    {"name": "unmatched-change skip", "passed": 1, "failed": 0, "details": "HEAD~1..HEAD 当前仅 gate/CI 文件，正确 skipped 且 exit 0。", "evidence": "tests/evidence/phase7-evaluation-worker.v1.json"},
+    {"name": "real RAG-change trigger", "passed": 1, "failed": 0, "details": "真实 retrieval/answer 历史变更范围触发 Phase 6，128 cases，报告 passed=true。", "evidence": "tests/evidence/P7Q-05-orchestrator-trigger.v1.json"},
+    {"name": "secret scan", "passed": 1, "failed": 0, "details": "未发现受支持的凭据模式。", "evidence": "tests/evidence/P7Q-05-orchestrator-secret-scan.log"},
+    {"name": "workflow static check", "passed": 1, "failed": 0, "details": "quality workflow 已接入 gate 与 phase7 evaluation artifact。"},
+    {"name": "diff check", "passed": 1, "failed": 0, "details": "git diff --check 通过。"}
+  ],
+  "merge_commit": "f738719",
+  "worker_commit": "04de92a5f583b71c0198b1ffccddf8147a21f891"
+}
