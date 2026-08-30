@@ -238,4 +238,10 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 依赖修复将 Spring Boot 升至 `3.5.14`，并固定 Spring/Tomcat/Netty/Jackson/Micrometer/AMQP/PostgreSQL/Bouncy Castle 的修复版本；Java 运行时与 Web 运行时替换为 immutable digest 的 Chainguard JRE/Nginx，移除最终镜像中的 curl/wget/shell 健康检查依赖。
 - server、worker、web 目标镜像的 `grype --fail-on high` 均返回 `0`；三份 immutable image reference、CycloneDX SBOM、Grype SARIF 和 Secret audit 结果见 [`P7D-02R-worker-summary.v1.json`](../../tests/evidence/P7D-02R-worker-summary.v1.json)。Maven JDK 21 回归、Web `format:check/build`、Compose/format/secret/供应链门禁均通过。
 - 运行时探针在隔离网络中验证 Web HTTP 探针和 Java PID 探针；完整 Compose 启动未作为本卡通过条件，因现有 `ragforge-p1` 共享卷导致 Qdrant unhealthy，且默认端口已被占用，本轮未宣称 Ubuntu 部署验收。
-- 本轮仅使用公共镜像与合成/本地数据，未使用生产凭据、未推送镜像、未执行生产迁移、未启用云出境、未创建 release；P7D-03 现在可按任务板进入干净 Ubuntu 24.04 部署验收。
+- 本轮仅使用公共镜像与合成/本地数据，未使用生产凭据、未推送镜像、未执行生产迁移、未启用云出境、未创建 release；P7D-03 验收票据已就绪，待独立 Ubuntu 24.04 环境可用后执行。
+
+## 22. P7D-03 Ubuntu 部署验收票据与环境阻塞（2026-08-30）
+
+- P7D-03 已按 P7D-02R 完成创建票据 [`P7D-03-a23.yaml`](tickets/P7D-03-a23.yaml)，基线为 `6fa7f48`，预算 18,000 tokens；ownership 限定为部署文档、Compose 运行入口、`tests/e2e/` 与 Ubuntu smoke 证据，不允许修改业务源码、契约、迁移或 release。
+- 只读环境检查显示 WSL 仅有运行中的 `docker-desktop`，没有独立 Ubuntu 24.04 发行版；Docker Engine 运行在 Docker Desktop。由于本卡验收条件要求“干净 Ubuntu 24.04 + 无继承卷”，不能将当前 Windows/共享 Compose 环境冒充通过，A23 暂不创建 worker worktree。
+- 按 AGENTS.md E6，P7D-03 标记为 BLOCKED，阻塞条件是外部 Ubuntu 24.04 执行环境缺失；获得独立 Ubuntu 24.04 WSL/VM 后可从 `6fa7f48` 重新分派，P7D-04~07 保持等待。

@@ -1,0 +1,124 @@
+card_id: P7D-03
+title: 干净 Ubuntu 24.04 完整部署与 RAG 业务闭环验收
+version: 1
+created_at: 2026-08-30
+created_by: Orchestrator
+status: BLOCKED
+baseline:
+  sha: 6fa7f48ab8fda1f7327b02b2a767a52bc75019d7
+  prerequisite: P7D-02R
+  prerequisite_commit: 1d18a99
+budget:
+  token_limit: 18000
+  accounting: worker self-report plus evidence summary
+scope:
+  ownership:
+    - docs/05-operations/DEPLOYMENT.md
+    - deploy/README.md
+    - deploy/compose/README.md
+    - deploy/compose/
+    - tests/e2e/
+    - tests/evidence/phase7-ubuntu-smoke.v1.json
+  read_only:
+    - docs/08-records/tickets/P7D-03-a23.yaml
+    - docs/05-operations/DEPLOYMENT.md
+    - deploy/README.md
+    - deploy/compose/README.md
+    - deploy/compose/compose.yaml
+    - deploy/compose/env.example
+    - deploy/compose/IMAGE_DIGESTS.md
+    - scripts/dev/core.py
+    - scripts/ops/health_probe.py
+    - scripts/ci/preflight.py
+    - scripts/ci/validate_compose.py
+    - tests/e2e/README.md
+    - tests/acceptance/test_phase1_api_smoke.py
+    - tests/acceptance/test_phase2_local_ollama.py
+    - tests/acceptance/test_phase3_cross_platform_connectors.py
+    - tests/integration/test_phase2_cloud_protocol.py
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/TASK_BOARD.md
+    - ROADMAP.md
+    - RISK_REGISTER.md
+    - TRACEABILITY_MATRIX.md
+    - AGENTS.md
+    - apps/
+    - contracts/
+    - db/
+    - .env
+    - .env.local
+    - production data or credentials
+    - release tags or production migrations
+objective:
+  text: 在一次全新、无历史卷数据的 Ubuntu 24.04 环境中，按部署文档启动 RAGForge 并完成十条合成数据业务旅程，输出可审计的结构化证据；验证失败必须 fail-closed，不得用既有 Windows/共享 Compose 资源替代干净 Ubuntu 验收。
+  journeys:
+    - clean bootstrap and platform admin setup with disposable secret
+    - provider test and explicit LOCAL_ONLY route
+    - space creation and member role assignment
+    - Git and Markdown/file ingestion with job completion
+    - active index readiness and provenance-preserving retrieval
+    - streaming answer with structured citation references
+    - feedback persistence and audit event verification
+    - cross-space access rejection
+    - unauthorized CLOUD egress rejection
+    - restart/reconnect and RPO 0s event/data consistency check
+acceptance:
+  - id: A1
+    text: Ubuntu 24.04 clean-environment preflight, Docker/Compose versions, project/network/volume isolation and no inherited application data are evidenced.
+  - id: A2
+    text: Deployment follows docs/05-operations/DEPLOYMENT.md and uses immutable application/infrastructure image references with no production credentials.
+  - id: A3
+    text: All ten journeys pass with synthetic fixtures; every API request is space-scoped where applicable and citations retain document/chunk provenance.
+  - id: A4
+    text: Restart/reconnect, audit, cross-space denial and unauthorized cloud-egress denial are recorded as structured assertions, not prose-only claims.
+  - id: A5
+    text: Failure paths leave the disposable environment recoverable and evidence names exact commands, timestamps, commit/image digests and unresolved risks.
+tests:
+  preflight:
+    - name: Ubuntu 24.04 availability
+      command: wsl --list --verbose
+      expected: an independent Ubuntu 24.04 distribution is installed and running; docker-desktop alone is insufficient
+    - name: Docker engine
+      command: docker info
+      expected: Docker Engine is reachable from the Ubuntu environment
+  must_run:
+    - name: Compose isolation validation
+      command: python scripts/ci/validate_compose.py --project-name ragforge-p7d03-a23 --env-file deploy/compose/env.example
+      expected: exit 0 with derived project/network/volume/ports
+    - name: Clean deployment
+      command: python scripts/dev/core.py --project-name ragforge-p7d03-a23 --env-file deploy/compose/env.example --profile app up --build
+      expected: disposable core/app stack starts on Ubuntu 24.04 with no inherited volumes
+    - name: Health and runtime inspection
+      command: python scripts/dev/core.py --project-name ragforge-p7d03-a23 --profile app health; python scripts/dev/core.py --project-name ragforge-p7d03-a23 --profile app ps
+      expected: core and app services healthy, non-root and immutable image refs visible
+    - name: Ten-journey E2E
+      command: python tests/e2e/phase7_ubuntu_smoke.py --project-name ragforge-p7d03-a23 --output tests/evidence/phase7-ubuntu-smoke.v1.json
+      expected: all ten journeys pass with structured assertions
+    - name: Disposable teardown
+      command: python scripts/dev/core.py --project-name ragforge-p7d03-a23 --profile app down
+      expected: containers stop cleanly and evidence records retained without deleting unrelated projects
+  evidence_file: tests/evidence/phase7-ubuntu-smoke.v1.json
+  evidence_schema:
+    schema_version: P7D-03-ubuntu-smoke.v1
+    status: PASS | BLOCKED | FAIL
+    environment: object
+    journeys: array
+    commands: array
+    risks: array
+report_schema:
+  card_id: string
+  status: PASS | BLOCKED | FAIL
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string, ...]}
+  tests: {preflight: object, deployment: object, e2e: object, teardown: object}
+  budget: {token_used: integer, token_limit: 18000, overrun_reason: string}
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met: {A1: true | false, A2: true | false, A3: true | false, A4: true | false, A5: true | false}
+  evidence_file: tests/evidence/phase7-ubuntu-smoke.v1.json

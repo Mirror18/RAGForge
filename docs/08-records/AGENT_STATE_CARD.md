@@ -129,7 +129,8 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7D-01 | 容器加固 | P2 | ✅ completed | A20 | codex/p7-container-hardening-a20 | RAGForge-worktrees/codex-p7-container-hardening-a20 | 8,000 | 7,900 | 0c313405ac49a18edefc99f0639baeb62ca9a0f4 | 已合并至 303d723，运行时证据更新至 61067ae；Compose build/up、三类应用 healthy、runtime inspect、容器加固脚本与 pytest 4/4 通过；未触碰生产数据/secret/迁移 |
 | P7D-02 | 发布镜像与供应链硬化 | P2 | ⛔ blocked | A21 / Orchestrator | codex/p7-supply-chain-a21 | RAGForge-worktrees/codex-p7-supply-chain-a21 | 7,000 | — | 20c7f87 | 镜像扫描链路已提交但 Grype `--fail-on high` 对 server/worker/web 均返回 2；应用依赖修复超出本卡 ownership，待拆分修复卡或明确受控例外 |
 | P7D-02R | P7D-02 供应链漏洞修复与重新验收 | P2 | ✅ completed | A22 / Orchestrator | codex/p7-supply-chain-remediation-a22 | RAGForge-worktrees/codex-p7-supply-chain-remediation-a22 | 10,000 | — | 1d18a99 | `98d5fd7` 已以非快进方式合并；三类目标镜像 `grype --fail-on high` 均为 0，SBOM/SARIF/Secret audit/回归证据已落盘；本地完整 Compose 受既有共享 Qdrant 卷不健康阻塞，未宣称部署验收 |
-| P7D-03~07 | Linux 交付与发布（5 张） | P2 | ⏳ ready | — | — | — | 45,000 | — | — | P7D-02R 已完成，P7D-03 可按依赖顺序启动；P7D-04~07 仍按前置卡片推进 |
+| P7D-03 | 干净 Ubuntu 24.04 完整部署验收 | P2 | ⛔ blocked | A23 / Orchestrator | — | — | 18,000 | — | — | ticket `P7D-03-a23` 已建立；本机仅有 `docker-desktop` WSL2 发行版，无独立 Ubuntu 24.04，按 E6 暂停，不用 Windows/共享卷替代 |
+| P7D-04~07 | 观测、升级回滚、公共化与阶段闭环（4 张） | P2 | ⏳ ready | — | — | — | 27,000 | — | — | 依赖 P7D-03；待 Ubuntu 24.04 部署验收完成后按顺序启动 |
 
 ---
 
