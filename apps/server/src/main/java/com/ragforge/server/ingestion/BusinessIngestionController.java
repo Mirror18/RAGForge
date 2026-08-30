@@ -44,8 +44,9 @@ public class BusinessIngestionController {
                                                            @RequestParam(required = false) Integer limit,
                                                            @RequestParam(required = false) String connectorType,
                                                            @RequestParam(required = false) String sourceState,
+                                                           @RequestParam(required = false) String q,
                                                            @AuthenticationPrincipal SessionPrincipal principal) {
-        return taskCenter.sources(spaceId, cursor, limit, connectorType, sourceState, principal);
+        return taskCenter.sources(spaceId, cursor, limit, connectorType, sourceState, q, principal);
     }
 
     @PostMapping("/sources/git")
@@ -171,8 +172,9 @@ public class BusinessIngestionController {
                                                                  @RequestParam(required = false) Integer limit,
                                                                  @RequestParam(required = false) String status,
                                                                  @RequestParam(required = false) UUID sourceId,
+                                                                 @RequestParam(required = false) String q,
                                                                  @AuthenticationPrincipal SessionPrincipal principal) {
-        return taskCenter.jobs(spaceId, cursor, limit, status, sourceId, principal);
+        return taskCenter.jobs(spaceId, cursor, limit, status, sourceId, q, principal);
     }
 
     @GetMapping("/jobs/{jobId}")

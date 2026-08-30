@@ -26,7 +26,7 @@ import java.util.UUID;
 /** API/application boundary for space-isolated source and task-center actions. */
 @Service
 public class SourceTaskCenterService {
-    private static final int DEFAULT_LIMIT = 20;
+    private static final int DEFAULT_LIMIT = 10;
     private static final int MAX_LIMIT = 100;
 
     private final JdbcTemplate jdbc;
@@ -44,7 +44,7 @@ public class SourceTaskCenterService {
 
     @Transactional(readOnly = true)
     public CursorPage<GitSourceService.SourceView> sources(UUID spaceId, String cursor, Integer limit,
-                                                            String connectorType, String sourceState,
+                                                            String connectorType, String sourceState, String q,
                                                             SessionPrincipal principal) {
         authorization.requireMember(spaceId, principal);
         int pageSize = pageSize(limit);
@@ -67,6 +67,12 @@ public class SourceTaskCenterService {
         if (sourceState != null && !sourceState.isBlank()) {
             sql.append(" AND v.source_state = ?");
             args.add(enumValue(sourceState, "sourceState"));
+        }
+        String search = searchText(q);
+        if (search != null) {
+            sql.append(" AND (LOWER(v.display_name) LIKE ? OR LOWER(v.root_ref) LIKE ? OR LOWER(COALESCE(v.git_branch, '')) LIKE ? OR CAST(v.source_id AS text) LIKE ?)");
+            String pattern = "%" + search + "%";
+            args.add(pattern); args.add(pattern); args.add(pattern); args.add(pattern);
         }
         if (position != null) {
             sql.append(" AND (v.updated_at, v.source_id) < (?, ?)");
@@ -97,33 +103,48 @@ public class SourceTaskCenterService {
 
     @Transactional(readOnly = true)
     public CursorPage<BusinessIngestionService.JobView> jobs(UUID spaceId, String cursor, Integer limit,
-                                                               String status, UUID sourceId,
+                                                               String status, UUID sourceId, String q,
                                                                SessionPrincipal principal) {
         authorization.requireMember(spaceId, principal);
         int pageSize = pageSize(limit);
         CursorCodec.Position position = cursor == null ? null : CursorCodec.decode(cursor);
         StringBuilder sql = new StringBuilder("""
-                SELECT id, space_id, source_id, source_document_id, document_revision_id,
-                       pipeline_version_id, status, idempotency_key, correlation_id, causation_id,
-                       version_no, created_at, updated_at
-                FROM ingestion_jobs
-                WHERE space_id = ? AND lifecycle_state = 'ACTIVE'
+                SELECT j.id, j.space_id, j.source_id, j.source_document_id, j.document_revision_id,
+                       j.pipeline_version_id, j.status, j.idempotency_key, j.correlation_id, j.causation_id,
+                       j.version_no, j.created_at, j.updated_at,
+                       sv.display_name AS source_display_name,
+                       sd.canonical_source_path AS source_document_path,
+                       sd.basename AS source_document_name
+                FROM ingestion_jobs j
+                LEFT JOIN source_versions sv ON sv.space_id = j.space_id AND sv.source_id = j.source_id
+                    AND sv.version_no = (SELECT MAX(sv2.version_no) FROM source_versions sv2
+                        WHERE sv2.space_id = j.space_id AND sv2.source_id = j.source_id)
+                LEFT JOIN source_documents sd ON sd.space_id = j.space_id AND sd.id = j.source_document_id
+                WHERE j.space_id = ? AND j.lifecycle_state = 'ACTIVE'
                 """);
         List<Object> args = new ArrayList<>(List.of(spaceId));
         if (status != null && !status.isBlank()) {
-            sql.append(" AND status = ?");
+            sql.append(" AND j.status = ?");
             args.add(enumValue(status, "status"));
         }
         if (sourceId != null) {
-            sql.append(" AND source_id = ?");
+            sql.append(" AND j.source_id = ?");
             args.add(sourceId);
         }
+        String search = searchText(q);
+        if (search != null) {
+            sql.append(" AND (CAST(j.id AS text) LIKE ? OR CAST(j.source_id AS text) LIKE ? OR CAST(j.source_document_id AS text) LIKE ? OR CAST(j.document_revision_id AS text) LIKE ? OR LOWER(j.status) LIKE ? OR LOWER(COALESCE(sv.display_name, '')) LIKE ? OR LOWER(COALESCE(sd.canonical_source_path, '')) LIKE ? OR LOWER(COALESCE(sd.basename, '')) LIKE ? OR EXISTS (SELECT 1 FROM pipeline_step_executions pse WHERE pse.space_id = j.space_id AND pse.job_id = j.id AND (LOWER(pse.step_name) LIKE ? OR LOWER(COALESCE(pse.error_code, '')) LIKE ?)))");
+            String pattern = "%" + search + "%";
+            args.add(pattern); args.add(pattern); args.add(pattern); args.add(pattern); args.add(pattern);
+            args.add(pattern); args.add(pattern); args.add(pattern);
+            args.add(pattern); args.add(pattern);
+        }
         if (position != null) {
-            sql.append(" AND (created_at, id) < (?, ?)");
+            sql.append(" AND (j.created_at, j.id) < (?, ?)");
             args.add(Timestamp.from(position.sortTime()));
             args.add(position.id());
         }
-        sql.append(" ORDER BY created_at DESC, id DESC LIMIT ?");
+        sql.append(" ORDER BY j.created_at DESC, j.id DESC LIMIT ?");
         args.add(pageSize + 1);
         List<JobRow> rows = jdbc.query(sql.toString(), (rs, row) -> new JobRow(mapJob(rs), instant(rs, "created_at")), args.toArray());
         boolean hasMore = rows.size() > pageSize;
@@ -302,6 +323,13 @@ public class SourceTaskCenterService {
     private static String enumValue(String value, String field) {
         if (!value.matches("[A-Za-z_]{1,32}")) throw invalid(field + " is invalid");
         return value.toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private static String searchText(String value) {
+        if (value == null || value.isBlank()) return null;
+        String search = value.trim().toLowerCase(java.util.Locale.ROOT);
+        if (search.length() > 120) throw invalid("q must be at most 120 characters");
+        return search;
     }
 
     private static int expectedVersion(ActionRequest body, String ifMatch) {

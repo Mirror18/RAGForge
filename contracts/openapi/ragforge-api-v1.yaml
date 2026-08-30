@@ -765,7 +765,7 @@
         "summary": "List source connectors in a space",
         "description": "Space-scoped source projections never return credentialRef, source credentials, source bytes or document text.",
         "security": [{"cookieAuth": []}, {"serviceToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}, {"$ref": "#/components/parameters/SearchQuery"}],
         "responses": {"200": {"description": "Sources", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SourcePage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
       },
       "post": {
@@ -1099,7 +1099,7 @@
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
       "get": {
         "tags": ["ingestion"], "operationId": "listSourceTasks", "summary": "List source tasks with cursor pagination and filters", "security": [{"cookieAuth": []}, {"serviceToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}, {"$ref": "#/components/parameters/SyncJobStatus"}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}, {"$ref": "#/components/parameters/SyncJobStatus"}, {"$ref": "#/components/parameters/SearchQuery"}],
         "responses": {"200": {"description": "Source tasks", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BusinessJobPage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}
       }
     },
@@ -1331,6 +1331,13 @@
         "in": "query",
         "required": false,
         "schema": {"type": "integer", "format": "int32", "minimum": 1, "maximum": 100, "default": 20}
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive search within the current space. Results remain cursor-paginated.",
+        "schema": {"type": "string", "maxLength": 120}
       },
       "ManagementFrom": {
         "name": "from",
