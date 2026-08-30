@@ -1,0 +1,124 @@
+meta:
+  card_id: P7Q-04
+  title: 契约-实现一致性门禁
+  priority: P1
+  agent_slug: a12
+  branch: codex/p7-contract-coverage-a12
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-contract-coverage-a12
+  base_sha: 3b5fbd2
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: []
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - scripts/ci/contract_coverage.py
+    - tests/contract/coverage_test.py
+    - .github/workflows/quality.yml
+  read_only:
+    - contracts/openapi/ragforge-api-v1.yaml
+    - scripts/ci/contract_test.py
+    - .github/workflows/quality.yml
+    - apps/server/src/main/java/com/ragforge/server/answer/AnswerFeedbackController.java
+    - apps/server/src/main/java/com/ragforge/server/answer/api/AnswerApiController.java
+    - apps/server/src/main/java/com/ragforge/server/identity/AuthController.java
+    - apps/server/src/main/java/com/ragforge/server/identity/PlatformAdminBootstrapController.java
+    - apps/server/src/main/java/com/ragforge/server/identity/UserAdminController.java
+    - apps/server/src/main/java/com/ragforge/server/index/BusinessIndexController.java
+    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
+    - apps/server/src/main/java/com/ragforge/server/ops/ManagementController.java
+    - apps/server/src/main/java/com/ragforge/server/prompt/PromptManagementController.java
+    - apps/server/src/main/java/com/ragforge/server/provider/ModelProfileController.java
+    - apps/server/src/main/java/com/ragforge/server/provider/ModelRouteController.java
+    - apps/server/src/main/java/com/ragforge/server/provider/ProviderConnectionController.java
+    - apps/server/src/main/java/com/ragforge/server/provider/SpaceBindingController.java
+    - apps/server/src/main/java/com/ragforge/server/run/RunEventController.java
+    - apps/server/src/main/java/com/ragforge/server/run/RunExecutionController.java
+    - apps/server/src/main/java/com/ragforge/server/space/SpaceController.java
+    - apps/server/src/main/java/com/ragforge/server/studio/ChunkStudioController.java
+    - apps/server/src/main/java/com/ragforge/server/studio/RetrievalPlaygroundController.java
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - AGENTS.md
+    - docs/08-records/TASK_BOARD.md
+    - docs/08-records/tickets/
+    - apps/web/
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - pom.xml
+    - deploy/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 新增 coverage_test.py/等价脚本，解析 OpenAPI 每个 operationId 并校验有对应 Controller mapping；反向校验 Server 暴露 endpoint 均在 OpenAPI 中
+    - id: A2
+      text: 对当前仓库无 false positive；遗漏端点明确列出 operationId、HTTP method、path 与 controller 文件，退出非零
+    - id: A3
+      text: 测试夹具能故意删除一个 operation 对应 controller 或契约并稳定失败，恢复后通过；不修改生产源码
+    - id: A4
+      text: quality workflow 接入该门禁，并保存 machine-readable coverage summary/artifact；不泄露 secrets、prompt、正文或生产数据
+    - id: A5
+      text: 运行 coverage test、contract 52/52、secret scan 与 workflow 静态检查通过，只修改 ownership 文件
+
+budget:
+  token_limit: 4000
+
+tests:
+  must_run:
+    - name: contract coverage test
+      command: python -m unittest tests.contract.coverage_test -v
+      expected: 当前实现与 OpenAPI 双向覆盖通过，并含故意缺口失败测试
+    - name: contract test
+      command: python scripts/ci/contract_test.py
+      expected: 52/52
+    - name: secret scan
+      command: python scripts/ci/secret_scan.py
+      expected: passed
+    - name: workflow static inspection
+      command: python -c "from pathlib import Path; t=Path('.github/workflows/quality.yml').read_text(encoding='utf-8'); assert 'contract_coverage' in t and 'coverage_test' in t"
+      expected: CI 已接入一致性门禁
+  evidence_file: tests/evidence/P7Q-04-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: true
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string
