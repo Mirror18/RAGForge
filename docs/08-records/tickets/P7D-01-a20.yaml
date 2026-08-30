@@ -1,0 +1,97 @@
+meta:
+  card_id: P7D-01
+  title: 容器加固
+  priority: P2
+  agent_slug: a20
+  branch: codex/p7-container-hardening-a20
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-container-hardening-a20
+  base_sha: 63cb4ac723d485fe93f5a8a9199ef8599b11013e
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7Q-05R]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - deploy/compose/compose.yaml
+    - deploy/docker/Dockerfile
+    - deploy/docker/nginx.conf
+    - scripts/ci/container_hardening_check.py
+    - tests/ci/test_container_hardening_check.py
+    - tests/evidence/P7D-01-worker-summary.v1.json
+    - tests/evidence/phase7-container-hardening.v1.json
+  read_only:
+    - deploy/compose/README.md
+    - deploy/compose/env.example
+    - scripts/ci/validate_compose.py
+    - scripts/ops/health_probe.py
+    - docs/08-records/tickets/P7D-01-a20.yaml
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - .github/workflows/
+    - apps/
+    - contracts/
+    - pom.xml
+
+acceptance:
+  criteria:
+    - id: A1
+      text: web、server、worker 运行身份均为非 root；web 以非特权端口运行并保持 Compose 对外端口语义可用。
+    - id: A2
+      text: 三类应用均启用 cap_drop ALL、no-new-privileges、read_only 文件系统，并只通过明确的 tmpfs/受控目录获得必要写权限。
+    - id: A3
+      text: server 与 worker 均有可验证的 Compose healthcheck/readiness；web healthcheck 继续可用；依赖条件不把未 ready 服务当作 healthy。
+    - id: A4
+      text: 三类应用配置 CPU、内存、进程数上限，stop_grace_period 优雅关闭，以及 json-file 日志 max-size/max-file 轮转。
+    - id: A5
+      text: 本地 Docker Compose profile app 构建并启动成功；docker inspect 验证身份、安全选项、只读文件系统、资源/日志配置，healthcheck 达到 healthy；证据写入指定 JSON。
+    - id: A6
+      text: container hardening 检查脚本有单元测试，失败时 fail closed；不触碰生产数据、secret、迁移或云出境配置。
+
+budget:
+  token_limit: 8000
+
+tests:
+  must_run:
+    - name: compose validation
+      command: python scripts/ci/validate_compose.py
+      expected: exit 0
+    - name: container hardening unit tests
+      command: python -m pytest -q tests/ci/test_container_hardening_check.py
+      expected: all passed
+    - name: compose hardening acceptance
+      command: python scripts/ci/container_hardening_check.py --evidence tests/evidence/phase7-container-hardening.v1.json
+      expected: exit 0 and evidence passed=true
+    - name: compose app smoke
+      command: docker compose -f deploy/compose/compose.yaml --profile app up -d --build
+      expected: exit 0; app services healthy
+  evidence_file: tests/evidence/P7D-01-worker-summary.v1.json
+  evidence_schema:
+    summary: {total: 0, passed: 0, failed: 0, failed_cases: [], duration_ms: 0}
+    raw_output_stored: true
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string, ...]}
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string}
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met: {A1: true, A2: true, A3: true, A4: true, A5: true, A6: true}
+  evidence_file: string

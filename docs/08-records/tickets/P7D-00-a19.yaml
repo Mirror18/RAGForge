@@ -1,0 +1,86 @@
+meta:
+  card_id: P7D-00
+  title: Actions Node.js 24 运行时升级
+  priority: P2
+  agent_slug: a19
+  branch: codex/p7-actions-node24-a19
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-actions-node24-a19
+  base_sha: 63cb4ac723d485fe93f5a8a9199ef8599b11013e
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7Q-05R]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - .github/workflows/quality.yml
+    - .github/workflows/README.md
+    - tests/evidence/P7D-00-worker-summary.v1.json
+  read_only:
+    - scripts/ci/format_check.py
+    - scripts/ci/secret_scan.py
+    - docs/08-records/tickets/P7D-00-a19.yaml
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - deploy/
+    - apps/
+    - contracts/
+    - pom.xml
+
+acceptance:
+  criteria:
+    - id: A1
+      text: setup-java 从 v4 升级到官方 Node.js 24 兼容的 v5，并保留 Java 21 配置。
+    - id: A2
+      text: checkout、setup-python、cache、setup-node、upload-artifact、Anchore scan 等仍以 Node.js 20 为目标或已出现弃用告警的 Actions 升级到已验证的 Node.js 24 兼容版本；不得留下旧版本引用。
+    - id: A3
+      text: quality workflow 保留 fetch-depth 0，且显式设置 FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true；不改变既有 job、权限、secret 或测试语义。
+    - id: A4
+      text: YAML 格式检查与 secret scan 通过；生成结构化 worker evidence，不包含完整长日志、凭据或个人数据。
+    - id: A5
+      text: 对每个变更动作记录版本选择依据；若某个动作无法确认 Node.js 24 兼容性，停止并报告，不以猜测替换。
+
+budget:
+  token_limit: 4000
+
+tests:
+  must_run:
+    - name: workflow format check
+      command: python scripts/ci/format_check.py
+      expected: exit 0
+    - name: secret scan
+      command: python scripts/ci/secret_scan.py
+      expected: exit 0
+    - name: workflow action runtime audit
+      command: python -c "from pathlib import Path; import re; p=Path('.github/workflows/quality.yml').read_text(encoding='utf-8'); assert 'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true' in p; assert 'actions/setup-java@v5' in p; assert not re.search(r'actions/(checkout|setup-python|cache|setup-node|upload-artifact)@v[45]\\b', p); print('actions runtime audit passed')"
+      expected: exit 0
+  evidence_file: tests/evidence/P7D-00-worker-summary.v1.json
+  evidence_schema:
+    summary: {total: 0, passed: 0, failed: 0, failed_cases: [], duration_ms: 0}
+    raw_output_stored: false
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string, ...]}
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string}
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met: {A1: true, A2: true, A3: true, A4: true, A5: true}
+  evidence_file: string
