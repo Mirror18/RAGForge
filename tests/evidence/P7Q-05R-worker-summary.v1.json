@@ -1,8 +1,8 @@
 {
   "card_id": "P7Q-05R",
   "status": "PASS",
-  "commit_sha": "",
-  "base_sha": "4ade90f5ed543ad09f1df01f802b623936ede702",
+  "commit_sha": "56bfcef18c01c441d3f1a1ee0e7e6f5b650ef25d",
+  "base_sha": "c3a559afcf91de1286b9385305b518adfc26dda9",
   "branch": "codex/p7-rag-gate-fetch-a18",
   "worktree": "D:\\project\\learning\\RAGForge-worktrees\\codex-p7-rag-gate-fetch-a18",
   "changed_files": {
@@ -56,7 +56,7 @@
     ]
   },
   "budget": {
-    "token_used": 4380,
+    "token_used": 4720,
     "token_limit": 4000,
     "overrun_reason": "首次票据的 base_sha 与单测路径错误，校正后重新读取契约并完整复跑必跑测试。"
   },
