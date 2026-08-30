@@ -1,0 +1,77 @@
+{
+  "card_id": "P7Q-05R",
+  "status": "PASS",
+  "commit_sha": "",
+  "base_sha": "4ade90f5ed543ad09f1df01f802b623936ede702",
+  "branch": "codex/p7-rag-gate-fetch-a18",
+  "worktree": "D:\\project\\learning\\RAGForge-worktrees\\codex-p7-rag-gate-fetch-a18",
+  "changed_files": {
+    "count": 2,
+    "list": [
+      ".github/workflows/quality.yml",
+      "tests/evidence/P7Q-05R-worker-summary.v1.json"
+    ]
+  },
+  "tests": {
+    "contract": {
+      "passed": 0,
+      "failed": 0,
+      "details": "票据未要求 contract 测试。"
+    },
+    "unit": {
+      "passed": 4,
+      "failed": 0,
+      "details": "python tests/ci/test_rag_evaluation_gate.py：Ran 4 tests，OK。"
+    },
+    "integration": {
+      "passed": 1,
+      "failed": 0,
+      "details": "depth=1 clone 对 9fdd94e0... 报 fatal: bad object；git fetch --unshallow 后 base/head 均可 rev-parse，git diff 退出 0。"
+    },
+    "custom": [
+      {
+        "name": "shallow failure reproduction",
+        "passed": 1,
+        "failed": 0,
+        "details": "修复前浅克隆稳定复现 bad object；fetch-depth: 0 对应的完整历史策略可解析指定 base/head。"
+      },
+      {
+        "name": "RAG gate bad object failure semantics",
+        "passed": 1,
+        "failed": 0,
+        "details": "无效 base ref 时 gate 退出 1，证据 status=failed、passed=false，未静默放行。"
+      },
+      {
+        "name": "format",
+        "passed": 1,
+        "failed": 0,
+        "details": "python scripts/ci/format_check.py：PASS，检查 822 个 tracked files。"
+      },
+      {
+        "name": "secret scan",
+        "passed": 1,
+        "failed": 0,
+        "details": "python scripts/ci/secret_scan.py：PASS。"
+      }
+    ]
+  },
+  "budget": {
+    "token_used": 4380,
+    "token_limit": 4000,
+    "overrun_reason": "首次票据的 base_sha 与单测路径错误，校正后重新读取契约并完整复跑必跑测试。"
+  },
+  "warnings": [],
+  "risks": [
+    "fetch-depth: 0 会增加 checkout 时间、网络传输和 runner 磁盘占用，影响随仓库历史增长。",
+    "回滚方式是删除 quality checkout 的 with/fetch-depth: 0 配置；回滚会重新暴露浅克隆 bad object 风险。"
+  ],
+  "integration_notes": "最小修复仅在 actions/checkout@v4 设置 fetch-depth: 0，未修改生产代码。完整历史保证常规 push before/head 与 pull_request base/head 可解析；集成时可直接合并本提交。",
+  "acceptance_met": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true,
+    "A5": true
+  },
+  "evidence_file": "tests/evidence/P7Q-05R-worker-summary.v1.json"
+}
