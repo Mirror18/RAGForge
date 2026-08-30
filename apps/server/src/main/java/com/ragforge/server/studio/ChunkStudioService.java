@@ -93,6 +93,10 @@ public class ChunkStudioService {
 
     public ChunkStudioChildProjection getChild(UUID spaceId, UUID childChunkId, SessionPrincipal principal) {
         authorization.requireMember(spaceId, principal);
+        return getChildProjection(spaceId, childChunkId);
+    }
+
+    private ChunkStudioChildProjection getChildProjection(UUID spaceId, UUID childChunkId) {
         StudioRepository.ChildStudioRow child = studio.findChild(spaceId, childChunkId)
                 .orElseThrow(() -> notFound("chunk_not_found", "Chunk not found"));
         ChunkRepository.ChunkOverride override = chunks.findLatestOverride(spaceId, childChunkId).orElse(null);
@@ -108,6 +112,28 @@ public class ChunkStudioService {
                         child.tableCell()),
                 new VectorStatus(vector.state(), vector.indexVersionId(), vector.vectorDimension(), vector.updatedAt()),
                 toSummary(override));
+    }
+
+    /**
+     * Resolves a browser handoff context through the same space-authorized
+     * projection path as a direct child lookup.  URL context is a hint only;
+     * the persisted provenance values are authoritative.
+     */
+    public ChunkStudioChildProjection lookup(UUID spaceId, UUID childChunkId, UUID documentRevisionId,
+                                              String contentRef, String textHash, SessionPrincipal principal) {
+        authorization.requireMember(spaceId, principal);
+        if (spaceId == null || childChunkId == null || documentRevisionId == null
+                || contentRef == null || contentRef.isBlank() || textHash == null
+                || !textHash.matches("[0-9a-fA-F]{64}")) {
+            throw notFound("context_not_found", "The provenance context is invalid");
+        }
+        ChunkStudioChildProjection projection = getChildProjection(spaceId, childChunkId);
+        if (!documentRevisionId.equals(projection.documentRevisionId())
+                || !contentRef.equals(projection.contentRef())
+                || !textHash.equalsIgnoreCase(projection.textHash())) {
+            throw notFound("context_not_found", "The provenance context is not available in this space");
+        }
+        return projection;
     }
 
     @Transactional

@@ -63,6 +63,43 @@ class ChunkStudioServiceTest {
     }
 
     @Test
+    void lookupReauthorizesSpaceAndResolvesMatchingProvenanceContext() {
+        when(studio.findChild(SPACE, CHILD)).thenReturn(Optional.of(child(NEW_REVISION)));
+        when(studio.findVectorStatus(eq(SPACE), eq(CHILD), any())).thenReturn(
+                new StudioRepository.VectorStatus("INDEXED", UUID.randomUUID(), 768, NOW));
+        when(chunks.findLatestOverride(SPACE, CHILD)).thenReturn(Optional.empty());
+
+        ChunkStudioService.ChunkStudioChildProjection result = service().lookup(SPACE, CHILD, NEW_REVISION,
+                "chunk://child/1", HASH, principal);
+
+        assertThat(result.childChunkId()).isEqualTo(CHILD);
+        verify(authorization).requireMember(SPACE, principal);
+    }
+
+    @Test
+    void lookupRejectsMismatchedContextWithoutReturningResourceContent() {
+        when(studio.findChild(SPACE, CHILD)).thenReturn(Optional.of(child(NEW_REVISION)));
+        when(studio.findVectorStatus(eq(SPACE), eq(CHILD), any())).thenReturn(
+                new StudioRepository.VectorStatus("INDEXED", UUID.randomUUID(), 768, NOW));
+        when(chunks.findLatestOverride(SPACE, CHILD)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().lookup(SPACE, CHILD, REVISION, "chunk://child/1", HASH, principal))
+                .isInstanceOf(ApiException.class).extracting("status")
+                .isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void lookupPropagatesCrossSpaceOrUnauthorizedFailureBeforeRepositoryAccess() {
+        doThrow(new ApiException(org.springframework.http.HttpStatus.FORBIDDEN, "space_access_denied", "Forbidden", "space"))
+                .when(authorization).requireMember(SPACE, principal);
+
+        assertThatThrownBy(() -> service().lookup(SPACE, CHILD, NEW_REVISION, "chunk://child/1", HASH, principal))
+                .isInstanceOf(ApiException.class).extracting("status")
+                .isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN);
+        verify(studio, never()).findChild(any(), any());
+    }
+
+    @Test
     void newerRevisionStartsNeedsReviewAndAuditHasNoBodyFields() {
         when(studio.findChild(SPACE, CHILD)).thenReturn(Optional.of(child(REVISION)));
         when(studio.documentRevisionExists(SPACE, NEW_REVISION)).thenReturn(true);

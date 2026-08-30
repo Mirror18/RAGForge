@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ApiError, type AnswerDefaults } from "./api";
+import { ApiError, type AnswerDefaults, type ProvenanceContext } from "./api";
 import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, deleteAnswerConversation, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, renameAnswerConversation, submitAnswerFeedback, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "./answer";
 import { type RunProjection } from "./answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null }>();
-const emit = defineEmits<{ "run-created": [runId: string]; "conversation-created": [conversationId: string] }>();
+const emit = defineEmits<{ "run-created": [runId: string]; "conversation-created": [conversationId: string]; "open-context": [context: ProvenanceContext] }>();
 
 type UiStatus = "empty" | "loading" | "reconnecting" | "completed" | "abstained" | "failed" | "cancelled" | "degraded" | "timeout" | "cancelling";
 
@@ -437,8 +437,8 @@ async function cancelAnswer(): Promise<void> {
   await cancelPromise;
 }
 
-async function openCitation(citation: AnswerCitation): Promise<void> {
-  if (!runContext.value || previewingEvidenceId.value) return;
+async function previewCitationWithAuthorization(citation: AnswerCitation): Promise<CitationPreviewResult | null> {
+  if (!runContext.value || previewingEvidenceId.value) return null;
   previewingEvidenceId.value = citation.evidenceId;
   previewNotice.value = "";
   previewResult.value = null;
@@ -446,11 +446,24 @@ async function openCitation(citation: AnswerCitation): Promise<void> {
     const result: CitationPreviewResult = await previewCitation(runContext.value.spaceId, runContext.value.runId, citation.evidenceId);
     previewResult.value = result;
     previewNotice.value = "服务端已重新鉴权该引用；以下仅显示结构化 provenance，不渲染正文。";
+    return result;
   } catch (error) {
     previewNotice.value = safeApiError(error, "引用暂不可打开；当前权限或证据版本不允许预览。");
+    return null;
   } finally {
     previewingEvidenceId.value = null;
   }
+}
+
+async function openCitation(citation: AnswerCitation): Promise<void> {
+  await previewCitationWithAuthorization(citation);
+}
+
+async function openCitationInStudio(citation: AnswerCitation): Promise<void> {
+  const preview = await previewCitationWithAuthorization(citation);
+  if (!preview) return;
+  emit("open-context", { target: "studio", spaceId: preview.spaceId, childChunkId: preview.childChunkId,
+    documentRevisionId: preview.documentRevisionId, contentRef: preview.contentRef, textHash: preview.textHash });
 }
 
 async function submitFeedback(citation: AnswerCitation, sentiment: "HELPFUL" | "NOT_HELPFUL"): Promise<void> {
@@ -501,7 +514,7 @@ onBeforeUnmount(() => abortController?.abort());
     <article v-if="status === 'degraded' || status === 'reconnecting'" class="answer-state warning-state"><strong>服务降级</strong><span>{{ notice || "事件连接正在恢复；已有事件将按 sequence 与 event_id 去重。" }}</span></article>
     <article v-if="status === 'cancelled'" class="answer-state"><strong>回答已取消</strong><span>服务端已确认取消；取消后的 answer delta 会被丢弃。</span></article>
 
-    <div v-if="citations.length" class="citation-section"><div class="card-title"><h3>可核验引用</h3><span class="muted">{{ citations.length }} 条 · 仅服务端 Citation 投影</span></div><div class="citation-grid"><article v-for="citation in citations" :key="citation.evidenceId" class="card citation-card"><div class="citation-title"><strong>{{ citation.evidenceId }}</strong><button type="button" class="secondary-button citation-open" :disabled="previewingEvidenceId === citation.evidenceId" @click="openCitation(citation)">{{ previewingEvidenceId === citation.evidenceId ? "鉴权中…" : "请求引用预览" }}</button></div><dl class="citation-details"><dt>revision</dt><dd><code>{{ citation.documentRevisionId }}</code></dd><dt>parent / child</dt><dd><code>{{ citation.parentChunkId }}</code><code>{{ citation.childChunkId }}</code></dd><dt>contentRef</dt><dd><code>{{ citation.contentRef }}</code></dd><dt>textHash</dt><dd><code>{{ citation.textHash }}</code></dd><dt>anchor</dt><dd>{{ anchorLabel(citation.anchor) }}</dd></dl><div class="feedback-actions"><span>这条证据是否有帮助？</span><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'HELPFUL')">有帮助</button><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'NOT_HELPFUL')">需改进</button></div></article></div></div>
+    <div v-if="citations.length" class="citation-section"><div class="card-title"><h3>可核验引用</h3><span class="muted">{{ citations.length }} 条 · 仅服务端 Citation 投影</span></div><div class="citation-grid"><article v-for="citation in citations" :key="citation.evidenceId" class="card citation-card"><div class="citation-title"><strong>{{ citation.evidenceId }}</strong><span><button type="button" class="secondary-button citation-open" :disabled="previewingEvidenceId === citation.evidenceId" @click="openCitation(citation)">{{ previewingEvidenceId === citation.evidenceId ? "鉴权中…" : "请求引用预览" }}</button><button type="button" class="quiet-button" :disabled="previewingEvidenceId === citation.evidenceId" @click="openCitationInStudio(citation)">在 Chunk Studio 打开</button></span></div><dl class="citation-details"><dt>revision</dt><dd><code>{{ citation.documentRevisionId }}</code></dd><dt>parent / child</dt><dd><code>{{ citation.parentChunkId }}</code><code>{{ citation.childChunkId }}</code></dd><dt>contentRef</dt><dd><code>{{ citation.contentRef }}</code></dd><dt>textHash</dt><dd><code>{{ citation.textHash }}</code></dd><dt>anchor</dt><dd>{{ anchorLabel(citation.anchor) }}</dd></dl><div class="feedback-actions"><span>这条证据是否有帮助？</span><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'HELPFUL')">有帮助</button><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'NOT_HELPFUL')">需改进</button></div></article></div></div>
     <p v-if="previewNotice" class="alert" :class="previewResult ? 'success' : 'error'" role="status">{{ previewNotice }}</p><article v-if="previewResult" class="card citation-preview" aria-live="polite"><div class="card-title"><h3>结构化 Citation preview</h3><span class="state-pill">citationAllowed: {{ previewResult.citationAllowed ? "true" : "false" }}</span></div><dl class="citation-details"><dt>evidence / run</dt><dd><code>{{ previewResult.evidenceId }} · {{ previewResult.runId }}</code></dd><dt>revision</dt><dd><code>{{ previewResult.documentRevisionId }}</code></dd><dt>contentRef</dt><dd><code>{{ previewResult.contentRef }}</code></dd><dt>textHash</dt><dd><code>{{ previewResult.textHash }}</code></dd><dt>anchor</dt><dd>{{ anchorLabel(previewResult.anchor) }}</dd></dl></article><p v-if="feedbackNotice" class="alert success" role="status">{{ feedbackNotice }}</p>
 
     <div v-if="tools.length || usage || errorState || eventLog.length" class="answer-observability two-column"><article class="card"><div class="card-title"><h3>事件状态</h3><span class="muted">sequence 单调、event_id 去重</span></div><div class="event-list"><div v-for="event in eventLog" :key="event.eventId" class="event-row"><span class="state-pill">{{ eventLabel(event.eventType) }}</span><span>#{{ event.sequence }}</span><code>{{ event.eventId }}</code></div></div></article><article class="card"><div class="card-title"><h3>工具与用量</h3><span class="muted">服务端结构化记录</span></div><div v-for="tool in tools" :key="tool.payload.toolCallId" class="tool-row"><span>{{ tool.payload.toolName }}</span><strong>{{ tool.payload.status }}</strong></div><dl v-if="usage" class="details usage-details"><dt>tokens</dt><dd>{{ usage.payload.inputTokens }} in · {{ usage.payload.outputTokens }} out · {{ usage.payload.totalTokens }} total</dd><dt>tools</dt><dd>{{ usage.payload.toolCallCount }}</dd><dt>provider reported</dt><dd>{{ usage.payload.providerReported ? "是" : "否" }}</dd></dl><p v-if="errorState" class="permission-hint">{{ safeErrorLabel(errorState.code) }} · {{ errorState.retryable ? "可重试" : "请检查配置或权限" }}</p><p v-if="!tools.length && !usage && !errorState" class="muted">尚无工具或用量事件。</p></article></div>
