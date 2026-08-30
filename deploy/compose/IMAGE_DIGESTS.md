@@ -20,8 +20,8 @@
 | Dockerfile frontend | `docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e` |
 | java-build | `maven:3.9-eclipse-temurin-21@sha256:8f6ac126f7810bb5549c4cd122d2bf0e9cda5bdeb0838aa928f09e779fd8bef8` |
 | web-build | `node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5` |
-| java-runtime | `eclipse-temurin:21-jre-jammy@sha256:eebd356ad7358b7094758e5787a6726f332917cfd56feab6457c56dab895cdbf` |
-| web | `nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10` |
+| java-runtime | `cgr.dev/chainguard/jre:latest@sha256:8442d5863e82c43320f20d40dd6169afa4173debae9433a597b0e2df3805e3b0` |
+| web | `cgr.dev/chainguard/nginx:latest@sha256:f801aa4ac908f6c3847efe81b577e4f34e1f237b5556dfbe698127ad464db269` |
 
 ## 应用镜像证据
 
@@ -33,6 +33,6 @@
 
 | 服务 | 构建别名 | image ID |
 | --- | --- | --- |
-| server | `ragforge/server:local` | `sha256:b42a579db9c159dd90e99d38f9c12e7e4ec2d8158d540fab22c83123b33d044d` |
-| worker | `ragforge/ingestion-worker:local` | `sha256:df5f78ec2dc4799a4d1c80ec99a056398782cc2e4583424c2b5c6ef3a2f4ad73` |
-| web | `ragforge/web:local` | `sha256:f70e12a53764e297569ffa01f52297a5ae8871e70cf26467d5c849cf0822bd2b` |
+| server | `ragforge/server:local` | `sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0` |
+| worker | `ragforge/ingestion-worker:local` | `sha256:19238cb72a3ebb2dfa3f782556cf8a743cec942f5ef97bfb35a9f78c3ba211f4` |
+| web | `ragforge/web:local` | `sha256:42b5331b75bc6094ebdf56aad9491cad721504ca618953befaed01ff2237ac84` |

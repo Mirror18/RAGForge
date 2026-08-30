@@ -1,0 +1,539 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "grype",
+          "version": "0.117.0",
+          "informationUri": "https://github.com/anchore/grype",
+          "rules": [
+            {
+              "id": "GHSA-5gvw-p9qm-jgwh-jackson-databind",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-5gvw-p9qm-jgwh medium vulnerability for jackson-databind package"
+              },
+              "fullDescription": {
+                "text": "jackson-databind: @JsonView bypassed for @JsonUnwrapped container properties on deserialization"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-5gvw-p9qm-jgwh",
+              "help": {
+                "text": "Vulnerability GHSA-5gvw-p9qm-jgwh\nSeverity: medium\nPackage: jackson-databind\nVersion: 2.21.4\nFix Version: 2.21.5\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar\nData Namespace: github:language:java\nLink: [GHSA-5gvw-p9qm-jgwh](https://github.com/advisories/GHSA-5gvw-p9qm-jgwh)",
+                "markdown": "**Vulnerability GHSA-5gvw-p9qm-jgwh**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | jackson-databind  | 2.21.4  | 2.21.5  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar  | github:language:java  | [GHSA-5gvw-p9qm-jgwh](https://github.com/advisories/GHSA-5gvw-p9qm-jgwh)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.21.4"
+                ],
+                "security-severity": "6.5"
+              }
+            },
+            {
+              "id": "GHSA-5jmj-h7xm-6q6v-jackson-databind",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-5jmj-h7xm-6q6v medium vulnerability for jackson-databind package"
+              },
+              "fullDescription": {
+                "text": "jackson-databind has case-insensitive deserialization bypasses per-property @JsonIgnoreProperties"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-5jmj-h7xm-6q6v",
+              "help": {
+                "text": "Vulnerability GHSA-5jmj-h7xm-6q6v\nSeverity: medium\nPackage: jackson-databind\nVersion: 2.21.4\nFix Version: 2.21.5\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar\nData Namespace: github:language:java\nLink: [GHSA-5jmj-h7xm-6q6v](https://github.com/advisories/GHSA-5jmj-h7xm-6q6v)",
+                "markdown": "**Vulnerability GHSA-5jmj-h7xm-6q6v**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | jackson-databind  | 2.21.4  | 2.21.5  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar  | github:language:java  | [GHSA-5jmj-h7xm-6q6v](https://github.com/advisories/GHSA-5jmj-h7xm-6q6v)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.21.4"
+                ],
+                "security-severity": "5.3"
+              }
+            },
+            {
+              "id": "GHSA-x2r2-rvhq-2mqv-spring-security-web",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-x2r2-rvhq-2mqv medium vulnerability for spring-security-web package"
+              },
+              "fullDescription": {
+                "text": "Spring Security: Open Redirect via Unvalidated Post-Login Redirect URL Stored in CookieRequestCache"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-x2r2-rvhq-2mqv",
+              "help": {
+                "text": "Vulnerability GHSA-x2r2-rvhq-2mqv\nSeverity: medium\nPackage: spring-security-web\nVersion: 6.5.10\nFix Version: 6.5.11\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar\nData Namespace: github:language:java\nLink: [GHSA-x2r2-rvhq-2mqv](https://github.com/advisories/GHSA-x2r2-rvhq-2mqv)",
+                "markdown": "**Vulnerability GHSA-x2r2-rvhq-2mqv**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | spring-security-web  | 6.5.10  | 6.5.11  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar  | github:language:java  | [GHSA-x2r2-rvhq-2mqv](https://github.com/advisories/GHSA-x2r2-rvhq-2mqv)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/org.springframework.security/spring-security-web@6.5.10"
+                ],
+                "security-severity": "6.1"
+              }
+            },
+            {
+              "id": "GHSA-jhq6-gfmj-v8fx-logback-core",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-jhq6-gfmj-v8fx low vulnerability for logback-core package"
+              },
+              "fullDescription": {
+                "text": "Logback vulnerable to Object Injection through HardenedObjectInputStream modules"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-jhq6-gfmj-v8fx",
+              "help": {
+                "text": "Vulnerability GHSA-jhq6-gfmj-v8fx\nSeverity: low\nPackage: logback-core\nVersion: 1.5.32\nFix Version: 1.5.34\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar\nData Namespace: github:language:java\nLink: [GHSA-jhq6-gfmj-v8fx](https://github.com/advisories/GHSA-jhq6-gfmj-v8fx)",
+                "markdown": "**Vulnerability GHSA-jhq6-gfmj-v8fx**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| low  | logback-core  | 1.5.32  | 1.5.34  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar  | github:language:java  | [GHSA-jhq6-gfmj-v8fx](https://github.com/advisories/GHSA-jhq6-gfmj-v8fx)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/ch.qos.logback/logback-core@1.5.32"
+                ],
+                "security-severity": "2.9"
+              }
+            },
+            {
+              "id": "GHSA-p5f7-rjhp-pxvc-spring-amqp",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-p5f7-rjhp-pxvc medium vulnerability for spring-amqp package"
+              },
+              "fullDescription": {
+                "text": "Spring AMQP Has Predictable Correlation IDs in RabbitTemplate.sendAndReceive() with Fixed Reply Queue"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-p5f7-rjhp-pxvc",
+              "help": {
+                "text": "Vulnerability GHSA-p5f7-rjhp-pxvc\nSeverity: medium\nPackage: spring-amqp\nVersion: 3.2.10\nFix Version: 3.2.11\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar\nData Namespace: github:language:java\nLink: [GHSA-p5f7-rjhp-pxvc](https://github.com/advisories/GHSA-p5f7-rjhp-pxvc)",
+                "markdown": "**Vulnerability GHSA-p5f7-rjhp-pxvc**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | spring-amqp  | 3.2.10  | 3.2.11  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar  | github:language:java  | [GHSA-p5f7-rjhp-pxvc](https://github.com/advisories/GHSA-p5f7-rjhp-pxvc)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/org.springframework.amqp/spring-amqp@3.2.10"
+                ],
+                "security-severity": "4.4"
+              }
+            },
+            {
+              "id": "GHSA-293q-567p-wmwq-spring-security-web",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-293q-567p-wmwq medium vulnerability for spring-security-web package"
+              },
+              "fullDescription": {
+                "text": "Spring Security Vulnerable to Unauthorized User Impersonation when Using X.509 Client Certificates"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-293q-567p-wmwq",
+              "help": {
+                "text": "Vulnerability GHSA-293q-567p-wmwq\nSeverity: medium\nPackage: spring-security-web\nVersion: 6.5.10\nFix Version: 6.5.11\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar\nData Namespace: github:language:java\nLink: [GHSA-293q-567p-wmwq](https://github.com/advisories/GHSA-293q-567p-wmwq)",
+                "markdown": "**Vulnerability GHSA-293q-567p-wmwq**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | spring-security-web  | 6.5.10  | 6.5.11  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar  | github:language:java  | [GHSA-293q-567p-wmwq](https://github.com/advisories/GHSA-293q-567p-wmwq)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/org.springframework.security/spring-security-web@6.5.10"
+                ],
+                "security-severity": "6.8"
+              }
+            },
+            {
+              "id": "GHSA-p47f-322f-whfh-logback-core",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-p47f-322f-whfh low vulnerability for logback-core package"
+              },
+              "fullDescription": {
+                "text": "QOS.CH Sarl logback logback-core has a deserialization of untrusted data vulnerability"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-p47f-322f-whfh",
+              "help": {
+                "text": "Vulnerability GHSA-p47f-322f-whfh\nSeverity: low\nPackage: logback-core\nVersion: 1.5.32\nFix Version: 1.5.33\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar\nData Namespace: github:language:java\nLink: [GHSA-p47f-322f-whfh](https://github.com/advisories/GHSA-p47f-322f-whfh)",
+                "markdown": "**Vulnerability GHSA-p47f-322f-whfh**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| low  | logback-core  | 1.5.32  | 1.5.33  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar  | github:language:java  | [GHSA-p47f-322f-whfh](https://github.com/advisories/GHSA-p47f-322f-whfh)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/ch.qos.logback/logback-core@1.5.32"
+                ],
+                "security-severity": "1.2"
+              }
+            },
+            {
+              "id": "GHSA-p8qj-fj6r-w7q9-spring-amqp",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-p8qj-fj6r-w7q9 medium vulnerability for spring-amqp package"
+              },
+              "fullDescription": {
+                "text": "Spring AMQP Core: Missing Certificate and Hostname Verification for amqps URIs in RabbitConnectionFactoryBean"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-p8qj-fj6r-w7q9",
+              "help": {
+                "text": "Vulnerability GHSA-p8qj-fj6r-w7q9\nSeverity: medium\nPackage: spring-amqp\nVersion: 3.2.10\nFix Version: 3.2.11\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar\nData Namespace: github:language:java\nLink: [GHSA-p8qj-fj6r-w7q9](https://github.com/advisories/GHSA-p8qj-fj6r-w7q9)",
+                "markdown": "**Vulnerability GHSA-p8qj-fj6r-w7q9**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | spring-amqp  | 3.2.10  | 3.2.11  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar  | github:language:java  | [GHSA-p8qj-fj6r-w7q9](https://github.com/advisories/GHSA-p8qj-fj6r-w7q9)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/org.springframework.amqp/spring-amqp@3.2.10"
+                ],
+                "security-severity": "4.0"
+              }
+            },
+            {
+              "id": "GHSA-ggg2-9786-hwc8-spring-boot-autoconfigure",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-ggg2-9786-hwc8 medium vulnerability for spring-boot-autoconfigure package"
+              },
+              "fullDescription": {
+                "text": "Spring Boot: Predictable Temp Directory in Artemis Auto-configuration"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-ggg2-9786-hwc8",
+              "help": {
+                "text": "Vulnerability GHSA-ggg2-9786-hwc8\nSeverity: medium\nPackage: spring-boot-autoconfigure\nVersion: 3.5.14\nFix Version: 3.5.15\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/spring-boot-autoconfigure-3.5.14.jar\nData Namespace: github:language:java\nLink: [GHSA-ggg2-9786-hwc8](https://github.com/advisories/GHSA-ggg2-9786-hwc8)",
+                "markdown": "**Vulnerability GHSA-ggg2-9786-hwc8**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | spring-boot-autoconfigure  | 3.5.14  | 3.5.15  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/spring-boot-autoconfigure-3.5.14.jar  | github:language:java  | [GHSA-ggg2-9786-hwc8](https://github.com/advisories/GHSA-ggg2-9786-hwc8)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/org.springframework.boot/spring-boot-autoconfigure@3.5.14"
+                ],
+                "security-severity": "5.3"
+              }
+            },
+            {
+              "id": "GHSA-mhm7-754m-9p8w-jackson-databind",
+              "name": "JavaMatcherExactDirectMatch",
+              "shortDescription": {
+                "text": "GHSA-mhm7-754m-9p8w medium vulnerability for jackson-databind package"
+              },
+              "fullDescription": {
+                "text": "jackson-databind: `@JsonView` bypass for creator properties with `@JsonTypeInfo(include=As.EXTERNAL_PROPERTY)`"
+              },
+              "helpUri": "https://github.com/advisories/GHSA-mhm7-754m-9p8w",
+              "help": {
+                "text": "Vulnerability GHSA-mhm7-754m-9p8w\nSeverity: medium\nPackage: jackson-databind\nVersion: 2.21.4\nFix Version: 2.21.5\nType: java-archive\nLocation: /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar\nData Namespace: github:language:java\nLink: [GHSA-mhm7-754m-9p8w](https://github.com/advisories/GHSA-mhm7-754m-9p8w)",
+                "markdown": "**Vulnerability GHSA-mhm7-754m-9p8w**\n| Severity | Package | Version | Fix Version | Type | Location | Data Namespace | Link |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| medium  | jackson-databind  | 2.21.4  | 2.21.5  | java-archive  | /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar  | github:language:java  | [GHSA-mhm7-754m-9p8w](https://github.com/advisories/GHSA-mhm7-754m-9p8w)  |\n"
+              },
+              "properties": {
+                "purls": [
+                  "pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.21.4"
+                ],
+                "security-severity": "6.5"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "GHSA-5gvw-p9qm-jgwh-jackson-databind",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: jackson-databind, version 2.21.4 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "f93d591fbde721413817154d3b827e9f274056caa9522bde8a38349bce134ebb:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-5jmj-h7xm-6q6v-jackson-databind",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: jackson-databind, version 2.21.4 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "f93d591fbde721413817154d3b827e9f274056caa9522bde8a38349bce134ebb:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-x2r2-rvhq-2mqv-spring-security-web",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: spring-security-web, version 6.5.10 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "dd2d89883835990074d218281baf265c57f213e6306656aa291f2c28d10382ac:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-jhq6-gfmj-v8fx-logback-core",
+          "level": "note",
+          "message": {
+            "text": "A low vulnerability in java-archive package: logback-core, version 1.5.32 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d0f7e17c82f1d0d34f902b91995a318605ac46fd65623e08c402ba8ab1b9e440:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-p5f7-rjhp-pxvc-spring-amqp",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: spring-amqp, version 3.2.10 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "620828f0b1d7d6e9e86e737d7c2508c2ea6830dfaaf2f7c123a364bb005d3918:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-293q-567p-wmwq-spring-security-web",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: spring-security-web, version 6.5.10 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/spring-security-web-6.5.10.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "dd2d89883835990074d218281baf265c57f213e6306656aa291f2c28d10382ac:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-p47f-322f-whfh-logback-core",
+          "level": "note",
+          "message": {
+            "text": "A low vulnerability in java-archive package: logback-core, version 1.5.32 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/logback-core-1.5.32.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d0f7e17c82f1d0d34f902b91995a318605ac46fd65623e08c402ba8ab1b9e440:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-p8qj-fj6r-w7q9-spring-amqp",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: spring-amqp, version 3.2.10 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/spring-amqp-3.2.10.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "620828f0b1d7d6e9e86e737d7c2508c2ea6830dfaaf2f7c123a364bb005d3918:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-ggg2-9786-hwc8-spring-boot-autoconfigure",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: spring-boot-autoconfigure, version 3.5.14 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/spring-boot-autoconfigure-3.5.14.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/spring-boot-autoconfigure-3.5.14.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/spring-boot-autoconfigure-3.5.14.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3c3bebee3c7148dd43196c0d0d6c6358b0bd6baa636445bf8ba61ca3a5a0526d:1"
+          }
+        },
+        {
+          "ruleId": "GHSA-mhm7-754m-9p8w-jackson-databind",
+          "level": "warning",
+          "message": {
+            "text": "A medium vulnerability in java-archive package: jackson-databind, version 2.21.4 was found in image ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0 at: /app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server//app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "/app/ragforge-server.jar",
+                  "fullyQualifiedName": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0@sha256:3289b654afb9fc801fde83db9c828f0c4491f3e1a9528f7c1ae153858674ef0d:/app/ragforge-server.jar:BOOT-INF/lib/jackson-databind-2.21.4.jar"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "f93d591fbde721413817154d3b827e9f274056caa9522bde8a38349bce134ebb:1"
+          }
+        }
+      ]
+    }
+  ]
+}
