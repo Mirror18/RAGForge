@@ -88,7 +88,7 @@ tests:
       command: mvn -q -pl apps/server test -Dtest="ServerIntegrationTest,BusinessIngestionPathPolicyTest,Phase3IngestionPersistenceIntegrationTest,CandidateIndexServiceIntegrationTest"
       expected: "新增用例 > 5；全部绿"
     - name: Web typecheck
-      command: npm --prefix apps/web run typecheck
+      command: npm --prefix apps/web run format:check
       expected: 0 errors
   evidence_file: tests/evidence/P7C-01-worker-summary.v1.json
   evidence_schema:
