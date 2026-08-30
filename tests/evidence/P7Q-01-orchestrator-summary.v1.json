@@ -1,0 +1,12 @@
+{
+  "card_id": "P7Q-01",
+  "status": "PASS",
+  "merge_commit": "002cb63",
+  "worker_commit": "a997aff82eaff6a87dee3abd49142df02f3b0c53",
+  "tests": {
+    "unit": "9/9",
+    "preflight_json": "six required checks passed",
+    "secret_scan": "passed"
+  },
+  "acceptance_met": {"A1": true, "A2": true, "A3": true, "A4": true, "A5": true}
+}
