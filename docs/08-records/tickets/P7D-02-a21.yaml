@@ -1,0 +1,132 @@
+# RAGForge Worker Agent Ticket — P7D-02
+
+meta:
+  card_id: P7D-02
+  title: 发布镜像与供应链硬化
+  priority: P2
+  agent_slug: a21
+  branch: codex/p7-supply-chain-a21
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-supply-chain-a21
+  base_sha: d299c0cb2329519136359d2a714a84a08f73b256
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: [P7D-01]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - deploy/compose/
+    - deploy/docker/Dockerfile
+    - .github/workflows/quality.yml
+    - .env.example
+    - scripts/ci/
+    - tests/ci/
+    - tests/evidence/P7D-02-worker-summary.v1.json
+  read_only:
+    - docs/08-records/tickets/P7D-02-a21.yaml
+    - deploy/compose/compose.yaml
+    - deploy/compose/env.example
+    - deploy/compose/README.md
+    - deploy/docker/Dockerfile
+    - deploy/docker/nginx.conf
+    - .github/workflows/quality.yml
+    - .env.example
+    - scripts/ci/sbom_dependency_scan.py
+    - scripts/ci/secret_scan.py
+    - scripts/ci/validate_compose.py
+    - tests/ci/test_container_hardening_check.py
+    - THIRD_PARTY_NOTICES.md
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - MEMORY.md
+    - apps/server/
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - apps/web/
+    - contracts/
+    - src/
+    - db/
+    - production/
+    - .env.local
+
+acceptance:
+  criteria:
+    - id: A1
+      text: deploy/compose 中所有基础设施与应用镜像均使用 immutable digest；应用 Dockerfile 的基础镜像也锁定 digest，并保留可审计的镜像清单/说明。
+    - id: A2
+      text: CI 针对构建后的目标镜像（不是源码目录）生成镜像级 SBOM，并上传可下载的 CycloneDX 或等价 artifact；不得仅复用源码路径 SBOM 作为镜像证据。
+    - id: A3
+      text: CI 针对同一目标镜像执行 Grype 扫描并上传 SARIF/artifact；扫描目标、镜像 digest、失败策略和证据名称可追溯。
+    - id: A4
+      text: Secret 审计覆盖目标镜像及 Compose 展开配置；生产 Secret 不使用默认占位值、不进入镜像、展开配置或日志；审计成功返回 0，失败返回非 0。
+    - id: A5
+      text: Compose 静态验证、现有容器加固回归、format/secret gate 与供应链自测全部通过；只使用合成/本地凭据，不创建 release、不推送生产镜像、不执行生产迁移、不启用云出境。
+
+budget:
+  token_limit: 7000
+
+tests:
+  must_run:
+    - name: Compose validation
+      command: python scripts/ci/validate_compose.py
+      expected: exit 0
+    - name: Supply-chain unit tests
+      command: python -m pytest -q tests/ci -k "container or supply or sbom or secret"
+      expected: all selected tests pass
+    - name: Tracked-file secret scan
+      command: python scripts/ci/secret_scan.py
+      expected: exit 0
+    - name: Dependency/SBOM command seam
+      command: python scripts/ci/sbom_dependency_scan.py --mode auto
+      expected: exit 0
+    - name: Target-image build and inspection
+      command: docker compose -f deploy/compose/compose.yaml --profile app build server worker web
+      expected: build succeeds and image digests are recorded in the worker evidence
+    - name: Workflow and text gates
+      command: python -m unittest discover -s scripts/ci -p "test_*.py" -v
+      expected: all selected tests pass
+  evidence_file: tests/evidence/P7D-02-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: true
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: 7000
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: tests/evidence/P7D-02-worker-summary.v1.json

@@ -16,8 +16,8 @@
 
 - Updated: 2026-08-30
 - 本轮业务闭环增量：真实浏览器已完成注册/登录、建空间、发布本地 Ollama Profile/Route/Prompt、Markdown 上传、Server→Outbox→RabbitMQ→Worker→MinIO/Qdrant 摄取、Parse Report、候选索引验证/active 发布、LOCAL_ONLY 带引用问答、引用预览、Run/Step/correlationId/usage 展示，以及同文档增量同步后的第二 Revision/Index/Answer；证据见 [`business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 目录已配置为本地约定，但本轮仍未读取个人 notes 内容。
-- Current stage: Phase 7 P2 可启动（`p2-ready`）。P7C-01~08、P7C-05R、P7Q-01~06 与 P7Q-05R 已完成；P0/P1 本地验收和同 SHA 远程 CI 均满足，下一卡为 P7D-01 容器加固。
-- 最近远程全绿的 Phase 7 主线候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`；quality Run [33307092918](https://github.com/Mirror18/RAGForge/actions/runs/33307092918) 全绿（5m48s）。容器、Ubuntu、观测、升级和供应链 P2 卡片尚未完成。
+- Current stage: Phase 7 P2 执行中（`p2-execution`）。P7C-01~08、P7C-05R、P7Q-01~06、P7Q-05R、P7D-00 与 P7D-01 已完成；P7D-01 的本地运行时证据和同候选远程 quality Run 均通过，下一卡为 P7D-02 发布镜像与供应链硬化。
+- 最近远程全绿的 Phase 7 P2 候选：`00bee66`；quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 全绿，annotations 为空。Ubuntu、观测、升级和供应链 P2 卡片尚未完成。
 - Repository: GitHub `Mirror18/RAGForge`
 - Branch: `main`
 - 当前权威状态（覆盖本文档中的历史基线行）：功能验证基线为 `bde93ebe9be2b0b9e2614a0cc43baf216285c1b6`，其 GitHub Actions quality Run [`32586867110`](https://github.com/Mirror18/RAGForge/actions/runs/32586867110) 全绿；随后记录提交 `6ec5d9d` 的 quality Run [`32587259456`](https://github.com/Mirror18/RAGForge/actions/runs/32587259456) 亦全绿。两次运行均覆盖静态、契约、SBOM/Grype、Maven、Phase 3–5、评估、安全、性能、Web 门禁；旧 SHA/旧 CI 行仅保留为历史记录。
@@ -200,7 +200,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 功能候选 `f695936594834f8a870fa95dca5ff0c6634441a1` 已包含 P7C-01~08、P7Q-01~06，以及恢复卡 P7C-05R。恢复卡修复 test profile 中 fake/production `AI_RUNTIME` adapter 重复注册；默认 profile 仍注册真实 AI Runtime adapter，registry 重复检测未被弱化。
 - 本地同候选验证：preflight 6/6；JDK 21 + Docker Maven reactor 307 tests（306 passed、0 failed、0 errors、1 skipped）；contract 52/52；OpenAPI/Controller 102/102；Web Vitest 10/10、Playwright 10/10、TypeScript/Vite build；128-case RAG gate；format、architecture、Markdown links、secret scan、dependency inventory 与 Compose static validation 全绿。
 - 评估证据为公共 synthetic fixture，candidate retrieval/generation 指标均为 1.0，cross-space、Evidence 外引用、prompt-injection tool 和 unauthorized cloud 违规均为 0；这不替代真实模型质量、容量或人工/red-team 结论，R-005/R-012 的既有豁免与 R-054 残余风险继续保留。
-- P2 入口仍为 `BLOCKED`：当前候选尚未推送，因而没有同 SHA GitHub Actions Linux 结果。只有推送后远程全绿，才能派发 P7D-01；本次没有创建 release、接受许可证、执行生产迁移或开启云出境。
+- 历史快照（当前已由第 17 节解除）：P2 入口当时为 `BLOCKED`，候选尚未推送且没有同 SHA GitHub Actions Linux 结果；只有推送后远程全绿，才能派发 P7D-01。本次没有创建 release、接受许可证、执行生产迁移或开启云出境。
 - 结构化汇总见 [`phase7-p2-entry-local-gates.v1.json`](../../tests/evidence/phase7-p2-entry-local-gates.v1.json)，详细 RAG 证据见 [`phase7-evaluation-f695936.v1.json`](../../tests/evidence/phase7-evaluation-f695936.v1.json)。
 
 ## 17. P7Q-05R 远程 RAG 门禁恢复（2026-08-30）
@@ -209,3 +209,10 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - P7Q-05R 在 checkout 设置 `fetch-depth: 0`，确保 push before/head 与 pull request base/head 可解析；RAG gate 对无效 ref 仍 fail-closed，不改为 skipped。浅克隆失败与 unshallow 成功均已复现，RAG gate 单测 4/4、format、secret scan 通过。
 - 修复实现提交 `56bfcef18c01c441d3f1a1ee0e7e6f5b650ef25d`，集成提交 `2b961f2832c83c247914a74276e89fd71f79c1eb`。在重推完成前，P2 当时继续阻塞；最终解除记录见下一条。
 - 重推后的主线 `f0ce7d2318ec16da8a70626c0f646d4a47a1227d` 已由 quality Run [33307092918](https://github.com/Mirror18/RAGForge/actions/runs/33307092918) 全绿验证，耗时 5m48s；RAG、完整 Maven、SBOM/Grype、Phase 2–5、安全和 Web 门禁全部通过。P2 入口阻塞解除。
+
+## 18. P7D-00/P7D-01 完成与 P7D-02 分派准备（2026-08-30）
+
+- P7D-00 Actions Node.js 24 运行时升级与 P7D-01 容器加固均已完成；P7D-01 证据 [`phase7-container-hardening.v1.json`](../../tests/evidence/phase7-container-hardening.v1.json) 为 PASS，覆盖 server、worker、web 的 non-root、health、capability、只读文件系统、受控临时写路径、资源限制和日志轮转。
+- 本治理变更以 `main`/`origin/main` 当时同步的记录提交 `d299c0c` 为基线；quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对候选 `00bee66` 全绿，检查 annotations 为空。该运行确认 P7D-00/P7D-01 的远程工作流基线已通过。
+- 下一项为 P7D-02「发布镜像与供应链硬化」：锁定基础镜像和应用镜像 immutable digest，针对目标镜像生成 SBOM/Grype SARIF，并对目标镜像执行 Secret 审计；不得创建 release、推送生产镜像、执行生产迁移或使用生产 Secret。
+- P7D-02 worker ticket 已建立于 [`P7D-02-a21.yaml`](tickets/P7D-02-a21.yaml)，基线为 `d299c0cb2329519136359d2a714a84a08f73b256`，依赖 P7D-01 已满足。
