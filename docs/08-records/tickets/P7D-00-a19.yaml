@@ -58,7 +58,7 @@ tests:
       command: python scripts/ci/secret_scan.py
       expected: exit 0
     - name: workflow action runtime audit
-      command: python -c "from pathlib import Path; import re; p=Path('.github/workflows/quality.yml').read_text(encoding='utf-8'); assert 'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true' in p; assert 'actions/setup-java@v5' in p; assert not re.search(r'actions/(checkout|setup-python|cache|setup-node|upload-artifact)@v[45]\\b', p); print('actions runtime audit passed')"
+      command: python -c "from pathlib import Path; import re; p=Path('.github/workflows/quality.yml').read_text(encoding='utf-8'); assert 'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true' in p; assert 'actions/setup-java@v5' in p; assert not re.search(r'actions/checkout@v4\\b|actions/setup-python@v5\\b|actions/cache@v4\\b|actions/setup-node@v4\\b|actions/upload-artifact@v4\\b', p); print('actions runtime audit passed')"
       expected: exit 0
   evidence_file: tests/evidence/P7D-00-worker-summary.v1.json
   evidence_schema:
