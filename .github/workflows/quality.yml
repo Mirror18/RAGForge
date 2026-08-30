@@ -121,6 +121,27 @@ jobs:
           path: tests/evidence/ci-logs/contract-coverage.json
           if-no-files-found: error
 
+      - name: Run RAG evaluation gate for RAG-relevant changes
+        shell: bash
+        env:
+          RAG_GATE_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          RAG_GATE_HEAD_REF: ${{ github.sha }}
+        run: |
+          set -o pipefail
+          mkdir -p tests/evidence
+          python scripts/ci/rag_evaluation_gate.py \
+            --base-ref "$RAG_GATE_BASE_REF" \
+            --head-ref "$RAG_GATE_HEAD_REF" \
+            --output tests/evidence/phase7-evaluation-${{ github.run_id }}.v1.json
+
+      - name: Upload Phase 7 RAG evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragforge-phase7-evaluation-${{ github.run_id }}
+          path: tests/evidence/phase7-evaluation-*.v1.json
+          if-no-files-found: error
+
       - name: Run deterministic Phase 2 cloud, concurrency, and egress gates
         shell: bash
         run: |
