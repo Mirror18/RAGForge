@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0
+  },
+  "raw_output_stored": true,
+  "commands": {
+    "contract_test": "52/52 passed",
+    "ai_runtime_unit_and_loopback": "4/4 passed",
+    "provider_model_binding_regression": "Maven exit 0",
+    "rerank_adapter_and_retrieval": "5 RERANK adapter tests plus RetrievalServiceTest passed",
+    "adapter_http_regression": "Maven exit 0"
+  },
+  "environment": {
+    "java": "21.0.7",
+    "maven_java_home": "C:\\Program Files\\Java\\jdk-21",
+    "initial_maven_runtime_issue": "Default mvn selected JDK 8; rerun with JDK 21"
+  }
+}

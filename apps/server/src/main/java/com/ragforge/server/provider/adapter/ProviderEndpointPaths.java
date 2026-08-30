@@ -22,6 +22,10 @@ final class ProviderEndpointPaths {
         return append(endpoint, "/v1/embeddings", "/v1", "/v1/embeddings");
     }
 
+    static URI aiRuntimeRerank(URI endpoint) {
+        return append(endpoint, "/v1/rerank", "/v1", "/v1/rerank");
+    }
+
     private static URI append(URI endpoint, String defaultPath, String basePath, String fullPath) {
         String current = endpoint.getPath() == null ? "" : endpoint.getPath();
         String path;

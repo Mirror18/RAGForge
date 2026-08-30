@@ -123,7 +123,9 @@ public final class RetrievalService {
                 request.profile().rrfK(), request.profile().rrfDenseWeight(), request.profile().rrfBm25Weight());
         StageTrace rrfTrace = new StageTrace(toRrfTrace(merged), elapsedMs(rrfStarted));
         long rerankStarted = System.nanoTime();
-        List<Reranker.Result> reranked = reranker.rerank(normalized, merged, request.profile().rerankTopK());
+        List<Reranker.Result> reranked = reranker instanceof SpaceAwareReranker spaceAware
+                ? spaceAware.rerank(request.spaceId(), normalized, merged, request.profile().rerankTopK())
+                : reranker.rerank(normalized, merged, request.profile().rerankTopK());
         StageTrace rerankTrace = new StageTrace(toRerankTrace(reranked), elapsedMs(rerankStarted));
         List<EvidenceBundle.Evidence> evidence = selectContext(request, reranked);
         boolean abstained = evidence.isEmpty();

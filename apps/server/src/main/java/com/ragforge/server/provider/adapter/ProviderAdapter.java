@@ -34,6 +34,16 @@ public interface ProviderAdapter {
                 request == null || request.identity() == null ? null : request.identity().requestId(), 0));
     }
 
+    default CompletionStage<ProviderRerankResponse> rerank(
+            ProviderConnection connection,
+            EgressDecision egressDecision,
+            ProviderRerankRequest request,
+            CancellationToken cancellationToken) {
+        return CompletableFuture.failedFuture(new ProviderAdapterException(
+                ProviderErrorClass.UNSUPPORTED_CAPABILITY, "Provider rerank is not supported",
+                request == null || request.identity() == null ? null : request.identity().requestId(), 0));
+    }
+
     default CompletionStage<ProviderChatResponse> chat(
             ProviderConnection connection,
             EgressDecision egressDecision,
