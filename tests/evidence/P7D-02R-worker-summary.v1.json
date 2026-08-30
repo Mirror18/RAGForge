@@ -1,0 +1,71 @@
+{
+  "schema_version": "P7D-02R-worker-summary.v1",
+  "card_id": "P7D-02R",
+  "status": "PASS",
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0,
+    "raw_output_stored": true
+  },
+  "changes": {
+    "java_dependencies": {
+      "spring_boot": "3.5.14",
+      "spring_framework": "6.2.19",
+      "spring_data_commons": "3.5.12",
+      "tomcat": "10.1.55",
+      "netty": "4.1.136.Final",
+      "jackson": "2.21.4",
+      "micrometer": "1.15.12",
+      "amqp_client": "5.33.1",
+      "postgresql": "42.7.12",
+      "bouncycastle": "1.84"
+    },
+    "runtime_images": {
+      "java": "cgr.dev/chainguard/jre:latest@sha256:8442d5863e82c43320f20d40dd6169afa4173debae9433a597b0e2df3805e3b0",
+      "web": "cgr.dev/chainguard/nginx:latest@sha256:f801aa4ac908f6c3847efe81b577e4f34e1f237b5556dfbe698127ad464db269"
+    },
+    "healthchecks": "Replaced curl/wget/shell runtime dependencies with small build-time HTTP/PID probes; server still checks actuator health and web still checks 127.0.0.1:8080."
+  },
+  "target_images": {
+    "server": {
+      "reference": "ragforge/server@sha256:ed327b2ffd35e628f2c7b1bfdf08a8fcf12d79f121afb777661df71032c574b0",
+      "sbom": "tests/evidence/P7D-02R-server.sbom.cdx.json",
+      "grype_sarif": "tests/evidence/P7D-02R-server.grype.sarif",
+      "grype_fail_on_high_exit": 0
+    },
+    "worker": {
+      "reference": "ragforge/ingestion-worker@sha256:19238cb72a3ebb2dfa3f782556cf8a743cec942f5ef97bfb35a9f78c3ba211f4",
+      "sbom": "tests/evidence/P7D-02R-ingestion-worker.sbom.cdx.json",
+      "grype_sarif": "tests/evidence/P7D-02R-ingestion-worker.grype.sarif",
+      "grype_fail_on_high_exit": 0
+    },
+    "web": {
+      "reference": "ragforge/web@sha256:42b5331b75bc6094ebdf56aad9491cad721504ca618953befaed01ff2237ac84",
+      "sbom": "tests/evidence/P7D-02R-web.sbom.cdx.json",
+      "grype_sarif": "tests/evidence/P7D-02R-web.grype.sarif",
+      "grype_fail_on_high_exit": 0
+    }
+  },
+  "passed_checks": [
+    "Compose validation",
+    "supply-chain unit tests 7/7",
+    "format gate",
+    "tracked-file secret scan",
+    "server/worker Maven regression under JDK 21",
+    "web npm ci, format:check and build",
+    "target server/worker/web image build",
+    "target image Secret audit with no findings",
+    "immutable image RepoDigest recorded for all targets",
+    "image-level Syft CycloneDX SBOM for all targets",
+    "Grype --fail-on high server exit 0",
+    "Grype --fail-on high worker exit 0",
+    "Grype --fail-on high web exit 0"
+  ],
+  "warnings": [
+    "npm ci reports 3 development-dependency audit findings; node_modules and Web package metadata are outside P7D-02R ownership and are not copied into the final web image."
+  ],
+  "evidence_scope": "Synthetic/local images only; no production credentials, release, registry push, migration, or cloud egress used."
+}

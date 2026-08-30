@@ -20,6 +20,17 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <minio.sdk.version>8.6.0</minio.sdk.version>
         <okhttp.jvm.version>5.1.0</okhttp.jvm.version>
+        <postgresql.version>42.7.12</postgresql.version>
+        <commons-lang3.version>3.18.0</commons-lang3.version>
+        <jackson-bom.version>2.21.4</jackson-bom.version>
+        <log4j2.version>2.25.5</log4j2.version>
+        <micrometer.version>1.15.12</micrometer.version>
+        <netty.version>4.1.135.Final</netty.version>
+        <rabbit-amqp-client.version>5.33.1</rabbit-amqp-client.version>
+        <spring-data-bom.version>2025.0.12</spring-data-bom.version>
+        <spring-framework.version>6.2.19</spring-framework.version>
+        <spring-retry.version>2.0.13</spring-retry.version>
+        <tomcat.version>10.1.55</tomcat.version>
     </properties>
 
     <dependencies>
@@ -46,6 +57,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>

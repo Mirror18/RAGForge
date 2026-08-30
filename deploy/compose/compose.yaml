@@ -29,7 +29,7 @@ x-ragforge-app-hardening: &ragforge-app-hardening
 # server, ingestion worker and static web container from the unified Dockerfile.
 services:
   postgres:
-    image: ${POSTGRES_IMAGE:-postgres:16.4-alpine}
+    image: ${POSTGRES_IMAGE:-postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ragforge}
@@ -51,7 +51,7 @@ services:
       start_period: 10s
 
   qdrant:
-    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.11.5}
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.11.5@sha256:7a4788934788a7ed9cbf6b8cc3ca1ee880dcd969cf8c6639dc7d0e446cbd4b47}
     restart: unless-stopped
     environment:
       QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
@@ -76,7 +76,7 @@ services:
       start_period: 10s
 
   rabbitmq:
-    image: ${RABBITMQ_IMAGE:-rabbitmq:3.13-management-alpine}
+    image: ${RABBITMQ_IMAGE:-rabbitmq:3.13-management-alpine@sha256:606d8c0d6b3c18d1da9afc53bc7cdb2a8d5486df91b5a9830e9e07626c9ae281}
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-ragforge}
@@ -100,7 +100,7 @@ services:
       start_period: 20s
 
   valkey:
-    image: ${VALKEY_IMAGE:-valkey/valkey:8.0.1-alpine}
+    image: ${VALKEY_IMAGE:-valkey/valkey:8.0.1-alpine@sha256:75010b6854cb5ba6a0b1540d1bd3238541a31e3f8018cd31f9e5b92bb3192fa6}
     restart: unless-stopped
     environment:
       VALKEY_PASSWORD: ${VALKEY_PASSWORD:-change-me}
@@ -124,7 +124,7 @@ services:
       start_period: 5s
 
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2024-12-18T13-15-44Z}
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2024-12-18T13-15-44Z@sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3}
     restart: unless-stopped
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-ragforge}
@@ -150,7 +150,7 @@ services:
   # useful for a fully containerized smoke environment; application services
   # should consume OLLAMA_BASE_URL instead of assuming a local socket.
   ollama:
-    image: ${OLLAMA_IMAGE:-ollama/ollama:0.5.4}
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.5.4@sha256:18bfb1d605604fd53dcad20d0556df4c781e560ebebcd923454d627c994a0e37}
     profiles:
       - ollama
     restart: unless-stopped
@@ -220,7 +220,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl -fsS http://127.0.0.1:8080/actuator/health | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'
+        - java -cp /opt/ragforge-healthcheck.jar HttpHealthcheck http://127.0.0.1:8080/actuator/health
       interval: 10s
       timeout: 5s
       retries: 12
@@ -270,7 +270,7 @@ services:
       # its liveness is the readiness signal after all dependencies are ready.
       test:
         - CMD-SHELL
-        - kill -0 1
+        - java -cp /opt/ragforge-healthcheck.jar HttpHealthcheck pid 'kill -0 1'
       interval: 10s
       timeout: 5s
       retries: 6
@@ -302,8 +302,9 @@ services:
         condition: service_healthy
     healthcheck:
       test:
-        - CMD-SHELL
-        - wget -q -O /dev/null http://127.0.0.1:8080/
+        - CMD
+        - /usr/local/bin/http-healthcheck
+        - http://127.0.0.1:8080/
       interval: 10s
       timeout: 5s
       retries: 6
