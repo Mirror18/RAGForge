@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, configureGitSource, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listGitSources, listIndexes, listIngestionJobs, publishIndex, syncGitSource, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type GitSourceView, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "./api";
+import { ApiError, configureGitSource, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listGitSources, listIndexes, listIngestionJobs, publishIndex, rollbackIndex, retireIndex, syncGitSource, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type GitSourceView, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "./api";
 import SourceLibraryView from "./SourceLibraryView.vue";
 import TaskCenterView from "./TaskCenterView.vue";
+import IndexLifecycleView from "./IndexLifecycleView.vue";
 
 const props = defineProps<{
   selectedSpaceId: string;
@@ -303,6 +304,38 @@ async function publishCandidate(index: IndexView): Promise<void> {
   }
 }
 
+async function rollbackPrevious(indexVersionId: string): Promise<void> {
+  const pointerVersion = activeIndex.value?.pointer.versionNo;
+  if (!props.selectedSpaceId || pointerVersion === undefined) return;
+  publishBusy.value = indexVersionId;
+  error.value = "";
+  try {
+    await rollbackIndex(props.selectedSpaceId, indexVersionId, pointerVersion);
+    notice.value = "已回滚上一版索引，current/previous pointer 已更新。";
+    await loadFlow();
+  } catch (value) {
+    error.value = describeError(value);
+  } finally {
+    publishBusy.value = "";
+  }
+}
+
+async function retireVersion(index: IndexView): Promise<void> {
+  const pointerVersion = activeIndex.value?.pointer.versionNo;
+  if (!props.selectedSpaceId || pointerVersion === undefined || index.state !== "ACTIVE") return;
+  publishBusy.value = index.indexVersionId;
+  error.value = "";
+  try {
+    await retireIndex(props.selectedSpaceId, index.indexVersionId, pointerVersion);
+    notice.value = `索引 v${index.versionNo} 已退役，仍保留在生命周期记录中。`;
+    await loadFlow();
+  } catch (value) {
+    error.value = describeError(value);
+  } finally {
+    publishBusy.value = "";
+  }
+}
+
 function chooseFile(event: Event): void {
   selectedFiles.value = Array.from((event.target as HTMLInputElement).files ?? []).filter(isSupportedSourceFile);
   selectedFile.value = selectedFiles.value[0] ?? null;
@@ -364,6 +397,16 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
     <div><span class="card-label">Chat route switch</span><strong>选择本次问答模型</strong><p class="muted">切换只选择已发布的 Chat route；出境授权由服务端空间绑定强制校验，不会自动回退。</p></div>
     <div class="field"><label for="runtime-mode">Chat provider</label><select id="runtime-mode" v-model="runtimeMode" @change="selectRuntimeMode"><option value="LOCAL">本地 Ollama（LOCAL_ONLY）</option><option value="MIMO" :disabled="!chatRoutes.some((item) => item.egressClass === 'CLOUD')">Xiaomi MiMo（显式云端授权）</option></select></div>
   </div>
+  <IndexLifecycleView
+    v-if="props.selectedSpaceId"
+    :indexes="indexes"
+    :active-index="activeIndex"
+    :can-manage="canManage"
+    :busy-index-id="publishBusy"
+    @publish="publishCandidate"
+    @rollback="rollbackPrevious"
+    @retire="retireVersion"
+  />
 </template>
 
 <style scoped>
@@ -374,4 +417,5 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
 @media (max-width: 600px) { .flow-steps, .flow-side { grid-template-columns: 1fr; }.flow-step { min-height: auto; }.flow-step p { min-height: auto; }.flow-boundary-note { flex-direction: column; }.setup-card { align-items: stretch; flex-direction: column; }.setup-actions button { width: 100%; } }
 .source-entry { display: grid; gap: 13px; margin: 2px 0 22px; padding: 16px; border: 1px solid #dce8f6; border-radius: 13px; background: linear-gradient(135deg, #f7fbff, #fafdff); }.source-entry strong { display: block; color: #2b4c78; font-size: .92rem; }.source-entry .muted { max-width: 650px; margin: 6px 0 0; font-size: .78rem; }.source-actions { display: flex; flex-wrap: wrap; gap: 9px; }.file-picker { position: relative; display: inline-flex; align-items: center; padding: 9px 12px; border: 1px solid #bed2ec; border-radius: 9px; background: #eaf3ff; color: #28578f; cursor: pointer; font-size: .75rem; font-weight: 800; }.file-picker:hover { border-color: #7ea8d8; background: #e1efff; }.file-picker input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }.secondary-picker { border-color: #d5deea; background: #fff; color: #647895; }.selected-files { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #56708f; font-size: .76rem; }.selected-files button { padding: 8px 11px; font-size: .73rem; }.section-divider { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 23px 0 15px; padding-top: 18px; border-top: 1px solid #edf1f6; }.section-divider span { color: #405f8b; font-size: .74rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }.section-divider small { color: #91a0b2; font-size: .7rem; }.flow-config { padding: clamp(18px, 2.5vw, 27px); }.flow-config .upload-panel { display: none; }
 @media (max-width: 600px) { .source-actions, .selected-files, .section-divider { align-items: stretch; flex-direction: column; }.file-picker, .selected-files button { justify-content: center; width: 100%; } }
+.flow-config .form-grid > .field.wide:last-child { display: none; }
 </style>
