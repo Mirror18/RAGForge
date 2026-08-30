@@ -12,14 +12,14 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：d35eb8e3d5e98ee4e95f6dc1b43aece0bda7b362
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应基线 SHA：42b75aa
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`implementation-reconciliation`）
-- **主线基线 SHA（main）**：`d35eb8e3d5e98ee4e95f6dc1b43aece0bda7b362`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
+- **主线基线 SHA（main）**：`42b75aa`；`origin/main`：`9fdd94e0e12afae1c3843d0680fb48017e00669f`
 - **最近已通过 CI**：GitHub Actions quality Run [32577917976](https://github.com/Mirror18/RAGForge/actions/runs/32577917976)（4m52s，全绿）
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
@@ -109,7 +109,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | AGENT-OPT-01 | Agent 效率文档骨架落地 | P0 | ✅ completed | Orchestrator | main | RAGForge | 8,000 | 未记录 | 609ef5c9a1284bef71ed9295910aeb9c48d383cb | 已由主线提交完成；历史实际 token 未记录，不重复执行 |
 | P7C-04 | durable BM25 ADR + 实现（R-023） | P0 | ⏳ pending | — | — | — | 10,000 | — | — | 等待用户明确批准接受 ADR-0012；不擅自执行高风险动作 |
 | P7C-01 | 来源任务中心后端 API | P0 | ✅ completed | A3 | codex/p7-source-task-api-a3 | RAGForge-worktrees/codex-p7-source-task-api-a3 | 8,000 | 5,800 | e4a9481710aabe31a6271adbcac9a30b7c7dfc08 | 已合并至 d35eb8e；V21 追加迁移；A1–A5 通过 |
-| P7C-02 | 来源任务中心前端 UI | P0 | 🚧 in_progress | A4 | codex/p7-source-task-ui-a4 | RAGForge-worktrees/codex-p7-source-task-ui-a4 | 7,000 | — | — | P7C-01 已完成；唯一 active Web worker |
+| P7C-02 | 来源任务中心前端 UI | P0 | ✅ completed | A4 | codex/p7-source-task-ui-a4 | RAGForge-worktrees/codex-p7-source-task-ui-a4 | 7,000 | 6,900 | d4bd103cc9ebb2f1b7fe9d74397c703957b00ebf | 已合并至 42b75aa；Web format:check/build 通过 |
 | P7C-03 | 索引生命周期 UI | P0 | ⏳ pending | — | — | — | 6,000 | — | — | P7C-01 已完成，可开始分派 |
 | P7C-05 | 真实 RERANK adapter | P0 | ⏳ blocked | — | — | — | 8,000 | — | — | 依赖 P7C-04 |
 | P7C-06 | 可核验问答 Web | P0 | ⏳ blocked | — | — | — | 9,000 | — | — | 依赖 P7C-01 / P7C-03 |
