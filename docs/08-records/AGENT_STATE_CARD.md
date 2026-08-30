@@ -127,7 +127,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7Q-05R | RAG gate 浅克隆恢复 | P1 | ✅ completed | A18 | codex/p7-rag-gate-fetch-a18 | RAGForge-worktrees/codex-p7-rag-gate-fetch-a18 | 4,000 | 4,720 | 56bfcef18c01c441d3f1a1ee0e7e6f5b650ef25d | 已合并至 2b961f2；checkout 使用完整历史，RAG gate 单测 4/4、浅克隆复现、format/secret 通过；等待远程复验 |
 | P7D-00 | Actions Node.js 24 运行时升级 | P2 | ✅ completed | A19 | codex/p7-actions-node24-a19 | RAGForge-worktrees/codex-p7-actions-node24-a19 | 4,000 | 3,000 | 55b42f2b5e3619e573db29abcf4f388a20330c9a | 已合并至 223d4fc；setup-java v5、官方 Actions/Anchore Node24 兼容版本、force runtime、format/secret/runtime audit 通过；待远程 quality 复验 |
 | P7D-01 | 容器加固 | P2 | ✅ completed | A20 | codex/p7-container-hardening-a20 | RAGForge-worktrees/codex-p7-container-hardening-a20 | 8,000 | 7,900 | 0c313405ac49a18edefc99f0639baeb62ca9a0f4 | 已合并至 303d723，运行时证据更新至 61067ae；Compose build/up、三类应用 healthy、runtime inspect、容器加固脚本与 pytest 4/4 通过；未触碰生产数据/secret/迁移 |
-| P7D-02 | 发布镜像与供应链硬化 | P2 | 🔄 active | A21 | codex/p7-supply-chain-a21 | RAGForge-worktrees/codex-p7-supply-chain-a21 | 7,000 | — | — | 已按 ticket 从 d299c0c 分派；完成后进入 P7D-03 |
+| P7D-02 | 发布镜像与供应链硬化 | P2 | ⛔ blocked | A21 / Orchestrator | codex/p7-supply-chain-a21 | RAGForge-worktrees/codex-p7-supply-chain-a21 | 7,000 | — | 20c7f87 | 镜像扫描链路已提交但 Grype `--fail-on high` 对 server/worker/web 均返回 2；应用依赖修复超出本卡 ownership，待拆分修复卡或明确受控例外 |
 | P7D-03~07 | Linux 交付与发布（5 张） | P2 | ⏳ ready | — | — | — | 45,000 | — | — | 依赖 P7D-02 或后续卡片；暂不启动 |
 
 ---

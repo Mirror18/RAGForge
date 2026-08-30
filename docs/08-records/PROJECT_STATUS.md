@@ -216,3 +216,11 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 本治理变更以 `main`/`origin/main` 当时同步的记录提交 `d299c0c` 为基线；quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对候选 `00bee66` 全绿，检查 annotations 为空。该运行确认 P7D-00/P7D-01 的远程工作流基线已通过。
 - 下一项为 P7D-02「发布镜像与供应链硬化」：锁定基础镜像和应用镜像 immutable digest，针对目标镜像生成 SBOM/Grype SARIF，并对目标镜像执行 Secret 审计；不得创建 release、推送生产镜像、执行生产迁移或使用生产 Secret。
 - P7D-02 worker ticket 已建立于 [`P7D-02-a21.yaml`](tickets/P7D-02-a21.yaml)，基线为 `d299c0cb2329519136359d2a714a84a08f73b256`，依赖 P7D-01 已满足。
+
+## 19. P7D-02 供应链扫描阻塞（2026-08-30）
+
+- P7D-02 已完成镜像基础层 digest 锁定、镜像级 SBOM/Grype CI 链路、目标镜像 Secret 审计、Compose/ Dockerfile digest 自测和本地目标镜像构建；隔离分支提交 `20c7f87` 保留全部可恢复改动。
+- 本地三项目标镜像均生成 CycloneDX SBOM 和 SARIF；Secret 审计无 findings，供应链单测 7/7、Compose/format/tracked-file secret gates 通过。
+- 阻塞证据：Grype `0.117.0 --fail-on high` 对 server、worker、web 均返回退出码 `2`；server/worker 同时含基础层和应用依赖高危项，web 含 Alpine curl/OpenSSL/libpng 高危项。该问题不能通过降低扫描阈值或增加未审批例外解决。
+- 由于应用依赖修复需要修改本卡 forbidden 的 `apps/server/` 或 `apps/ingestion-worker/`，P7D-02 暂不合并，P7D-03 Ubuntu 部署不得启动；需先建立有明确 ownership、风险 owner/期限/补偿控制的漏洞修复卡，或由用户批准受控安全例外。
+- 结构化证据见 [`P7D-02-worker-summary.v1.json`](../../tests/evidence/P7D-02-worker-summary.v1.json)；本轮未使用生产凭据、未推送生产镜像、未执行生产迁移、未创建 release、未开启云出境。

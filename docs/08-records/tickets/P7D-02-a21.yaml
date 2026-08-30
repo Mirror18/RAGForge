@@ -77,8 +77,8 @@ tests:
       command: python scripts/ci/validate_compose.py
       expected: exit 0
     - name: Supply-chain unit tests
-      command: python -m pytest -q tests/ci -k "container or supply or sbom or secret"
-      expected: all selected tests pass
+      command: python -m unittest discover -s tests/ci -p "test_supply_chain_gates.py" -v
+      expected: 7 tests pass
     - name: Tracked-file secret scan
       command: python scripts/ci/secret_scan.py
       expected: exit 0
