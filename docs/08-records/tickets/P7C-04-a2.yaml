@@ -1,0 +1,125 @@
+meta:
+  card_id: P7C-04
+  title: Durable BM25（R-023 关闭）
+  priority: P0
+  agent_slug: a2
+  branch: codex/p7-durable-bm25-a2
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-durable-bm25-a2
+  base_sha: 609ef5c9a1284bef71ed9295910aeb9c48d383cb
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: []
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - docs/02-architecture/adr/0012-durable-bm25.md
+    - apps/server/src/main/java/com/ragforge/server/retrieval/
+    - apps/server/src/test/java/com/ragforge/server/retrieval/
+    - apps/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/
+    - apps/ingestion-worker/src/test/java/com/ragforge/ingestion/pipeline/
+  read_only:
+    - docs/02-architecture/adr/0006-versioned-ingestion-and-indexes.md
+    - docs/02-architecture/adr/0003-postgresql-qdrant-and-messaging.md
+    - apps/server/src/main/java/com/ragforge/server/retrieval/Bm25CandidateStore.java
+    - apps/server/src/main/java/com/ragforge/server/retrieval/InMemoryBm25CandidateStore.java
+    - apps/server/src/main/java/com/ragforge/server/retrieval/RetrievalService.java
+    - apps/server/src/main/java/com/ragforge/server/retrieval/JdbcChunkCatalog.java
+    - apps/server/src/main/java/com/ragforge/server/retrieval/ChunkCatalog.java
+    - apps/server/src/main/java/com/ragforge/server/index/CandidateIndexService.java
+    - apps/server/src/main/java/com/ragforge/server/index/CandidateIndexStore.java
+    - apps/server/src/main/java/com/ragforge/server/chunk/ChunkRepository.java
+    - apps/server/src/test/java/com/ragforge/server/retrieval/RetrievalServiceTest.java
+    - apps/server/src/test/java/com/ragforge/server/retrieval/RetrievalServiceQdrantIntegrationTest.java
+    - apps/server/src/test/java/com/ragforge/server/retrieval/InMemoryBm25CandidateStoreTest.java
+    - apps/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilder.java
+    - apps/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/BusinessIngestionSideEffectHandler.java
+    - apps/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/QdrantIndexWriter.java
+    - apps/ingestion-worker/src/test/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilderTest.java
+    - contracts/openapi/ragforge-api-v1.yaml
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md
+    - MEMORY.md
+    - apps/web/
+    - contracts/openapi/ragforge-api-v1.yaml
+    - apps/server/src/main/resources/db/migration/
+    - pom.xml
+    - deploy/
+    - .github/workflows/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: ADR-0012 记录选型、空间/索引作用域、重建与回滚方案，状态为 Accepted；不得接受需要用户审批的新高风险决策。
+    - id: A2
+      text: 替换生产路径中的 InMemoryBm25CandidateStore；lexical 状态可从持久化事实重建，服务重启后仍可命中。
+    - id: A3
+      text: Provider/Store 明确包含 space_id 与 index/version 作用域，跨空间数据不会进入同一 lexical 查询结果。
+    - id: A4
+      text: 新增重启后 lexical index 命中集成测试，并保留 RetrievalServiceTest 与 worker 构建路径测试。
+    - id: A5
+      text: R-023 在本卡报告中标记为可关闭并给出验证证据；若实现确实需要数据库迁移，停止并向 Orchestrator 提出精确迁移方案，不自行新增 V21。
+
+budget:
+  token_limit: 10000
+
+tests:
+  must_run:
+    - name: contract test
+      command: python scripts/ci/contract_test.py
+      expected: "52/52"
+    - name: Retrieval unit tests
+      command: mvn -q -pl apps/server -am test -Dtest="RetrievalServiceTest,InMemoryBm25CandidateStoreTest"
+      expected: BUILD SUCCESS
+    - name: Worker lexical/index tests
+      command: mvn -q -pl apps/ingestion-worker -am test -Dtest="SpaceCandidateIndexBuilderTest,BusinessIngestionSideEffectHandlerTest"
+      expected: BUILD SUCCESS
+    - name: Durable restart integration test
+      command: mvn -q -pl apps/server -am test -Dtest="*DurableBm25*"
+      expected: BUILD SUCCESS with restart/rebuild assertion
+  evidence_file: tests/evidence/P7C-04-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: false
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: 10000
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string

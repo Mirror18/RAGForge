@@ -1,0 +1,131 @@
+meta:
+  card_id: P7C-01
+  title: 来源任务中心后端 API
+  priority: P0
+  agent_slug: a3
+  branch: codex/p7-source-task-api-a3
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7-source-task-api-a3
+  base_sha: 609ef5c9a1284bef71ed9295910aeb9c48d383cb
+  updated_at: "2026-08-30"
+  dependencies_satisfied: true
+  depends_on_cards: []
+  migration_owner: true
+  migration_next: V21
+
+scope:
+  ownership:
+    - apps/server/src/main/java/com/ragforge/server/ingestion/
+    - apps/server/src/test/java/com/ragforge/server/ingestion/
+    - apps/server/src/main/java/com/ragforge/server/index/
+    - apps/server/src/test/java/com/ragforge/server/index/
+    - apps/server/src/main/java/com/ragforge/server/chunk/
+    - apps/server/src/test/java/com/ragforge/server/chunk/
+    - apps/server/src/main/resources/db/migration/V21__phase7_source_task_center.sql
+    - contracts/openapi/ragforge-api-v1.yaml
+  read_only:
+    - contracts/ingestion/ingestion-domain.v1.schema.json
+    - contracts/ingestion/index-version.v1.schema.json
+    - contracts/openapi/ragforge-api-v1.yaml
+    - docs/02-architecture/INGESTION_PIPELINE.md
+    - docs/02-architecture/adr/0006-versioned-ingestion-and-indexes.md
+    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
+    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionService.java
+    - apps/server/src/main/java/com/ragforge/server/ingestion/IngestionRepository.java
+    - apps/server/src/main/java/com/ragforge/server/ingestion/GitSourceService.java
+    - apps/server/src/main/java/com/ragforge/server/index/BusinessIndexController.java
+    - apps/server/src/main/java/com/ragforge/server/index/IndexRepository.java
+    - apps/server/src/main/java/com/ragforge/server/index/CandidateIndexService.java
+    - apps/server/src/main/java/com/ragforge/server/chunk/ChunkRepository.java
+    - apps/server/src/test/java/com/ragforge/server/ServerIntegrationTest.java
+    - apps/server/src/test/java/com/ragforge/server/ingestion/BusinessIngestionPathPolicyTest.java
+    - apps/server/src/test/java/com/ragforge/server/ingestion/Phase3IngestionPersistenceIntegrationTest.java
+    - apps/server/src/test/java/com/ragforge/server/index/CandidateIndexServiceIntegrationTest.java
+    - apps/server/src/main/resources/db/migration/V19__phase7_git_source_configuration.sql
+    - apps/server/src/main/resources/db/migration/V20__phase7_git_checkpoint_objects.sql
+  forbidden:
+    - docs/08-records/AGENT_STATE_CARD.md
+    - docs/08-records/PROJECT_STATUS.md
+    - docs/08-records/RISK_REGISTER.md
+    - docs/08-records/TRACEABILITY_MATRIX.md
+    - docs/08-records/TASK_BOARD.md
+    - AGENTS.md
+    - docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md
+    - MEMORY.md
+    - apps/web/
+    - apps/ingestion-worker/
+    - apps/ai-runtime/
+    - pom.xml
+    - deploy/
+    - .github/workflows/
+    - apps/server/src/main/resources/db/migration/V19__phase7_git_source_configuration.sql
+    - apps/server/src/main/resources/db/migration/V20__phase7_git_checkpoint_objects.sql
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 新增 /sources、/jobs、/indexes 的分页与筛选 API；使用 cursor 分页，不使用 slice(0,5) 或 limit=100 硬截断。
+    - id: A2
+      text: 重试、重放、重新同步、归档、删除均包含幂等 Key、乐观锁与 space_id 强制校验。
+    - id: A3
+      text: OpenAPI 覆盖新增 operation，contract_test.py 通过 52/52。
+    - id: A4
+      text: 跨空间、未授权、停用用户三类拒绝路径均有 ServerIntegrationTest 用例。
+    - id: A5
+      text: 迁移只能追加 V21，包含锁/回填说明，不修改 V19/V20，不与其他卡片冲突。
+
+budget:
+  token_limit: 8000
+
+tests:
+  must_run:
+    - name: contract test
+      command: python scripts/ci/contract_test.py
+      expected: "52/52"
+    - name: Server target compile
+      command: mvn -q -pl apps/server -am test-compile -DskipTests=false
+      expected: BUILD SUCCESS
+    - name: Server ingestion/index focused tests
+      command: mvn -q -pl apps/server test -Dtest="ServerIntegrationTest,BusinessIngestionPathPolicyTest,Phase3IngestionPersistenceIntegrationTest,CandidateIndexServiceIntegrationTest"
+      expected: "新增用例 > 5；全部绿"
+    - name: Web typecheck
+      command: npm --prefix apps/web run typecheck
+      expected: 0 errors
+  evidence_file: tests/evidence/P7C-01-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: false
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: 8000
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+    A5: true | false
+  evidence_file: string
