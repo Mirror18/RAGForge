@@ -16,6 +16,7 @@ import com.ragforge.server.provider.adapter.ProviderAdapter;
 import com.ragforge.server.provider.adapter.ProviderAdapterException;
 import com.ragforge.server.provider.adapter.ProviderChatRequest;
 import com.ragforge.server.provider.adapter.ProviderEmbeddingRequest;
+import com.ragforge.server.provider.adapter.ProviderRerankRequest;
 import com.ragforge.server.provider.adapter.RequestIdentity;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -152,6 +153,21 @@ public class ProviderConnectionService {
                 if (response.usage() != null) {
                     verified.add("USAGE_REPORTING");
                 }
+            } else if (purpose == ProviderRepository.RoutePurpose.RERANK) {
+                UUID probeCandidate = UuidV7.random();
+                var response = adapter.rerank(connection, decision,
+                        new ProviderRerankRequest(spaceId, identity, request.modelName().trim(),
+                                "ragforge provider connectivity probe",
+                                List.of(new ProviderRerankRequest.Candidate(spaceId, probeCandidate,
+                                        "ragforge provider connectivity probe")),
+                                timeout, 1, Set.of(ModelCapability.RERANK)), new CancellationToken())
+                        .toCompletableFuture().join();
+                if (response.candidates().stream().noneMatch(candidate -> candidate.candidateId().equals(probeCandidate))) {
+                    throw new ProviderAdapterException(
+                            com.ragforge.server.provider.adapter.ProviderErrorClass.INVALID_RESPONSE,
+                            "Provider rerank probe did not return its candidate identity");
+                }
+                verified.add("RERANK");
             } else {
                 throw new ProviderAdapterException(
                         com.ragforge.server.provider.adapter.ProviderErrorClass.UNSUPPORTED_CAPABILITY,
