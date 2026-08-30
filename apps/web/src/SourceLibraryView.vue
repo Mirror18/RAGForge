@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { ApiError, configureGitSource, listAllCursorPages, listSources, operateSourceTask, type GitSourceView, type PlatformRole, type SpaceRole, type SourceRecord, type TaskActionOperation } from "./api";
+import { ApiError, configureGitSource, listSources, operateSourceTask, type GitSourceView, type PlatformRole, type SpaceRole, type SourceRecord, type TaskActionOperation } from "./api";
 import { formatDateTime } from "./format";
 
 const props = defineProps<{
@@ -65,17 +65,7 @@ async function load(): Promise<void> {
   const spaceIdAtStart = props.selectedSpaceId;
   loading.value = true; error.value = "";
   try {
-    const query = searchQuery.value.trim().toLocaleLowerCase();
-    if (query) {
-      const allSources = await listAllCursorPages<GitSourceView>(`/api/v1/spaces/${encodeURIComponent(spaceIdAtStart)}/sources`, { limit: 50, connectorType: connectorType.value, sourceState: sourceState.value });
-      if (props.selectedSpaceId !== spaceIdAtStart) return;
-      sources.value = allSources.filter((item) => [item.source.displayName, item.source.rootRef, item.source.gitBranch, item.source.connectorType, item.source.sourceState, item.source.state, item.source.sourceId].filter(Boolean).join(" ").toLocaleLowerCase().includes(query));
-      nextCursor.value = null;
-      emit("sources-loaded", sources.value);
-      persistState();
-      return;
-    }
-    const page = await listSources(spaceIdAtStart, { cursor: cursor.value, limit: 20, connectorType: connectorType.value, sourceState: sourceState.value });
+    const page = await listSources(spaceIdAtStart, { cursor: cursor.value, limit: 10, connectorType: connectorType.value, sourceState: sourceState.value, q: searchQuery.value.trim() || undefined });
     if (props.selectedSpaceId !== spaceIdAtStart) return;
     sources.value = page.items;
     nextCursor.value = page.nextCursor;
@@ -123,7 +113,7 @@ onMounted(() => { if (props.selectedSpaceId) { restoreState(); void load(); } })
     <div class="filter-row"><div class="field"><label for="source-connector-filter">连接器</label><select id="source-connector-filter" v-model="connectorType" @change="applyFilters"><option value="">全部连接器</option><option value="GIT">Git</option></select></div><div class="field"><label for="source-state-filter">状态</label><select id="source-state-filter" v-model="sourceState" @change="applyFilters"><option value="">全部状态</option><option value="ACTIVE">ACTIVE</option><option value="PAUSED">PAUSED</option></select></div><div class="field search-field"><label for="source-search">搜索来源</label><div class="search-control"><input id="source-search" v-model="searchQuery" maxlength="120" placeholder="名称、仓库、分支或 ID" @keyup.enter="applyFilters" /><button type="button" class="secondary-button" :disabled="loading" @click="applyFilters">搜索</button></div></div><div class="field reason-field"><label for="source-action-reason">操作说明（可选）</label><input id="source-action-reason" v-model="actionReason" maxlength="500" placeholder="记录本次操作原因" /></div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
     <div v-if="sources.length" class="source-list"><article v-for="item in sources" :key="item.source.sourceId" class="source-row"><div class="source-main"><strong>{{ sourceLabel(item.source) }}</strong><span>{{ item.source.rootRef }} · {{ item.source.gitBranch || "默认分支" }}</span><small>状态 {{ sourceStateLabel(item.source) }} · 版本 {{ sourceVersion(item) }} · checkpoint {{ item.checkpoint?.cursor || "未同步" }}</small><small v-if="item.checkpoint">checkpoint 更新于 {{ formatDateTime(item.checkpoint.updatedAt) }}</small></div><div class="button-row"><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'RETRY')">重试</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'REPLAY')">重放</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'RESYNC')">重新同步</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'ARCHIVE')">归档</button><button type="button" class="danger-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'DELETE')">删除</button></div></article></div><div v-else-if="!loading" class="empty-state"><strong>{{ searchQuery.trim() ? "没有匹配的来源" : "暂无来源" }}</strong><span>{{ searchQuery.trim() ? "请换一个名称、仓库地址、分支或 ID。" : "提交 Git 来源后，服务端会在当前空间创建来源记录。" }}</span></div>
-    <div class="pagination"><button type="button" class="quiet-button" :disabled="loading || Boolean(searchQuery.trim()) || !cursor" @click="previousPage">上一页</button><span>{{ searchQuery.trim() ? "搜索结果" : `当前页 ${cursor ? "（cursor）" : "（首页）"}` }} · {{ sources.length }} 条</span><button type="button" class="quiet-button" :disabled="loading || Boolean(searchQuery.trim()) || !nextCursor" @click="nextPage">下一页</button></div>
+    <div class="pagination"><button type="button" class="quiet-button" :disabled="loading || !cursor" @click="previousPage">上一页</button><span>{{ searchQuery.trim() ? "搜索结果（每页 10 条）" : `当前页（每页 10 条） ${cursor ? "（cursor）" : "（首页）"}` }} · {{ sources.length }} 条</span><button type="button" class="quiet-button" :disabled="loading || !nextCursor" @click="nextPage">下一页</button></div>
   </section>
 </template>
 

@@ -349,11 +349,11 @@ export async function createAnswerConversation(spaceId: string, idempotencyKey: 
 }
 
 export async function listAnswerConversations(spaceId: string, includeArchived = false): Promise<ConversationHistoryItem[]> {
-  return listAllCursorPages<ConversationHistoryItem>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations", { includeArchived: String(includeArchived), limit: 20 });
+  return listAllCursorPages<ConversationHistoryItem>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations", { includeArchived: String(includeArchived), limit: 10 });
 }
 
 export async function listConversationRuns(spaceId: string, conversationId: string): Promise<ConversationRunItem[]> {
-  return listAllCursorPages<ConversationRunItem>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations/" + encodeURIComponent(conversationId) + "/runs", { limit: 20 });
+  return listAllCursorPages<ConversationRunItem>("/api/v1/spaces/" + encodeURIComponent(spaceId) + "/conversations/" + encodeURIComponent(conversationId) + "/runs", { limit: 10 });
 }
 
 export async function archiveAnswerConversation(spaceId: string, conversationId: string, idempotencyKey: string): Promise<ConversationHistoryItem> {

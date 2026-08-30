@@ -92,14 +92,14 @@ async function loadSection(): Promise<void> {
   loading.value = true;
   try {
     if (section.value === "providers") {
-      const response = await listAllCursorPages<ProviderConnection>(path("/provider-connections"), { limit: 20 });
+      const response = await listAllCursorPages<ProviderConnection>(path("/provider-connections"), { limit: 10 });
       providerConnections.value = response;
       if (!profileForm.value.providerConnectionId) profileForm.value.providerConnectionId = response[0]?.providerConnectionId ?? "";
     } else if (section.value === "models") {
       const [profiles, routes, connections] = await Promise.all([
-        listAllCursorPages<ModelProfile>(path("/model-profiles"), { limit: 20 }),
-        listAllCursorPages<ModelRoute>(path("/model-routes"), { limit: 20 }),
-        listAllCursorPages<ProviderConnection>(path("/provider-connections"), { limit: 20 }),
+        listAllCursorPages<ModelProfile>(path("/model-profiles"), { limit: 10 }),
+        listAllCursorPages<ModelRoute>(path("/model-routes"), { limit: 10 }),
+        listAllCursorPages<ProviderConnection>(path("/provider-connections"), { limit: 10 }),
       ]);
       modelProfiles.value = profiles;
       modelRoutes.value = routes;
@@ -107,7 +107,7 @@ async function loadSection(): Promise<void> {
       if (!profileForm.value.providerConnectionId) profileForm.value.providerConnectionId = providerConnections.value[0]?.providerConnectionId ?? "";
       if (!routeForm.value.modelProfileId) routeForm.value.modelProfileId = profiles[0]?.modelProfileId ?? "";
     } else if (section.value === "prompts") {
-      const response = await listAllCursorPages<PromptTemplate>(path("/prompt-templates"), { limit: 20 });
+      const response = await listAllCursorPages<PromptTemplate>(path("/prompt-templates"), { limit: 10 });
       promptTemplates.value = response;
       if (!response.some((item) => item.promptTemplateId === selectedPromptTemplateId.value)) {
         selectedPromptTemplateId.value = response.find((item) => item.purpose === "CHAT")?.promptTemplateId
@@ -119,9 +119,9 @@ async function loadSection(): Promise<void> {
     } else if (section.value === "cost") {
       managementCost.value = await getManagementCostUsage(props.selectedSpaceId, { from: managementFrom.value, to: managementTo.value });
     } else if (section.value === "feedback") {
-      managementFeedback.value = await listAllCursorPages<ManagementFeedbackItem>(path("/management/feedback"), { from: managementFrom.value, to: managementTo.value, limit: 20 });
+      managementFeedback.value = await listAllCursorPages<ManagementFeedbackItem>(path("/management/feedback"), { from: managementFrom.value, to: managementTo.value, limit: 10 });
     } else if (section.value === "audit") {
-      managementAudit.value = await listAllCursorPages<ManagementAuditItem>(path("/management/audit/export"), { from: managementFrom.value, to: managementTo.value, limit: 20 });
+      managementAudit.value = await listAllCursorPages<ManagementAuditItem>(path("/management/audit/export"), { from: managementFrom.value, to: managementTo.value, limit: 10 });
     }
   } catch (value) {
     error.value = describeError(value, "功能中心数据加载失败。");

@@ -76,6 +76,8 @@ CI 和公开仓库只使用合成/授权样本。真实 Obsidian 仓库仅作为
 `25432`、Qdrant `26333/26334`、RabbitMQ `25672/25673`、Valkey `26379`、MinIO
 `29000/29001`。账号、空间和业务数据均来自同一套数据库和数据卷。
 
+来源库和任务中心的列表由接口执行空间内搜索并使用 cursor 分页，默认每页 10 条；前端通过 `q` 传递搜索词，翻页不会退化为一次性加载全部数据。
+
 ```powershell
 .\scripts\dev\start-local.bat
 Invoke-RestMethod http://127.0.0.1:25082/actuator/health

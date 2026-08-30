@@ -67,9 +67,9 @@ async function loadManagementData(): Promise<void> {
   if (!canManageSpace.value && !isPlatformAdmin.value) { members.value = []; return; }
   managementLoading.value = true; managementError.value = "";
   try {
-    if (props.selectedSpaceId && canManageSpace.value) members.value = await listAllCursorPages<SpaceMember>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/members`, { limit: 20 });
+    if (props.selectedSpaceId && canManageSpace.value) members.value = await listAllCursorPages<SpaceMember>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/members`, { limit: 10 });
     else members.value = [];
-    if (isPlatformAdmin.value) users.value = await listAllCursorPages<ManagedUser>("/api/v1/users", { limit: 20 });
+    if (isPlatformAdmin.value) users.value = await listAllCursorPages<ManagedUser>("/api/v1/users", { limit: 10 });
   } catch (value) { managementError.value = describeManagementError(value, "管理数据加载失败。"); }
   finally { managementLoading.value = false; }
 }

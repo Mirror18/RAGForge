@@ -78,7 +78,7 @@ async function checkApiHealth(): Promise<void> {
   apiStatus.value = "checking";
   workspaceError.value = "";
   try {
-    const [current, visibleSpaces] = await Promise.all([getCurrentSession(), listAllCursorPages<Space>("/api/v1/spaces", { limit: 20 })]);
+    const [current, visibleSpaces] = await Promise.all([getCurrentSession(), listAllCursorPages<Space>("/api/v1/spaces", { limit: 10 })]);
     session.value = current;
     spaces.value = visibleSpaces;
     if (!selectedSpaceId.value || !spaces.value.some((space) => space.spaceId === selectedSpaceId.value)) selectedSpaceId.value = spaces.value[0]?.spaceId ?? "";

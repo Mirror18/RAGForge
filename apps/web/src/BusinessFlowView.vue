@@ -166,14 +166,14 @@ async function loadFlow(): Promise<void> {
   try {
     const failures: string[] = [];
     const [providers, profiles, routes, prompts, active, currentJobs, indexPage, currentGitSources] = await Promise.all([
-      readWithTimeout("Provider connection", listAllCursorPages<ProviderConnection>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/provider-connections`, { limit: 20 }), [], failures),
-      readWithTimeout("Model profile", listAllCursorPages<ModelProfile>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-profiles`, { limit: 20 }), [], failures),
-      readWithTimeout("Model route", listAllCursorPages<ModelRoute>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-routes`, { limit: 20 }), [], failures),
-      readWithTimeout("Prompt template", listAllCursorPages<PromptTemplate>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/prompt-templates`, { limit: 20 }), [], failures),
+      readWithTimeout("Provider connection", listAllCursorPages<ProviderConnection>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/provider-connections`, { limit: 10 }), [], failures),
+      readWithTimeout("Model profile", listAllCursorPages<ModelProfile>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-profiles`, { limit: 10 }), [], failures),
+      readWithTimeout("Model route", listAllCursorPages<ModelRoute>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-routes`, { limit: 10 }), [], failures),
+      readWithTimeout("Prompt template", listAllCursorPages<PromptTemplate>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/prompt-templates`, { limit: 10 }), [], failures),
       readWithTimeout("Active index", getActiveIndex(props.selectedSpaceId), null, failures),
-      readWithTimeout("Ingestion jobs", listAllCursorPages<IngestionJobView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/jobs`, { limit: 20 }), [], failures),
-      readWithTimeout("Index versions", listAllCursorPages<IndexView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/indexes`, { limit: 20 }), [], failures),
-      readWithTimeout("Git sources", listAllCursorPages<GitSourceView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/sources`, { limit: 20 }), [], failures),
+      readWithTimeout("Ingestion jobs", listAllCursorPages<IngestionJobView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/jobs`, { limit: 10 }), [], failures),
+      readWithTimeout("Index versions", listAllCursorPages<IndexView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/indexes`, { limit: 10 }), [], failures),
+      readWithTimeout("Git sources", listAllCursorPages<GitSourceView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/sources`, { limit: 10 }), [], failures),
     ]);
     providerConnections.value = providers;
     modelProfiles.value = profiles;

@@ -770,12 +770,12 @@ function queryString(values: Record<string, string | number | null | undefined>)
   return encoded ? `?${encoded}` : "";
 }
 
-export function listSources(spaceId: string, options: { cursor?: string | null; limit?: number; connectorType?: string; sourceState?: string } = {}): Promise<CursorPage<GitSourceView>> {
+export function listSources(spaceId: string, options: { cursor?: string | null; limit?: number; connectorType?: string; sourceState?: string; q?: string } = {}): Promise<CursorPage<GitSourceView>> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources${queryString(options)}`);
 }
 
 /** @deprecated Use listSources so cursor and filters are preserved. */
-export function listGitSources(spaceId: string): Promise<CursorPage<GitSourceView>> { return listSources(spaceId, { limit: 20 }); }
+export function listGitSources(spaceId: string): Promise<CursorPage<GitSourceView>> { return listSources(spaceId, { limit: 10 }); }
 export function configureGitSource(spaceId: string, body: { sourceId?: string; displayName: string; remote: string; branch: string; include: string[]; exclude: string[] }): Promise<GitSourceView> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/sources/git`, { method: "POST", body });
 }
@@ -787,7 +787,7 @@ export function listIngestionJobs(spaceId: string): Promise<IngestionJobView[]> 
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/ingestion-jobs`);
 }
 
-export function listTaskJobs(spaceId: string, options: { cursor?: string | null; limit?: number; status?: string; sourceId?: string } = {}): Promise<CursorPage<IngestionJobView>> {
+export function listTaskJobs(spaceId: string, options: { cursor?: string | null; limit?: number; status?: string; sourceId?: string; q?: string } = {}): Promise<CursorPage<IngestionJobView>> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/jobs${queryString(options)}`);
 }
 

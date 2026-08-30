@@ -64,7 +64,7 @@ async function loadSources(): Promise<void> {
   if (!props.selectedSpaceId) return;
   const spaceIdAtStart = props.selectedSpaceId;
   try {
-    const result = await listAllCursorPages<GitSourceView>(`/api/v1/spaces/${encodeURIComponent(spaceIdAtStart)}/sources`, { limit: 20 });
+    const result = await listAllCursorPages<GitSourceView>(`/api/v1/spaces/${encodeURIComponent(spaceIdAtStart)}/sources`, { limit: 10 });
     if (props.selectedSpaceId === spaceIdAtStart) sourceOptions.value = result;
   }
   catch (value) { if (!error.value) error.value = describeError(value); }
@@ -74,17 +74,7 @@ async function load(): Promise<void> {
   const spaceIdAtStart = props.selectedSpaceId;
   loading.value = true; error.value = "";
   try {
-    const query = searchQuery.value.trim().toLocaleLowerCase();
-    if (query) {
-      const allJobs = await listAllCursorPages<IngestionJobView>(`/api/v1/spaces/${encodeURIComponent(spaceIdAtStart)}/jobs`, { limit: 50, status: status.value, sourceId: sourceId.value || undefined });
-      if (props.selectedSpaceId !== spaceIdAtStart) return;
-      jobs.value = allJobs.filter((item) => [item.job.id, item.job.sourceId, item.job.sourceDocumentId, item.job.documentRevisionId, item.job.status, item.job.error?.code, item.job.error?.message, item.job.error?.detail, ...item.steps.flatMap((step) => [step.stepName, step.status, step.errorCode, step.errorMessage, step.errorDetail])].filter(Boolean).join(" ").toLocaleLowerCase().includes(query));
-      nextCursor.value = null;
-      persistState();
-      schedulePolling();
-      return;
-    }
-    const page = await listTaskJobs(spaceIdAtStart, { cursor: cursor.value, limit: 20, status: status.value, sourceId: sourceId.value || undefined });
+    const page = await listTaskJobs(spaceIdAtStart, { cursor: cursor.value, limit: 10, status: status.value, sourceId: sourceId.value || undefined, q: searchQuery.value.trim() || undefined });
     if (props.selectedSpaceId !== spaceIdAtStart) return;
     jobs.value = page.items; nextCursor.value = page.nextCursor; persistState();
   } catch (value) { error.value = describeError(value); }
@@ -132,7 +122,7 @@ onBeforeUnmount(stopPolling);
     <div class="filter-row"><div class="field"><label for="task-status-filter">任务状态</label><select id="task-status-filter" v-model="status" @change="applyFilters"><option value="">全部状态</option><option value="REQUESTED">已提交</option><option value="RUNNING">处理中</option><option value="RETRY_SCHEDULED">等待重试</option><option value="SUCCEEDED">已完成</option><option value="FAILED">失败</option><option value="DLQ">死信</option></select></div><div class="field"><label for="task-source-filter">来源</label><select id="task-source-filter" v-model="sourceId" @change="applyFilters"><option value="">全部来源</option><option v-for="item in sourceOptions" :key="item.source.sourceId" :value="item.source.sourceId">{{ item.source.displayName }}</option></select></div><div class="field search-field"><label for="task-search">搜索任务</label><div class="search-control"><input id="task-search" v-model="searchQuery" maxlength="120" placeholder="任务、来源、步骤或错误" @keyup.enter="applyFilters" /><button type="button" class="secondary-button" :disabled="loading" @click="applyFilters">搜索</button></div></div><div class="field"><label for="task-action-reason">操作说明（可选）</label><input id="task-action-reason" v-model="actionReason" maxlength="500" placeholder="记录重试或清理原因" /></div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
     <div v-if="jobs.length" class="job-list"><article v-for="item in jobs" :key="item.job.id" class="job-card"><div class="job-header"><div><strong>{{ statusLabel(item.job.status) }}</strong><span>任务 {{ item.job.id }}</span><small>创建于 {{ formatDateTime(item.job.createdAt) }} · 更新于 {{ formatDateTime(item.job.updatedAt) }}</small></div><span class="state-pill" :class="item.job.status.toLowerCase()">{{ item.job.status }}</span></div><p v-if="jobError(item)" class="job-error"><strong>任务错误：</strong>{{ jobError(item) }}</p><div class="step-list"><div v-for="step in item.steps" :key="step.id" class="step-row"><span class="step-state" :class="step.status.toLowerCase()">{{ step.status }}</span><strong>{{ step.stepName }}</strong><small>{{ stepError(step) || "无错误详情" }}</small></div><p v-if="!item.steps.length" class="muted">Worker 尚未报告步骤，任务仍由服务端排队。</p></div><details class="job-details"><summary>查看尝试与时间</summary><div v-for="attempt in item.attempts" :key="attempt.id" class="attempt-row"><span>Attempt {{ attempt.attemptNo }} · {{ attempt.status }}</span><small>{{ formatDateTime(attempt.startedAt) }} → {{ formatDateTime(attempt.finishedAt) }}</small></div></details><div class="button-row"><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !isRetryable(item) || !canManage" @click="operate(item, 'RETRY')">重试</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !isRetryable(item) || !canManage" @click="operate(item, 'REPLAY')">重放</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !isRetryable(item) || !canManage" @click="operate(item, 'RESYNC')">重新同步</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'ARCHIVE')">归档</button><button type="button" class="danger-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'DELETE')">删除</button><button type="button" class="quiet-button" :disabled="loading" @click="refreshJob(item)">读取最新详情</button></div></article></div><div v-else-if="!loading" class="empty-state"><strong>{{ searchQuery.trim() ? "没有匹配的任务" : "暂无任务" }}</strong><span>{{ searchQuery.trim() ? "请换一个任务 ID、来源、步骤或错误关键词。" : "来源提交或同步后，任务会出现在这里；你可以稍后刷新。" }}</span></div>
-    <div class="pagination"><button type="button" class="quiet-button" :disabled="loading || Boolean(searchQuery.trim()) || !cursor" @click="previousPage">上一页</button><span>{{ searchQuery.trim() ? "搜索结果" : `当前页 ${cursor ? "（cursor）" : "（首页）"}` }} · {{ jobs.length }} 条</span><button type="button" class="quiet-button" :disabled="loading || Boolean(searchQuery.trim()) || !nextCursor" @click="nextPage">下一页</button></div>
+    <div class="pagination"><button type="button" class="quiet-button" :disabled="loading || !cursor" @click="previousPage">上一页</button><span>{{ searchQuery.trim() ? "搜索结果（每页 10 条）" : `当前页（每页 10 条） ${cursor ? "（cursor）" : "（首页）"}` }} · {{ jobs.length }} 条</span><button type="button" class="quiet-button" :disabled="loading || !nextCursor" @click="nextPage">下一页</button></div>
   </section>
 </template>
 

@@ -37,6 +37,8 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 
 Server 和 Web 默认仍从宿主机源码启动；需要完整容器化运行时可启用 `app` profile。应用镜像统一由 `deploy/docker/Dockerfile` 的 `server`、`worker`、`web` targets 生成。Ollama 默认也是宿主机服务（`11434`），其 Compose `ollama` profile 仅用于明确选择的全容器化 smoke 环境。`observability.yaml` 中的 OTel Collector、Prometheus、Grafana、Loki 和 Tempo 是可选运维观测面，不是应用功能依赖。
 
+来源库与任务中心使用空间内服务端 cursor 分页，页面默认每页 10 条；搜索词通过 `q` 参数传给接口，不会先把全部数据加载到浏览器再过滤。
+
 `apps/ingestion-worker` 已有 `BusinessIngestionSideEffectHandler` 实现；宿主机启动脚本和 Compose `app` profile 都会以 `RAGFORGE_INGESTION_ENABLED=true` 启动可消费任务的 Worker。宿主机脚本与容器化 profile 只能选择一种运行模式，避免重复消费或端口占用。
 
 启动后可直接打开 Web 完成真实业务闭环：注册/登录 → 创建空间 → 初始化本地 Ollama → 选择 Markdown（或显式选择本地 notes 文件夹）→ 等待摄取和 active index → 带引用问答 → Run/Step/usage → 再次上传修改后的同一文件验证增量 Revision。可复核证据见 [`tests/evidence/business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。个人 notes 不会被服务端自动扫描，云端 route 也不会自动回退。
