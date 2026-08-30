@@ -230,4 +230,12 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 已新增任务板卡 `P7D-02R`（board.v4），从阻塞提交 `20c7f87` 派生，预算 10,000 tokens；目标是修复目标镜像中的 Critical/High 漏洞并在 `grype --fail-on high` 下重新验收。
 - ownership 明确为：根 `pom.xml`、`apps/server/pom.xml`、`apps/ingestion-worker/pom.xml`、`deploy/docker/`、`deploy/compose/`、`scripts/ci/`、`tests/ci/` 和本卡证据文件。禁止修改 Server/Worker 业务源码、Web 源码、契约、数据库迁移、治理文档和 release 文件。
 - P7D-02R 允许升级直接/传递依赖和基础镜像 digest，但不允许降低 Grype 阈值、增加无 owner/期限/补偿控制的漏洞例外或把未修复高危项标记为通过；若修复仍需超出上述 ownership，必须 BLOCKED 回报。
-- ticket 已建立于 [`P7D-02R-a22.yaml`](tickets/P7D-02R-a22.yaml)，现已分派至 A22 隔离 worktree `codex/p7-supply-chain-remediation-a22`，基线为 `20c7f87`；P7D-03 Ubuntu 部署继续冻结。
+- ticket 已建立于 [`P7D-02R-a22.yaml`](tickets/P7D-02R-a22.yaml)，现已分派至 A22 隔离 worktree `codex/p7-supply-chain-remediation-a22`，基线为 `20c7f87`；P7D-03 在本卡完成后解除冻结。
+
+## 21. P7D-02R 供应链漏洞修复完成（2026-08-30）
+
+- A22 worker 提交 `98d5fd7` 已以非 fast-forward 合并至 main，合并提交为 `1d18a99`；ownership 内的根/模块 Maven 依赖、Dockerfile、Compose 健康检查与证据文件均已验收，未修改业务源码、契约、迁移、release 或治理规则。
+- 依赖修复将 Spring Boot 升至 `3.5.14`，并固定 Spring/Tomcat/Netty/Jackson/Micrometer/AMQP/PostgreSQL/Bouncy Castle 的修复版本；Java 运行时与 Web 运行时替换为 immutable digest 的 Chainguard JRE/Nginx，移除最终镜像中的 curl/wget/shell 健康检查依赖。
+- server、worker、web 目标镜像的 `grype --fail-on high` 均返回 `0`；三份 immutable image reference、CycloneDX SBOM、Grype SARIF 和 Secret audit 结果见 [`P7D-02R-worker-summary.v1.json`](../../tests/evidence/P7D-02R-worker-summary.v1.json)。Maven JDK 21 回归、Web `format:check/build`、Compose/format/secret/供应链门禁均通过。
+- 运行时探针在隔离网络中验证 Web HTTP 探针和 Java PID 探针；完整 Compose 启动未作为本卡通过条件，因现有 `ragforge-p1` 共享卷导致 Qdrant unhealthy，且默认端口已被占用，本轮未宣称 Ubuntu 部署验收。
+- 本轮仅使用公共镜像与合成/本地数据，未使用生产凭据、未推送镜像、未执行生产迁移、未启用云出境、未创建 release；P7D-03 现在可按任务板进入干净 Ubuntu 24.04 部署验收。
