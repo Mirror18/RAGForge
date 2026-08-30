@@ -320,6 +320,56 @@ export interface RunSnapshot {
   steps: Array<{ stepId: string; type: string; status: string; sequence: number; attempt: number; createdAt: string; finishedAt: string | null; error: RunSnapshot["error"] }>;
 }
 
+export interface ManagementHealth {
+  spaceId: string;
+  from: string;
+  to: string;
+  providers: { total: number; active: number; unhealthy: number; disabled: number };
+  runs: { total: number; succeeded: number; failed: number; inFlight: number };
+}
+
+export interface ManagementUsageCost {
+  spaceId: string;
+  from: string;
+  to: string;
+  items: Array<{
+    usageSource: string;
+    currency: string;
+    ledgerEntries: number;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    estimatedCost: number;
+  }>;
+}
+
+export interface ManagementFeedbackItem {
+  id: string;
+  spaceId: string;
+  runId: string;
+  evidenceId: string;
+  actorUserId: string;
+  sentiment: "HELPFUL" | "NOT_HELPFUL";
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagementAuditItem {
+  id: string;
+  eventType: string;
+  actorUserId: string | null;
+  aggregateId: string | null;
+  correlationId: string;
+  occurredAt: string;
+  payloadSha256: string;
+}
+
+export interface ManagementCursorPage<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
 export interface Anchor {
   headingPath: string[];
   pageNumber?: number;
@@ -755,6 +805,28 @@ export function listIndexes(spaceId: string, options: { cursor?: string | null; 
 
 export function getActiveIndex(spaceId: string): Promise<ActiveIndexView | null> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/indexes/active`);
+}
+
+function managementWindow(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+export function getManagementHealth(spaceId: string, window = managementWindow()): Promise<ManagementHealth> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/management/health${queryString(window)}`);
+}
+
+export function getManagementCostUsage(spaceId: string, window = managementWindow()): Promise<ManagementUsageCost> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/management/cost-usage${queryString(window)}`);
+}
+
+export function listManagementFeedback(spaceId: string, options: { from: string; to: string; cursor?: string | null; limit?: number }): Promise<ManagementCursorPage<ManagementFeedbackItem>> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/management/feedback${queryString(options)}`);
+}
+
+export function exportManagementAudit(spaceId: string, options: { from: string; to: string; cursor?: string | null; limit?: number }): Promise<ManagementCursorPage<ManagementAuditItem>> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/management/audit/export${queryString(options)}`);
 }
 
 export function publishIndex(spaceId: string, indexVersionId: string): Promise<{ activeIndexVersionId: string }> {

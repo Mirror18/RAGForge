@@ -720,6 +720,42 @@
         "responses": {"201": {"description": "Feedback recorded", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerFeedback"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "412": {"$ref": "#/components/responses/PreconditionFailed"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}}
       }
     },
+    "/api/v1/spaces/{spaceId}/management/health": {
+      "x-ragforge-implementation-status": "phase7-management",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["management"], "operationId": "getManagementHealth", "summary": "Read space-scoped aggregate health", "description": "Management-only aggregate of provider and run health. No prompt, answer, document or provider payload is returned.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/ManagementFrom"}, {"$ref": "#/components/parameters/ManagementTo"}],
+        "responses": {"200": {"description": "Aggregate health", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ManagementHealth"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/management/cost-usage": {
+      "x-ragforge-implementation-status": "phase7-management",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["management"], "operationId": "getManagementCostUsage", "summary": "Read space-scoped cost and usage aggregates", "description": "Aggregates usage ledger tokens and estimated cost without exposing request metadata or payloads.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/ManagementFrom"}, {"$ref": "#/components/parameters/ManagementTo"}],
+        "responses": {"200": {"description": "Cost and usage", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ManagementCostUsage"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/management/feedback": {
+      "x-ragforge-implementation-status": "phase7-management",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["management"], "operationId": "listManagementFeedback", "summary": "List redacted answer feedback", "description": "Lists only feedback identifiers, sentiment and timestamps. Feedback reason and answer body are never returned.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/ManagementFrom"}, {"$ref": "#/components/parameters/ManagementTo"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}],
+        "responses": {"200": {"description": "Feedback page", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ManagementFeedbackPage"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
+    "/api/v1/spaces/{spaceId}/management/audit/export": {
+      "x-ragforge-implementation-status": "phase7-management",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["management"], "operationId": "exportManagementAudit", "summary": "Export a redacted audit index", "description": "Exports structured audit identifiers, correlation IDs, timestamps and payload hashes. Raw payloads, prompts and document content are never returned.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/ManagementFrom"}, {"$ref": "#/components/parameters/ManagementTo"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}],
+        "responses": {"200": {"description": "Audit export page", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ManagementAuditPage"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
     "/api/v1/spaces/{spaceId}/sources": {
       "x-ragforge-implementation-status": "phase3-contract",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
@@ -1258,6 +1294,20 @@
         "in": "query",
         "required": false,
         "schema": {"type": "integer", "format": "int32", "minimum": 1, "maximum": 100, "default": 20}
+      },
+      "ManagementFrom": {
+        "name": "from",
+        "in": "query",
+        "required": true,
+        "description": "Inclusive UTC time-window start.",
+        "schema": {"type": "string", "format": "date-time"}
+      },
+      "ManagementTo": {
+        "name": "to",
+        "in": "query",
+        "required": true,
+        "description": "Exclusive UTC time-window end.",
+        "schema": {"type": "string", "format": "date-time"}
       }
     },
     "headers": {
@@ -1909,6 +1959,13 @@
       "AnswerCitationPreview": {"type": "object", "additionalProperties": false, "required": ["evidenceId", "spaceId", "correlationId", "runId", "evidenceBundleId", "evidenceBundleVersion", "evidenceBundleHash", "indexVersionId", "retrievalProfileId", "retrievalProfileVersion", "documentRevisionId", "parentChunkId", "childChunkId", "contentRef", "textHash", "anchor", "citationAllowed"], "properties": {"evidenceId": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceBundleId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceBundleVersion": {"type": "integer", "minimum": 1}, "evidenceBundleHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "indexVersionId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileId": {"$ref": "#/components/schemas/UuidV7"}, "retrievalProfileVersion": {"type": "integer", "minimum": 1}, "documentRevisionId": {"$ref": "#/components/schemas/UuidV7"}, "parentChunkId": {"$ref": "#/components/schemas/UuidV7"}, "childChunkId": {"$ref": "#/components/schemas/UuidV7"}, "contentRef": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$"}, "textHash": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}, "anchor": {"type": "object", "additionalProperties": false}, "citationAllowed": {"type": "boolean", "const": true}}},
       "AnswerFeedbackRequest": {"type": "object", "additionalProperties": false, "required": ["evidenceId", "sentiment"], "properties": {"evidenceId": {"$ref": "#/components/schemas/UuidV7"}, "sentiment": {"type": "string", "enum": ["HELPFUL", "NOT_HELPFUL"]}, "reason": {"type": ["string", "null"], "maxLength": 1000}, "version": {"type": ["integer", "null"], "minimum": 0}}},
       "AnswerFeedback": {"type": "object", "additionalProperties": false, "required": ["id", "spaceId", "runId", "evidenceId", "actorUserId", "sentiment", "reason", "version", "createdAt", "updatedAt"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceId": {"$ref": "#/components/schemas/UuidV7"}, "actorUserId": {"$ref": "#/components/schemas/UuidV7"}, "sentiment": {"type": "string", "enum": ["HELPFUL", "NOT_HELPFUL"]}, "reason": {"type": ["string", "null"], "maxLength": 1000}, "version": {"type": "integer", "minimum": 0}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}}},
+      "ManagementHealth": {"type": "object", "additionalProperties": false, "required": ["spaceId", "from", "to", "providers", "runs"], "properties": {"spaceId": {"$ref": "#/components/schemas/UuidV7"}, "from": {"type": "string", "format": "date-time"}, "to": {"type": "string", "format": "date-time"}, "providers": {"type": "object", "additionalProperties": false, "required": ["total", "active", "unhealthy", "disabled"], "properties": {"total": {"type": "integer", "minimum": 0}, "active": {"type": "integer", "minimum": 0}, "unhealthy": {"type": "integer", "minimum": 0}, "disabled": {"type": "integer", "minimum": 0}}}, "runs": {"type": "object", "additionalProperties": false, "required": ["total", "succeeded", "failed", "inFlight"], "properties": {"total": {"type": "integer", "minimum": 0}, "succeeded": {"type": "integer", "minimum": 0}, "failed": {"type": "integer", "minimum": 0}, "inFlight": {"type": "integer", "minimum": 0}}}}},
+      "ManagementCostUsage": {"type": "object", "additionalProperties": false, "required": ["spaceId", "from", "to", "items"], "properties": {"spaceId": {"$ref": "#/components/schemas/UuidV7"}, "from": {"type": "string", "format": "date-time"}, "to": {"type": "string", "format": "date-time"}, "items": {"type": "array", "items": {"$ref": "#/components/schemas/ManagementCostUsageRow"}}}},
+      "ManagementCostUsageRow": {"type": "object", "additionalProperties": false, "required": ["usageSource", "currency", "ledgerEntries", "inputTokens", "outputTokens", "totalTokens", "estimatedCost"], "properties": {"usageSource": {"type": "string"}, "currency": {"type": "string"}, "ledgerEntries": {"type": "integer", "minimum": 0}, "inputTokens": {"type": "integer", "minimum": 0}, "outputTokens": {"type": "integer", "minimum": 0}, "totalTokens": {"type": "integer", "minimum": 0}, "estimatedCost": {"type": "number", "minimum": 0}}},
+      "ManagementFeedbackPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/ManagementFeedbackItem"}}, "nextCursor": {"type": ["string", "null"]}}},
+      "ManagementFeedbackItem": {"type": "object", "additionalProperties": false, "required": ["id", "spaceId", "runId", "evidenceId", "actorUserId", "sentiment", "version", "createdAt", "updatedAt"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "spaceId": {"$ref": "#/components/schemas/UuidV7"}, "runId": {"$ref": "#/components/schemas/UuidV7"}, "evidenceId": {"$ref": "#/components/schemas/UuidV7"}, "actorUserId": {"$ref": "#/components/schemas/UuidV7"}, "sentiment": {"type": "string", "enum": ["HELPFUL", "NOT_HELPFUL"]}, "version": {"type": "integer", "minimum": 0}, "createdAt": {"type": "string", "format": "date-time"}, "updatedAt": {"type": "string", "format": "date-time"}}},
+      "ManagementAuditPage": {"type": "object", "additionalProperties": false, "required": ["items", "nextCursor"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/ManagementAuditItem"}}, "nextCursor": {"type": ["string", "null"]}}},
+      "ManagementAuditItem": {"type": "object", "additionalProperties": false, "required": ["id", "eventType", "actorUserId", "aggregateId", "correlationId", "occurredAt", "payloadSha256"], "properties": {"id": {"$ref": "#/components/schemas/UuidV7"}, "eventType": {"type": "string"}, "actorUserId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]}, "aggregateId": {"oneOf": [{"$ref": "#/components/schemas/UuidV7"}, {"type": "null"}]}, "correlationId": {"$ref": "#/components/schemas/UuidV7"}, "occurredAt": {"type": "string", "format": "date-time"}, "payloadSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
       "AnswerSseEvent": {"type": "object", "additionalProperties": false, "required": ["schema_version", "event_id", "event_type", "sequence", "idempotency_key", "space_id", "correlation_id", "run_id", "occurred_at", "payload"], "properties": {"schema_version": {"type": "string", "const": "v1"}, "event_id": {"$ref": "#/components/schemas/UuidV7"}, "event_type": {"type": "string", "enum": ["answer.delta", "answer.citation", "answer.abstention", "answer.tool", "answer.usage", "answer.error", "answer.done"]}, "sequence": {"type": "integer", "minimum": 1}, "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 255}, "space_id": {"$ref": "#/components/schemas/UuidV7"}, "correlation_id": {"$ref": "#/components/schemas/UuidV7"}, "run_id": {"$ref": "#/components/schemas/UuidV7"}, "occurred_at": {"type": "string", "format": "date-time"}, "payload": {"type": "object", "additionalProperties": false}}},
       "RetrievalPlaygroundSide": {
         "type": "object",
