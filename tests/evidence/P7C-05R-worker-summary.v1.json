@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "ragforge-worker-test-summary-v1",
+  "cardId": "P7C-05R",
+  "jdk": "C:\\Program Files\\Java\\jdk-21",
+  "result": "PASS",
+  "tests": [
+    {
+      "name": "original failures",
+      "command": "mvn -q -pl apps/server -am test \"-Dtest=LocalOllamaRunAcceptanceTest,RunExecutionControllerIntegrationTest\"",
+      "passed": 9,
+      "failed": 0,
+      "details": "2 classes green; test profile context started with FakeProviderAdapter as the AI_RUNTIME adapter"
+    },
+    {
+      "name": "adapter regression",
+      "command": "mvn -q -pl apps/server -am test \"-Dtest=AiRuntimeRerankProviderAdapterTest,ProviderConnectionApiIntegrationTest\"",
+      "passed": 9,
+      "failed": 0,
+      "details": "2 classes green; ProviderConnectionApiIntegrationTest started with the default production profile"
+    },
+    {
+      "name": "contract",
+      "command": "python scripts/ci/contract_test.py",
+      "passed": 52,
+      "failed": 0,
+      "details": "52/52 contract tests passed; 22 contract artifacts checked"
+    }
+  ],
+  "warnings": [
+    "Testcontainers shutdown emitted non-failing Lettuce reconnect warnings."
+  ]
+}
