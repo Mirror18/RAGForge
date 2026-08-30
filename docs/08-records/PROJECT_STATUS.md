@@ -230,4 +230,4 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 已新增任务板卡 `P7D-02R`（board.v4），从阻塞提交 `20c7f87` 派生，预算 10,000 tokens；目标是修复目标镜像中的 Critical/High 漏洞并在 `grype --fail-on high` 下重新验收。
 - ownership 明确为：根 `pom.xml`、`apps/server/pom.xml`、`apps/ingestion-worker/pom.xml`、`deploy/docker/`、`deploy/compose/`、`scripts/ci/`、`tests/ci/` 和本卡证据文件。禁止修改 Server/Worker 业务源码、Web 源码、契约、数据库迁移、治理文档和 release 文件。
 - P7D-02R 允许升级直接/传递依赖和基础镜像 digest，但不允许降低 Grype 阈值、增加无 owner/期限/补偿控制的漏洞例外或把未修复高危项标记为通过；若修复仍需超出上述 ownership，必须 BLOCKED 回报。
-- ticket 已建立于 [`P7D-02R-a22.yaml`](tickets/P7D-02R-a22.yaml)，尚未启动 worker；P7D-03 Ubuntu 部署继续冻结。
+- ticket 已建立于 [`P7D-02R-a22.yaml`](tickets/P7D-02R-a22.yaml)，现已分派至 A22 隔离 worktree `codex/p7-supply-chain-remediation-a22`，基线为 `20c7f87`；P7D-03 Ubuntu 部署继续冻结。
