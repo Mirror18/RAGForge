@@ -12,15 +12,15 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应功能基线 SHA：303d723
+> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应功能基线 SHA：61067ae
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`p2-execution`）
-- **主线功能基线 SHA**：`303d723`；最近远程全绿候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`
-- **当前远程 CI**：quality Run [33307092918](https://github.com/Mirror18/RAGForge/actions/runs/33307092918) 对 `f0ce7d2` 全绿（5m48s）；P7D-00/P7D-01 已本地验收，待 `303d723` 推送后远程复验
+- **主线功能基线 SHA**：`61067ae`；最近远程全绿候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`
+- **当前远程 CI**：quality Run [33307092918](https://github.com/Mirror18/RAGForge/actions/runs/33307092918) 对 `f0ce7d2` 全绿（5m48s）；P7D-00/P7D-01 已本地验收，待 `61067ae` 推送后远程复验
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
 - **当前工作包完成度（P7-A..H）**：
@@ -126,7 +126,7 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 | P7Q-06 | URL Router + 可恢复页面 + 分页门禁 | P1 | ✅ completed | A15 | codex/p7-web-router-pagination-a15 | RAGForge-worktrees/codex-p7-web-router-pagination-a15 | 11,000 | 8,600 | 370ccaf19ba093a2ba67d0a074e6b5d26ba1e7d1 | 已合并至 c5c12bc；URL/space/provenance/run 状态恢复，cursor 分页覆盖 120 sources、7 jobs、6 indexes，Vitest 10/10、Playwright 10/10、format/build/secret scan 通过；npm audit 仍有 3 个漏洞 |
 | P7Q-05R | RAG gate 浅克隆恢复 | P1 | ✅ completed | A18 | codex/p7-rag-gate-fetch-a18 | RAGForge-worktrees/codex-p7-rag-gate-fetch-a18 | 4,000 | 4,720 | 56bfcef18c01c441d3f1a1ee0e7e6f5b650ef25d | 已合并至 2b961f2；checkout 使用完整历史，RAG gate 单测 4/4、浅克隆复现、format/secret 通过；等待远程复验 |
 | P7D-00 | Actions Node.js 24 运行时升级 | P2 | ✅ completed | A19 | codex/p7-actions-node24-a19 | RAGForge-worktrees/codex-p7-actions-node24-a19 | 4,000 | 3,000 | 55b42f2b5e3619e573db29abcf4f388a20330c9a | 已合并至 223d4fc；setup-java v5、官方 Actions/Anchore Node24 兼容版本、force runtime、format/secret/runtime audit 通过；待远程 quality 复验 |
-| P7D-01 | 容器加固 | P2 | ✅ completed | A20 | codex/p7-container-hardening-a20 | RAGForge-worktrees/codex-p7-container-hardening-a20 | 8,000 | 7,900 | 0c313405ac49a18edefc99f0639baeb62ca9a0f4 | 已合并至 303d723；Compose build/up、三类应用 healthy、runtime inspect、容器加固脚本与 pytest 4/4 通过；未触碰生产数据/secret/迁移 |
+| P7D-01 | 容器加固 | P2 | ✅ completed | A20 | codex/p7-container-hardening-a20 | RAGForge-worktrees/codex-p7-container-hardening-a20 | 8,000 | 7,900 | 0c313405ac49a18edefc99f0639baeb62ca9a0f4 | 已合并至 303d723，运行时证据更新至 61067ae；Compose build/up、三类应用 healthy、runtime inspect、容器加固脚本与 pytest 4/4 通过；未触碰生产数据/secret/迁移 |
 | P7D-02~07 | Linux 交付与发布（6 张） | P2 | ⏳ ready | — | — | — | 52,000 | — | — | 依赖 P7D-01 或后续卡片；暂不启动 |
 
 ---
