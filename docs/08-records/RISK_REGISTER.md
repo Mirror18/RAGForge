@@ -28,7 +28,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 | R-020 | MinIO 等运行时镜像使用 tag，许可证和生产 digest 尚未锁定 | 2 | 5 | 10 | Phase 1 依赖登记；发布前 SBOM、许可证复核、immutable digest 和镜像扫描 | Compliance / Operations | MITIGATING |
 | R-021 | Run retry context 仅保存在进程内，重启后历史失败 Run 无法继续 retry | 3 | 4 | 12 | Phase 2 已验证同进程 timeout/retry；Phase 3/6 设计持久化 retry command/context 和恢复演练 | Platform | OPEN |
 | R-022 | 真实 OCR runtime 不可用导致扫描 PDF 质量门禁无法闭环 | 4 | 4 | 16 | Tesseract 受限子进程、PDFBox 渲染、输入/页数/输出/超时上限；Windows 与 Ubuntu CI 真实 2/2 样本 | Ingestion / Operations | CLOSED |
-| R-023 | BM25 当前为进程内确定性实现，重启后 lexical index 需重建 | 3 | 4 | 12 | Phase 4 明确 provider seam 与 space/index scope；Phase 5/6 选择 durable lexical provider 前不得宣称重启持久化 | Retrieval | OPEN |
+| R-023 | BM25 当前为进程内确定性实现，重启后 lexical index 需重建 | 3 | 4 | 12 | ADR-0012；Qdrant 版本化 candidate payload 持久化 searchable text，按 space_id/index_version_id 重建；DurableBm25CandidateStore 重启命中测试 1/1 | Retrieval | CLOSED |
 | R-024 | 1M Qdrant 证据使用 8 维合成向量，不能直接外推生产 embedding 维度和混合并发 | 3 | 4 | 12 | Qdrant `v1.11.5` 1M 真实 filter probe p95 1101.3382ms；生产 embedding 维度、并发和索引重建需 Phase 6 复测 | Performance / Retrieval | MITIGATING |
 
 ## 2. 维护规则
@@ -167,3 +167,9 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-045` 已关闭（实现范围）：production adapter 不再固定 `stream=false`；Ollama NDJSON、OpenAI-compatible/MiMo SSE、durable answer delta、Last-Event-ID replay 和同实例/多实例上游取消已接通。取消后事件存储仍独立拒绝新增 delta。
 - `R-027` 的“production GenerationPort 不暴露 streaming”原因已关闭，但旧 TTFT 数值不能自动成为当前提交的性能证据。本轮只有公共 loopback 协议/竞态测试，没有调用真实模型；发布候选必须重新测量真实 Ollama/MiMo TTFT、总耗时、吞吐、取消延迟和多实例 fan-out 延迟。
 - 流中正文在完整 claims/citation 校验前是暂态。服务端不保存 raw provider frame，只保存投影后的 answer text 事件；非 `COMPLETED` 终态 Web 会清空暂态文本。后续浏览器或其他客户端必须遵守同一规则，不得把中途 delta 当作已核验答案。
+
+## 17. P7-C-04 Durable BM25 处置（2026-08-30）
+
+- R-023 已关闭：用户明确批准接受 ADR-0012；Worker 将 searchable text 与 provenance payload 一起写入版本化 Qdrant candidate collection，Server 生产路径改用 DurableBm25CandidateStore，重启后通过 Qdrant scroll 重建 BM25 状态并命中。
+- 验证：RetrievalServiceTest 9/9、InMemoryBm25CandidateStoreTest 3/3、SpaceCandidateIndexBuilderTest 1/1、BusinessIngestionSideEffectHandlerTest 3/3、DurableBm25CandidateStoreTest 1/1、contract 52/52；未新增数据库迁移。
+- RERANK route 的真实 adapter 仍属于 P7C-05，不因本风险关闭而宣称完成。

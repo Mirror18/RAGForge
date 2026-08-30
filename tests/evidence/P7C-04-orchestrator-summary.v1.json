@@ -1,0 +1,22 @@
+{
+  "schema_version": "P7C-04-orchestrator-summary-v1",
+  "card_id": "P7C-04",
+  "passed": true,
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failed_cases": [],
+    "duration_ms": 0
+  },
+  "checks": [
+    {"name": "contract test", "passed": 52, "failed": 0, "details": "contract 52/52。", "evidence": "tests/evidence/P7C-04-orchestrator-contract.log"},
+    {"name": "server retrieval tests", "passed": 12, "failed": 0, "details": "RetrievalServiceTest 9/9；InMemoryBm25CandidateStoreTest 3/3。", "evidence": "tests/evidence/P7C-04-orchestrator-retrieval.log"},
+    {"name": "worker lexical/index tests", "passed": 4, "failed": 0, "details": "BusinessIngestionSideEffectHandlerTest 3/3；SpaceCandidateIndexBuilderTest 1/1。", "evidence": "tests/evidence/P7C-04-orchestrator-worker.log"},
+    {"name": "durable restart integration", "passed": 1, "failed": 0, "details": "DurableBm25CandidateStoreTest 1/1，重启后从版本化 Qdrant payload 重建并命中。", "evidence": "tests/evidence/P7C-04-orchestrator-durable.log"}
+  ],
+  "adr": "docs/02-architecture/adr/0012-durable-bm25.md",
+  "merge_commit": "75da5cb",
+  "worker_commit": "a427362546d19a37d1b61759526371fcdaa5105a",
+  "database_migrations_added": 0
+}
