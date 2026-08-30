@@ -76,8 +76,29 @@ public class RunExecutionService {
     @Transactional
     public ConversationRepository.ConversationRecord createConversation(UUID spaceId, SessionPrincipal principal,
                                                                           String title) {
+        return createConversation(spaceId, principal, title, "legacy-" + UUID.randomUUID());
+    }
+
+    @Transactional
+    public ConversationRepository.ConversationRecord createConversation(UUID spaceId, SessionPrincipal principal,
+                                                                          String title, String idempotencyKey) {
         requireRole(spaceId, principal, true);
-        return conversations.create(UUID.randomUUID(), spaceId, principal.userId(), title, Instant.now());
+        String requestHash = sha256("CREATE|" + title.trim());
+        ConversationRepository.CommandReceipt receipt = conversations.findCommand(spaceId, idempotencyKey).orElse(null);
+        if (receipt != null) {
+            if (!requestHash.equals(receipt.requestHash()) || !"CREATE".equals(receipt.operation())) {
+                throw new ApiException(HttpStatus.CONFLICT, "idempotency_key_conflict", "Command conflict",
+                        "Idempotency key is already bound to another conversation command");
+            }
+            return conversations.find(spaceId, receipt.conversationId()).orElseThrow(() ->
+                    notFound("conversation_not_found", "Conversation not found"));
+        }
+        Instant now = Instant.now();
+        ConversationRepository.ConversationRecord created = conversations.create(UUID.randomUUID(), spaceId,
+                principal.userId(), title, now);
+        conversations.recordCommand(UUID.randomUUID(), spaceId, created.id(), "CREATE", idempotencyKey,
+                requestHash, null, created.version(), principal.userId(), now);
+        return created;
     }
 
     public List<ConversationRepository.ConversationRecord> listConversations(UUID spaceId,
@@ -98,10 +119,68 @@ public class RunExecutionService {
     @Transactional
     public ConversationRepository.ConversationRecord archiveConversation(UUID spaceId, UUID conversationId,
                                                                           SessionPrincipal principal) {
+        ConversationRepository.ConversationRecord current = conversations.find(spaceId, conversationId)
+                .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
+        return archiveConversation(spaceId, conversationId, principal, current.version(),
+                "legacy-" + UUID.randomUUID(), "ARCHIVE");
+    }
+
+    @Transactional
+    public ConversationRepository.ConversationRecord archiveConversation(UUID spaceId, UUID conversationId,
+                                                                          SessionPrincipal principal, long expectedVersion,
+                                                                          String idempotencyKey, String operation) {
+        requireRole(spaceId, principal, true);
+        ConversationRepository.ConversationRecord current = conversations.find(spaceId, conversationId)
+                .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
+        String requestHash = sha256(operation + "|" + conversationId + "|" + expectedVersion);
+        ConversationRepository.CommandReceipt receipt = conversations.findCommand(spaceId, idempotencyKey).orElse(null);
+        if (receipt != null) {
+            if (!requestHash.equals(receipt.requestHash()) || !operation.equals(receipt.operation())) {
+                throw new ApiException(HttpStatus.CONFLICT, "idempotency_key_conflict", "Command conflict",
+                        "Idempotency key is already bound to another conversation command");
+            }
+            return conversations.find(spaceId, conversationId).orElseThrow();
+        }
+        Instant now = Instant.now();
+        ConversationRepository.ConversationRecord result;
+        try {
+            result = conversations.archive(spaceId, conversationId, principal.userId(), now, expectedVersion);
+        } catch (ConversationRepository.OptimisticLockException conflict) {
+            throw new ApiException(HttpStatus.PRECONDITION_FAILED, "conversation_version_conflict",
+                    "Conversation version conflict", "Refresh the conversation before changing it");
+        }
+        conversations.recordCommand(UUID.randomUUID(), spaceId, conversationId, operation, idempotencyKey,
+                requestHash, expectedVersion, result.version(), principal.userId(), now);
+        return result;
+    }
+
+    @Transactional
+    public ConversationRepository.ConversationRecord renameConversation(UUID spaceId, UUID conversationId,
+                                                                         SessionPrincipal principal, String title,
+                                                                         long expectedVersion, String idempotencyKey) {
         requireRole(spaceId, principal, true);
         conversations.find(spaceId, conversationId)
                 .orElseThrow(() -> notFound("conversation_not_found", "Conversation not found"));
-        return conversations.archive(spaceId, conversationId, principal.userId(), Instant.now());
+        String requestHash = sha256("RENAME|" + conversationId + "|" + title.trim() + "|" + expectedVersion);
+        ConversationRepository.CommandReceipt receipt = conversations.findCommand(spaceId, idempotencyKey).orElse(null);
+        if (receipt != null) {
+            if (!requestHash.equals(receipt.requestHash()) || !"RENAME".equals(receipt.operation())) {
+                throw new ApiException(HttpStatus.CONFLICT, "idempotency_key_conflict", "Command conflict",
+                        "Idempotency key is already bound to another conversation command");
+            }
+            return conversations.find(spaceId, conversationId).orElseThrow();
+        }
+        Instant now = Instant.now();
+        ConversationRepository.ConversationRecord result;
+        try {
+            result = conversations.rename(spaceId, conversationId, title, now, expectedVersion);
+        } catch (ConversationRepository.OptimisticLockException conflict) {
+            throw new ApiException(HttpStatus.PRECONDITION_FAILED, "conversation_version_conflict",
+                    "Conversation version conflict", "Refresh the conversation before changing it");
+        }
+        conversations.recordCommand(UUID.randomUUID(), spaceId, conversationId, "RENAME", idempotencyKey,
+                requestHash, expectedVersion, result.version(), principal.userId(), now);
+        return result;
     }
 
     /** Creates the run, executes it synchronously, and returns the persisted terminal/failed state. */

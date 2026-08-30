@@ -61,18 +61,69 @@ public class ConversationRepository {
     @Transactional
     public ConversationRecord archive(UUID spaceId, UUID id, UUID actorUserId, Instant now) {
         ConversationRecord existing = find(spaceId, id).orElseThrow();
-        if ("ARCHIVED".equals(existing.status())) {
-            return existing;
+        return archive(spaceId, id, actorUserId, now, existing.version());
+    }
+
+    @Transactional
+    public ConversationRecord archive(UUID spaceId, UUID id, UUID actorUserId, Instant now, long expectedVersion) {
+        ConversationRecord existing = find(spaceId, id).orElseThrow();
+        if ("ARCHIVED".equals(existing.status())) return existing;
+        if (existing.version() != expectedVersion) {
+            throw new OptimisticLockException("Conversation version has changed");
         }
         int updated = jdbc.update("""
                         UPDATE conversations
                         SET status = 'ARCHIVED', archived_at = ?, archived_by = ?, updated_at = ?, version = version + 1
-                        WHERE id = ? AND space_id = ? AND status = 'ACTIVE'
-                        """, Timestamp.from(now), actorUserId, Timestamp.from(now), id, spaceId);
+                        WHERE id = ? AND space_id = ? AND status = 'ACTIVE' AND version = ?
+                        """, Timestamp.from(now), actorUserId, Timestamp.from(now), id, spaceId, expectedVersion);
         if (updated != 1) {
-            throw new IllegalStateException("Conversation is not active in the requested space");
+            throw new OptimisticLockException("Conversation version has changed");
         }
         return find(spaceId, id).orElseThrow();
+    }
+
+    @Transactional
+    public ConversationRecord rename(UUID spaceId, UUID id, String title, Instant now, long expectedVersion) {
+        if (title == null || title.isBlank() || title.length() > 200) {
+            throw new IllegalArgumentException("Conversation title is invalid");
+        }
+        int updated = jdbc.update("""
+                UPDATE conversations SET title = ?, updated_at = ?, version = version + 1
+                WHERE id = ? AND space_id = ? AND status = 'ACTIVE' AND version = ?
+                """, title.trim(), Timestamp.from(now), id, spaceId, expectedVersion);
+        if (updated != 1) throw new OptimisticLockException("Conversation version has changed");
+        return find(spaceId, id).orElseThrow();
+    }
+
+    public Optional<CommandReceipt> findCommand(UUID spaceId, String idempotencyKey) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT id, space_id, conversation_id, operation, idempotency_key, request_hash,
+                           expected_version, result_version, actor_user_id, created_at
+                    FROM conversation_command_receipts
+                    WHERE space_id = ? AND idempotency_key = ?
+                    """, (rs, row) -> new CommandReceipt(rs.getObject("id", UUID.class),
+                    rs.getObject("space_id", UUID.class), rs.getObject("conversation_id", UUID.class),
+                    rs.getString("operation"), rs.getString("idempotency_key"), rs.getString("request_hash"),
+                    (Long) rs.getObject("expected_version"), (Long) rs.getObject("result_version"),
+                    rs.getObject("actor_user_id", UUID.class), rs.getTimestamp("created_at").toInstant()),
+                    spaceId, idempotencyKey));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    @Transactional
+    public void recordCommand(UUID id, UUID spaceId, UUID conversationId, String operation,
+                              String idempotencyKey, String requestHash, Long expectedVersion,
+                              Long resultVersion, UUID actorUserId, Instant now) {
+        jdbc.update("""
+                INSERT INTO conversation_command_receipts
+                    (id, space_id, conversation_id, operation, idempotency_key, request_hash,
+                     expected_version, result_version, actor_user_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, id, spaceId, conversationId, operation, idempotencyKey, requestHash,
+                expectedVersion, resultVersion, actorUserId, Timestamp.from(now));
     }
 
     private ConversationRecord map(java.sql.ResultSet rs) throws java.sql.SQLException {
@@ -95,6 +146,17 @@ public class ConversationRepository {
         public ConversationRecord(UUID id, UUID spaceId, UUID actorUserId, String title,
                                   Instant createdAt, Instant updatedAt, long version) {
             this(id, spaceId, actorUserId, title, "ACTIVE", null, null, createdAt, updatedAt, version);
+        }
+    }
+
+    public record CommandReceipt(UUID id, UUID spaceId, UUID conversationId, String operation,
+                                 String idempotencyKey, String requestHash, Long expectedVersion,
+                                 Long resultVersion, UUID actorUserId, Instant createdAt) {
+    }
+
+    public static final class OptimisticLockException extends RuntimeException {
+        public OptimisticLockException(String message) {
+            super(message);
         }
     }
 }
