@@ -5,7 +5,7 @@ meta:
   agent_slug: a2
   branch: codex/p7-durable-bm25-a2
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7-durable-bm25-a2
-  base_sha: 3cc67e7
+  base_sha: 4ec57ce
   updated_at: "2026-08-30"
   dependencies_satisfied: true
   depends_on_cards: []
