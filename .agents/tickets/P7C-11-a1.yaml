@@ -1,0 +1,105 @@
+meta:
+  card_id: P7C-11
+  title: 调整基础设施健康探针，使 Ollama 成为可选检查
+  priority: P1
+  agent_slug: a1
+  branch: codex/p7c-11-health-probe-a1
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7c-11-health-probe-a1
+  base_sha: c34c8e8533485330f26be8aebc908caff467bd9f
+  updated_at: "2026-09-05"
+  dependencies_satisfied: true
+  depends_on_cards: [P7C-10]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - scripts/ops/health_probe.py
+    - scripts/ops/test_health_probe.py
+    - scripts/ops/README.md
+    - scripts/dev/core.py
+    - scripts/dev/README.md
+    - deploy/compose/README.md
+    - tests/evidence/P7C-11-worker-summary.v1.json
+  read_only:
+    - deploy/compose/compose.yaml
+    - deploy/compose/env.example
+  forbidden:
+    - AGENTS.md
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - docs/10-项目状态审计记录.md
+    - docs/11-风险登记表.md
+    - docs/12-需求追溯矩阵.md
+    - docs/13-Agent工程记忆.md
+    - frontend/ragforge-web/
+    - backend/
+    - contracts/
+    - .github/workflows/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 直接运行 health_probe.py 默认不把 Ollama 作为失败条件，仍检查 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO
+    - id: A2
+      text: health_probe.py 支持 --check-ollama；scripts/dev/core.py 支持 health --check-ollama 并正确透传
+    - id: A3
+      text: 默认成功文案说明只验证必需 core 服务，文档明确 Ollama 仅在本地模型场景显式检查
+    - id: A4
+      text: 单元测试、CLI 帮助检查和 git diff --check 全部通过
+
+budget:
+  token_limit: 4500
+
+tests:
+  must_run:
+    - name: Health probe unit tests
+      command: python -m unittest discover -s scripts/ops -p "test_health_probe.py"
+      expected: "所有测试通过"
+    - name: Health probe CLI help
+      command: python scripts/ops/health_probe.py --help
+      expected: "包含 --check-ollama"
+    - name: Core health CLI help
+      command: python scripts/dev/core.py health --help
+      expected: "包含 --check-ollama"
+    - name: Diff whitespace check
+      command: git diff --check
+      expected: "exit 0"
+  evidence_file: tests/evidence/P7C-11-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: false
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+  evidence_file: string
