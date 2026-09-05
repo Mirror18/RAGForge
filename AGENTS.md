@@ -148,7 +148,7 @@ An agent halts and reports to the human if and only if any of the following appl
 
 - Releases follow Semantic Versioning and must record an entry in `CHANGELOG.md`. Never cut a release without an explicit human decision on the version number, changelog content, and rollback point.
 - Each release must reference the exact commit SHA, the deployment artifact/SBOM, and the rollback procedure; see `docs/05-部署运维与恢复.md` and the Main/Release pipeline in `docs/04-交付路线与质量门禁.md`.
-- Before a release, verify that the phase exit-criteria records are committed as the numbered `docs/` project records and the structured evidence is committed under `tests/evidence/`.
+- Before a release, verify phase exit criteria against `docs/04-交付路线与质量门禁.md`, current governance records in `docs/08–13`, structured evidence under `tests/evidence/`, and the Git commits that implemented the release candidate.
 
 ## Security incidents and dependency response
 
@@ -164,7 +164,7 @@ An agent halts and reports to the human if and only if any of the following appl
 - `backend/ai-runtime`: OCR and rerank runtime only; it is not a second business backend.
 - `contracts`: source of truth for public API and event contracts.
 - `tests`: cross-application and acceptance tests; unit tests stay with their modules.
-- `docs/08–32`: flat project records for state, tasks, audit, risks, traceability, phase plans, evidence summaries, and retrospectives; Worker YAML contracts live under `.agents/tickets/`.
+- `docs/08–13`: flat current project records for state, tasks, audit, risks, traceability, and Agent memory; historical phase plans, implementation details, evidence summaries, and retrospectives are retrieved from Git history; Worker YAML contracts live under `.agents/tickets/`.
 
 ## Quality gates
 
