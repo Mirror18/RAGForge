@@ -4,7 +4,7 @@ RAGForge 是面向企业内部、多用户知识空间的商业级 RAG 学习工
 
 ## 先看这里
 
-不知道下一步做什么时，打开 [`docs/README.md`](./docs/README.md)，然后按顺序阅读 01–07 主文档。要执行任务时只走：
+不知道下一步做什么时，打开 [`docs/README.md`](./docs/README.md)，然后按顺序阅读 00–07 主文档和术语字典。要执行任务时只走：
 
 1. [项目状态卡](./docs/08-项目状态卡.md)
 2. [项目任务总台账](./docs/09-项目任务总台账.md)
@@ -32,7 +32,7 @@ config/ deploy/ libs/      # 配置、运行资产和受约束复用库
 
 直接运行资产：[`deploy/docker/Dockerfile`](./deploy/docker/Dockerfile) · [`deploy/compose/compose.yaml`](./deploy/compose/compose.yaml) · [`scripts/dev/start-local.bat`](./scripts/dev/start-local.bat)。
 
-详细启动和目录职责见[工程结构与本地运行](./docs/03-工程结构与本地运行.md)，前端见 [`frontend/README.md`](./frontend/README.md)，后端见 [`backend/README.md`](./backend/README.md)，部署见 [`deploy/README.md`](./deploy/README.md)。
+详细技术栈、启动方式和目录职责见[技术栈与工程运行](./docs/01-技术栈与工程运行.md)，前端见 [`frontend/README.md`](./frontend/README.md)，后端见 [`backend/README.md`](./backend/README.md)，部署见 [`deploy/README.md`](./deploy/README.md)。
 
 ## 根目录保留的机器/平台文件
 

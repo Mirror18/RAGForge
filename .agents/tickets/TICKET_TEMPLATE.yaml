@@ -50,7 +50,7 @@ scope:
     - contracts/openapi/ragforge-api-v1.yaml
     # 只读取 DoD 的 §1、§2（若 Worker 能直接跳到行号则更省）
     - docs/04-交付路线与质量门禁.md
-    - docs/02-架构与领域设计.md
+    - docs/02-项目架构与领域模型.md
     # 现有实现参考（精确到文件，不做目录级 Grep）
     - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
     - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionService.java

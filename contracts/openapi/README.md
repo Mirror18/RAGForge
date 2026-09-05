@@ -1,6 +1,6 @@
 # OpenAPI
 
-[`ragforge-api-v1.yaml`](./ragforge-api-v1.yaml) 是 RAGForge 的 REST/SSE v1 投影。文件使用 JSON 语法保存 YAML 合法内容，使当前 Python 标准库 contract tests 可以在不引入 YAML 依赖的情况下解析它。规范遵循 [API 与事件设计](../../docs/02-架构与领域设计.md)：`/api/v1`、RFC 9457、UUIDv7、cursor、Idempotency-Key、Session/CSRF 和 service tokens。
+[`ragforge-api-v1.yaml`](./ragforge-api-v1.yaml) 是 RAGForge 的 REST/SSE v1 投影。文件使用 JSON 语法保存 YAML 合法内容，使当前 Python 标准库 contract tests 可以在不引入 YAML 依赖的情况下解析它。规范遵循 [API 与事件设计](../../docs/02-项目架构与领域模型.md)：`/api/v1`、RFC 9457、UUIDv7、cursor、Idempotency-Key、Session/CSRF 和 service tokens。
 
 ## Contract 状态
 
