@@ -19,12 +19,12 @@
     {
       "name": "Maven server compile",
       "result": "passed",
-      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed and incremental compilation disabled."
+      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed, target cleaned before run, and incremental compilation disabled."
     },
     {
       "name": "Maven worker compile",
       "result": "passed",
-      "details": "Clean worker compile succeeded and ScannedObject exposes Java Record accessors."
+      "details": "Clean worker compile succeeded and ScannedObject exposes Java Record accessors; stale target/classes cannot be reused by startup."
     },
     {
       "name": "Full local startup",
@@ -49,6 +49,7 @@
   ],
   "notes": [
     "The worker uses the existing local RabbitMQ and MinIO environment variables from start-local.ps1.",
+    "Worker startup was observed after target cleanup and completed with Started IngestionWorkerApplication.",
     "No bootstrap token or platform administrator was created."
   ]
 }
