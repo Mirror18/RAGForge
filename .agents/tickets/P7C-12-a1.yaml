@@ -1,0 +1,103 @@
+meta:
+  card_id: P7C-12
+  title: 修复 Windows 启动脚本增量编译导致的运行时缺类
+  priority: P1
+  agent_slug: a1
+  branch: codex/p7c-12-startup-compile-a1
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7c-12-startup-compile-a1
+  base_sha: 35a7ce6
+  updated_at: "2026-09-05"
+  dependencies_satisfied: true
+  depends_on_cards: [P7C-11]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - scripts/dev/start-local.ps1
+    - scripts/dev/README.md
+    - tests/evidence/P7C-12-worker-summary.v1.json
+  read_only:
+    - scripts/dev/start-local.bat
+    - pom.xml
+    - backend/server/pom.xml
+  forbidden:
+    - AGENTS.md
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - docs/10-项目状态审计记录.md
+    - docs/11-风险登记表.md
+    - docs/12-需求追溯矩阵.md
+    - docs/13-Agent工程记忆.md
+    - frontend/ragforge-web/
+    - backend/ingestion-worker/
+    - contracts/
+    - deploy/
+    - .github/workflows/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: start-local.ps1 启动 Server 和 Worker 时显式禁用 Maven 增量编译，避免 stale target/classes 遗漏源码类
+    - id: A2
+      text: 完整启动后 Server、Worker、Web 保持运行，Server 健康端点为 200，core 依赖不受影响
+    - id: A3
+      text: 未登录访问 /api/v1/sessions/current 返回结构化 401，而不是 NoClassDefFoundError/500；前端可正常进入登录态
+    - id: A4
+      text: PowerShell 参数静态检查、Maven 编译验证、登录接口验证和 git diff --check 全部通过
+
+budget:
+  token_limit: 5000
+
+tests:
+  must_run:
+    - name: Maven server compile
+      command: $env:JAVA_HOME='C:\\Program Files\\Java\\jdk-21'; $env:Path="$env:JAVA_HOME\\bin;$env:Path"; mvn -q -pl backend/server -am compile '-Dmaven.compiler.useIncrementalCompilation=false'
+      expected: "exit 0"
+    - name: Startup option static check
+      command: rg -n "maven.compiler.useIncrementalCompilation=false" scripts/dev/start-local.ps1
+      expected: "Server 和 Worker 启动参数均包含该选项"
+    - name: Session unauthorized response
+      command: curl.exe -sS -i http://127.0.0.1:25082/api/v1/sessions/current
+      expected: "HTTP 401 且 Content-Type 为 application/problem+json"
+    - name: Diff whitespace check
+      command: git diff --check
+      expected: "exit 0"
+  evidence_file: tests/evidence/P7C-12-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: false
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+  evidence_file: string
