@@ -113,6 +113,6 @@ NONE -> ACTIVE -> NEEDS_REVIEW -> ACTIVE
 - JSONB 用于连接器/供应商扩展配置，但核心过滤、约束和报表字段结构化。
 - 软删除不能代替历史版本；用户隐私删除需要单独的可验证清理流程。
 
-## 7. 领域增量提案（Proposed）
+## 7. 已接受领域演进（实施待拆卡）
 
-[演进总设计](ARCHITECTURE_EVOLUTION.md)复用现有 PipelineVersion、PipelineStepExecution、ParsedArtifact/ParseReport 与 Evidence/Citation，提出 ArtifactManifest、IndexValidationResult 和 RetrievalExecutionSnapshot 的概念职责。准确命名、空间身份及保留边界见总设计第 3、5 节；这些值对象或记录不是已发布 DTO、数据库表或新建迁移。[ADR-0013](adr/0013-versioned-knowledge-execution.md)待人工决策。
+[演进总设计](ARCHITECTURE_EVOLUTION.md)复用现有 PipelineVersion、PipelineStepExecution、ParsedArtifact/ParseReport 与 Evidence/Citation，定义 ArtifactManifest、IndexValidationResult 和 RetrievalExecutionSnapshot 的概念职责。准确命名、空间身份及保留边界见总设计第 3、5 节；这些值对象或记录不是已发布 DTO、数据库表或新建迁移。[ADR-0013](adr/0013-versioned-knowledge-execution.md)已接受，具体实现仍待独立设计与验证。

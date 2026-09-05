@@ -192,7 +192,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 ## 20. 知识执行架构提案风险（2026-09-05）
 
-版本：`knowledge-evolution-risks.v1`；状态均为设计风险 OPEN，不构成上线漏洞结论或风险接受。[ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md) 尚未接受。
+版本：`knowledge-evolution-risks.v1`；状态均为设计风险 OPEN，不构成上线漏洞结论或风险接受。[ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md)已于 2026-09-05 接受；风险在实施验证前保持 OPEN。
 
 | ID | 风险 | 概率 | 影响 | 分值 | 计划缓解与关闭证据 | Owner | 状态 |
 |---|---|---:|---:|---:|---|---|---|

@@ -92,6 +92,6 @@ MVP 工具：
 - Answer 创建期间使用预分配的稳定 `answer_id` 关联 delta/citation/done。同实例 cancel 直接触发当前 `CancellationToken`；其他实例的 cancel 通过 durable run-event fan-out 通知生成实例。HTTP stream、总输出（1 MB）和回答请求均有限时/限长；取消后的 delta 由事件存储再次 fail-closed 拒绝。
 - 调用重试创建新 invocation；usage ledger 用供应商 request ID 或本地幂等键去重。
 
-## 8. 检索执行演进提案（Proposed）
+## 8. 已接受检索执行演进（实施待拆卡）
 
-[演进总设计](ARCHITECTURE_EVOLUTION.md)第 5 节建议 Chat、Playground、Evaluation 共用 retrieval application port，以 RetrievalExecutionSnapshot 固定 index/profile/模型及有效参数；已有混合检索、Evidence Bundle 和 citation allow-list 继续作为基础。快照不固定权限，历史回答、引用、物料、缓存和重放仍须当前授权；删除与撤权约束不能随索引回滚撤销。具体生命周期与验收统一见总设计，[ADR-0013](adr/0013-versioned-knowledge-execution.md)尚未接受。
+[演进总设计](ARCHITECTURE_EVOLUTION.md)第 5 节定义 Chat、Playground、Evaluation 共用 retrieval application port，以 RetrievalExecutionSnapshot 固定 index/profile/模型及有效参数；已有混合检索、Evidence Bundle 和 citation allow-list 继续作为基础。快照不固定权限，历史回答、引用、物料、缓存和重放仍须当前授权；删除与撤权约束不能随索引回滚撤销。具体生命周期与验收统一见总设计，[ADR-0013](adr/0013-versioned-knowledge-execution.md)已接受但尚未实施。

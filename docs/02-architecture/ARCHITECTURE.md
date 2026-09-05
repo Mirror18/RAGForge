@@ -119,6 +119,6 @@ SPI 输入输出必须使用仓库自有的稳定领域对象；第三方 SDK �
 - 摄取可解释性、父子分块和 Retrieval Test 参考 [RAGFlow](https://github.com/infiniflow/ragflow)，复用代码时遵守 Apache-2.0 Notice。
 - 工作区和本地优先体验参考 [AnythingLLM](https://github.com/Mintplex-Labs/anything-llm)，不照搬其整体架构。
 
-## 9. 架构演进提案（Proposed）
+## 9. 已接受架构演进（实施待拆卡）
 
-[知识执行演进总设计](ARCHITECTURE_EVOLUTION.md)在现行模块化单体与独立 Worker 边界内，提出受控阶段、可验证解析产物与统一检索快照；[ADR-0013](adr/0013-versioned-knowledge-execution.md)尚待人工接受，不能直接驱动实施。现行 Accepted ADR 与持久化 BM25 保持有效。当前实现和目标的差异、权限流及后续验收以总设计为唯一提案来源，本节不声明能力已上线。
+[知识执行演进总设计](ARCHITECTURE_EVOLUTION.md)在现行模块化单体与独立 Worker 边界内，定义受控阶段、可验证解析产物与统一检索快照；[ADR-0013](adr/0013-versioned-knowledge-execution.md)已于 2026-09-05 接受。现行 Accepted ADR 与持久化 BM25 保持有效。实现前仍须独立拆卡并完成契约、迁移与安全验证；本节不声明能力已上线。

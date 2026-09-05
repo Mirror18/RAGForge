@@ -16,6 +16,6 @@ ADR 采用不可变历史：决策变更时新增 ADR 并把旧文档标记为 `
 | [0010](0010-phase5-provider-material-composition.md) | Accepted | Phase 5 真实 embedding、版本化 evidence material 与 session authorizer 的组合边界 |
 | [0011](0011-multi-instance-run-event-fanout.md) | Accepted | 多实例 Run Event live fan-out（Valkey live hint + PostgreSQL durable replay） |
 | [0012](0012-durable-bm25.md) | Accepted | 以版本化 Qdrant candidate payload 持久化并重建 BM25 lexical 状态 |
-| [0013](0013-versioned-knowledge-execution.md) | Proposed | 受控知识阶段、可验证解析产物与统一检索快照；待人工接受，不直接驱动实施 |
+| [0013](0013-versioned-knowledge-execution.md) | Accepted | 受控知识阶段、可验证解析产物与统一检索快照；实现仍须独立契约、迁移和安全验证 |
 
 模板必填项：Status、Date、Context、Decision、Consequences、Alternatives、References。

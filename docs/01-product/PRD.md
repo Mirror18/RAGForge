@@ -139,9 +139,9 @@ RAGForge 是供企业内部团队部署的通用知识助手。它把分散文�
 - [AnythingLLM：工作区和本地优先体验参考](https://github.com/Mintplex-Labs/anything-llm)
 - [Spring AI：Java AI 应用抽象](https://github.com/spring-projects/spring-ai)
 
-## 8. 知识执行架构演进需求（2026-09-05，Proposed）
+## 8. 知识执行架构演进需求（2026-09-05，Accepted，实施待拆卡）
 
-版本：`knowledge-evolution-requirements.v1`。本节是用户要求的架构文档规划，待 [ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md) 经人类明确接受后再拆实施卡；不修改当前交付承诺、不代表功能已实现。[设计与迁移](../02-architecture/ARCHITECTURE_EVOLUTION.md) 是技术细节唯一入口。
+版本：`knowledge-evolution-requirements.v1`。本节是已接受的架构约束；[ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md)已于 2026-09-05 经项目负责人接受。后续仍须拆实施卡；不修改当前交付承诺、不代表功能已实现。[设计与迁移](../02-architecture/ARCHITECTURE_EVOLUTION.md) 是技术细节唯一入口。
 
 | 需求 ID | 用户价值与拟议变化 | 验收场景（计划，尚未执行） |
 |---|---|---|

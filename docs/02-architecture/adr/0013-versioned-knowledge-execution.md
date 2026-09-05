@@ -1,6 +1,6 @@
 # ADR-0013：受控知识执行与版本化检索快照
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-05
 - Proposal Version: `knowledge-execution-proposal.v1`
 
@@ -14,7 +14,7 @@ RAGForge 已有版本化摄取、Pipeline/Job/阶段记录、解析产物、索�
 
 ## Decision
 
-**此处为待审议建议，不是已接受决策。人工明确接受前不能据此修改运行架构、可执行契约或数据库。**
+**Decision accepted on 2026-09-05 by the project owner.** 本 ADR 已成为架构约束；实施仍须按看板拆成独立卡片，完成契约、迁移、安全审查和验证后才可修改运行架构、可执行契约或数据库。
 
 1. 保留模块化单体加独立 ingestion worker；在现有 PipelineVersion/阶段记录上表达固定有限依赖、版本输入、幂等重试、租约 fencing 与显式重放。
 2. 复用 ParsedArtifact/ParseReport，补可验证 manifest 和版本化质量判定，纳入已有索引验证及原子发布边界。

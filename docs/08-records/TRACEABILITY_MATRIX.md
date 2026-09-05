@@ -175,11 +175,11 @@
 
 ## 知识执行架构演进（2026-09-05，设计提案）
 
-版本：`knowledge-evolution-traceability.v1`。下列全部为 Proposed，未执行运行时验收；文档交付卡为 [ARCH-DOC-01](TASK_BOARD.md)，技术设计与验收映射见[架构演进](../02-architecture/ARCHITECTURE_EVOLUTION.md)，不是当前功能完成证据。
+版本：`knowledge-evolution-traceability.v1`。ADR 已于 2026-09-05 接受，但下列实现与运行时验收仍未执行；文档交付卡为 [ARCH-DOC-01](TASK_BOARD.md)，技术设计与验收映射见[架构演进](../02-architecture/ARCHITECTURE_EVOLUTION.md)，不是当前功能完成证据。
 
 | 需求 ID | 来源 | 架构决策 | 计划验证 | 风险 | 实现状态 |
 |---|---|---|---|---|---|
-| RF-ARCH-001 | [PRD §8](../01-product/PRD.md) | [ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md) | 阶段崩溃/重复投递/租约/取消/跨空间/固定版本重放 | R-055、R-058 | 待审批与拆卡 |
-| RF-ARCH-002 | PRD §8 | ADR-0013；沿用 ADR-0006/0012 | 解析产物完整性、质量拒绝、发布失败保持旧索引、原子切换 | R-055 | 待审批与拆卡 |
-| RF-ARCH-003 | PRD §8 | ADR-0013；沿用现有 Evidence Bundle | 同路径检索评估、固定配置对比、成本/延迟与安全门禁 | R-057 | 待审批与拆卡 |
-| RF-ARCH-004 | PRD §8 | ADR-0013；保持 ADR-0004 空间 RBAC | 来源暂停/错误/删除/撤权、历史引用和缓存再授权 | R-056、R-059 | 待审批与拆卡 |
+| RF-ARCH-001 | [PRD §8](../01-product/PRD.md) | [ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md) | 阶段崩溃/重复投递/租约/取消/跨空间/固定版本重放 | R-055、R-058 | 已接受，待拆卡 |
+| RF-ARCH-002 | PRD §8 | ADR-0013；沿用 ADR-0006/0012 | 解析产物完整性、质量拒绝、发布失败保持旧索引、原子切换 | R-055 | 已接受，待拆卡 |
+| RF-ARCH-003 | PRD §8 | ADR-0013；沿用现有 Evidence Bundle | 同路径检索评估、固定配置对比、成本/延迟与安全门禁 | R-057 | 已接受，待拆卡 |
+| RF-ARCH-004 | PRD §8 | ADR-0013；保持 ADR-0004 空间 RBAC | 来源暂停/错误/删除/撤权、历史引用和缓存再授权 | R-056、R-059 | 已接受，待拆卡 |

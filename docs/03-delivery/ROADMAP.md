@@ -207,11 +207,11 @@ flowchart LR
 
 ## 3. 候选架构演进顺序（2026-09-05，尚未排入实现）
 
-版本：`knowledge-evolution-roadmap.v1`。本轮只完成 [ARCH-DOC-01](../08-records/TASK_BOARD.md) 文档卡；[ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md) 为 Proposed，Phase 7 已有退出条件和 Ubuntu 外部验收依赖保持原约束。以下为待批准工作包，不是已满足依赖的 Worker Ticket。
+版本：`knowledge-evolution-roadmap.v1`。本轮只完成 [ARCH-DOC-01](../08-records/TASK_BOARD.md) 文档卡；[ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md)已于 2026-09-05 接受，Phase 7 已有退出条件和 Ubuntu 外部验收依赖保持原约束。以下为待拆分工作包，不是已满足依赖的 Worker Ticket。
 
 | 顺序 | 拟议工作包 | 前置与单一所有者 | 退出证据（计划） |
 |---|---|---|---|
-| 1 | 契约与兼容模型 | 人类明确接受 ADR；Orchestrator 指定契约和迁移唯一 owner | 现有字段与新增字段对照、版本兼容规则、迁移锁/回填估算、契约测试；不直接执行生产迁移 |
+| 1 | 契约与兼容模型 | ADR-0013 已接受；Orchestrator 指定契约和迁移唯一 owner | 现有字段与新增字段对照、版本兼容规则、迁移锁/回填估算、契约测试；不直接执行生产迁移 |
 | 2 | 受控摄取执行与解析产物 | 工作包1已合并且相关 CI 通过；Worker owner | 重投递、租约过期、取消、部分失败、阶段恢复、跨空间拒绝；候选索引质量闸门 |
 | 3 | 统一检索执行计划与观测 | 工作包1已验收；Retrieval owner；复用已有版本与 Evidence Bundle | 线上/Playground/离线同路径；版本化数据集上基线/候选质量、延迟、成本及安全对比 |
 | 4 | 兼容迁移与收敛 | 工作包2、3通过，删除/授权/历史引用安全评审通过；Orchestrator | 合成数据影子执行、分空间启用、失败回退与历史引用演练、运维手册和追溯闭环 |

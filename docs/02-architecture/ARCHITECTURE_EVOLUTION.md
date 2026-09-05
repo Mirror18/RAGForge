@@ -1,7 +1,7 @@
 # 知识执行架构演进提案
 
 - 文档版本：`knowledge-execution-proposal.v1`；日期：2026-09-05。
-- 状态：**Proposed，待人工决策**；关联 [ADR-0013](adr/0013-versioned-knowledge-execution.md)。本文不能直接驱动实施，也不代表新接口已经发布。
+- 状态：**Accepted，实施待拆卡**；关联 [ADR-0013](adr/0013-versioned-knowledge-execution.md)，已于 2026-09-05 由项目负责人接受。本文定义后续实现约束，不代表新接口已经发布。
 - 现行规则以 [总体架构](ARCHITECTURE.md)、[ADR-0006](adr/0006-versioned-ingestion-and-indexes.md)、[ADR-0012](adr/0012-durable-bm25.md) 为准。本提案不替代 Accepted ADR。
 - 外部事实及来源见[开源对标记录](../07-research/2026-09-05-knowledge-architecture-benchmark.md)；下文是 RAGForge 自有设计推论，没有性能提升结论。
 
@@ -127,7 +127,7 @@ Chat、Playground 和 Evaluation 应调用同一 retrieval application port；�
 
 ## 6. 分步实施条件与回滚
 
-以下只是后续卡片顺序，须先人工接受 ADR、拆出预算票据并完成契约评审；本次不修改代码、schema、migration 或部署配置。
+以下是后续卡片顺序。ADR 已接受，但仍须拆出预算票据并完成契约评审；本次不修改代码、schema、migration 或部署配置。
 
 | 阶段 | 可验收切片 | 进入下一阶段的条件 | 回滚 |
 |---|---|---|---|

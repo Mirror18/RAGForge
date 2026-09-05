@@ -59,4 +59,4 @@
 | 统一执行快照 | RetrievalProfileVersion、混合检索、Evidence Bundle | 三入口最小公共参数和快照保留 |
 | 历史再授权 | 空间 RBAC、引用鉴权、删除与墓碑 | 派生回答和缓存的拒读语义与安全测试 |
 
-以上建议见 [ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md)，均为 Proposed。后续若需要源码复用或新增依赖，必须重新固定对应源码版本、审查具体路径及许可证，并更新[复用登记](UPSTREAM_REUSE_REGISTER.md)。本记录中的 HEAD 不能代替该审批证据。
+以上建议已由 [ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md)于 2026-09-05 接受；其实施仍待独立卡片验证。后续若需要源码复用或新增依赖，必须重新固定对应源码版本、审查具体路径及许可证，并更新[复用登记](UPSTREAM_REUSE_REGISTER.md)。本记录中的 HEAD 不能代替该审批证据。
