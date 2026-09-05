@@ -4,7 +4,7 @@ param(
     [int]$ServerPort = 25082,
     [int]$WebPort = 25174,
     [switch]$SkipWeb,
-    [switch]$SkipModelCheck,
+    [switch]$CheckOllama,
     [switch]$OpenBrowser
 )
 
@@ -98,7 +98,12 @@ $javaHome = Find-Java21
 
 & $docker info --format "{{.ServerVersion}}" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Docker Engine 不可用，请确认 Docker Desktop 已启动。" }
-if (-not $SkipModelCheck) { Assert-OllamaModels }
+if ($CheckOllama) {
+    Write-Host "检查 Ollama 本地模型..."
+    Assert-OllamaModels
+} else {
+    Write-Host "跳过 Ollama 检查；本地模型能力可在启动后按需配置。"
+}
 
 $portsJson = & $python -c "import json,sys; sys.path.insert(0, sys.argv[1]); from compose_isolation import project_ports; print(json.dumps(project_ports(sys.argv[2])))" $scriptRoot $ProjectName
 if ($LASTEXITCODE -ne 0) { throw "无法解析 Compose 端口映射。" }
@@ -191,10 +196,9 @@ try {
     Write-Host "  RabbitMQ:  http://127.0.0.1:$($ports.RABBITMQ_MANAGEMENT_PORT)"
     Write-Host "  MinIO:     http://127.0.0.1:$($ports.S3_CONSOLE_PORT)"
     Write-Host "  Qdrant:    http://127.0.0.1:$($ports.QDRANT_PORT)/dashboard"
-    Write-Host "  Ollama:    http://127.0.0.1:11434"
+    Write-Host "  Ollama:    可选（本地模型需要）http://127.0.0.1:11434"
     Write-Host "  Logs:      $runtimeDirectory"
     if ($OpenBrowser -and -not $SkipWeb) { Start-Process "http://127.0.0.1:$WebPort" }
 } finally {
     Pop-Location
 }
-
