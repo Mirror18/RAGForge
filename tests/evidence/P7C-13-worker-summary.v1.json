@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "P7C-13",
+  "status": "PASS",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "failedCases": [],
+    "durationMs": 0
+  },
+  "acceptance": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true
+  },
+  "checks": [
+    {
+      "name": "Maven server compile",
+      "result": "passed",
+      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed and incremental compilation disabled."
+    },
+    {
+      "name": "Maven worker compile",
+      "result": "passed",
+      "details": "Clean worker compile succeeded and ScannedObject exposes Java Record accessors."
+    },
+    {
+      "name": "Full local startup",
+      "result": "passed",
+      "details": "start-local.bat completed core, Server, Worker and Web startup without Ollama."
+    },
+    {
+      "name": "Worker readiness",
+      "result": "passed",
+      "details": "Worker PID remained alive and worker.log contained Started IngestionWorkerApplication."
+    },
+    {
+      "name": "HTTP smoke",
+      "result": "passed",
+      "details": "Server health and Web returned HTTP 200; unauthenticated session returned structured HTTP 401."
+    },
+    {
+      "name": "PowerShell and diff checks",
+      "result": "passed",
+      "details": "UTF-8 PowerShell parse, static compiler-argument check and git diff --check passed."
+    }
+  ],
+  "notes": [
+    "The worker uses the existing local RabbitMQ and MinIO environment variables from start-local.ps1.",
+    "No bootstrap token or platform administrator was created."
+  ]
+}

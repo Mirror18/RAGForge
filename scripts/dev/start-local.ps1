@@ -74,6 +74,19 @@ function Wait-ForHttp([string]$Uri, [int]$Attempts = 180, [System.Diagnostics.Pr
     }
 }
 
+function Wait-ForLog([string]$LogPath, [string]$Pattern, [int]$Attempts = 90, [System.Diagnostics.Process]$Process = $null) {
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        if ($Process -and $Process.HasExited) {
+            throw "Process exited before its startup log became ready: $LogPath (exit code $($Process.ExitCode))"
+        }
+        if (Test-Path -LiteralPath $LogPath) {
+            if (Select-String -LiteralPath $LogPath -Pattern $Pattern -Quiet -ErrorAction SilentlyContinue) { return }
+        }
+        Start-Sleep -Seconds 1
+    }
+    throw "服务未在 $Attempts 秒内完成启动：$LogPath"
+}
+
 function Assert-OllamaModels {
     try {
         $response = Invoke-RestMethod -TimeoutSec 5 -Uri "http://127.0.0.1:11434/api/tags"
@@ -145,11 +158,19 @@ try {
     $env:RAGFORGE_OUTBOX_RELAY_ENABLED = "true"
     $env:RAGFORGE_RUN_EVENT_FANOUT_ENABLED = "true"
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
+    $mavenJava21Arguments = @(
+        "-Dmaven.compiler.release=21",
+        "-Dmaven.compiler.source=21",
+        "-Dmaven.compiler.target=21",
+        "-Dmaven.compiler.compilerVersion=21",
+        "-Dmaven.compiler.useIncrementalCompilation=false"
+    )
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
     # spring-boot:run invokes Maven compile phases. Disable incremental compilation so
     # stale target/classes cannot omit classes after a branch switch or source move.
-    $server = Start-Process -FilePath $maven -ArgumentList "-Dmaven.compiler.useIncrementalCompilation=false", "-pl", "backend/server", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    # Explicit Java 21 properties also override conflicting machine-wide Maven profiles.
+    $server = Start-Process -FilePath $maven -ArgumentList ($mavenJava21Arguments + @("-pl", "backend/server", "spring-boot:run")) -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -166,8 +187,16 @@ try {
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
-    $worker = Start-Process -FilePath $maven -ArgumentList "-Dmaven.compiler.useIncrementalCompilation=false", "-pl", "backend/ingestion-worker", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    $worker = Start-Process -FilePath $maven -ArgumentList ($mavenJava21Arguments + @("-pl", "backend/ingestion-worker", "spring-boot:run")) -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
+    try {
+        Wait-ForLog (Join-Path $runtimeDirectory "worker.log") "Started IngestionWorkerApplication in " 90 $worker
+    } catch {
+        Write-Host "Worker 最近日志：" -ForegroundColor Yellow
+        Get-Content (Join-Path $runtimeDirectory "worker.log") -Tail 40 -ErrorAction SilentlyContinue
+        Get-Content (Join-Path $runtimeDirectory "worker.err.log") -Tail 40 -ErrorAction SilentlyContinue
+        throw
+    }
 
     if (-not $SkipWeb) {
         Write-Host "启动 Web..."
