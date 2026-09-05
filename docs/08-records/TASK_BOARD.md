@@ -86,7 +86,7 @@ P7C-04（可并行） ─► P7C-05
 
 | 卡片 ID | 标题 | 前置 | Ownership | Token 预算 | 验收输出 | 必跑测试/门禁 |
 |---|---|---|---|---:|---|---|
-| ARCH-DOC-01 | GitHub 知识库对标与架构演进提案 | 当前代码只读架构审计 + 官方资料研究；不依赖 Ubuntu | 架构与研究文档；精确清单见 [Ticket](tickets/ARCH-DOC-01-a24.yaml)；治理文档由 Orchestrator 集成 | 10,000 | 四项目事实/差距矩阵；目标边界图；摄取/检索/发布/恢复设计；Proposed ADR；A1–A5，文档完成不等于实现验收 | Markdown links、format、architecture、path index、secret、git diff --check |
+| ARCH-DOC-01 | GitHub 知识库对标与架构演进提案 | 当前代码只读架构审计 + 官方资料研究；不依赖 Ubuntu | 架构与研究文档；治理文档由 Orchestrator 集成 | 10,000 | 四项目事实/差距矩阵；目标边界图；摄取/检索/发布/恢复设计；ADR-0013 已接受；A1–A5，文档完成不等于实现验收 | Markdown links、format、architecture、path index、secret、git diff --check |
 
 > 本轮架构文档预算单独核算，不计入下方历史 Phase 7 实现预算；不自动调度新实现。新增治理/研究文档是本卡必要集成内容，状态见状态卡 §6。
 

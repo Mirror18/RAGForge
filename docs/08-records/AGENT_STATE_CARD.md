@@ -12,14 +12,14 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-09-05 | 更新人：Orchestrator（架构审计） | 对应功能基线 SHA：2ad59b9
+> 上一次更新：2026-09-05 | 更新人：Orchestrator（架构决策合并） | 对应功能基线 SHA：5de4952
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`p2-execution`）
-- **主线功能基线 SHA**：`2ad59b9ff2552cece954ce875e6c153f54536f1d`（2026-09-05 只读审计；主线相对本地缓存 origin/main ahead 6，未刷新远程）；本 SHA 的远程 CI 未核验。
+- **主线功能基线 SHA**：`5de49528dd461198d3fd60059c8acb9f3c92891b`（2026-09-05 合并 ARCH-DOC-01 和已接受的 ADR-0013）；本 SHA 的远程 CI 未核验。
 - **历史远程 CI（不代表当前基线）**：quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对 `00bee66` 全绿；P7D-00/P7D-01 本地与远程验收通过，检查 annotations 为空
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
@@ -109,7 +109,7 @@ P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7
 
 | 卡片 ID | 标题 | 优先级 | 状态 | 担当 Agent | branch | worktree | Token 预算 | 实际消耗 | 完成 SHA | 备注 |
 |---|---|---|---|---|---|---|---:|---:|---|---|
-| ARCH-DOC-01 | 开源知识库架构演进文档 | P2 / 用户追加 | documented-local / pending integration | A24 / Orchestrator | codex/arch-knowledge-evolution-a24 | RAGForge-worktrees/codex-arch-knowledge-evolution-a24 | 10,000 | 约 10,600（Worker 估算，+6%） | 79d7e76a2dd716915a56f777b2b1a57d246d15cf | 文档与本地门禁通过；ADR Proposed；未合并 main、未核验该候选远程 CI；不改变 P7D-03 阻塞 |
+| ARCH-DOC-01 | 开源知识库架构演进文档 | P2 / 用户追加 | ✅ integrated | A24 / Orchestrator | codex/arch-knowledge-evolution-a24 | RAGForge-worktrees/codex-arch-knowledge-evolution-a24 | 10,000 | 约 10,600（Worker 估算，+6%） | 5de49528dd461198d3fd60059c8acb9f3c92891b | ADR-0013 已由项目负责人接受并合并 main；本地文档门禁通过，远程 CI 未核验；实现仍待拆卡，不改变 P7D-03 阻塞 |
 | AGENT-OPT-01 | Agent 效率文档骨架落地 | P0 | ✅ completed | Orchestrator | main | RAGForge | 8,000 | 未记录 | 609ef5c9a1284bef71ed9295910aeb9c48d383cb | 已由主线提交完成；历史实际 token 未记录，不重复执行 |
 | P7C-04 | durable BM25 ADR + 实现（R-023） | P0 | ✅ completed | A2 | codex/p7-durable-bm25-a2 | RAGForge-worktrees/codex-p7-durable-bm25-a2 | 10,000 | 7,600 | a427362546d19a37d1b61759526371fcdaa5105a | 已合并至 75da5cb；ADR-0012 Accepted，Qdrant payload 重建与重启命中 1/1，Server/Worker/contract 门禁通过，未新增迁移；R-023 CLOSED |
 | P7C-01 | 来源任务中心后端 API | P0 | ✅ completed | A3 | codex/p7-source-task-api-a3 | RAGForge-worktrees/codex-p7-source-task-api-a3 | 8,000 | 5,800 | e4a9481710aabe31a6271adbcac9a30b7c7dfc08 | 已合并至 d35eb8e；V21 追加迁移；A1–A5 通过 |
