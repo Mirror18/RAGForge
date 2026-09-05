@@ -1,0 +1,100 @@
+meta:
+  card_id: P7C-09
+  title: 前端工作台视觉整理与冗余入口清理
+  priority: P1
+  agent_slug: a1
+  branch: codex/p7c-09-ui-a1
+  worktree: D:\project\learning\RAGForge-worktrees\codex-p7c-09-ui-a1
+  base_sha: e09408a7ed8949bff010badbc942ee99ec20720a
+  updated_at: "2026-09-05"
+  dependencies_satisfied: true
+  depends_on_cards: [P7C-08]
+  migration_owner: false
+  migration_next: null
+
+scope:
+  ownership:
+    - frontend/ragforge-web/src/App.vue
+    - frontend/ragforge-web/src/AuthView.vue
+    - frontend/ragforge-web/src/BusinessFlowView.vue
+  read_only:
+    - frontend/ragforge-web/package.json
+    - frontend/ragforge-web/tsconfig.json
+    - frontend/ragforge-web/tests/e2e/web-journeys.spec.ts
+  forbidden:
+    - AGENTS.md
+    - docs/08-项目状态卡.md
+    - docs/10-项目状态审计记录.md
+    - docs/11-风险登记表.md
+    - docs/12-需求追溯矩阵.md
+    - docs/13-Agent工程记忆.md
+    - contracts/
+    - backend/
+    - deploy/
+
+acceptance:
+  criteria:
+    - id: A1
+      text: 登录页与已登录工作台建立统一的视觉层级、间距、颜色和响应式布局，保持现有可访问标签与核心操作不变
+    - id: A2
+      text: 业务闭环不再同时展示重复的网页来源、Git 来源与来源库入口；入口保留且不删除现有服务端能力
+    - id: A3
+      text: 清理明显的遗留隐藏样式和无效视觉规则，不引入占位数据、伪造状态或跨空间行为
+    - id: A4
+      text: 前端构建、类型检查、单元测试和关键 Web 旅程通过
+
+budget:
+  token_limit: 7000
+
+tests:
+  must_run:
+    - name: Web build
+      command: npm --prefix frontend/ragforge-web run build
+      expected: BUILD SUCCESS
+    - name: Web typecheck
+      command: npm --prefix frontend/ragforge-web run format:check
+      expected: 0 errors
+    - name: Web unit tests
+      command: npm --prefix frontend/ragforge-web run test:unit
+      expected: all tests pass
+    - name: Web journeys
+      command: npm --prefix frontend/ragforge-web run test:e2e
+      expected: all journeys pass
+  evidence_file: tests/evidence/P7C-09-worker-summary.v1.json
+  evidence_schema:
+    summary:
+      total: 0
+      passed: 0
+      failed: 0
+      failed_cases: []
+      duration_ms: 0
+    raw_output_stored: true
+
+report_schema:
+  card_id: string
+  status: "PASS | BLOCKED | FAIL"
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files:
+    count: integer
+    list: [string, ...]
+  tests:
+    contract: {passed: integer, failed: integer, details: string}
+    unit: {passed: integer, failed: integer, details: string}
+    integration: {passed: integer, failed: integer, details: string}
+    custom: [{name: string, passed: integer, failed: integer, details: string}]
+  budget:
+    token_used: integer
+    token_limit: integer
+    overrun_reason: string
+  warnings: [string, ...]
+  risks: [string, ...]
+  integration_notes: string
+  acceptance_met:
+    A1: true | false
+    A2: true | false
+    A3: true | false
+    A4: true | false
+  evidence_file: string
