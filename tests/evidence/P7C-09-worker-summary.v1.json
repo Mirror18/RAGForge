@@ -1,0 +1,23 @@
+{
+  "cardId": "P7C-09",
+  "version": "v1",
+  "passed": true,
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failedCases": [],
+    "durationMs": 22000
+  },
+  "checks": [
+    { "name": "Web build", "command": "npm --prefix frontend/ragforge-web run build", "status": "PASS" },
+    { "name": "Web typecheck", "command": "npm --prefix frontend/ragforge-web run format:check", "status": "PASS" },
+    { "name": "Web unit tests", "command": "npm --prefix frontend/ragforge-web run test:unit", "status": "PASS", "tests": 10 },
+    { "name": "Web journeys", "command": "npm --prefix frontend/ragforge-web run test:e2e", "status": "PASS", "tests": 10 }
+  ],
+  "notes": [
+    "Build output: 47 modules transformed.",
+    "E2E covers login, space isolation, ingestion, index publish, answer citations, permissions, cross-space rejection, URL restoration and pagination.",
+    "No raw command output exceeded the evidence threshold in the final run."
+  ]
+}
