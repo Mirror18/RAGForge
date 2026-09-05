@@ -34,7 +34,7 @@
     {
       "name": "Worker readiness",
       "result": "passed",
-      "details": "Worker PID remained alive and worker.log contained Started IngestionWorkerApplication."
+      "details": "The application JVM PID remained alive and worker.log contained Started IngestionWorkerApplication; the PID file no longer points at the Maven wrapper."
     },
     {
       "name": "HTTP smoke",
@@ -49,7 +49,7 @@
   ],
   "notes": [
     "The worker uses the existing local RabbitMQ and MinIO environment variables from start-local.ps1.",
-    "Worker startup was observed after target cleanup and completed with Started IngestionWorkerApplication.",
+    "Worker startup was observed after foreground target cleanup and compile, completed with Started IngestionWorkerApplication, and kept the application JVM alive.",
     "Application startup skips test compilation; test compilation remains covered by the separate Maven regression command.",
     "No bootstrap token or platform administrator was created."
   ]
