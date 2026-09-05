@@ -5,7 +5,7 @@ meta:
   agent_slug: a1
   branch: codex/p7c-09-ui-a1
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7c-09-ui-a1
-  base_sha: e09408a7ed8949bff010badbc942ee99ec20720a
+  base_sha: 86b46be
   updated_at: "2026-09-05"
   dependencies_satisfied: true
   depends_on_cards: [P7C-08]
