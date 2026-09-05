@@ -38,6 +38,13 @@
 
 > 按日期倒序。条目尽量短，能一句话说完就别写一段。
 
+### 2026-09-06 · Windows 本地启动与 bootstrap 边界
+
+- Maven 全局 profile 与 `target/classes` 可能让 Spring Boot 看似启动但请求阶段缺类；本地脚本应先以 Java 21 完整编译并 repackage，再直接运行可执行 JAR，Worker 还要等待真实 JVM 启动日志与存活状态。
+- `maven.test.skip=true` 不应带入前台主编译；在本机配置下它会生成不完整主类目录，测试编译应单独运行，启动阶段只在运行命令上跳过测试编译。
+- Ollama 与平台管理员 bootstrap 是两条独立边界：本地服务可在不启动 Ollama、不配置 bootstrap Token 时运行；启动脚本不得自动提权或把 Secret 写入仓库、日志、浏览器存储。
+- bootstrap 的一次性、Secret 注入、并发最多一次成功与 fail-closed 限制应保留在生产/共享环境；本地体验若不需要管理员初始化，保持关闭即可，不应为方便登录而删除安全边界。
+
 ### 2026-08-30 · Agent 效率改造
 
 - **MEMORY.md 自身治理**：已把「状态」职责剥离到 `AGENT_STATE_CARD.md`。今后如果看到新 Agent 从 MEMORY.md 找「当前阶段」，要立刻纠正。
