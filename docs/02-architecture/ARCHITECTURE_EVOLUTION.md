@@ -20,7 +20,7 @@
 | BM25 | Qdrant 持久 payload；每次查询 scroll 并重建统计 | 沿用 ADR-0012，不引入持久倒排服务，不声称当前具有持久倒排结构 |
 | 权限与历史 | 已有 space RBAC、引用重鉴权、Deletion Job 和恢复墓碑 | 明确历史派生内容、缓存和重放的权限适用范围；尚未全量追踪历史读取实现 |
 
-代码依据：[生产摄取 handler](../../apps/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/BusinessIngestionSideEffectHandler.java)（51–96、179–228）、[候选索引构建](../../apps/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilder.java)（57–87）、[ParseReport](../../apps/ingestion-worker/src/main/java/com/ragforge/ingestion/parser/ParseReport.java)（7–18）、[检索服务](../../apps/server/src/main/java/com/ragforge/server/retrieval/RetrievalService.java)（107–120）。这些局部审计事实不构成全仓能力或漏洞判断。
+代码依据：[生产摄取 handler](../../backend/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/BusinessIngestionSideEffectHandler.java)（51–96、179–228）、[候选索引构建](../../backend/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilder.java)（57–87）、[ParseReport](../../backend/ingestion-worker/src/main/java/com/ragforge/ingestion/parser/ParseReport.java)（7–18）、[检索服务](../../backend/server/src/main/java/com/ragforge/server/retrieval/RetrievalService.java)（107–120）。这些局部审计事实不构成全仓能力或漏洞判断。
 
 ## 2. 目标边界与数据流
 

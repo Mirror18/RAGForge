@@ -15,10 +15,10 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 ## 按领域路由
 
-- `apps/server/`：同步 API、业务规则、空间权限、检索与回答编排。
-- `apps/ingestion-worker/`：异步来源同步、解析、分块、向量和候选索引；不绕过 Server 直接成为第二业务后端。
-- `apps/web/`：角色感知 SPA；用户路径必须从空间、来源、索引、问答和管理闭环验证。
-- `apps/ai-runtime/`：仅 OCR、rerank 等窄职责运行时能力。
+- `backend/server/`：同步 API、业务规则、空间权限、检索与回答编排。
+- `backend/ingestion-worker/`：异步来源同步、解析、分块、向量和候选索引；不绕过 Server 直接成为第二业务后端。
+- `frontend/ragforge-web/`：角色感知 SPA；用户路径必须从空间、来源、索引、问答和管理闭环验证。
+- `backend/ai-runtime/`：仅 OCR、rerank 等窄职责运行时能力。
 - `contracts/`：OpenAPI、事件和跨语言 schema 的唯一契约源；先契约后 producer/consumer。
 - `deploy/`、`scripts/`、`tests/`：部署入口、自动化门禁和跨应用证据；生成物与真实凭据不得入仓。
 

@@ -17,8 +17,8 @@ meta:
 scope:
   ownership:
     - pom.xml
-    - apps/server/pom.xml
-    - apps/ingestion-worker/pom.xml
+    - backend/server/pom.xml
+    - backend/ingestion-worker/pom.xml
     - deploy/docker/Dockerfile
     - deploy/compose/
     - scripts/ci/
@@ -32,10 +32,10 @@ scope:
     - deploy/docker/Dockerfile
     - .github/workflows/quality.yml
     - pom.xml
-    - apps/server/pom.xml
-    - apps/ingestion-worker/pom.xml
-    - apps/web/package.json
-    - apps/web/package-lock.json
+    - backend/server/pom.xml
+    - backend/ingestion-worker/pom.xml
+    - frontend/ragforge-web/package.json
+    - frontend/ragforge-web/package-lock.json
     - scripts/ci/secret_audit.py
     - scripts/ci/secret_scan.py
     - scripts/ci/validate_compose.py
@@ -52,11 +52,11 @@ scope:
     - docs/08-records/TASK_BOARD.md
     - AGENTS.md
     - MEMORY.md
-    - apps/server/src/main/
-    - apps/server/src/test/
-    - apps/ingestion-worker/src/main/
-    - apps/ingestion-worker/src/test/
-    - apps/web/src/
+    - backend/server/src/main/
+    - backend/server/src/test/
+    - backend/ingestion-worker/src/main/
+    - backend/ingestion-worker/src/test/
+    - frontend/ragforge-web/src/
     - contracts/
     - db/
     - production/
@@ -95,10 +95,10 @@ tests:
       command: python scripts/ci/secret_scan.py
       expected: exit 0
     - name: Server and Worker regression
-      command: mvn -q -pl apps/server,apps/ingestion-worker -am test
+      command: mvn -q -pl backend/server,backend/ingestion-worker -am test
       expected: BUILD SUCCESS with zero failures/errors
     - name: Web typecheck and build
-      command: npm ci --prefix apps/web; npm --prefix apps/web run format:check; npm --prefix apps/web run build
+      command: npm ci --prefix frontend/ragforge-web; npm --prefix frontend/ragforge-web run format:check; npm --prefix frontend/ragforge-web run build
       expected: npm ci、format:check 和 build 均 exit 0
     - name: Target-image build
       command: docker compose -f deploy/compose/compose.yaml --profile app build server worker web

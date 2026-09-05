@@ -3,7 +3,7 @@
 - `dev/`：本地环境检查、启动和样本导入。
   - `dev/core.py`：统一管理 Compose core/app profile、健康检查、备份冒烟和构建。
   - `dev/start-local.bat` / `dev/start-local.ps1`：Windows 宿主机源码模式，启动 core、Server、Worker 和 Web。
-- `../deploy/docker/Dockerfile`：容器化 Server、Worker、Web 的唯一 Dockerfile；不在 `apps/server/` 下维护副本。
+- `../deploy/docker/Dockerfile`：容器化 Server、Worker、Web 的唯一 Dockerfile；不在 `backend/server/` 下维护副本。
 - `ci/`：链接、契约、SBOM、评估等 CI helpers。
 - `ops/`：备份、恢复、健康诊断和受控维护。
 - `phase4/`：Phase 4 检索 30 问质量基准、1M 参考规模探针和可选 Qdrant 1M 容量演练。

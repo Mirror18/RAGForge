@@ -16,10 +16,10 @@
 
 ## 自动化验证
 
-- `mvn -pl apps/server,apps/ingestion-worker -am test`：Server 210 tests，0 failures，0 errors，1 skipped；Worker 首轮暴露 1 个测试数据契约和 1 个禁用摄取 bean 条件问题，修复后 `mvn -pl apps/ingestion-worker -am test` 为 28/28 通过。
+- `mvn -pl backend/server,backend/ingestion-worker -am test`：Server 210 tests，0 failures，0 errors，1 skipped；Worker 首轮暴露 1 个测试数据契约和 1 个禁用摄取 bean 条件问题，修复后 `mvn -pl backend/ingestion-worker -am test` 为 28/28 通过。
 - `python scripts/ci/contract_test.py`：52/52 contract tests，21 artifacts，通过。
-- `apps/web/npm run format:check`：通过。
-- `apps/web/npm run build`：通过。
+- `frontend/ragforge-web/npm run format:check`：通过。
+- `frontend/ragforge-web/npm run build`：通过。
 - `git diff --check`：通过。
 
 ## 尚未宣称的证据

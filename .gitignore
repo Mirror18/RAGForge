@@ -9,9 +9,16 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+config/private/*
+!config/private/README.md
+secrets/
+*.secret
+*.secret.*
+*.local.yml
+*.local.yaml
+*.local.json
 *.pem
 *.key
-secrets/
 
 # Java
 **/target/
@@ -25,6 +32,7 @@ secrets/
 
 # Python
 **/__pycache__/
+**/*.egg-info/
 **/.pytest_cache/
 **/.mypy_cache/
 **/.ruff_cache/

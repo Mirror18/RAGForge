@@ -34,7 +34,7 @@ class Phase3IdempotencyTest(unittest.TestCase):
                 "--batch-mode",
                 "--no-transfer-progress",
                 "-pl",
-                "apps/ingestion-worker",
+                "backend/ingestion-worker",
                 "-Dtest=IdempotencyConcurrencyIntegrationTest",
                 "test",
             ],

@@ -4,7 +4,7 @@
   "verified_at": "2026-08-21T13:04:38+08:00",
   "code_commit_under_test": "e27ae75f085e3a4fe3d39fa0b00b5ceecb931bd2",
   "command": "mvn --batch-mode --no-transfer-progress test",
-  "targeted_command": "mvn -pl apps/server -am -Dtest=Phase4ChunkIndexPersistenceIntegrationTest,RetrievalServiceQdrantIntegrationTest,ChunkStudioServiceTest,RetrievalPlaygroundServiceTest,StudioControllerMockMvcTest -Dsurefire.failIfNoSpecifiedTests=false test",
+  "targeted_command": "mvn -pl backend/server -am -Dtest=Phase4ChunkIndexPersistenceIntegrationTest,RetrievalServiceQdrantIntegrationTest,ChunkStudioServiceTest,RetrievalPlaygroundServiceTest,StudioControllerMockMvcTest -Dsurefire.failIfNoSpecifiedTests=false test",
   "test_results": {
     "phase4_persistence_tests": 6,
     "phase4_persistence_failures": 0,

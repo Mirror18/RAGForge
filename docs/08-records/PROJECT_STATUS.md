@@ -148,7 +148,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 
 - 当前执行入口为 [`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) 与 [`PHASE_7_EXECUTION_PLAN.md`](phase-7/PHASE_7_EXECUTION_PLAN.md)。二者以 production code 和可重跑门禁为依据，覆盖并取代此前“Phase 7 只剩部署”的任务判断。
 - 已确认的产品断点：注册只产生 `USER` 且没有平台管理员 bootstrap；OpenAPI 的 Provider connection test 没有 Controller 实现；Model Profile 可在没有 verified capabilities 时直接 `PUBLISHED`；generation request 固定 `stream=false`；Git/local connectors 未接 Server/Web；feedback、审计/成本管理视图缺失。
-- 已确认的检索断点：BM25 是进程内 `InMemoryBm25CandidateStore`；空间虽绑定 RERANK route，production retrieval 仍使用 `LexicalReranker`；`apps/ai-runtime` 只有包骨架。现状不能被描述为 durable lexical 或真实模型 rerank。
+- 已确认的检索断点：BM25 是进程内 `InMemoryBm25CandidateStore`；空间虽绑定 RERANK route，production retrieval 仍使用 `LexicalReranker`；`backend/ai-runtime` 只有包骨架。现状不能被描述为 durable lexical 或真实模型 rerank。
 - 已确认的交付断点：Server/Worker 镜像为 UID 10001，但 Web 仍为默认 nginx root；Server/Worker 在 Compose 中没有应用级 healthcheck，三类应用也没有完整 capability/只读写路径/资源限额/digest 证据。
 - 本轮门禁：format、architecture、52 contract tests、Compose 静态验证和 secret scan 通过。直接运行 Maven 时 Maven 绑定 JDK 8；显式切到 JDK 21 后 Server 执行 187 tests，20 个 Testcontainers tests 因 Docker daemon 未运行报 error、1 个真实 Ollama 用例 skipped，Worker 未执行。Node/npm 不在当前 PATH，Web 本轮未构建，且项目没有 Web test script。
 - 因此当前没有同一候选 SHA 的全量 green、容器 runtime、Ubuntu、升级/回滚或目标镜像 SBOM/Grype 证据；Phase 7 不能完成，也不能创建 release。
@@ -222,13 +222,13 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - P7D-02 已完成镜像基础层 digest 锁定、镜像级 SBOM/Grype CI 链路、目标镜像 Secret 审计、Compose/ Dockerfile digest 自测和本地目标镜像构建；隔离分支提交 `20c7f87` 保留全部可恢复改动。
 - 本地三项目标镜像均生成 CycloneDX SBOM 和 SARIF；Secret 审计无 findings，供应链单测 7/7、Compose/format/tracked-file secret gates 通过。
 - 阻塞证据：Grype `0.117.0 --fail-on high` 对 server、worker、web 均返回退出码 `2`；server/worker 同时含基础层和应用依赖高危项，web 含 Alpine curl/OpenSSL/libpng 高危项。该问题不能通过降低扫描阈值或增加未审批例外解决。
-- 由于应用依赖修复需要修改本卡 forbidden 的 `apps/server/` 或 `apps/ingestion-worker/`，P7D-02 暂不合并，P7D-03 Ubuntu 部署不得启动；需先建立有明确 ownership、风险 owner/期限/补偿控制的漏洞修复卡，或由用户批准受控安全例外。
+- 由于应用依赖修复需要修改本卡 forbidden 的 `backend/server/` 或 `backend/ingestion-worker/`，P7D-02 暂不合并，P7D-03 Ubuntu 部署不得启动；需先建立有明确 ownership、风险 owner/期限/补偿控制的漏洞修复卡，或由用户批准受控安全例外。
 - 结构化证据见 [`P7D-02-worker-summary.v1.json`](../../tests/evidence/P7D-02-worker-summary.v1.json)；本轮未使用生产凭据、未推送生产镜像、未执行生产迁移、未创建 release、未开启云出境。
 
 ## 20. P7D-02R 漏洞修复卡与 ownership（2026-08-30）
 
 - 已新增任务板卡 `P7D-02R`（board.v4），从阻塞提交 `20c7f87` 派生，预算 10,000 tokens；目标是修复目标镜像中的 Critical/High 漏洞并在 `grype --fail-on high` 下重新验收。
-- ownership 明确为：根 `pom.xml`、`apps/server/pom.xml`、`apps/ingestion-worker/pom.xml`、`deploy/docker/`、`deploy/compose/`、`scripts/ci/`、`tests/ci/` 和本卡证据文件。禁止修改 Server/Worker 业务源码、Web 源码、契约、数据库迁移、治理文档和 release 文件。
+- ownership 明确为：根 `pom.xml`、`backend/server/pom.xml`、`backend/ingestion-worker/pom.xml`、`deploy/docker/`、`deploy/compose/`、`scripts/ci/`、`tests/ci/` 和本卡证据文件。禁止修改 Server/Worker 业务源码、Web 源码、契约、数据库迁移、治理文档和 release 文件。
 - P7D-02R 允许升级直接/传递依赖和基础镜像 digest，但不允许降低 Grype 阈值、增加无 owner/期限/补偿控制的漏洞例外或把未修复高危项标记为通过；若修复仍需超出上述 ownership，必须 BLOCKED 回报。
 - ticket 已建立于 [`P7D-02R-a22.yaml`](tickets/P7D-02R-a22.yaml)，现已分派至 A22 隔离 worktree `codex/p7-supply-chain-remediation-a22`，基线为 `20c7f87`；P7D-03 在本卡完成后解除冻结。
 

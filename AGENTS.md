@@ -79,7 +79,7 @@ When a user prompt says "keep working on Phase 7" (or similar scope), route as: 
 
 ### E2. Precise-context feeding (no wholesale reads)
 
-The orchestrator writes every ticket's `scope.read_only` as an allow-list of exact file paths (and, when tooling supports it, exact line ranges). The worker never falls back to "open apps/server/ingestion and read all controllers". General rules:
+The orchestrator writes every ticket's `scope.read_only` as an allow-list of exact file paths (and, when tooling supports it, exact line ranges). The worker never falls back to "open backend/server/ingestion and read all controllers". General rules:
 
 - Long governance documents (`PROJECT_STATUS.md`, `ROADMAP.md`, `DEFINITION_OF_DONE.md`, `TEST_STRATEGY.md`, `SECURITY_BASELINE.md`, `THREAT_MODEL.md`): a worker may read at most one or two named subsections, never the full file.
 - Contracts: read only the domain-specific schema files and OpenAPI YAML touched by the card. Do not pre-read `contracts/README.md` unless the ticket says so.
@@ -158,10 +158,10 @@ An agent halts and reports to the human if and only if any of the following appl
 
 ## Directory ownership
 
-- `apps/server`: synchronous API and application orchestration.
-- `apps/ingestion-worker`: asynchronous source synchronization and indexing jobs.
-- `apps/web`: Vue SPA.
-- `apps/ai-runtime`: OCR and rerank runtime only; it is not a second business backend.
+- `backend/server`: synchronous API and application orchestration.
+- `backend/ingestion-worker`: asynchronous source synchronization and indexing jobs.
+- `frontend/ragforge-web`: Vue SPA.
+- `backend/ai-runtime`: OCR and rerank runtime only; it is not a second business backend.
 - `contracts`: source of truth for public API and event contracts.
 - `tests`: cross-application and acceptance tests; unit tests stay with their modules.
 - `docs/08-records`: dated decision evidence, reviews, risks, and retrospectives.

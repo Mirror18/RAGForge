@@ -60,4 +60,4 @@ cancel 或 retention 语义。广播只用于低延迟唤醒，断线重连仍�
 - [`ADR-0003`](0003-postgresql-qdrant-and-messaging.md)
 - [`API_AND_EVENTS.md`](../API_AND_EVENTS.md)
 - [`PHASE_6_CHECKLIST.md`](../../03-delivery/PHASE_6_CHECKLIST.md)
-- [`JdbcRunEventStore`](../../../apps/server/src/main/java/com/ragforge/server/run/JdbcRunEventStore.java)
+- [`JdbcRunEventStore`](../../../backend/server/src/main/java/com/ragforge/server/run/JdbcRunEventStore.java)

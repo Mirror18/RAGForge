@@ -24,7 +24,7 @@
 只把下面这些内容写回本文件：
 - 踩坑记录（比如 Python 是 uv shim、Maven 默认绑 JDK 8、Docker Desktop npipe 与 Testcontainers 的兼容）
 - 值得复用的「决策习惯」（例如「新增 RERANK 能力前，先用 connection probe 的 UNSUPPORTED_CAPABILITY 测试闸门」）
-- 特定目录的历史所有权决定（不要写状态，要写规则，例如 `apps/ai-runtime` 只能承载 OCR/rerank）
+- 特定目录的历史所有权决定（不要写状态，要写规则，例如 `backend/ai-runtime` 只能承载 OCR/rerank）
 
 **不要把这些东西写进本文件**：
 - 任何「当前阶段 / 进行中任务 / 完成 SHA / 最新 CI」字段 —— 请写回 [`AGENT_STATE_CARD.md`](docs/08-records/AGENT_STATE_CARD.md)

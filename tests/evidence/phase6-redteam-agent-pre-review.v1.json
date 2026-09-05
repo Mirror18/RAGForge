@@ -39,7 +39,7 @@
       "errors": 0
     },
     {
-      "command": "mvn -q -pl apps/server -am '-Dtest=AgentToolSecurityTest' '-Dsurefire.failIfNoSpecifiedTests=false' test",
+      "command": "mvn -q -pl backend/server -am '-Dtest=AgentToolSecurityTest' '-Dsurefire.failIfNoSpecifiedTests=false' test",
       "status": "passed",
       "tests": 9,
       "failures": 0,

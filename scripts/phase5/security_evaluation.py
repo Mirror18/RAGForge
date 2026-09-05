@@ -48,8 +48,8 @@ def revision() -> str:
 def main() -> int:
     results = [
         run("phase5-contracts", ["python", "-m", "unittest", "discover", "-s", "tests/contract", "-p", "test_phase5*.py"]),
-        run("agent-tool-security", [MAVEN, "--batch-mode", "--no-transfer-progress", "-pl", "apps/server", "-am", "-Dtest=AgentToolSecurityTest", "-Dsurefire.failIfNoSpecifiedTests=false", "test"]),
-        run("answer-security-and-egress", [MAVEN, "--batch-mode", "--no-transfer-progress", "-pl", "apps/server", "-am", "-Dtest=RAGAnswerServiceTest,AnswerApiControllerTest,Phase5ProviderIntegrationTest", "-Dsurefire.failIfNoSpecifiedTests=false", "test"]),
+        run("agent-tool-security", [MAVEN, "--batch-mode", "--no-transfer-progress", "-pl", "backend/server", "-am", "-Dtest=AgentToolSecurityTest", "-Dsurefire.failIfNoSpecifiedTests=false", "test"]),
+        run("answer-security-and-egress", [MAVEN, "--batch-mode", "--no-transfer-progress", "-pl", "backend/server", "-am", "-Dtest=RAGAnswerServiceTest,AnswerApiControllerTest,Phase5ProviderIntegrationTest", "-Dsurefire.failIfNoSpecifiedTests=false", "test"]),
     ]
     passed = all(item["passed"] for item in results)
     report = {

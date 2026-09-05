@@ -12,7 +12,7 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-09-05 | 更新人：Orchestrator（架构决策合并） | 对应功能基线 SHA：5de4952
+> 上一次更新：2026-09-05 | 更新人：Orchestrator（项目结构整理） | 对应功能基线 SHA：5de4952
 
 ---
 
@@ -44,7 +44,7 @@ Agent 在任何场景下都不能违反的 6 条：
 1. **`space_id` 是安全边界**：所有读取/写入租户内容的查询都必须包含并强制 `space_id`。
 2. **云出境显式 opt-in**：禁止从本地路由静默 failover 到云端路由。
 3. **结构化 provenance**：citation 必须来自 Evidence Bundle / chunk provenance，不得以自由文本生成引用。
-4. **架构：模块化单体 + 独立 Ingestion Worker**；`apps/ai-runtime` 仅承担 OCR 与 rerank，不得演变为第二业务后端。
+4. **架构：模块化单体 + 独立 Ingestion Worker**；`backend/ai-runtime` 仅承担 OCR 与 rerank，不得演变为第二业务后端。
 5. **提交规范**：一任务一分支一 worktree；中文 Conventional Commit：`<type>(<scope>): <中文摘要>`。
 6. **高风险动作需用户审批**：接受 ADR、接受第三方许可证、开启云出境、执行生产迁移、创建 release。
 
@@ -56,15 +56,15 @@ Agent 在任何场景下都不能违反的 6 条：
 
 ```
 P7-B（已完成）
-├─► P7C-01 来源任务中心 API ◄── ownership: apps/server + contracts/openapi
-│    ├─► P7C-02 来源任务中心 Web ◄── ownership: apps/web
-│    └─► P7C-03 索引生命周期 UI ◄── ownership: apps/web + server 少量
+├─► P7C-01 来源任务中心 API ◄── ownership: backend/server + contracts/openapi
+│    ├─► P7C-02 来源任务中心 Web ◄── ownership: frontend/ragforge-web
+│    └─► P7C-03 索引生命周期 UI ◄── ownership: frontend/ragforge-web + server 少量
 │         └─► P7C-06 可核验问答 Web
 │              ├─► P7C-07 上下文跳转
 │              ├─► P7C-08 管理闭环（反馈/审计/成本）
 │              └─► P7Q-06 Router + 分页 + 可恢复状态
 ├─► P7C-04 durable BM25（ADR + 实现）  ◄── **可并行，ownership: docs/adr + server**
-│    └─► P7C-05 真实 RERANK adapter（apps/ai-runtime + server）
+│    └─► P7C-05 真实 RERANK adapter（backend/ai-runtime + server）
 P7C-06 ─► P7E 卡片（P7Q-01~06，见 TASK_BOARD.md）
 P7Q-01~06 全部通过 + 当前候选远程 CI 全绿 → 进入 P7-F 容器加固
 P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7-H 阶段闭环（需用户显式批准 release）
@@ -111,7 +111,8 @@ P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7
 
 | 卡片 ID | 标题 | 优先级 | 状态 | 担当 Agent | branch | worktree | Token 预算 | 实际消耗 | 完成 SHA | 备注 |
 |---|---|---|---|---|---|---|---:|---:|---|---|
-| GOV-01 | 对齐 dataH 的 Agent-first 工程入口与文档导航 | P0 / 用户追加 | ✅ integrated | Orchestrator | main | RAGForge | 6,000 | 未记录 | 见本提交 | 新增 START_HERE、仓库级 Skill、治理目录 Agent 循环入口；保持 apps/contracts/tests 路径稳定 |
+| GOV-01 | 对齐 dataH 的 Agent-first 工程入口与文档导航 | P0 / 用户追加 | ✅ integrated | Orchestrator | main | RAGForge | 6,000 | 未记录 | 4ca4a65 | 新增 START_HERE、仓库级 Skill、治理目录 Agent 循环入口 |
+| GOV-02 | 前后端物理归拢、共享目录边界和项目文档手册化 | P0 / 用户追加 | ✅ integrated | Orchestrator | main | RAGForge | 12,000 | 未记录 | 见本提交 | frontend/backend 归拢；保留 contracts/tests/fixtures/scripts 独立；补齐 README、config/private 和项目手册 |
 | ARCH-DOC-01 | 开源知识库架构演进文档 | P2 / 用户追加 | ✅ integrated | A24 / Orchestrator | codex/arch-knowledge-evolution-a24 | RAGForge-worktrees/codex-arch-knowledge-evolution-a24 | 10,000 | 约 10,600（Worker 估算，+6%） | 5de49528dd461198d3fd60059c8acb9f3c92891b | ADR-0013 已由项目负责人接受并合并 main；本地文档门禁通过，远程 CI 未核验；实现仍待拆卡，不改变 P7D-03 阻塞 |
 | AGENT-OPT-01 | Agent 效率文档骨架落地 | P0 | ✅ completed | Orchestrator | main | RAGForge | 8,000 | 未记录 | 609ef5c9a1284bef71ed9295910aeb9c48d383cb | 已由主线提交完成；历史实际 token 未记录，不重复执行 |
 | P7C-04 | durable BM25 ADR + 实现（R-023） | P0 | ✅ completed | A2 | codex/p7-durable-bm25-a2 | RAGForge-worktrees/codex-p7-durable-bm25-a2 | 10,000 | 7,600 | a427362546d19a37d1b61759526371fcdaa5105a | 已合并至 75da5cb；ADR-0012 Accepted，Qdrant payload 重建与重启命中 1/1，Server/Worker/contract 门禁通过，未新增迁移；R-023 CLOSED |

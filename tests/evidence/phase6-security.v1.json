@@ -32,7 +32,7 @@
     },
     {
       "name": "agent-tool-security",
-      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl apps/server -am -Dtest=AgentToolSecurityTest -Dsurefire.failIfNoSpecifiedTests=false test",
+      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl backend/server -am -Dtest=AgentToolSecurityTest -Dsurefire.failIfNoSpecifiedTests=false test",
       "status": "passed",
       "exit_code": 0,
       "output_sha256": "78e61cb2a0b84d02580f2fd0e992b1e411c32f8b550de3d2f51a20ae1e65fcf1",

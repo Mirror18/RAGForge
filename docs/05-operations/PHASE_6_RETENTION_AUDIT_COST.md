@@ -16,7 +16,7 @@
 单元验证：
 
 ```text
-mvn -pl apps/server -Dtest=Phase6OperationsServiceTest test
+mvn -pl backend/server -Dtest=Phase6OperationsServiceTest test
 ```
 
 所有 SQL 查询都必须携带空间和时间窗口参数。审计导出中的 hash 用于外部归档后完整性核验，不能反推出 payload 内容。

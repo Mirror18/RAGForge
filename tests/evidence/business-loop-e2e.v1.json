@@ -136,10 +136,10 @@
     "cross-space Run lookup was denied"
   ],
   "commands": [
-    "mvn -pl apps/server '-Dproject.build.sourceEncoding=UTF-8' -DskipTests compile",
-    "mvn -pl apps/ingestion-worker '-Dproject.build.sourceEncoding=UTF-8' test",
-    "npm --prefix apps/web run format:check",
-    "npm --prefix apps/web run build",
+    "mvn -pl backend/server '-Dproject.build.sourceEncoding=UTF-8' -DskipTests compile",
+    "mvn -pl backend/ingestion-worker '-Dproject.build.sourceEncoding=UTF-8' test",
+    "npm --prefix frontend/ragforge-web run format:check",
+    "npm --prefix frontend/ragforge-web run build",
     "python scripts/ci/contract_test.py",
     "git diff --check"
   ],

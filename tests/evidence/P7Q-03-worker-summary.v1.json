@@ -15,10 +15,10 @@
     "production_data": false
   },
   "commands": [
-    { "name": "Web unit tests", "command": "npm --prefix apps/web run test:unit", "passed": 8, "failed": 0, "duration_ms": 610, "details": "8 tests passed" },
-    { "name": "Web E2E tests", "command": "npm --prefix apps/web run test:e2e", "passed": 8, "failed": 0, "duration_ms": 6200, "details": "8 journeys passed in isolated synthetic fixture" },
-    { "name": "Web format check", "command": "npm --prefix apps/web run format:check", "passed": 1, "failed": 0, "duration_ms": 1400, "details": "tsc --noEmit passed with 0 errors" },
-    { "name": "Web build", "command": "npm --prefix apps/web run build", "passed": 1, "failed": 0, "duration_ms": 1090, "details": "vite production build passed" },
+    { "name": "Web unit tests", "command": "npm --prefix frontend/ragforge-web run test:unit", "passed": 8, "failed": 0, "duration_ms": 610, "details": "8 tests passed" },
+    { "name": "Web E2E tests", "command": "npm --prefix frontend/ragforge-web run test:e2e", "passed": 8, "failed": 0, "duration_ms": 6200, "details": "8 journeys passed in isolated synthetic fixture" },
+    { "name": "Web format check", "command": "npm --prefix frontend/ragforge-web run format:check", "passed": 1, "failed": 0, "duration_ms": 1400, "details": "tsc --noEmit passed with 0 errors" },
+    { "name": "Web build", "command": "npm --prefix frontend/ragforge-web run build", "passed": 1, "failed": 0, "duration_ms": 1090, "details": "vite production build passed" },
     { "name": "secret scan", "command": "python scripts/ci/secret_scan.py", "passed": 1, "failed": 0, "duration_ms": 900, "details": "no supported credential pattern found" }
   ],
   "journeys": [

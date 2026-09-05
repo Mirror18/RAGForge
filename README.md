@@ -16,9 +16,14 @@ Agent 日常入口固定为：
 
 ```text
 RAGForge/
-├── apps/                    # 可独立构建的 server、ingestion-worker、web、ai-runtime
+├── frontend/ragforge-web/   # Vue SPA；前端源码、前端测试和启动说明集中在这里
+├── backend/                 # 后端运行面；Server、Worker、AI Runtime 分开部署
+│   ├── server/
+│   ├── ingestion-worker/
+│   └── ai-runtime/
 ├── contracts/               # OpenAPI、事件和跨语言 schema
 ├── config/                  # 非敏感配置、Prompt 和模型 Profile 模板
+│   └── private/              # 本机私密配置目录；仅保留 README，不提交真实内容
 ├── deploy/                  # Docker Compose、Dockerfile 和运行资产
 ├── docs/                    # 治理、产品、架构、交付、质量、安全、运维和记录
 ├── fixtures/                # 可公开的文档、评估和安全样本
@@ -29,11 +34,14 @@ RAGForge/
 └── licenses/                # 已批准复用组件的许可证文本
 ```
 
-关键边界：模块化单体由 `apps/server` 负责业务真相；`apps/ingestion-worker` 独立运行但共享契约；`apps/ai-runtime` 只承载 OCR/rerank 等窄职责；所有租户内容查询和 mutation 都强制 `space_id`；云端出境必须按空间显式授权；回答引用使用结构化 provenance。
+关键边界：模块化单体由 `backend/server` 负责业务真相；`backend/ingestion-worker` 独立运行但共享契约；`backend/ai-runtime` 只承载 OCR/rerank 等窄职责；`frontend/ragforge-web` 只负责交互，不构成安全边界；所有租户内容查询和 mutation 都强制 `space_id`；云端出境必须按空间显式授权；回答引用使用结构化 provenance。
+
+目录取舍、职责矩阵、启动顺序和文档阅读顺序见[项目手册](docs/00-governance/PROJECT_MANUAL.md)。
 
 ## 文档入口
 
 - [文档索引](docs/README.md)
+- [项目手册](docs/00-governance/PROJECT_MANUAL.md)
 - [项目章程](docs/00-governance/PROJECT_CHARTER.md)
 - [总体架构](docs/02-architecture/ARCHITECTURE.md)
 - [架构演进与 ADR-0013](docs/02-architecture/ARCHITECTURE_EVOLUTION.md)
@@ -60,7 +68,7 @@ python scripts/dev/core.py up
 python scripts/dev/core.py health
 ```
 
-容器化应用入口见 [`deploy/README.md`](deploy/README.md)，应用职责见 [`apps/README.md`](apps/README.md)，脚本边界见 [`scripts/README.md`](scripts/README.md)。
+前端入口见 [`frontend/README.md`](frontend/README.md)，后端入口见 [`backend/README.md`](backend/README.md)，容器化应用入口见 [`deploy/README.md`](deploy/README.md)，脚本边界见 [`scripts/README.md`](scripts/README.md)。
 
 直接入口：[`deploy/docker/Dockerfile`](deploy/docker/Dockerfile) · [`deploy/compose/compose.yaml`](deploy/compose/compose.yaml) · [`scripts/dev/start-local.bat`](scripts/dev/start-local.bat)
 

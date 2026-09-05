@@ -6,14 +6,14 @@
   "tests": [
     {
       "name": "original failures",
-      "command": "mvn -q -pl apps/server -am test \"-Dtest=LocalOllamaRunAcceptanceTest,RunExecutionControllerIntegrationTest\"",
+      "command": "mvn -q -pl backend/server -am test \"-Dtest=LocalOllamaRunAcceptanceTest,RunExecutionControllerIntegrationTest\"",
       "passed": 9,
       "failed": 0,
       "details": "2 classes green; test profile context started with FakeProviderAdapter as the AI_RUNTIME adapter"
     },
     {
       "name": "adapter regression",
-      "command": "mvn -q -pl apps/server -am test \"-Dtest=AiRuntimeRerankProviderAdapterTest,ProviderConnectionApiIntegrationTest\"",
+      "command": "mvn -q -pl backend/server -am test \"-Dtest=AiRuntimeRerankProviderAdapterTest,ProviderConnectionApiIntegrationTest\"",
       "passed": 9,
       "failed": 0,
       "details": "2 classes green; ProviderConnectionApiIntegrationTest started with the default production profile"

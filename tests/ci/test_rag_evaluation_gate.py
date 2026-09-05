@@ -13,8 +13,8 @@ import rag_evaluation_gate as gate  # noqa: E402
 
 class RagEvaluationGateTest(unittest.TestCase):
     def test_rag_path_detection_uses_path_boundaries_and_case_insensitive_words(self):
-        self.assertTrue(gate.is_rag_path("apps/server/RetrievalEngine.java"))
-        self.assertTrue(gate.is_rag_path("apps/web/prompts/AnswerPanel.vue"))
+        self.assertTrue(gate.is_rag_path("backend/server/RetrievalEngine.java"))
+        self.assertTrue(gate.is_rag_path("frontend/ragforge-web/prompts/AnswerPanel.vue"))
         self.assertFalse(gate.is_rag_path("docs/notretrieval/overview.md"))
         self.assertFalse(gate.is_rag_path("docs/reporter/overview.md"))
 
@@ -31,7 +31,7 @@ class RagEvaluationGateTest(unittest.TestCase):
     def test_evaluation_failure_blocks_and_is_recorded(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "phase7-evaluation-failure.v1.json"
-            with patch.object(gate, "changed_paths", return_value=["apps/server/retrieval/service.py"]), patch.object(
+            with patch.object(gate, "changed_paths", return_value=["backend/server/retrieval/service.py"]), patch.object(
                 gate, "_run_evaluation", return_value=(1, "threshold failure")
             ):
                 self.assertNotEqual(gate.run_gate("base", "head", output), 0)

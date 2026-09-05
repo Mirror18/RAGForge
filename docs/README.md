@@ -1,6 +1,6 @@
 # RAGForge 文档索引
 
-先读[从这里开始](00-governance/START_HERE.md)。本索引负责导航，不复制状态和任务验收；同一事实只在其权威文档维护。
+先读[从这里开始](00-governance/START_HERE.md)，再按[项目手册](00-governance/PROJECT_MANUAL.md)的顺序阅读。本索引负责导航，不复制状态和任务验收；同一事实只在其权威文档维护。
 
 ## 文档分区
 
@@ -15,6 +15,16 @@
 | `06-security-compliance` | 安全基线、威胁、出境、留存和 OSS 合规 | [安全基线](06-security-compliance/SECURITY_BASELINE.md) |
 | `07-research` | GitHub 对标、参考资料和上游复用登记 | [GitHub 调研](07-research/GITHUB_BENCHMARK.md) |
 | `08-records` | 状态、任务、风险、追溯、阶段计划、证据和复盘 | [状态卡](08-records/AGENT_STATE_CARD.md) / [任务板](08-records/TASK_BOARD.md) |
+
+## 推荐阅读顺序
+
+1. [项目手册](00-governance/PROJECT_MANUAL.md)：项目目标、目录边界、启动方式、文档生成规则和下一步导航。
+2. [项目章程](00-governance/PROJECT_CHARTER.md) → [PRD](01-product/PRD.md)：为什么做、做什么、不做什么。
+3. [总体架构](02-architecture/ARCHITECTURE.md) → [架构演进](02-architecture/ARCHITECTURE_EVOLUTION.md) → [ADR 索引](02-architecture/adr/README.md)：代码为何这样分。
+4. [路线图](03-delivery/ROADMAP.md) → 对应阶段清单 → [测试策略](04-quality/TEST_STRATEGY.md)：如何开发和验收。
+5. [部署设计](05-operations/DEPLOYMENT.md) → [`deploy/`](../deploy/README.md)：如何运行、升级和恢复。
+6. [安全基线](06-security-compliance/SECURITY_BASELINE.md) → [风险登记表](08-records/RISK_REGISTER.md)：哪些边界不可破坏。
+7. [状态卡](08-records/AGENT_STATE_CARD.md) → [任务板](08-records/TASK_BOARD.md)：今天做哪一张卡；完成细节回到 Git history。
 
 ## 权威关系
 

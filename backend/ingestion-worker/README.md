@@ -1,5 +1,26 @@
 # RAGForge Ingestion Worker
 
+Worker 是可独立部署的异步摄取进程，源码、测试和配置都集中在本目录。它消费 RabbitMQ 摄取任务，执行来源同步、解析、分块、向量和候选索引流水线；它不是第二个业务后端。
+
+## 本地启动与验证
+
+从仓库根目录先启动 core，再启动 Worker：
+
+```powershell
+python scripts/dev/core.py up
+python scripts/dev/core.py health
+$env:RAGFORGE_INGESTION_ENABLED = "true"
+mvn -pl backend/ingestion-worker spring-boot:run
+```
+
+定向测试和完整测试：
+
+```powershell
+mvn -q -pl backend/ingestion-worker -am test
+```
+
+Worker 默认连接本地 PostgreSQL 和 RabbitMQ；队列名、数据库地址和凭据通过环境变量配置。生产或共享环境必须使用隔离的 exchange、queue、DLQ 和可变测试数据，不能复用其他运行实例。
+
 独立部署的 Java worker 消费 RabbitMQ 摄取任务，执行版本化摄取流水线。worker 不复用 server Controller 或 repository；业务副作用通过明确的 `IngestionSideEffectHandler` 接口接入，并在 PostgreSQL 的 `ingestion_idempotency` 表中记录完成结果。
 
 ## 消息边界

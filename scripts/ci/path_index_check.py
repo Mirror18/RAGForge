@@ -40,7 +40,7 @@ INDEX_REQUIREMENTS = {
         "scripts/dev/start-local.bat",
     ),
 }
-FORBIDDEN_REFERENCES = ("apps/server/Dockerfile",)
+FORBIDDEN_REFERENCES = ("backend/server/Dockerfile",)
 
 
 def main() -> int:

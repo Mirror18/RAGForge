@@ -15,7 +15,7 @@
     },
     {
       "name": "agent-tool-security",
-      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl apps/server -am -Dtest=AgentToolSecurityTest -Dsurefire.failIfNoSpecifiedTests=false test",
+      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl backend/server -am -Dtest=AgentToolSecurityTest -Dsurefire.failIfNoSpecifiedTests=false test",
       "exit_code": 0,
       "tests_run": 9,
       "failures": 0,
@@ -25,7 +25,7 @@
     },
     {
       "name": "answer-security-and-egress",
-      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl apps/server -am -Dtest=RAGAnswerServiceTest,AnswerApiControllerTest,Phase5ProviderIntegrationTest -Dsurefire.failIfNoSpecifiedTests=false test",
+      "command": "D:\\tools\\maven\\apache-maven-3.9.6\\bin\\mvn.cmd --batch-mode --no-transfer-progress -pl backend/server -am -Dtest=RAGAnswerServiceTest,AnswerApiControllerTest,Phase5ProviderIntegrationTest -Dsurefire.failIfNoSpecifiedTests=false test",
       "exit_code": 0,
       "tests_run": 19,
       "failures": 0,

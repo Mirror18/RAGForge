@@ -57,7 +57,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 ## 5. Phase 2 复审（2026-08-13）
 
-- `R-004` 已关闭：Provider adapter、Space Binding、Run binding enforcement 和出境隔离 5/5 共同证明 local-only 默认、cloud 授权显式、跨空间/未授权请求在 provider 调用前拒绝，且 local 失败不静默 fallback 到 cloud；证据见 [`test_phase2_egress_isolation.py`](../../tests/security/test_phase2_egress_isolation.py) 和 [`SpaceBindingApiIntegrationTest.java`](../../apps/server/src/test/java/com/ragforge/server/provider/SpaceBindingApiIntegrationTest.java)。
+- `R-004` 已关闭：Provider adapter、Space Binding、Run binding enforcement 和出境隔离 5/5 共同证明 local-only 默认、cloud 授权显式、跨空间/未授权请求在 provider 调用前拒绝，且 local 失败不静默 fallback 到 cloud；证据见 [`test_phase2_egress_isolation.py`](../../tests/security/test_phase2_egress_isolation.py) 和 [`SpaceBindingApiIntegrationTest.java`](../../backend/server/src/test/java/com/ragforge/server/provider/SpaceBindingApiIntegrationTest.java)。
 - `R-007` 在 Phase 2 的 Run usage 范围内关闭：取消不写 usage，超时重试产生新 Run/Invocation，成功重试只产生一条 usage ledger，且 provider-reported usage 去重测试通过；摄取消息重投、Outbox/DLQ 和索引成本仍留给 Phase 3，不提前扩展关闭范围。
 - 新增 `R-021`：Run retry context 当前保存在进程内，进程重启后历史失败 Run 无法继续 retry。P=3、I=4、Score=12，Platform，OPEN；Phase 3/6 评估持久化 retry command/context 和恢复演练。
 - `R-003` 仍为 OPEN：Phase 2 已覆盖 Provider/Run/Binding 的空间隔离，但 Qdrant payload、对象 URI、缓存 key 和未来内容查询尚未实现，不能关闭跨空间总风险。
@@ -95,7 +95,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-005` 继续 MITIGATING：Phase 6 已形成 128 个版本化公共合成评估用例，确定性 candidate 指标为 1.0；人工/red-team review manifest 尚未完成，不能关闭引用、拒答和冲突场景的质量风险。
 - `R-012` 继续 OPEN：评估规模门槛已达到 128 cases，但人工复核和真实模型质量证据仍缺失；不得以 deterministic fixture 指标替代人工 review。
 - `R-024` 已关闭（Phase 6 容量门槛范围）：a2 隔离 Compose 使用真实 Ollama 768 维、1,000,000 synthetic child chunks、4-space filter、20 并发混合负载完成；Recall@10 `0.995`、p95 `119.8761ms`、错误率 `0`，证据见 [`phase6-capacity-retrieval-a2.v1.json`](../../tests/evidence/phase6-capacity-retrieval-a2.v1.json)。向量值为 live dimension 下的公共合成值，生产语义质量和成本仍不由该证据承诺。
-- V14 运维复审：answer/event retention 删除已改为显式 `space_id` 参数和按空间调度；隔离 scheduler 过期 event 1 → 0，跨空间 answer purge 回归通过，证据见 [`phase6-operations-runtime.v1.json`](../../tests/evidence/phase6-operations-runtime.v1.json) 与 [`Phase5PersistenceIntegrationTest`](../../apps/server/src/test/java/com/ragforge/server/run/Phase5PersistenceIntegrationTest.java)。
+- V14 运维复审：answer/event retention 删除已改为显式 `space_id` 参数和按空间调度；隔离 scheduler 过期 event 1 → 0，跨空间 answer purge 回归通过，证据见 [`phase6-operations-runtime.v1.json`](../../tests/evidence/phase6-operations-runtime.v1.json) 与 [`Phase5PersistenceIntegrationTest`](../../backend/server/src/test/java/com/ragforge/server/run/Phase5PersistenceIntegrationTest.java)。
 - `R-029` 已关闭（Phase 6 在线性能门槛范围）：隔离 server `ragforge-p6-online` 通过正式 register/login session 创建 synthetic LOCAL_ONLY Ollama run，100 次 health API 与 100 次 SSE first-event 均成功；non-AI p95 `28.7487ms`、SSE first-event p95 `35.9285ms`，证据见 [`phase6-capacity-online.v1.json`](../../tests/evidence/phase6-capacity-online.v1.json)。TTFT 仍单独排除。
 - `R-027` 继续 MITIGATING：真实 Ollama RAG E2E 和 SSE first-event 门槛均已有证据，但当前同步适配器仍不测 TTFT，不能将 first-event p95 解释为 TTFT。
 - `R-027` 补充证据：[`phase6-real-ollama-stream-metrics.v1.json`](../../tests/evidence/phase6-real-ollama-stream-metrics.v1.json) 通过 loopback `LOCAL_ONLY` standalone stream probe 实测 TTFT `9130.6742ms`、provider total `11456.3744ms`、wall `11475.2584ms`、`19.6176 tokens/s` 和 provider usage `35/46/81`；该探针不改变同步 RAG graph，故集成路径 TTFT 仍未测量，风险保持 MITIGATING。
@@ -178,7 +178,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 ## 18. P7-C-05 真实 RERANK adapter 处置（2026-08-30）
 
 - 生产检索已由 `ProviderReranker` 接管 RERANK：只解析目标 `space_id` 下 ACTIVE binding、PUBLISHED route/profile 和 LOCAL_ONLY AI runtime connection；未配置、未发布、跨空间、超时、非法响应和未支持能力均 fail-closed，不静默回退 `LexicalReranker`。
-- `apps/ai-runtime` 新增无第三方依赖的 bounded `/v1/rerank` loopback seam；Provider connection test 对 RERANK 写入 verified capability，并保留 success、failed、`UNSUPPORTED_CAPABILITY` 三类结果路径。主线验证：AI runtime 4/4、RERANK adapter 5/5、Provider/Model/Binding 15/15、RetrievalService 9/9、Provider HTTP 33/33、contract 52/52。
+- `backend/ai-runtime` 新增无第三方依赖的 bounded `/v1/rerank` loopback seam；Provider connection test 对 RERANK 写入 verified capability，并保留 success、failed、`UNSUPPORTED_CAPABILITY` 三类结果路径。主线验证：AI runtime 4/4、RERANK adapter 5/5、Provider/Model/Binding 15/15、RetrievalService 9/9、Provider HTTP 33/33、contract 52/52。
 - 未新增数据库迁移、未开启云出境、未提交凭据。R-054 跟踪默认确定性 scorer 在模型替换前仍需离线评估；R-053 的部署网络 egress 防护继续有效。
 
 ## 19. Phase 7 P2 入口风险复核（2026-08-30）

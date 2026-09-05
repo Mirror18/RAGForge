@@ -39,7 +39,7 @@ AnswerAuthorizationContext context = answerAuthorizationContextFactory.issue(
 answers.answer(answerRequest, context);
 ```
 
-`SpaceAuthorizer` 必须同时校验 context 的空间、run、用户/session、过期时间，并再次读取服务端 membership/run ownership；模型、工具或客户端 body 不能构造或替换 context。该方案与现有 [`ToolExecutionContext`](../../../apps/server/src/main/java/com/ragforge/server/agent/ToolExecutionContext.java) 一致，显式、可测试，且不会依赖异步线程的 ambient security state。
+`SpaceAuthorizer` 必须同时校验 context 的空间、run、用户/session、过期时间，并再次读取服务端 membership/run ownership；模型、工具或客户端 body 不能构造或替换 context。该方案与现有 [`ToolExecutionContext`](../../../backend/server/src/main/java/com/ragforge/server/agent/ToolExecutionContext.java) 一致，显式、可测试，且不会依赖异步线程的 ambient security state。
 
 ### 方案 B：短时、不可转移的授权 grant（适合异步）
 

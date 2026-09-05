@@ -32,7 +32,7 @@
 
 - `npm run format:check`：通过。
 - `npm run build`：通过，TypeScript/Vite 构建成功。
-- `mvn -pl apps/server -Dproject.build.sourceEncoding=UTF-8 -Dtest=BusinessIngestionPathPolicyTest,ProviderAdapterHttpTest,Phase5ProviderIntegrationTest,V11RagPromptPortTest test`：通过，41 tests，0 failures，0 errors，0 skipped。
+- `mvn -pl backend/server -Dproject.build.sourceEncoding=UTF-8 -Dtest=BusinessIngestionPathPolicyTest,ProviderAdapterHttpTest,Phase5ProviderIntegrationTest,V11RagPromptPortTest test`：通过，41 tests，0 failures，0 errors，0 skipped。
 - `git diff --check`：通过。
 
 ## 明确限制

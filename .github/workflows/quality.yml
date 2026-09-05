@@ -358,27 +358,27 @@ jobs:
         with:
           name: ragforge-phase3-jvm-evidence
           path: |
-            apps/server/target/surefire-reports/**
-            apps/ingestion-worker/target/surefire-reports/**
+            backend/server/target/surefire-reports/**
+            backend/ingestion-worker/target/surefire-reports/**
           if-no-files-found: error
 
-      - name: Cache apps/web npm dependencies
-        if: ${{ hashFiles('apps/web/package.json') != '' }}
+      - name: Cache frontend/ragforge-web npm dependencies
+        if: ${{ hashFiles('frontend/ragforge-web/package.json') != '' }}
         uses: actions/cache@v5
         with:
           path: ~/.npm
-          key: npm-web-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json', 'apps/web/package.json') }}
+          key: npm-web-${{ runner.os }}-${{ hashFiles('frontend/ragforge-web/package-lock.json', 'frontend/ragforge-web/package.json') }}
           restore-keys: |
             npm-web-${{ runner.os }}-
 
-      - name: Install apps/web dependencies from lockfile
-        if: ${{ hashFiles('apps/web/package.json') != '' }}
-        working-directory: apps/web
+      - name: Install frontend/ragforge-web dependencies from lockfile
+        if: ${{ hashFiles('frontend/ragforge-web/package.json') != '' }}
+        working-directory: frontend/ragforge-web
         run: npm ci
 
-      - name: npm format/build when apps/web exists
-        if: ${{ hashFiles('apps/web/package.json') != '' }}
-        working-directory: apps/web
+      - name: npm format/build when frontend/ragforge-web exists
+        if: ${{ hashFiles('frontend/ragforge-web/package.json') != '' }}
+        working-directory: frontend/ragforge-web
         shell: bash
         run: |
           set -o pipefail
@@ -388,9 +388,9 @@ jobs:
             npm run --if-present build
           } 2>&1 | tee ../../tests/evidence/ci-logs/npm-build.log
 
-      - name: npm unit tests when apps/web exists
-        if: ${{ hashFiles('apps/web/package.json') != '' }}
-        working-directory: apps/web
+      - name: npm unit tests when frontend/ragforge-web exists
+        if: ${{ hashFiles('frontend/ragforge-web/package.json') != '' }}
+        working-directory: frontend/ragforge-web
         shell: bash
         run: |
           set -o pipefail
@@ -439,7 +439,7 @@ jobs:
           name: ragforge-quality-logs-${{ github.run_id }}
           path: |
             tests/evidence/ci-logs/**
-            apps/server/target/surefire-reports/**
-            apps/ingestion-worker/target/surefire-reports/**
+            backend/server/target/surefire-reports/**
+            backend/ingestion-worker/target/surefire-reports/**
           if-no-files-found: warn
           retention-days: 14

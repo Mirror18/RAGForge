@@ -18,15 +18,15 @@
   },
   "commands": [
     {
-      "command": "mvn -q -pl apps/server '-Dtest=RunEventFanoutTest,MultiInstanceRunEventFanoutIntegrationTest' test",
+      "command": "mvn -q -pl backend/server '-Dtest=RunEventFanoutTest,MultiInstanceRunEventFanoutIntegrationTest' test",
       "result": "4/4 passed"
     },
     {
-      "command": "mvn -q -pl apps/server '-Dtest=TwoServerInstancesRunEventFanoutIntegrationTest' test",
+      "command": "mvn -q -pl backend/server '-Dtest=TwoServerInstancesRunEventFanoutIntegrationTest' test",
       "result": "1/1 passed; two independent Spring server contexts"
     },
     {
-      "command": "mvn -q -pl apps/server test",
+      "command": "mvn -q -pl backend/server test",
       "result": "210 tests, 0 failures, 0 errors, 1 skipped"
     },
     {

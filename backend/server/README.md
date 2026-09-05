@@ -1,5 +1,28 @@
 # RAGForge Server
 
+Server 是 RAGForge 的模块化单体和业务真相进程，负责 `/api/v1`、认证与 Session、空间隔离、Provider/Prompt、检索、引用回答、SSE、审计、Outbox relay 和管理 API。批量解析与索引任务由独立的 `backend/ingestion-worker` 执行。
+
+## 本地启动
+
+从仓库根目录执行：
+
+```powershell
+python scripts/dev/core.py up
+python scripts/dev/core.py health
+mvn -pl backend/server spring-boot:run
+```
+
+默认 HTTP 端口为 `8080`；一键本地闭环请使用 `scripts/dev/start-local.bat`，它会显式设置本地 PostgreSQL、RabbitMQ、Valkey、MinIO、Qdrant 和 Ollama 适配器配置。健康检查：`http://127.0.0.1:8080/actuator/health`。
+
+常用验证：
+
+```powershell
+mvn -q -pl backend/server -am test
+mvn -q -pl backend/server -DskipTests compile
+```
+
+数据库迁移只由此进程的 Flyway 序列统一管理；Worker 不执行迁移。真实密码、Provider key、bootstrap token 等只通过环境变量或 `config/private/` 注入。
+
 ## Phase 3 persistence boundary
 
 `V8__phase3_versioned_ingestion.sql` adds space-scoped source, revision,

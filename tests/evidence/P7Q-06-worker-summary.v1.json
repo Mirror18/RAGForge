@@ -10,7 +10,7 @@
   },
   "raw_output_stored": true,
   "checks": {
-    "web_format": { "passed": true, "detail": "npm --prefix apps/web run format:check; tsc --noEmit passed" },
+    "web_format": { "passed": true, "detail": "npm --prefix frontend/ragforge-web run format:check; tsc --noEmit passed" },
     "web_unit": { "passed": true, "detail": "1 test file; 10 tests passed" },
     "web_e2e": { "passed": true, "detail": "10/10 passed: original 8 journeys, >100 collections, six page refresh recovery" },
     "web_build": { "passed": true, "detail": "vite production build passed" },

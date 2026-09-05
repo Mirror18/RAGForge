@@ -97,7 +97,7 @@ def main() -> int:
             run("phase5-contract-security", [sys.executable, "-m", "unittest", "tests.contract.test_phase5_contracts"]),
             run(
                 "agent-tool-security",
-                [str(MAVEN), "--batch-mode", "--no-transfer-progress", "-pl", "apps/server", "-am", "-Dtest=AgentToolSecurityTest", "-Dsurefire.failIfNoSpecifiedTests=false", "test"],
+                [str(MAVEN), "--batch-mode", "--no-transfer-progress", "-pl", "backend/server", "-am", "-Dtest=AgentToolSecurityTest", "-Dsurefire.failIfNoSpecifiedTests=false", "test"],
                 blocked_if_missing=True,
             ),
             run(

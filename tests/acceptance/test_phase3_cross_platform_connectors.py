@@ -49,7 +49,7 @@ class Phase3CrossPlatformConnectorTest(unittest.TestCase):
                 "--batch-mode",
                 "--no-transfer-progress",
                 "-pl",
-                "apps/ingestion-worker",
+                "backend/ingestion-worker",
                 "-Dtest=CrossPlatformConnectorManifestTest",
                 "test",
             ],

@@ -44,4 +44,6 @@ RAGForge 当前处于 Phase 7 `p2-execution`。P0/P1 的主要产品与回归门
 
 ## 目录边界
 
-`apps/` 保持可独立构建的进程边界；`contracts/` 是公开契约；`deploy/` 是运行入口；`docs/` 是产品、架构、交付和证据；`fixtures/` 与 `tests/` 只放可公开、可销毁的验证资产。不要因为 dataH 使用 `frontend/backend` 命名就重命名这些已经稳定且被大量引用的 RAGForge 路径。
+`frontend/` 只放前端应用；`backend/` 只放后端运行面。`contracts/` 是跨应用公开契约；`tests/` 只放跨应用、契约、验收、安全和评估测试；`fixtures/` 只放可公开、可销毁的验证数据；`scripts/` 只放仓库级开发、CI、评估和运维脚本。`deploy/` 是运行入口，`docs/` 是产品、架构、交付和证据。
+
+更完整的目录职责、启动方式和文档顺序见[项目手册](PROJECT_MANUAL.md)。

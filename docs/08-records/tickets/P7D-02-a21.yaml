@@ -45,10 +45,10 @@ scope:
     - docs/08-records/TASK_BOARD.md
     - AGENTS.md
     - MEMORY.md
-    - apps/server/
-    - apps/ingestion-worker/
-    - apps/ai-runtime/
-    - apps/web/
+    - backend/server/
+    - backend/ingestion-worker/
+    - backend/ai-runtime/
+    - frontend/ragforge-web/
     - contracts/
     - src/
     - db/

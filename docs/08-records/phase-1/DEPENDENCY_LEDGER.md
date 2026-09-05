@@ -13,9 +13,9 @@
 | Valkey | `8.0.1-alpine` | Session/缓存 | 否 | BSD-3-Clause；镜像扫描 |
 | MinIO | `RELEASE.2024-12-18T13-15-44Z` | S3-compatible storage | 否 | 以该发行物许可证和 SBOM 为准；商业发布前复核 AGPL 义务 |
 | Ollama | `0.5.4` | 可选宿主机/容器 provider 连接探针 | 否 | 以官方发行物许可证和 SBOM 为准 |
-| Vue | `3.5.13`，npm lockfile | Web UI 骨架 | 否 | MIT；`apps/web/package-lock.json` |
-| Vite | `6.4.3`，npm lockfile | Web 构建 | 否 | MIT；`apps/web/package-lock.json` |
-| TypeScript | `5.7.3`，npm lockfile | Web 类型检查 | 否 | Apache-2.0；`apps/web/package-lock.json` |
+| Vue | `3.5.13`，npm lockfile | Web UI 骨架 | 否 | MIT；`frontend/ragforge-web/package-lock.json` |
+| Vite | `6.4.3`，npm lockfile | Web 构建 | 否 | MIT；`frontend/ragforge-web/package-lock.json` |
+| TypeScript | `5.7.3`，npm lockfile | Web 类型检查 | 否 | Apache-2.0；`frontend/ragforge-web/package-lock.json` |
 
 ## 闸门结果
 

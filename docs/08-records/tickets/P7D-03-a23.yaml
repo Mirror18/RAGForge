@@ -44,7 +44,8 @@ scope:
     - RISK_REGISTER.md
     - TRACEABILITY_MATRIX.md
     - AGENTS.md
-    - apps/
+    - frontend/
+    - backend/
     - contracts/
     - db/
     - .env

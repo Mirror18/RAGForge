@@ -38,7 +38,7 @@ class Phase3ParserQualityTest(unittest.TestCase):
                 "--batch-mode",
                 "--no-transfer-progress",
                 "-pl",
-                "apps/ingestion-worker",
+                "backend/ingestion-worker",
                 "-Dtest=NativeDocumentParserTest,TesseractOcrEngineTest",
                 "test",
             ],

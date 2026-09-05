@@ -37,11 +37,11 @@ meta:
 
 scope:
   ownership:
-    - apps/server/src/main/java/com/ragforge/server/ingestion/
-    - apps/server/src/test/java/com/ragforge/server/ingestion/
-    - apps/server/src/main/java/com/ragforge/server/index/
-    - apps/server/src/test/java/com/ragforge/server/index/
-    - apps/server/src/main/resources/db/migration/
+    - backend/server/src/main/java/com/ragforge/server/ingestion/
+    - backend/server/src/test/java/com/ragforge/server/ingestion/
+    - backend/server/src/main/java/com/ragforge/server/index/
+    - backend/server/src/test/java/com/ragforge/server/index/
+    - backend/server/src/main/resources/db/migration/
     - contracts/openapi/ragforge-api-v1.yaml
   read_only:
     # 契约（只需要这几个具体文件，不要读 contracts/ 下所有文件）
@@ -52,10 +52,10 @@ scope:
     - docs/03-delivery/DEFINITION_OF_DONE.md
     - docs/02-architecture/INGESTION_PIPELINE.md
     # 现有实现参考（精确到文件，不做目录级 Grep）
-    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
-    - apps/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionService.java
-    - apps/server/src/main/java/com/ragforge/server/ingestion/IngestionRepository.java
-    - apps/server/src/main/java/com/ragforge/server/index/IndexRepository.java
+    - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
+    - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionService.java
+    - backend/server/src/main/java/com/ragforge/server/ingestion/IngestionRepository.java
+    - backend/server/src/main/java/com/ragforge/server/index/IndexRepository.java
   forbidden:
     # 这些文件 / 目录 Worker 绝对不能写，也不要读取浪费 Token
     - docs/08-records/AGENT_STATE_CARD.md
@@ -66,9 +66,9 @@ scope:
     - docs/00-governance/AGENT_LOOP_PROMPT.md
     - MEMORY.md
     - docs/08-records/TASK_BOARD.md
-    - apps/web/
-    - apps/ingestion-worker/
-    - apps/ai-runtime/
+    - frontend/ragforge-web/
+    - backend/ingestion-worker/
+    - backend/ai-runtime/
     - pom.xml                # 除非明确需要加依赖；否则不动
     - deploy/
     - .github/workflows/
@@ -96,13 +96,13 @@ tests:
       command: python scripts/ci/contract_test.py
       expected: "Phase 4 42/42 + Phase 5 10/10 = 52/52"
     - name: Server target compile
-      command: mvn -q -pl apps/server -am test-compile -DskipTests=false
+      command: mvn -q -pl backend/server -am test-compile -DskipTests=false
       expected: BUILD SUCCESS
     - name: Server ingestion/index 定向测试
-      command: mvn -q -pl apps/server test -Dtest="ServerIntegrationTest,BusinessIngestionPathPolicyTest,Phase3IngestionPersistenceIntegrationTest"
+      command: mvn -q -pl backend/server test -Dtest="ServerIntegrationTest,BusinessIngestionPathPolicyTest,Phase3IngestionPersistenceIntegrationTest"
       expected: "新增用例 > 5；全部绿"
     - name: Web typecheck
-      command: npm --prefix apps/web run typecheck
+      command: npm --prefix frontend/ragforge-web run typecheck
       expected: 0 errors
   evidence_file: tests/evidence/P7C-01-worker-summary.v1.json
   # 大于 50 行的 stdout/stderr 必须写入 evidence_file，回报只写摘要

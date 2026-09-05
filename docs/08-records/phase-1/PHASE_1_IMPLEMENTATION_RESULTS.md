@@ -33,7 +33,7 @@
 | 退出条件 | 状态 | 可复核证据 |
 |---|---|---|
 | 新环境按文档可重复启动 | 已满足（本地） | [`deploy/compose/README.md`](../../05-operations/DEPLOYMENT.md)；`python scripts/ci/validate_compose.py --project-name ragforge-p1-orch-check --env-file deploy/compose/env.example`；隔离项目 `ragforge-p1-api-check` 实际启动 PostgreSQL、Qdrant、RabbitMQ、Valkey、MinIO，并使用独立 network、volume 和端口 block |
-| 跨空间授权集成测试通过 | 已满足（本地黑盒 + Java 集成测试） | [`tests/acceptance/test_phase1_api_smoke.py`](../../../tests/acceptance/test_phase1_api_smoke.py) 3/3；[`ServerIntegrationTest.java`](../../../apps/server/src/test/java/com/ragforge/server/ServerIntegrationTest.java) 覆盖非成员读写/成员变更、CSRF、Session、幂等和迁移；真实 Compose API 黑盒通过 |
+| 跨空间授权集成测试通过 | 已满足（本地黑盒 + Java 集成测试） | [`tests/acceptance/test_phase1_api_smoke.py`](../../../tests/acceptance/test_phase1_api_smoke.py) 3/3；[`ServerIntegrationTest.java`](../../../backend/server/src/test/java/com/ragforge/server/ServerIntegrationTest.java) 覆盖非成员读写/成员变更、CSRF、Session、幂等和迁移；真实 Compose API 黑盒通过 |
 | 数据库迁移、备份冒烟和健康检查可执行 | 已满足（真实 PostgreSQL/依赖） | Flyway `V1__initial_schema.sql`、`V2__idempotency_records.sql`；`python scripts/dev/core.py --project-name ragforge-p1-api-check health`；`python scripts/dev/core.py --project-name ragforge-p1-api-check backup-smoke --output tmp/backups/phase1-api-check.sql`；`/actuator/health` 返回 `UP`；备份文件生成并有 SHA-256 记录。完整恢复演练留至 Phase 6 |
 | CI 对空白业务骨架全部通过 | 已满足（Linux GitHub Actions） | Run [31616214088](https://github.com/Mirror18/RAGForge/actions/runs/31616214088) 的 quality job 26 个步骤全部成功；包含 Syft SBOM、artifact `9149315317`、Grype High 阈值扫描、Maven 全量测试和 npm 跨平台 lockfile/build |
 
@@ -67,8 +67,8 @@ python scripts/ci/validate_compose.py --project-name ragforge-p1-orch-check --en
 python -m unittest discover -s scripts/phase0 -p "test_*.py" -v
 python tests/acceptance/test_phase1_api_smoke.py
 mvn -B -ntp -DskipTests compile
-mvn -B -ntp -pl apps/server "-Dtest=UuidV7Test,SecurityConfigTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
-mvn -B -ntp -pl apps/ingestion-worker test
+mvn -B -ntp -pl backend/server "-Dtest=UuidV7Test,SecurityConfigTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+mvn -B -ntp -pl backend/ingestion-worker test
 npm ci
 npm run format:check
 npm run build

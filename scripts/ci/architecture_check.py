@@ -46,7 +46,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    required_dirs = ("apps/server", "apps/ingestion-worker", "apps/web", "apps/ai-runtime", "contracts")
+    required_dirs = ("backend/server", "backend/ingestion-worker", "frontend/ragforge-web", "backend/ai-runtime", "contracts")
     missing_dirs = [path for path in required_dirs if not (REPO_ROOT / path).is_dir()]
     if missing_dirs:
         print(f"Architecture check failed: missing ownership boundary directories: {missing_dirs}", file=sys.stderr)

@@ -2,7 +2,7 @@
   "evidenceVersion" : "phase6-real-ollama-rag-e2e.v1",
   "codeCommit" : "6d2dd87425c87f04f721f86665f86a014e65a0fa",
   "executedAt" : "2026-08-22T11:02:36Z",
-  "exactCommandRedacted" : "mvn -pl apps/server -Dtest=Phase5RealOllamaRagE2ETest -Dragforge.real-e2e=true test (isolated local endpoints; credentials redacted)",
+  "exactCommandRedacted" : "mvn -pl backend/server -Dtest=Phase5RealOllamaRagE2ETest -Dragforge.real-e2e=true test (isolated local endpoints; credentials redacted)",
   "environment" : "Windows 11 / JDK 21.0.7 / Docker Compose p5-real-orch / Ollama 0.32.9",
   "schemaHash" : "e39228cd7c45da0de1a2047cbec9f9bdbd4d76d0216c01fa490b63b639ab5a39",
   "configHash" : "7f948999deabe83861c4fa6256b37886efb858b144e246c02afca56ddb57fec3",

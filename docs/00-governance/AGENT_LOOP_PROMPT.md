@@ -25,7 +25,7 @@
 
 硬规则（引用自 AGENTS.md「Non-negotiable rules」，任何时候不得违反）：
 1. space_id 是安全边界；2. 云出境显式 opt-in，不静默 failover；3. citation 必须来自结构化 provenance；
-4. 模块化单体 + 独立 Ingestion Worker；apps/ai-runtime 仅承担 OCR / rerank；
+4. 模块化单体 + 独立 Ingestion Worker；backend/ai-runtime 仅承担 OCR / rerank；
 5. 一任务一分支一 worktree，中文 Conventional Commit；
 6. 接受 ADR / 接受许可证 / 开启云出境 / 生产迁移 / 创建 release 这 5 类动作，必须显式用户审批。
 
@@ -43,8 +43,8 @@
 
 二、为每张候选卡片生成 Worker Ticket（YAML，写入 docs/08-records/tickets/<CARD_ID>-<agent>.yaml）
 - 完全按 TICKET_TEMPLATE.yaml 的字段结构：meta / scope / acceptance / budget / tests / report_schema。
-- scope.ownership：只写这张卡片真正会改动的目录/文件；不要填整包（例如 P7C-04 所有权不应包含 apps/web）。
-- scope.read_only：**精确到具体文件名**，给最少必要的 5–15 个路径。禁止把 "contracts/"、"apps/server/"、"docs/02-architecture/" 这种整目录放进去。如果 Worker 真的需要更多文件，它会停下来请求扩展，而不是你预先塞满。
+- scope.ownership：只写这张卡片真正会改动的目录/文件；不要填整包（例如 P7C-04 所有权不应包含 frontend/ragforge-web）。
+- scope.read_only：**精确到具体文件名**，给最少必要的 5–15 个路径。禁止把 "contracts/"、"backend/server/"、"docs/02-architecture/" 这种整目录放进去。如果 Worker 真的需要更多文件，它会停下来请求扩展，而不是你预先塞满。
 - scope.forbidden：显式列出状态卡 / PROJECT_STATUS / RISK_REGISTER / TRACEABILITY_MATRIX / AGENTS.md / MEMORY.md / TASK_BOARD.md 这些 Worker 绝对不许动的文件；以及所有其它 ownership 之外的模块。
 - budget.token_limit：从 TASK_BOARD 抄；不得私自放大。
 - tests.must_run：列 2–5 条最小必要命令（contract test + 定向单元/集成 + Web typecheck/build 即可；不要让 Worker 跑全量 238 条 Maven 除非是阶段结束）。
@@ -157,7 +157,7 @@ space_id 安全边界 / 云出境显式 opt-in / 结构化 provenance / 模块�
 8. docs/08-records/RISK_REGISTER.md
 9. 与目标直接相关的 PRD / 架构 / ADR / 安全 / 开源合规文档
 
-可选读取：现有实际代码结构（apps/*、contracts/*、tests/*、docs/*），必要时抽样读取 production code 来核对「契约存在而实现缺失」类断点。
+可选读取：现有实际代码结构（frontend/*、backend/*、contracts/*、tests/*、docs/*），必要时抽样读取 production code 来核对「契约存在而实现缺失」类断点。
 
 交付物：
 1. 审计结论（中文）：用事实逐条列出「CHECKLIST / EXECUTION_PLAN 中的完成声明」与实际代码 / 可执行门禁之间的匹配与断点。不要接受历史完成声明作为证据。

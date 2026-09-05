@@ -29,11 +29,11 @@ P4-A checklist/contract
 |---|---|---|---|---|---|---|
 | P4-A | checklist、验收口径、执行记录 | `docs/03-delivery/PHASE_4_CHECKLIST.md`、`docs/08-records/phase-4/` | ROADMAP Phase 4、ADR-0003/0006、[INGESTION_PIPELINE](../../02-architecture/INGESTION_PIPELINE.md)、[RETRIEVAL_AND_CHAT](../../02-architecture/RETRIEVAL_AND_CHAT.md)、[RAG_EVALUATION](../../04-quality/RAG_EVALUATION.md) | 主 Agent | checklist 未勾选、量化门槛明确（Recall@10>=0.90、MRR@10>=0.75）、所有权表提交 | 任何运行时代码 |
 | P4-B | chunk/index/retrieval 领域契约与 chunk-studio/playground REST 投影 | `contracts/`（chunking-domain、index-version、retrieval-profile）、contract tests | P4-A | Contract Agent | schema parse、space/version/correlation、override 状态机、profile 不可变、敏感字段禁止 | migration、consumer 实现 |
-| P4-C | ParentChunk/ChildChunk/ChunkOverride/IndexVersion/RetrievalProfile 持久化与状态机 | `apps/server/src/main/resources/db/migration/` 单一序列（V9 起）、chunk/index/profile repository | P4-B | Persistence Agent | PostgreSQL migration、FK、状态机、space isolation、active pointer 单行、rollback tests | Qdrant、检索实现 |
+| P4-C | ParentChunk/ChildChunk/ChunkOverride/IndexVersion/RetrievalProfile 持久化与状态机 | `backend/server/src/main/resources/db/migration/` 单一序列（V9 起）、chunk/index/profile repository | P4-B | Persistence Agent | PostgreSQL migration、FK、状态机、space isolation、active pointer 单行、rollback tests | Qdrant、检索实现 |
 | P4-D | 父子分块引擎：标题/表格/代码/列表边界、token 估算、引用锚点、overlap | chunking 模块、合成 fixture、chunking unit/quality tests | P4-B、P4-C | Chunking Agent | 边界不硬切、parent/child 范围与锚点可验证、确定性、Windows/Linux 一致 | embedding、索引写入 |
 | P4-E | embedding cache、Qdrant candidate index、VALIDATING 校验、active pointer 发布、24h 保留 | index/embedding 模块、Qdrant Testcontainer tests、collection/object key 命名 | P4-B、P4-C、P4-D | Index Agent | 候选隔离、校验失败不污染 ACTIVE、发布原子、旧索引保留、空间过滤、幂等 cache key | 检索排序、Chunk Studio |
 | P4-F | 检索服务：dense+BM25+RRF+rerank+parent expansion、RetrievalProfileVersion、Evidence Bundle | retrieval 模块、retrieval unit/integration tests、30 问评估切片 | P4-B、P4-C、P4-E | Retrieval Agent | 空间过滤强制、profile 不可变、RRF/rerank 可复现、evidence 含 provenance、离线评估对比 | Web、生成回答 |
-| P4-G | Chunk Studio 与 Retrieval Playground（REST + Web） | 指定 REST controller、`apps/web` 页面、前后端契约测试 | P4-B、P4-C、P4-D、P4-E、P4-F | Studio Agent | override 可审计、NEEDS_REVIEW 流转、A/B 展示、按角色权限 | 离线评估 |
+| P4-G | Chunk Studio 与 Retrieval Playground（REST + Web） | 指定 REST controller、`frontend/ragforge-web` 页面、前后端契约测试 | P4-B、P4-C、P4-D、P4-E、P4-F | Studio Agent | override 可审计、NEEDS_REVIEW 流转、A/B 展示、按角色权限 | 离线评估 |
 | P4-H | 30 问基准、100 万 child chunk 规模证据、跨平台 acceptance、CI、记录、闭环 | `scripts/phase4/`、`tests/evidence/`、`.github/workflows/`、阶段记录 | 全部证据 | 主 Agent | checklist 全勾、main 全量通过、GitHub Actions 成功、规模证据可复现、worktree clean | 新功能实现 |
 
 ## 并行规则

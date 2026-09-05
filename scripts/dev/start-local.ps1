@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string]$ProjectName = "ragforge-p1",
     [int]$ServerPort = 25082,
@@ -142,7 +142,7 @@ try {
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
-    $server = Start-Process -FilePath $maven -ArgumentList "-pl", "apps/server", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    $server = Start-Process -FilePath $maven -ArgumentList "-pl", "backend/server", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -159,17 +159,17 @@ try {
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
-    $worker = Start-Process -FilePath $maven -ArgumentList "-pl", "apps/ingestion-worker", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    $worker = Start-Process -FilePath $maven -ArgumentList "-pl", "backend/ingestion-worker", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
 
     if (-not $SkipWeb) {
         Write-Host "启动 Web..."
-        if (-not (Test-Path (Join-Path $repoRoot "apps\web\node_modules"))) {
-            & $npm --prefix apps/web ci
+        if (-not (Test-Path (Join-Path $repoRoot "frontend\ragforge-web\node_modules"))) {
+            & $npm --prefix frontend/ragforge-web ci
             if ($LASTEXITCODE -ne 0) { throw "Web 依赖安装失败。" }
         }
         $env:VITE_SERVER_TARGET = "http://127.0.0.1:$ServerPort"
-        $web = Start-Process -FilePath $npm -ArgumentList "--prefix", "apps/web", "run", "dev", "--", "--host", "127.0.0.1", "--port", "$WebPort" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "web.log") -RedirectStandardError (Join-Path $runtimeDirectory "web.err.log") -PassThru
+        $web = Start-Process -FilePath $npm -ArgumentList "--prefix", "frontend/ragforge-web", "run", "dev", "--", "--host", "127.0.0.1", "--port", "$WebPort" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "web.log") -RedirectStandardError (Join-Path $runtimeDirectory "web.err.log") -PassThru
         Set-Content -Path (Join-Path $runtimeDirectory "web.pid") -Value $web.Id
         try {
             Wait-ForHttp "http://127.0.0.1:$WebPort/" 90 $web

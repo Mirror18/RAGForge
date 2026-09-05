@@ -12,8 +12,8 @@
     <description>RAGForge modular monolith and ingestion worker</description>
 
     <modules>
-        <module>apps/server</module>
-        <module>apps/ingestion-worker</module>
+        <module>backend/server</module>
+        <module>backend/ingestion-worker</module>
     </modules>
 
     <properties>
