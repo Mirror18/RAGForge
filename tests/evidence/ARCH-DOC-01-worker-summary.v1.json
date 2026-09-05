@@ -1,0 +1,79 @@
+{
+  "artifact_version": "ARCH-DOC-01-worker-summary.v1",
+  "card_id": "ARCH-DOC-01",
+  "observed_at": "2026-09-05T07:13:30.2226936Z",
+  "base_sha": "2ad59b9ff2552cece954ce875e6c153f54536f1d",
+  "scope": "documentation-only",
+  "runtime_tests_run": false,
+  "offline_evaluation_run": false,
+  "passed": true,
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "command": "python scripts/ci/check_markdown_links.py",
+      "exit_code": 0,
+      "duration_ms": 790,
+      "output_lines": 1,
+      "raw_output": "Markdown link check passed: 171 files scanned."
+    },
+    {
+      "command": "python scripts/ci/format_check.py",
+      "exit_code": 0,
+      "duration_ms": 706,
+      "output_lines": 1,
+      "raw_output": "Format gate passed: 849 tracked files checked for whitespace, Python and JSON syntax."
+    },
+    {
+      "command": "python scripts/ci/architecture_check.py",
+      "exit_code": 0,
+      "duration_ms": 326,
+      "output_lines": 1,
+      "raw_output": "Architecture check passed: modular-monolith/worker directories exist; core services are unprofiled and application services are isolated behind app."
+    },
+    {
+      "command": "python scripts/ci/path_index_check.py",
+      "exit_code": 0,
+      "duration_ms": 364,
+      "output_lines": 1,
+      "raw_output": "Path index check passed: canonical Docker, Compose, and local-start paths are indexed."
+    },
+    {
+      "command": "python scripts/ci/secret_scan.py",
+      "exit_code": 0,
+      "duration_ms": 1224,
+      "output_lines": 1,
+      "raw_output": "Secret scan passed: no supported credential pattern found in tracked text files."
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "duration_ms": 231,
+      "output_lines": 10,
+      "raw_output": "warning: in the working copy of 'docs/01-product/PRD.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/02-architecture/RETRIEVAL_AND_CHAT.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/03-delivery/ROADMAP.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/07-research/GITHUB_BENCHMARK.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/07-research/UPSTREAM_REUSE_REGISTER.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/AGENT_STATE_CARD.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/RISK_REGISTER.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/TRACEABILITY_MATRIX.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/tickets/ARCH-DOC-01-a24.yaml', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/README.md', CRLF will be replaced by LF the next time Git touches it"
+    }
+  ],
+  "post_review_checks": [
+    {
+      "command": "python scripts/ci/check_markdown_links.py",
+      "exit_code": 0,
+      "duration_ms": 580,
+      "raw_output": "Markdown link check passed: 171 files scanned."
+    },
+    {
+      "command": "python scripts/ci/format_check.py",
+      "exit_code": 0,
+      "duration_ms": 618,
+      "raw_output": "Format gate passed: 850 tracked files checked for whitespace, Python and JSON syntax."
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "duration_ms": 207,
+      "raw_output": "warning: in the working copy of 'docs/01-product/PRD.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/03-delivery/ROADMAP.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/07-research/GITHUB_BENCHMARK.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/07-research/UPSTREAM_REUSE_REGISTER.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/RISK_REGISTER.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/TRACEABILITY_MATRIX.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/tickets/ARCH-DOC-01-a24.yaml', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/README.md', CRLF will be replaced by LF the next time Git touches it"
+    }
+  ]
+}

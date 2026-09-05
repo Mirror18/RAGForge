@@ -48,3 +48,14 @@ Approval date:
 ## 4. 当前声明
 
 截至 `2026-08-12`，RAGForge 根仓库没有引入上述依赖、没有 vendored third-party source，也没有复制第三方许可证全文。正式引入前必须重新核对上游精确版本、文件级许可证、传递依赖/SBOM、Notice/copyright 和适用的商业/分发义务，并同步更新 `THIRD_PARTY_NOTICES.md`。
+
+## 5. 2026-09-05 架构研究补充（reference-only）
+
+版本：`knowledge-architecture-reference.v1`。本轮仅阅读公开官方说明并独立编写设计，没有引入依赖、复制源码或接受新许可证。以下观察不覆盖 §2 历史精确版本登记和已有接受/拒绝结论；证据与读取范围见[增量调研](2026-09-05-knowledge-architecture-benchmark.md)。
+
+| 参考 ID | 上游 | 范围 | 采用程度 | 审批状态 |
+|---|---|---|---|---|
+| AR-20260905-01 | [RAGFlow](https://github.com/infiniflow/ragflow) | 解析检查、摄取配置与检索测试行为 | reference-only；沿用 UR-001 复用闸门 | 无新增接受 |
+| AR-20260905-02 | [Dify](https://github.com/langgenius/dify) | Datasource 与 Pipeline 职责分工 | reference-only；UR-007 代码拒绝结论保持；[官方 LICENSE](https://github.com/langgenius/dify/blob/main/LICENSE) 含附加条件 | 无新增接受 |
+| AR-20260905-03 | [Onyx](https://github.com/onyx-dot-app/onyx) | 来源同步状态、refresh/prune、权限处理边界 | reference-only；[官方连接器说明](https://docs.onyx.app/admins/connectors/overview) 将权限同步标为 EE，不将其视为可直接复制的 MIT 能力 | 未申请许可证接受 |
+| AR-20260905-04 | [Haystack](https://github.com/deepset-ai/haystack) | 类型化组件与受控执行的设计启发 | reference-only；不引入 Python 框架或其实现；本次不是文件级许可证验收 | 未申请许可证接受 |
