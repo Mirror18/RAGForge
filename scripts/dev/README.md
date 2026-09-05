@@ -29,7 +29,7 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 
 默认本地项目名为 `ragforge-p1`，Server/Web 端口为 `25082` 和 `25174`；可通过 `-ProjectName`、`-ServerPort`、`-WebPort` 调整。脚本默认不会访问 Ollama；传入 `-CheckOllama` 时才会检查 `qwen3.5:9b` 与 `nomic-embed-text:latest`。无论是否检查，脚本都不会把本地路由静默切换为云路由。
 
-脚本启动 Server 和 Worker 时会先在前台清理并完成 Maven `clean compile`，再固定使用 Java 21、跳过启动阶段的测试编译、禁用增量编译，并以不 fork 的 Spring Boot 运行模式启动，避免机器级 Maven profile 或切换分支、源码移动造成 `target/classes` 不完整，进而出现 `NoClassDefFoundError`。测试编译仍由独立回归命令执行。脚本会等待 Worker 的 Spring Boot 启动日志，并把应用 JVM PID 写入 `tmp/local-run/worker.pid`（不是 Maven 包装进程）；Worker 编译或启动失败时会返回非零并打印最近日志，不会继续报告“已就绪”。
+脚本启动 Server 和 Worker 时会先在前台清理并完成 Maven `clean compile`、`jar:jar` 与 `spring-boot:repackage`，固定使用 Java 21，再直接运行构建出的、运行期间不会被 IDE 增量编译覆盖的 JAR；应用运行阶段不触发测试编译，增量编译也不会影响运行产物，避免机器级 Maven profile 或切换分支、源码移动造成 `target/classes` 不完整，进而出现 `NoClassDefFoundError`。测试编译仍由独立回归命令执行。脚本会等待 Worker 的 Spring Boot 启动日志，并把应用 JVM PID 写入 `tmp/local-run/worker.pid`（不是 Maven 包装进程）；Worker 编译或启动失败时会返回非零并打印最近日志，不会继续报告“已就绪”。
 
 完整的当前应用运行面需要下列 Docker core 服务：
 
