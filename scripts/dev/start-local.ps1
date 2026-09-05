@@ -147,7 +147,9 @@ try {
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
-    $server = Start-Process -FilePath $maven -ArgumentList "-pl", "backend/server", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    # spring-boot:run invokes Maven compile phases. Disable incremental compilation so
+    # stale target/classes cannot omit classes after a branch switch or source move.
+    $server = Start-Process -FilePath $maven -ArgumentList "-Dmaven.compiler.useIncrementalCompilation=false", "-pl", "backend/server", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -164,7 +166,7 @@ try {
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
-    $worker = Start-Process -FilePath $maven -ArgumentList "-pl", "backend/ingestion-worker", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    $worker = Start-Process -FilePath $maven -ArgumentList "-Dmaven.compiler.useIncrementalCompilation=false", "-pl", "backend/ingestion-worker", "spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
 
     if (-not $SkipWeb) {
