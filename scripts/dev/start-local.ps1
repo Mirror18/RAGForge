@@ -158,18 +158,12 @@ try {
     $env:RAGFORGE_OUTBOX_RELAY_ENABLED = "true"
     $env:RAGFORGE_RUN_EVENT_FANOUT_ENABLED = "true"
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
-    $mavenJava21Arguments = @(
-        "-Dmaven.compiler.release=21",
-        "-Dmaven.compiler.source=21",
-        "-Dmaven.compiler.target=21",
-        "-Dmaven.compiler.compilerVersion=21",
-        "-Dmaven.compiler.useIncrementalCompilation=false"
-    )
+    $mavenJava21Arguments = "-Dmaven.compiler.release=21 -Dmaven.compiler.source=21 -Dmaven.compiler.target=21 -Dmaven.compiler.compilerVersion=21 -Dmaven.compiler.useIncrementalCompilation=false"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
     # Clean before spring-boot:run so stale target/classes cannot survive a branch
     # switch or source move. Explicit Java 21 properties override machine profiles.
-    $server = Start-Process -FilePath $maven -ArgumentList ($mavenJava21Arguments + @("-pl", "backend/server", "clean", "spring-boot:run")) -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    $server = Start-Process -FilePath $maven -ArgumentList "$mavenJava21Arguments -pl backend/server clean spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -186,7 +180,7 @@ try {
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
-    $worker = Start-Process -FilePath $maven -ArgumentList ($mavenJava21Arguments + @("-pl", "backend/ingestion-worker", "clean", "spring-boot:run")) -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenJava21Arguments -pl backend/ingestion-worker clean spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
     try {
         Wait-ForLog (Join-Path $runtimeDirectory "worker.log") "Started IngestionWorkerApplication in " 90 $worker
