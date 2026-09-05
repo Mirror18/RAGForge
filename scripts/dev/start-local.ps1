@@ -103,7 +103,7 @@ function Wait-ForApplicationPid([string]$LogPath, [string]$ApplicationName, [int
 }
 
 function Invoke-MavenCompile([string]$Module, [string]$LogPath) {
-    Write-Host "预编译 $Module（Java 21，跳过测试编译）..."
+    Write-Host "预编译 $Module（Java 21，完整主编译）..."
     & $maven @mavenJava21Arguments "-pl" $Module "clean" "compile" *> $LogPath
     if ($LASTEXITCODE -ne 0) {
         Write-Host "$Module 编译失败，最近日志：" -ForegroundColor Yellow
@@ -188,11 +188,10 @@ try {
         "-Dmaven.compiler.source=21",
         "-Dmaven.compiler.target=21",
         "-Dmaven.compiler.compilerVersion=21",
-        "-Dmaven.compiler.useIncrementalCompilation=false",
-        "-Dmaven.test.skip=true"
+        "-Dmaven.compiler.useIncrementalCompilation=false"
     )
     $mavenJava21ArgumentLine = $mavenJava21Arguments -join " "
-    $mavenSpringBootRunArgumentLine = "$mavenJava21ArgumentLine -Dspring-boot.run.fork=false"
+    $mavenSpringBootRunArgumentLine = "$mavenJava21ArgumentLine -Dmaven.test.skip=true -Dspring-boot.run.fork=false"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
     Invoke-MavenCompile "backend/server" (Join-Path $runtimeDirectory "server-compile.log")
