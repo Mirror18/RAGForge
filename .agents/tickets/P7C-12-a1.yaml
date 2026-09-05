@@ -5,7 +5,7 @@ meta:
   agent_slug: a1
   branch: codex/p7c-12-startup-compile-a1
   worktree: D:\project\learning\RAGForge-worktrees\codex-p7c-12-startup-compile-a1
-  base_sha: 35a7ce6
+  base_sha: 630dcbda3a61eaf311c4756c6bbb4cf54a75ec2a
   updated_at: "2026-09-05"
   dependencies_satisfied: true
   depends_on_cards: [P7C-11]
