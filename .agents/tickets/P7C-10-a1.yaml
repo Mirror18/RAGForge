@@ -53,10 +53,10 @@ budget:
 tests:
   must_run:
     - name: PowerShell parse
-      command: powershell -NoProfile -Command "& { $errors = $null; [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/dev/start-local.ps1'), [ref]$null, [ref]$errors) | Out-Null; if ($errors.Count -gt 0) { throw 'PowerShell parse failed' } }"
+      command: pwsh -NoProfile -Command '& { $errors = $null; [System.Management.Automation.Language.Parser]::ParseInput([IO.File]::ReadAllText((Resolve-Path "scripts/dev/start-local.ps1"), [Text.Encoding]::UTF8), [ref]$null, [ref]$errors) | Out-Null; if ($errors.Count -gt 0) { throw "PowerShell parse failed" } }'
       expected: "exit 0"
     - name: Startup option static check
-      command: powershell -NoProfile -Command "& { $content = Get-Content -Raw 'scripts/dev/start-local.ps1'; if ($content -notmatch '\[switch\]\$CheckOllama') { throw 'CheckOllama switch missing' }; if ($content -match '\[switch\]\$SkipModelCheck') { throw 'obsolete SkipModelCheck switch remains' }; if ($content -notmatch 'if \(\$CheckOllama\)') { throw 'opt-in guard missing' } }"
+      command: pwsh -NoProfile -Command '& { $content = Get-Content -Raw "scripts/dev/start-local.ps1"; if ($content -notmatch "\[switch\]\$CheckOllama") { throw "CheckOllama switch missing" }; if ($content -match "\[switch\]\$SkipModelCheck") { throw "obsolete SkipModelCheck switch remains" }; if ($content -notmatch "if \(\$CheckOllama\)") { throw "opt-in guard missing" } }'
       expected: "exit 0"
     - name: Diff whitespace check
       command: git diff --check
