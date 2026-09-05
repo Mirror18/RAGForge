@@ -29,7 +29,7 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 
 默认本地项目名为 `ragforge-p1`，Server/Web 端口为 `25082` 和 `25174`；可通过 `-ProjectName`、`-ServerPort`、`-WebPort` 调整。脚本默认不会访问 Ollama；传入 `-CheckOllama` 时才会检查 `qwen3.5:9b` 与 `nomic-embed-text:latest`。无论是否检查，脚本都不会把本地路由静默切换为云路由。
 
-脚本启动 Server 和 Worker 时会禁用 Maven 增量编译，避免切换分支或源码移动后 `target/classes` 遗留不完整，进而出现 `NoClassDefFoundError`。
+脚本启动 Server 和 Worker 时会固定 Maven 使用 Java 21 并禁用增量编译，避免机器级 Maven profile 或切换分支、源码移动造成 `target/classes` 不完整，进而出现 `NoClassDefFoundError`。脚本还会等待 Worker 的 Spring Boot 启动日志；Worker 编译或启动失败时会返回非零并打印最近日志，不会继续报告“已就绪”。
 
 完整的当前应用运行面需要下列 Docker core 服务：
 
