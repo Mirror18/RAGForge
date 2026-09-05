@@ -14,7 +14,7 @@
 
 ## 复用与合规结论
 
-- 以上均为官方依赖/API 使用，不是上游源代码复制；`docs/07-research/UPSTREAM_REUSE_REGISTER.md` 不新增源码复用批准项。
+- 以上均为官方依赖/API 使用，不是上游源代码复制；许可证与复用登记见 [`docs/06-安全合规与研究.md`](../../06-安全合规与研究.md)，不新增源码复用批准项。
 - Tesseract/Leptonica 仅作为外部运行时安装，不提交二进制、训练数据或第三方源码；CI 通过 Ubuntu 包安装并打印版本，Windows 本地使用已批准的 UB-Mannheim 安装包完成验收。
 - Tesseract 官方说明其引擎为 Apache-2.0，并依赖 BSD-2-Clause 的 Leptonica；发布前仍需以最终目标发行包的 SBOM、包元数据和 Notice 再核对训练数据许可。
 - 本地仓库的 `scripts/ci/sbom_dependency_scan.py` 明确保留 placeholder 分支，不能作为 SBOM 已完成的证据；GitHub Actions 的 Syft/Grype 步骤是发布前有效门禁。

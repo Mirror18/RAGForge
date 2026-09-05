@@ -1,9 +1,9 @@
 # RAGForge 任务看板（TASK_BOARD）
 
-> 本看板与 [`AGENT_STATE_CARD.md`](AGENT_STATE_CARD.md) §6 的分派表一一对应，是 Agent 执行任务的预算与验收真源。
+> 本看板与 [`AGENT_STATE_CARD.md`](./AGENT_STATE_CARD.md) §6 的分派表一一对应，是 Agent 执行任务的预算与验收真源。
 > 每张卡片有独立 Token 预算、依赖、归属目录、必跑测试；**超预算 20% 必须停下汇报**。
 >
-> 版本：`board.v7` | 生效基线：Phase 7 `p2-execution` | 生成日期：2026-09-05
+> 版本：`board.v8` | 生效基线：Phase 7 `p2-execution` | 生成日期：2026-09-05
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## 0.5 人类任务总览（先看这里）
 
-本表回答两个问题：**要开发什么**，以及**完成后用户/系统会得到什么**。状态以本看板与[状态卡](AGENT_STATE_CARD.md)为准；卡片下面保留预算、ownership、验收命令和依赖。已完成任务的实施细节、改动文件、真实测试结果、风险和下一步写在对应 Git commit body 中，不在本表追加执行日志。
+本表回答两个问题：**要开发什么**，以及**完成后用户/系统会得到什么**。状态以本看板与[状态卡](./AGENT_STATE_CARD.md)为准；卡片下面保留预算、ownership、验收命令和依赖。已完成任务的实施细节、改动文件、真实测试结果、风险和下一步写在对应 Git commit body 中，不在本表追加执行日志。
 
 | 任务包 | 要开发什么 | 达成效果 | 当前状态 |
 |---|---|---|---|
@@ -33,6 +33,8 @@
 | P7D-04～07 | 观测、升级/回滚、公共化和阶段闭环 | 形成可定位故障、可恢复升级、可审查公共仓库和完整 Phase 7 证据 | ⏳ 等待 P7D-03 |
 | ARCH-DOC-01 | 版本化知识执行架构演进 | 已接受 ADR-0013 和设计边界；后续可拆成可实现的契约、迁移、执行快照和恢复任务 | ✅ 文档完成；实现待拆卡 |
 | GOV-01 | Agent-first 入口和文档收敛 | 人类从 START_HERE 找到下一步；Agent 按状态卡→任务板→Ticket 工作 | ✅ 完成 |
+| GOV-02 | 前后端物理归拢和共享工程边界 | 前端、后端、私密配置和各自启动入口集中；共享契约/测试/样本/脚本保持有实际职责 | ✅ 完成 |
+| GOV-03 | 文档实际内容合并与记录归档 | 项目说明按 01–07 顺序阅读；状态、任务、风险、证据和复盘统一进入 08-records；原文与执行细节可由 Git history 追溯 | ✅ 完成 |
 
 ### 如何查看一个任务的完整记录
 
@@ -57,7 +59,7 @@ P7C-04（可并行） ─► P7C-05
 | **P7C-01** | **来源任务中心后端 API**：多文件逐项状态、分页、筛选、失败重试 / 重放、重新同步、归档 / 删除 | 无（P7-B 已完成） | `backend/server/ingestion/`、`backend/server/chunk/`、`backend/server/index/`、`contracts/openapi/ragforge-api-v1.yaml`、`backend/server/src/main/resources/db/migration/`（**迁移单 owner：V19 系列**） | **8,000** | 新增 /jobs、/sources、/index 列表 API；`slice(0,5)` 的内部捷径全部替换；删除/归档/重试都有版本乐观锁 | contract 52/52 + 定向集成测试（`ServerIntegrationTest` 新增 5+ 用例）+ Web typecheck/build |
 | **P7C-02** | **来源与任务中心前端 UI**：提交 → 处理中 → 终态展示、分页、筛选、失败重试、重新同步、删除/归档、错误详情 | P7C-01 | `frontend/ragforge-web/`（BusinessFlowView / 新组件 TaskCenter / SourceLibrary） | **7,000** | 100+ 合成资源的 fixture 下，列表无静默截断；所有按钮受 CSRF + `space_id` 保护 | Web typecheck/build + `ServerIntegrationTest` 权限拒绝回归 |
 | **P7C-03** | **索引生命周期 UI**：candidate 的构建/验证依据展示 → 发布 → active → 回滚上一版 → retired；文案不得把 candidate 描述为 active | P7C-01 | `frontend/ragforge-web/`、`backend/server/index/`（若 API 缺少回滚/退役端点则补少量） | **6,000** | UI 显示 candidate/active/retired 三种状态；回滚产生 previous pointer；≥2 个索引版本的数据能正确切换 | 定向 UI 路由测试（若无自动化就写手工复现脚本并留 JSON 证据）+ contract 52/52 |
-| **P7C-04** | **Durable BM25（R-023 关闭）**：选型 ADR + 替换 `InMemoryBm25CandidateStore`，重启后 lexical 重建持久化 | 无（可与 P7C-01 并行） | `docs/02-architecture/adr/`（ADR-0012）、`backend/server/retrieval/`、`backend/ingestion-worker/`（若重建任务放 Worker） | **10,000** | ADR-0012 状态 Accepted；新 Provider 有 space/index 作用域；重启 + 重建集成测试通过；R-023 在风险表标记 CLOSED | RetrievalServiceTest + 新增「重启后 lexical index 命中」集成测试 + contract 52/52 |
+| **P7C-04** | **Durable BM25（R-023 关闭）**：选型 ADR + 替换 `InMemoryBm25CandidateStore`，重启后 lexical 重建持久化 | 无（可与 P7C-01 并行） | `docs/07-架构决策记录.md`（ADR-0012）、`backend/server/retrieval/`、`backend/ingestion-worker/`（若重建任务放 Worker） | **10,000** | ADR-0012 状态 Accepted；新 Provider 有 space/index 作用域；重启 + 重建集成测试通过；R-023 在风险表标记 CLOSED | RetrievalServiceTest + 新增「重启后 lexical index 命中」集成测试 + contract 52/52 |
 | **P7C-05** | **真实 RERANK adapter 接线**：把声明 `RERANK` route 接到真实 adapter（`backend/ai-runtime`）；Provider connection test 对 RERANK 能真实返回 verified capability；不再允许 `LexicalReranker` 冒充 | P7C-04 | `backend/ai-runtime/`、`backend/server/provider/`、`backend/server/retrieval/` | **8,000** | RERANK connection test 有独立 success/failed/UNSUPPORTED_CAPABILITY 路径；Profile PUBLISHED 闸门对 RERANK 同样生效 | Provider/Model/Binding 14/14 + 新增 RERANK loopback 探针用例 4/4 + contract 52/52 |
 | **P7C-05R** | **RERANK test-profile adapter 冲突修复**：全 reactor 中 `FakeProviderAdapter` 与 production AI runtime adapter 重复注册 `AI_RUNTIME`，导致两个 Spring context 无法启动 | P7C-05 | `backend/server/provider/adapter/`、对应 adapter tests | **4,000** | test profile 只保留 fake adapter；默认 production profile 仍注册真实 AI runtime adapter；registry 不再重复 | 两条原失败 Spring 测试 + AI runtime adapter/Provider probe 回归 + contract 52/52 |
 | **P7C-06** | **可核验问答 Web**：明确新会话入口；历史 answer + citation 恢复；可阅读来源预览或受权原文跳转；反馈 API + UI；会话重命名/删除；真实 streaming 时「回答增量」文案改为规范描述 | P7C-01、P7C-03 | `frontend/ragforge-web/`（AnswerView / 新组件）、`backend/server/answer/`（若历史 citation API 缺失） | **9,000** | 普通用户不手填 UUID 可完成：新会话 → 问答 → 查看 citation 原文 → 反馈 → 看历史回答；citation preview 不再丢弃响应内容 | Web typecheck/build + 新增历史/反馈 ServerIntegrationTest 3/3 + contract 52/52 |
@@ -94,10 +96,10 @@ P7C-04（可并行） ─► P7C-05
 | **P7D-01** | **容器加固**：Web 改为非 root；Server/Worker 在 Compose 里新增 health/readiness；三类应用统一 capability、只读文件系统 + 受控写路径、资源限额（mem/cpu）、优雅关闭、日志上限。 | P0 + P1 全绿 | `deploy/compose/compose.yaml`、各应用 Dockerfile | **8,000** | `docker compose --profile app up -d` 后 `docker inspect` 三项都为 non-root；healthcheck 状态变成 healthy；日志超限时自动轮转 | 本地脚本化验收（输出到 `tests/evidence/phase7-container-hardening.v1.json`） |
 | **P7D-02** | **发布镜像与供应链硬化**：基础镜像与应用镜像全部锁定 immutable digest；使用目标镜像（不是源码）生成 SBOM/Grype 结果；生产 Secret 不使用 Compose 默认占位值、不进入展开配置、镜像或日志。 | P7D-01 | `deploy/compose/`、`.github/workflows/`、根 `.env.example` | **7,000** | 所有镜像 digest 在 `deploy/compose/` 有清单；镜像级 SBOM 和 Grype SARIF artifact 最新可用；Secret 审计脚本返回 0 | 目标镜像 SBOM/Grype；secret scan 脚本针对镜像执行 |
 | **P7D-02R** | **P7D-02 漏洞修复与重新验收**：修复目标镜像的 Critical/High 漏洞（基础层与应用依赖），重新生成 SBOM/Grype，并保持 fail-closed；不得通过降低阈值、忽略规则或未审批例外掩盖发现。 | P7D-02（阻塞基线 `20c7f87`） | `pom.xml`、`backend/server/pom.xml`、`backend/ingestion-worker/pom.xml`、`deploy/docker/`、`deploy/compose/`、`scripts/ci/`、`tests/ci/`、`tests/evidence/` | **10,000** | server/worker/web 目标镜像在 `--fail-on high` 下通过；所有修复版本与 digest 可追溯；保留 P7D-02 的 Secret/SBOM/Grype 证据链 | Java/Web 回归 + 目标镜像构建 + 镜像 SBOM/Grype + Secret 审计 + format/secret gates |
-| **P7D-03** | **干净 Ubuntu 24.04 完整部署验收**：从 0 文档执行到 RAG 业务闭环 smoke（平台初始化 → Provider test → 空间/成员 → Git/文件摄取 → active index → streaming 引用问答 → 反馈 → 审计 → 跨空间拒绝 → 未授权云出境拒绝）。合成 fixture。 | P7D-02R | `docs/05-operations/DEPLOYMENT.md`、`deploy/compose/`、`tests/e2e/` | **18,000** | Ubuntu 24.04 ISO + Docker + RAGForge 部署脚本；所有 10 条旅程产出结构化证据；RPO=0s 满足 | 独立证据文件 `tests/evidence/phase7-ubuntu-smoke.v1.json`；人工复核清单可勾选 |
-| **P7D-04** | **Observability overlay 验证**：叠加 observability profile，验证 Dashboard、trace/log 脱敏、告警、Runbook 可定位规定故障。 | P7D-03 | `deploy/compose/observability.yaml`、`docs/05-operations/` runbooks | **8,000** | Grafana dashboard 有数据；OTel trace 的 prompt/正文字段脱敏；4 个 Runbook 演练 4/4 可定位故障 | 证据文件 `tests/evidence/phase7-observability.v1.json` |
-| **P7D-05** | **升级与回滚演练**：从上一兼容基线（Phase 6 闭环的 `462c7a5`）升级到当前版本 → 验证 citation、索引、对象一致性 → 在兼容窗口内回滚。仅用合成数据。 | P7D-03 | `docs/05-operations/DEPLOYMENT.md`（upgrade/rollback 章节） | **9,000** | upgrade / rollback 各执行一次；citation 与 Qdrant 引用一致；所有版本化 migration 兼容 | 证据文件 `tests/evidence/phase7-upgrade-rollback.v1.json` |
-| **P7D-06** | **公共化清理**：执行 secret / 个人信息 / Obsidian 内容 / 生产数据 / raw prompt / 许可证 / Notice / 历史 / 大文件检查。根许可证、release 版本、生产迁移仍需用户单独批准。 | P7D-05（清理是 release 前最后一步） | 仓库根 `.gitignore`、`docs/00-governance/REPOSITORY_LICENSING.md`、根 LICENSE（待用户批准） | **5,000** | secret scan / PII scan / 大文件 scan 全部通过；公共化检查 checkist 有逐项 SHA 证明 | 扫描脚本 + 输出 + `docs/07-research/UPSTREAM_REUSE_REGISTER.md` 与 `THIRD_PARTY_NOTICES.md` 最新核对 |
+| **P7D-03** | **干净 Ubuntu 24.04 完整部署验收**：从 0 文档执行到 RAG 业务闭环 smoke（平台初始化 → Provider test → 空间/成员 → Git/文件摄取 → active index → streaming 引用问答 → 反馈 → 审计 → 跨空间拒绝 → 未授权云出境拒绝）。合成 fixture。 | P7D-02R | `docs/05-部署运维与恢复.md`、`deploy/compose/`、`tests/e2e/` | **18,000** | Ubuntu 24.04 ISO + Docker + RAGForge 部署脚本；所有 10 条旅程产出结构化证据；RPO=0s 满足 | 独立证据文件 `tests/evidence/phase7-ubuntu-smoke.v1.json`；人工复核清单可勾选 |
+| **P7D-04** | **Observability overlay 验证**：叠加 observability profile，验证 Dashboard、trace/log 脱敏、告警、Runbook 可定位规定故障。 | P7D-03 | `deploy/compose/observability.yaml`、`docs/05-部署运维与恢复.md` Runbook 章节 | **8,000** | Grafana dashboard 有数据；OTel trace 的 prompt/正文字段脱敏；4 个 Runbook 演练 4/4 可定位故障 | 证据文件 `tests/evidence/phase7-observability.v1.json` |
+| **P7D-05** | **升级与回滚演练**：从上一兼容基线（Phase 6 闭环的 `462c7a5`）升级到当前版本 → 验证 citation、索引、对象一致性 → 在兼容窗口内回滚。仅用合成数据。 | P7D-03 | `docs/05-部署运维与恢复.md`（upgrade/rollback 章节） | **9,000** | upgrade / rollback 各执行一次；citation 与 Qdrant 引用一致；所有版本化 migration 兼容 | 证据文件 `tests/evidence/phase7-upgrade-rollback.v1.json` |
+| **P7D-06** | **公共化清理**：执行 secret / 个人信息 / Obsidian 内容 / 生产数据 / raw prompt / 许可证 / Notice / 历史 / 大文件检查。根许可证、release 版本、生产迁移仍需用户单独批准。 | P7D-05（清理是 release 前最后一步） | 根 `.gitignore`、`docs/06-安全合规与研究.md`、根 LICENSE（待用户批准） | **5,000** | secret scan / PII scan / 大文件 scan 全部通过；公共化检查 checkist 有逐项 SHA 证明 | 扫描脚本 + 输出 + `docs/06-安全合规与研究.md` 与 `THIRD_PARTY_NOTICES.md` 最新核对 |
 | **P7D-07** | **Release 文档与阶段闭环**：PROJECT_STATUS、RISK_REGISTER、TRACEABILITY_MATRIX、阶段 retrospective 更新；创建 CHANGELOG 条目。**在用户显式批准版本号 + 根许可证 + 生产迁移之前，禁止 `git tag` 或创建 release。** | 用户批准：版本号 / 根许可证 / 生产迁移。否则不进入。 | `docs/08-records/` 全部治理文档、`CHANGELOG.md` | **5,000** | Phase 7 retrospective 完成；RISK_REGISTER 所有 OPEN/MITIGATING 高风险要么关要么接受要么缓解有证据；追溯矩阵通过；checklist 全部勾选 | （治理文档审查，没有测试；必须含用户签名/批注的豁免项） |
 
 ---
@@ -116,8 +118,14 @@ P7C-04（可并行） ─► P7C-05
 
 | 卡片 ID | 标题 | 前置 | Ownership | Token 预算 | 验收输出 | 必跑测试/门禁 |
 |---|---|---|---|---:|---|---|
-| GOV-01 | 对齐 dataH 的 Agent-first 工程入口：建立人类 START_HERE、仓库级 Skill、治理目录下的 Agent 循环提示词；精简根 README 和文档索引 | 无 | `.agents/skills/ragforge-development/`、`README.md`、`docs/README.md`、`docs/00-governance/START_HERE.md`、`docs/00-governance/AGENT_LOOP_PROMPT.md`、`MEMORY.md`、`docs/08-records/TASK_BOARD.md`、`docs/08-records/AGENT_STATE_CARD.md`、`docs/08-records/tickets/TICKET_TEMPLATE.yaml` | 6,000 | 人类从单一入口能找到当前阻塞和下一步；Agent 能按状态卡→任务板→Ticket 路由；旧提示词路径不再被引用；没有状态/任务第二真源 | `quick_validate.py`、Markdown links、path index、format、git diff --check |
-| GOV-02 | 按 dataH 风格完成前后端物理归拢：前端统一到 `frontend/`，后端统一到 `backend/`；为父级和子项目补启动 README；保留 `contracts/`、`tests/`、`fixtures/`、`scripts/` 的仓库级共享边界；建立 `config/private/`；把 docs 收敛为项目手册 + 分区权威文档 | GOV-01 | `frontend/`、`backend/`、`README.md`、`.gitignore`、`config/private/`、`docs/`、`pom.xml`、`deploy/`、`.github/`、`scripts/`、`tests/`、`AGENTS.md` | 12,000 | Git 跟踪的应用源码不再位于 `apps/`；前后端均有父级 README 和启动说明；共享目录职责清晰；敏感配置目录默认忽略；docs 有唯一总览和顺序入口；所有路径索引、构建和文档门禁通过 | `git grep` 旧路径清零、Markdown links、architecture、path index、secret scan、format、后端/前端/AI Runtime smoke |
+| GOV-01 | 对齐 dataH 的 Agent-first 工程入口：建立人类 START_HERE、仓库级 Skill、治理目录下的 Agent 循环提示词；精简根 README 和文档索引 | 无 | `.agents/skills/ragforge-development/`、`README.md`、`docs/README.md`、`docs/03-工程结构与本地运行.md`、`docs/04-交付路线与质量门禁.md`、`MEMORY.md`、`docs/08-records/TASK_BOARD.md`、`docs/08-records/AGENT_STATE_CARD.md`、`docs/08-records/tickets/TICKET_TEMPLATE.yaml` | 6,000 | 人类从单一入口能找到当前阻塞和下一步；Agent 能按状态卡→任务板→Ticket 路由；没有状态/任务第二真源 | `quick_validate.py`、Markdown links、path index、format、git diff --check |
+| GOV-02 | 按 dataH 风格完成前后端物理归拢：前端统一到 `frontend/`，后端统一到 `backend/`；为父级和子项目补启动 README；保留有实际跨应用职责的 `contracts/`、`tests/`、`fixtures/`、`scripts/`；建立 `config/private/` 和项目工程手册 | GOV-01 | `frontend/`、`backend/`、`README.md`、`.gitignore`、`config/private/`、`docs/03-工程结构与本地运行.md`、`pom.xml`、`deploy/`、`.github/`、`scripts/`、`tests/`、`AGENTS.md` | 12,000 | Git 跟踪的应用源码不再位于 `apps/`；前后端均有父级 README 和启动说明；共享目录职责清晰；敏感配置目录默认忽略；所有路径索引、构建和文档门禁通过 | `git grep` 旧路径清零、Markdown links、architecture、path index、secret scan、format、后端/前端/AI Runtime smoke |
+
+## 3.3 用户追加：文档实际内容合并与记录归档
+
+| 卡片 ID | 标题 | 前置 | Ownership | Token 预算 | 验收输出 | 必跑测试/门禁 |
+|---|---|---|---|---:|---|---|
+| GOV-03 | 合并 docs 中的实际正文：产品、架构、工程、交付、运维、安全/研究、ADR 各形成一份有序主文档；根目录 GitHub 入口文件改为指针；`08-records/` 固定为状态、任务、风险、追溯、证据和复盘归档 | GOV-02 | `docs/`、根目录 Markdown 入口、`.agents/skills/`、`AGENTS.md`、`scripts/ci/`、`scripts/phase6/`、`deploy/compose/`、`docs/08-records/` | 10,000 | docs 根目录只有 01–07 主文档加 README；旧 00–07 文档树和 Runbook 子目录移除；合并文件保留全部源正文；根目录标准入口不再复制正文；告警章节锚点、Markdown links、path index、format、secret 和 observability 检查通过；Git history 可恢复原路径细节 | `check_markdown_links.py`、`format_check.py`、`architecture_check.py`、`path_index_check.py`、`secret_scan.py`、`observability_check.py`、`git diff --check` |
 
 ---
 
@@ -144,3 +152,5 @@ P7C-04（可并行） ─► P7C-05
 > board.v5 结构变更：新增用户指定的 ARCH-DOC-01 文档卡；来源基线 `2ad59b9`，状态与提交见状态卡 §6。
 
 > board.v6 结构变更：新增 GOV-01，按 dataH 的 Agent-first 入口整理 RAGForge 文档与仓库级 Skill；不改变业务代码和 Phase 7 依赖。
+
+> board.v8 结构变更：GOV-02 拆出前后端物理归拢，GOV-03 专门负责按实际正文合并 docs、保留 08-records 证据归档并修正自动化引用；任务执行细节仍只在 Git history。

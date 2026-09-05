@@ -327,7 +327,7 @@ def main() -> int:
             "diagnosis_path": {
                 "dashboard": "RAGForge Phase 6 On-call",
                 "alert": "RAGForgeUnauthorizedEgress",
-                "runbook": "docs/05-operations/runbooks/unauthorized-egress.md",
+                "runbook": "docs/05-部署运维与恢复.md#runbook-unauthorized-egress",
                 "safe_fields": ["trace_id", "correlation_id", "run_id", "space_id", "decision", "route_class", "error_code"],
             },
             "code_commit": subprocess_sha(),

@@ -49,8 +49,8 @@ scope:
     - contracts/ingestion/index-version.v1.schema.json
     - contracts/openapi/ragforge-api-v1.yaml
     # 只读取 DoD 的 §1、§2（若 Worker 能直接跳到行号则更省）
-    - docs/03-delivery/DEFINITION_OF_DONE.md
-    - docs/02-architecture/INGESTION_PIPELINE.md
+    - docs/04-交付路线与质量门禁.md
+    - docs/02-架构与领域设计.md
     # 现有实现参考（精确到文件，不做目录级 Grep）
     - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
     - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionService.java
@@ -63,7 +63,7 @@ scope:
     - docs/08-records/RISK_REGISTER.md
     - docs/08-records/TRACEABILITY_MATRIX.md
     - AGENTS.md
-    - docs/00-governance/AGENT_LOOP_PROMPT.md
+    - docs/04-交付路线与质量门禁.md
     - MEMORY.md
     - docs/08-records/TASK_BOARD.md
     - frontend/ragforge-web/

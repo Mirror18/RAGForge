@@ -116,5 +116,5 @@ Authorization/Cookie、prompt/document body、数据库语句和 LLM 输入输�
 投影字段。Grafana 日志面板因此只能用于关联诊断，不能用于读取正文。
 
 这套 profile 的 runtime 验收命令、指标契约和故障演练记录见
-[`docs/05-operations/observability-profile.md`](../../docs/05-operations/observability-profile.md)
+[`docs/05-部署运维与恢复.md`](../../docs/05-部署运维与恢复.md)
 与 [`scripts/phase6/observability_drill.py`](../../scripts/phase6/observability_drill.py)。

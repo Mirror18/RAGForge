@@ -4,7 +4,7 @@
 - 阶段状态：completed（ADR-0010 Accepted；方案 A、既有 provider connection、revision/artifact material service 与本地 LOCAL_ONLY Ollama RAG E2E 已完成）
 - 当前代码验收基线：`600960f`；ADR 接受提交 `246f993`，真实 Ollama RAG 生成审计提交 `600960f`
 - 阶段执行计划：[`PHASE_5_EXECUTION_PLAN.md`](../phase-5/PHASE_5_EXECUTION_PLAN.md)
-- 阶段清单：[`PHASE_5_CHECKLIST.md`](../../03-delivery/PHASE_5_CHECKLIST.md)
+- 阶段清单：[`PHASE_5_CHECKLIST.md`](../../04-交付路线与质量门禁.md)
 
 ## 事实与质量数据
 
@@ -43,4 +43,4 @@
 - 当前 embedding provider 复用既有 provider connection，并通过独立 embedding capability 接口接入；本阶段已用受控本地 route/profile/credential fixture 完成验证，云 route 仍未启用。
 - ADR-0010 的方案 A 已由用户明确接受；本阶段仅授权本地 `LOCAL_ONLY` Ollama，云 route/生产凭据仍需未来显式决策。
 
-上述选择记录于已接受的 [`ADR-0010`](../../02-architecture/adr/0010-phase5-provider-material-composition.md)；本阶段未启用云出境、生产迁移或 release。
+上述选择记录于已接受的 [`ADR-0010`](../../07-架构决策记录.md)；本阶段未启用云出境、生产迁移或 release。

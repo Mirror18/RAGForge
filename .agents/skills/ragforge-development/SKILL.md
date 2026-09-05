@@ -37,7 +37,7 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 ## 参考入口
 
-- 人类入口：[`docs/00-governance/START_HERE.md`](../../../docs/00-governance/START_HERE.md)
-- Agent 循环：[`docs/00-governance/AGENT_LOOP_PROMPT.md`](../../../docs/00-governance/AGENT_LOOP_PROMPT.md)
-- 架构基线：[`docs/02-architecture/ARCHITECTURE.md`](../../../docs/02-architecture/ARCHITECTURE.md)
-- 交付路线：[`docs/03-delivery/ROADMAP.md`](../../../docs/03-delivery/ROADMAP.md)
+- 人类入口：[`docs/03-工程结构与本地运行.md`](../../../docs/03-工程结构与本地运行.md)
+- Agent 循环：[`docs/04-交付路线与质量门禁.md`](../../../docs/04-交付路线与质量门禁.md)
+- 架构基线：[`docs/02-架构与领域设计.md`](../../../docs/02-架构与领域设计.md)
+- 交付路线：[`docs/04-交付路线与质量门禁.md`](../../../docs/04-交付路线与质量门禁.md)

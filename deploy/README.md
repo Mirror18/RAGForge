@@ -5,7 +5,7 @@
 - `docker/nginx.conf`：Web 容器的 SPA fallback 与 `/api`、`/actuator` 反向代理配置。
 - `kubernetes/`：未来预留，当前不维护双套生产配置。
 
-部署规则见 [DEPLOYMENT.md](../docs/05-operations/DEPLOYMENT.md)。生成/复制第三方 Compose 片段同样要经过许可证和 Secret 检查。
+部署规则见 [DEPLOYMENT.md](../docs/05-部署运维与恢复.md)。生成/复制第三方 Compose 片段同样要经过许可证和 Secret 检查。
 
 常用入口：
 

@@ -26,7 +26,7 @@ P3-A checklist/contract
 
 | Task | 目标 | 允许写入 | 只读依赖 | 单一 owner | 关键验收 | 不负责 |
 |---|---|---|---|---|---|---|
-| P3-A | checklist、验收口径、执行记录 | `docs/03-delivery/PHASE_3_CHECKLIST.md`、`docs/08-records/phase-3/` | Phase 3 PRD/ADR/安全/质量文档 | 主 Agent | checklist 未勾选、量化门槛明确、所有权表提交 | 任何运行时代码 |
+| P3-A | checklist、验收口径、执行记录 | `docs/04-交付路线与质量门禁.md` 的 Phase 3 章节、`docs/08-records/phase-3/` | Phase 3 PRD/ADR/安全/质量文档 | 主 Agent | checklist 未勾选、量化门槛明确、所有权表提交 | 任何运行时代码 |
 | P3-B | SourceConnector、ingestion REST、event schema | `contracts/`、指定 `backend/server`/shared contract 目录、contract tests | P3-A、Phase 2 contract | Contract Agent | schema parse、space/version/correlation/sensitive-field tests | migration、consumer实现 |
 | P3-C | 版本化 Source/Revision/Artifact/Job/Attempt/Step/Checkpoint 持久化 | `backend/server/src/main/resources/db/migration/` 单一序列、source/ingestion repository | P3-B | Persistence Agent | PostgreSQL migration、FK、状态机、space isolation、rollback tests | Rabbit topology、connector、parser |
 | P3-D | Outbox relay、RabbitMQ topology、Worker consumer、retry/DLQ/幂等 | `backend/ingestion-worker`、指定 shared messaging 文件、worker tests | P3-B、P3-C | Worker Agent | Testcontainer redelivery/concurrency、ack boundary、DLQ redaction、checkpoint safety | connector parser、根 Compose |

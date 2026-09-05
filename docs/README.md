@@ -1,48 +1,47 @@
-# RAGForge 文档索引
+# RAGForge 文档入口
 
-先读[从这里开始](00-governance/START_HERE.md)，再按[项目手册](00-governance/PROJECT_MANUAL.md)的顺序阅读。本索引负责导航，不复制状态和任务验收；同一事实只在其权威文档维护。
+这里是项目的唯一文档入口。当前文档按阅读和决策顺序收敛为 7 份主文档；`08-records/` 是状态、任务、风险、追溯、证据和复盘的归档区，不再把同一主题拆成一堆用途不明的目录。
 
-## 文档分区
+主文档保留原有实际正文，合并不是摘要。每份主文档开头列出收录来源；原文件的提交、删除和每次任务的具体改动仍可通过 Git history 追溯。
 
-| 分区 | 内容 | 入口 |
-|---|---|---|
-| `00-governance` | 项目章程、授权、Agent 工作流和协作约定 | [START_HERE](00-governance/START_HERE.md) / [项目章程](00-governance/PROJECT_CHARTER.md) |
-| `01-product` | 产品目标、范围、角色和用户故事 | [PRD](01-product/PRD.md) |
-| `02-architecture` | 总体架构、领域、摄取、检索、API 和 ADR | [总体架构](02-architecture/ARCHITECTURE.md) / [ADR 索引](02-architecture/adr/README.md) |
-| `03-delivery` | 路线图、阶段清单、完成定义和开发流程 | [路线图](03-delivery/ROADMAP.md) / [Phase 7](03-delivery/PHASE_7_CHECKLIST.md) |
-| `04-quality` | 测试策略、RAG 评估、性能和测试数据政策 | [测试策略](04-quality/TEST_STRATEGY.md) |
-| `05-operations` | 部署、备份、观测和 Runbook | [部署设计](05-operations/DEPLOYMENT.md) |
-| `06-security-compliance` | 安全基线、威胁、出境、留存和 OSS 合规 | [安全基线](06-security-compliance/SECURITY_BASELINE.md) |
-| `07-research` | GitHub 对标、参考资料和上游复用登记 | [GitHub 调研](07-research/GITHUB_BENCHMARK.md) |
-| `08-records` | 状态、任务、风险、追溯、阶段计划、证据和复盘 | [状态卡](08-records/AGENT_STATE_CARD.md) / [任务板](08-records/TASK_BOARD.md) |
+## 按顺序阅读
 
-## 推荐阅读顺序
+| 顺序 | 主文档 | 回答的问题 |
+|---:|---|---|
+| 1 | [项目范围与产品闭环](./01-项目范围与产品闭环.md) | 为什么做、做什么、不做什么、用户如何完成闭环、成功指标是什么 |
+| 2 | [架构与领域设计](./02-架构与领域设计.md) | 代码为什么这样分、领域对象如何协作、摄取/检索/API 如何工作 |
+| 3 | [工程结构与本地运行](./03-工程结构与本地运行.md) | 前后端和共享工程边界在哪里、如何启动、下一步从哪里找 |
+| 4 | [交付路线与质量门禁](./04-交付路线与质量门禁.md) | 按什么路线开发、如何拆 Agent 任务、什么条件才算完成 |
+| 5 | [部署运维与恢复](./05-部署运维与恢复.md) | 如何部署、观测、备份、恢复和处理故障 |
+| 6 | [安全合规与研究](./06-安全合规与研究.md) | 安全边界、数据出境、依赖/许可证和外部研究如何约束项目 |
+| 7 | [架构决策记录](./07-架构决策记录.md) | 已接受的架构决策、决策背景、后果和实施限制 |
 
-1. [项目手册](00-governance/PROJECT_MANUAL.md)：项目目标、目录边界、启动方式、文档生成规则和下一步导航。
-2. [项目章程](00-governance/PROJECT_CHARTER.md) → [PRD](01-product/PRD.md)：为什么做、做什么、不做什么。
-3. [总体架构](02-architecture/ARCHITECTURE.md) → [架构演进](02-architecture/ARCHITECTURE_EVOLUTION.md) → [ADR 索引](02-architecture/adr/README.md)：代码为何这样分。
-4. [路线图](03-delivery/ROADMAP.md) → 对应阶段清单 → [测试策略](04-quality/TEST_STRATEGY.md)：如何开发和验收。
-5. [部署设计](05-operations/DEPLOYMENT.md) → [`deploy/`](../deploy/README.md)：如何运行、升级和恢复。
-6. [安全基线](06-security-compliance/SECURITY_BASELINE.md) → [风险登记表](08-records/RISK_REGISTER.md)：哪些边界不可破坏。
-7. [状态卡](08-records/AGENT_STATE_CARD.md) → [任务板](08-records/TASK_BOARD.md)：今天做哪一张卡；完成细节回到 Git history。
+## 当前状态与任务
 
-## 权威关系
+- [记录归档说明](./08-records/README.md)：说明每类项目记录放在哪里。
+- [Agent 状态卡](./08-records/AGENT_STATE_CARD.md)：日常唯一状态入口，先看当前阶段、基线、阻塞和下一步。
+- [任务板](./08-records/TASK_BOARD.md)：任务目标、完成效果、依赖、ownership、预算和验收标准。
+- [项目状态](./08-records/PROJECT_STATUS.md)：仅在审计、阶段闭环和发布治理时读取的证据级记录。
+- [风险登记表](./08-records/RISK_REGISTER.md) / [追溯矩阵](./08-records/TRACEABILITY_MATRIX.md)：风险与需求/证据关系。
+- [Worker Tickets](./08-records/tickets/)：单张任务卡的精确执行约束。
 
-- 硬规则：根目录 [`AGENTS.md`](../AGENTS.md)。
-- 日常状态：[`AGENT_STATE_CARD.md`](08-records/AGENT_STATE_CARD.md)。
-- 任务定义与预算：[`TASK_BOARD.md`](08-records/TASK_BOARD.md)；Worker 只读自己的 Ticket。
-- 任务目标与达成效果：[`TASK_BOARD.md` 人类任务总览](08-records/TASK_BOARD.md#05-人类任务总览先看这里)；任务执行细节、测试和风险以 Git commit body 为准。
-- 产品范围：[`PRD.md`](01-product/PRD.md)；架构决策：[`02-architecture/adr/`](02-architecture/adr/)。
-- 审计、阶段和证据级记录：[`PROJECT_STATUS.md`](08-records/PROJECT_STATUS.md)、风险表、追溯矩阵和阶段记录。
+你不知道下一步做什么时，只需按这个顺序：状态卡 → 任务板 → 对应 Ticket → 独立 worktree → Git commit。任务实际完成了哪些文件、测试是否通过、风险和回滚是什么，以该 commit 的 body 为准，不在文档里另写流水账。
 
-## 当前架构演进
+## 信息优先级
 
-- [GitHub 知识库对标](07-research/2026-09-05-knowledge-architecture-benchmark.md)
-- [目标架构、差距与迁移设计](02-architecture/ARCHITECTURE_EVOLUTION.md)
-- [ADR-0013：版本化知识执行](02-architecture/adr/0013-versioned-knowledge-execution.md)
+1. 根目录 [`AGENTS.md`](../AGENTS.md)：仓库硬规则和 Agent 协作约束。
+2. 本目录 01–07 主文档：稳定的产品、设计、工程、交付、运维、安全和架构决策。
+3. [`08-records/AGENT_STATE_CARD.md`](./08-records/AGENT_STATE_CARD.md)：日常状态快照。
+4. [`08-records/TASK_BOARD.md`](./08-records/TASK_BOARD.md)：任务定义与预算真源。
+5. Git history：每张任务卡的实际执行细节和不可替代的变更证据。
 
-ADR-0013 已接受，但实现仍需拆成有 ownership、契约和测试的任务卡；文档接受不等于运行时完成。
+## 文档维护规则
 
-## 如何维护
+- 新产品范围进入 01；新架构决策进入 07；实现和启动说明进入 03；交付/质量规则进入 04；部署故障处理进入 05；安全、许可证和调研进入 06。
+- 当前状态、任务、风险、追溯、阶段证据和复盘只进入 `08-records/` 对应文件。
+- 不把主文档复制到根目录、应用目录或记录目录；应用和共享工程目录的 README 只说明该目录自身的启动和边界。
+- 文档正文使用相对仓库链接；外部资料使用直接 HTTPS 链接。文档整合前的原始文件可用提交历史恢复，不作为当前阅读入口。
 
-新需求先更新 PRD、路线图、风险和追溯；架构变化新增 ADR；运行证据放到 `docs/08-records/` 或 `tests/evidence/`；不要把聊天记录、临时草稿或 README 的复制内容当作第二个事实源。
+## 目录边界
+
+`frontend/` 和 `backend/` 归拢应用代码；`contracts/` 是跨应用契约；`tests/` 是跨应用和验收验证；`fixtures/` 是可公开/合成样本；`scripts/` 是仓库级自动化；`deploy/` 是运行资产；`config/private/` 是被 `.gitignore` 保护的本机敏感配置目录。目录是否保留看实际跨应用职责，不用 README 的空介绍制造第二套结构。

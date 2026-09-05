@@ -9,4 +9,4 @@
 - `performance/`：load/soak/capacity scripts。
 - `security/`：RBAC/SSRF/upload/prompt-injection/secret probes。
 
-测试数据遵守 [TEST_DATA_POLICY.md](../docs/04-quality/TEST_DATA_POLICY.md)。
+测试数据遵守 [TEST_DATA_POLICY.md](../docs/04-交付路线与质量门禁.md)。

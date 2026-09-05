@@ -32,7 +32,7 @@ bounded metadata; source bytes and full extracted text stay in object storage.
 Composite `(id, space_id)` foreign keys reject cross-space references.
 
 The migration is forward-only in normal deployments. Before applying V8 take
-the PostgreSQL backup required by [`BACKUP_RESTORE.md`](../../docs/05-operations/BACKUP_RESTORE.md).
+the PostgreSQL backup required by [`BACKUP_RESTORE.md`](../../docs/05-部署运维与恢复.md).
 Rollback means restoring that backup and deploying the previous application,
 not editing an already-applied migration. `IngestionRepository` repeats
 `space_id` in read predicates and advances a checkpoint only after durable

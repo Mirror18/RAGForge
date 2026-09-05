@@ -21,7 +21,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "tests" / "evidence" / "phase6-security.v1.json"
 MAVEN = Path(r"D:\tools\maven\apache-maven-3.9.6\bin\mvn.cmd")
-LICENSE_REGISTER = ROOT / "docs" / "07-research" / "UPSTREAM_REUSE_REGISTER.md"
+LICENSE_REGISTER = ROOT / "docs" / "06-安全合规与研究.md"
 THIRD_PARTY_NOTICES = ROOT / "THIRD_PARTY_NOTICES.md"
 
 
@@ -81,7 +81,7 @@ def check_license_traceability() -> dict[str, Any]:
     passed = bool(register and notices and "SPDX" in register and "精确版本/Commit" in notices)
     return {
         "name": "license-traceability-policy",
-        "command": "read docs/07-research/UPSTREAM_REUSE_REGISTER.md and THIRD_PARTY_NOTICES.md",
+        "command": "read docs/06-安全合规与研究.md and THIRD_PARTY_NOTICES.md",
         "status": "passed" if passed else "failed",
         "exit_code": 0 if passed else 1,
         "raw_output_persisted": False,
@@ -138,7 +138,7 @@ def main() -> int:
             "sbom_vulnerability_image_scan": sbom["status"],
             "license_policy": results[6]["status"],
             "license_policy_evidence": [
-                "docs/07-research/UPSTREAM_REUSE_REGISTER.md",
+                "docs/06-安全合规与研究.md",
                 "THIRD_PARTY_NOTICES.md",
             ],
         },

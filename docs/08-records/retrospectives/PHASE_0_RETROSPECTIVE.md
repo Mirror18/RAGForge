@@ -2,7 +2,7 @@
 
 > 复盘日期：2026-08-12
 >
-> 关联证据：[`PHASE_0_BENCHMARK_RESULTS.md`](../phase-0/PHASE_0_BENCHMARK_RESULTS.md)、[`GITHUB_BENCHMARK.md`](../../07-research/GITHUB_BENCHMARK.md)、[`PHASE_0_CHECKLIST.md`](../../03-delivery/PHASE_0_CHECKLIST.md)
+> 关联证据：[`PHASE_0_BENCHMARK_RESULTS.md`](../phase-0/PHASE_0_BENCHMARK_RESULTS.md)、[`GITHUB_BENCHMARK.md`](../../06-安全合规与研究.md)、[`PHASE_0_CHECKLIST.md`](../../04-交付路线与质量门禁.md)
 
 ## 1. 事实
 

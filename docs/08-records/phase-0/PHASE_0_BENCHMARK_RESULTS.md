@@ -18,7 +18,7 @@
 | LLM | `qwen3.5:9b`，model ID `6488c96fa5fa`；模型切换演练另用 `qwen3.5:0.8b`，model ID `f3817196d142` |
 | Embedding | `nomic-embed-text:latest`，model ID `0a109f422b47`，768 维 |
 | RAGFlow | 官方 `v0.26.4`，镜像 digest `sha256:16d24d1968ab59e2715a85d2590f1569c9539e0362344a42f3a23e8be06a655b` |
-| AnythingLLM | 实际运行镜像 `1.14.0`，digest `sha256:316505ac362555b92ae6ec5d7f6e060d981c79d528f0cf4460969cdd4e59d918`；许可证候选版本另固定为 `v1.15.0`，见 [`GITHUB_BENCHMARK.md`](../../07-research/GITHUB_BENCHMARK.md) |
+| AnythingLLM | 实际运行镜像 `1.14.0`，digest `sha256:316505ac362555b92ae6ec5d7f6e060d981c79d528f0cf4460969cdd4e59d918`；许可证候选版本另固定为 `v1.15.0`，见 [`GITHUB_BENCHMARK.md`](../../06-安全合规与研究.md) |
 | 隔离 | RAGFlow Compose 项目 `ragforge-p0-ragflow`；AnythingLLM 容器 `ragforge-p0-anythingllm`；独立端口、volume、网络 |
 
 资产由 [`generate_assets.py`](../../../scripts/phase0/generate_assets.py) 生成，并由 [`test_assets.py`](../../../scripts/phase0/test_assets.py) 和 [`validate_assets.py`](../../../scripts/phase0/validate_assets.py) 验证。`scan-placeholder.pdf` 是无可提取文本的 image-only PDF，不能把其 0 chunks 当成 OCR 成功。

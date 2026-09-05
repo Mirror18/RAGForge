@@ -28,9 +28,9 @@ P6-B、P6-C、P6-E 可在文件 ownership 不冲突时并行；P6-D 依赖 A 与
 
 | Task | 目标 | 允许写入 | 只读依赖 | Owner | 必跑验证 | 不负责 |
 |---|---|---|---|---|---|---|
-| P6-A | 冻结 checklist、计划、证据 schema、风险入口 | `docs/03-delivery/PHASE_6_CHECKLIST.md`、`docs/08-records/phase-6/`、Phase 6 contract/evidence schema | Phase 5 records、RAG evaluation、performance/security docs | 主 Agent | Markdown/link/schema checks | runtime feature |
+| P6-A | 冻结 checklist、计划、证据 schema、风险入口 | `docs/04-交付路线与质量门禁.md` 的 Phase 6 章节、`docs/08-records/phase-6/`、Phase 6 contract/evidence schema | Phase 5 records、RAG evaluation、performance/security docs | 主 Agent | Markdown/link/schema checks | runtime feature |
 | P6-B | 120+ dataset、人工复核、baseline/candidate、Promptfoo matrix/red-team adapter | `tests/evaluation/phase6*`、`scripts/phase6/evaluation*`、`tests/evidence/phase6-evaluation*` | Phase 5 dataset/schema、ADR-0008、test data policy | Evaluation Agent | dataset validator、evaluation/security tests | telemetry/backup |
-| P6-C | OTel、metrics、dashboards、alerts、runbook 可执行证据 | `deploy/compose/` observability profile、`docs/05-operations/`、`tests/evidence/phase6-observability*` | OBSERVABILITY、deployment、runbook rules | Observability Agent | compose/health/smoke/trace redaction | migrations/evaluation |
+| P6-C | OTel、metrics、dashboards、alerts、runbook 可执行证据 | `deploy/compose/` observability profile、`docs/05-部署运维与恢复.md`、`tests/evidence/phase6-observability*` | OBSERVABILITY、deployment、runbook rules | Observability Agent | compose/health/smoke/trace redaction | migrations/evaluation |
 | P6-D | 上传/SSRF/越权/注入/供应链安全收敛 | security tests, fixtures, threat review, `scripts/phase6/security*` | SECURITY_BASELINE、THREAT_MODEL、Phase 5 tool tests | Security Agent | targeted security, secret/SCA/SBOM | new business permissions |
 | P6-E | PG/Object/Qdrant backup and isolated recovery drills | `scripts/phase6/recovery*`、`tests/evidence/phase6-recovery*`、operations docs | BACKUP_RESTORE、migration/schema、compose | Recovery Agent | isolated restore and hash/count verification | production data |
 | P6-F | 真实 embedding dimension、1M chunks、并发/混合负载/成本 | `scripts/phase6/capacity*`、`tests/evidence/phase6-capacity*`、performance docs | fixed P6 config, Qdrant/Retrieval ports, PERFORMANCE_PLAN | Performance Agent | capacity/perf and no-synthetic-proxy checks | model/route architecture |

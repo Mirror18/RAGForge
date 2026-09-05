@@ -41,8 +41,8 @@ scope:
     - scripts/ci/validate_compose.py
     - scripts/ci/format_check.py
     - tests/ci/test_supply_chain_gates.py
-    - docs/06-security-compliance/SECURITY_BASELINE.md
-    - docs/07-research/UPSTREAM_REUSE_REGISTER.md
+    - docs/06-安全合规与研究.md
+    - THIRD_PARTY_NOTICES.md
     - THIRD_PARTY_NOTICES.md
   forbidden:
     - docs/08-records/AGENT_STATE_CARD.md

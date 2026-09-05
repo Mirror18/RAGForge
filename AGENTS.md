@@ -81,7 +81,7 @@ When a user prompt says "keep working on Phase 7" (or similar scope), route as: 
 
 The orchestrator writes every ticket's `scope.read_only` as an allow-list of exact file paths (and, when tooling supports it, exact line ranges). The worker never falls back to "open backend/server/ingestion and read all controllers". General rules:
 
-- Long governance documents (`PROJECT_STATUS.md`, `ROADMAP.md`, `DEFINITION_OF_DONE.md`, `TEST_STRATEGY.md`, `SECURITY_BASELINE.md`, `THREAT_MODEL.md`): a worker may read at most one or two named subsections, never the full file.
+- Long governance documents (`docs/08-records/PROJECT_STATUS.md`, `docs/04-交付路线与质量门禁.md`, `docs/06-安全合规与研究.md`): a worker may read at most one or two named subsections, never the full file.
 - Contracts: read only the domain-specific schema files and OpenAPI YAML touched by the card. Do not pre-read `contracts/README.md` unless the ticket says so.
 - ADRs: read only the numbered ADR the card explicitly references.
 - Evidence JSON under `tests/evidence/*.json`: if the ticket only needs to confirm a gate, read the top-level `passed`/`summary` fields only; the detail array should not enter the context.
@@ -135,8 +135,8 @@ An agent halts and reports to the human if and only if any of the following appl
 ### Integration and phase closure
 
 - The orchestrator reviews every worker commit and its verification evidence before integration.
-- A commit may be merged only when all relevant CI jobs are green, the orchestrator review has no unresolved comments, and the Definition of Done in `docs/03-delivery/DEFINITION_OF_DONE.md` is satisfied.
-- Security-sensitive changes (authentication, authorization, data egress, prompt injection, SSRF, secrets handling) require a security review pass before merge; see `docs/06-security-compliance/SECURITY_BASELINE.md` and `docs/06-security-compliance/THREAT_MODEL.md`.
+- A commit may be merged only when all relevant CI jobs are green, the orchestrator review has no unresolved comments, and the Definition of Done in `docs/04-交付路线与质量门禁.md` is satisfied.
+- Security-sensitive changes (authentication, authorization, data egress, prompt injection, SSRF, secrets handling) require a security review pass before merge; see the security sections in `docs/06-安全合规与研究.md`.
 - Integrate one branch at a time in dependency order. Prefer a non-fast-forward merge so worker commits remain traceable; the merge commit message must also be Chinese, for example `merge(p1): 合并 OpenAPI 契约任务`.
 - Do not resolve conflicts with blanket `ours`/`theirs`. Reconcile against the accepted contract and rerun all affected tests.
 - After each integration batch, run repository-level tests and check architecture, contracts, migrations, security boundaries, licenses, and documentation links as applicable.
@@ -147,14 +147,14 @@ An agent halts and reports to the human if and only if any of the following appl
 ## Release and versioning
 
 - Releases follow Semantic Versioning and must record an entry in `CHANGELOG.md`. Never cut a release without an explicit human decision on the version number, changelog content, and rollback point.
-- Each release must reference the exact commit SHA, the deployment artifact/SBOM, and the rollback procedure; see `docs/05-operations/DEPLOYMENT.md` and the Main/Release pipeline in `docs/03-delivery/DEVELOPMENT_WORKFLOW.md`.
+- Each release must reference the exact commit SHA, the deployment artifact/SBOM, and the rollback procedure; see `docs/05-部署运维与恢复.md` and the Main/Release pipeline in `docs/04-交付路线与质量门禁.md`.
 - Before a release, verify that the phase exit-criteria evidence is committed under `docs/08-records/`.
 
 ## Security incidents and dependency response
 
 - Report suspected vulnerabilities through `SECURITY.md`. Do not disclose a confirmed vulnerability in a public commit before coordinated disclosure.
 - Triage critical/high vulnerabilities promptly (target: initial triage within 24 hours of confirmation), record the decision in `RISK_REGISTER.md`, and land a fix or documented mitigation before the next release.
-- Dependency updates run on a maintained cadence (for example Dependabot or Renovate). The BOM owner reviews each update for license, vulnerability, and maintenance health before merging; see `docs/07-research/UPSTREAM_REUSE_REGISTER.md`.
+- Dependency updates run on a maintained cadence (for example Dependabot or Renovate). The BOM owner reviews each update for license, vulnerability, and maintenance health before merging; see `docs/06-安全合规与研究.md`.
 
 ## Directory ownership
 

@@ -30,7 +30,7 @@ class ObservabilityAssetTest(unittest.TestCase):
             self.assertTrue(path.is_relative_to(observability_check.ROOT))
             self.assertTrue(
                 path.is_relative_to(observability_check.ROOT / "deploy" / "compose")
-                or path.is_relative_to(observability_check.ROOT / "docs" / "05-operations")
+                or path.is_relative_to(observability_check.ROOT / "docs")
             )
 
 

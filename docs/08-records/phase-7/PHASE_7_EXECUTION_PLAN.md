@@ -3,7 +3,7 @@
 - Version: `phase7-plan.v6`
 - Status: `p2-ready`
 - Functional candidate baseline: `f695936594834f8a870fa95dca5ff0c6634441a1`
-- Checklist: [`PHASE_7_CHECKLIST.md`](../../03-delivery/PHASE_7_CHECKLIST.md)
+- Checklist: [`PHASE_7_CHECKLIST.md`](../../04-交付路线与质量门禁.md)
 
 ## 目标与边界
 

@@ -3,8 +3,8 @@
 > ⚠️ **Agent 入口规则**：所有 AI Agent 每轮启动时，**本文件是唯一必读的状态入口**。
 > 除非执行的是「审计 / 阶段复盘 / 发布验收」类高上下文任务，否则不应主动读取下面这些长文档：
 > - `PROJECT_STATUS.md`（治理与证据档案，180+ 行）
-> - `ROADMAP.md`（阶段定义，200+ 行）
-> - 各阶段 CHECKLIST、EXECUTION_PLAN（仅在 Worker Ticket 明确列出时按需读取）
+> - `docs/04-交付路线与质量门禁.md`（路线、阶段清单、DoD、测试和评估，合并后仍按 Ticket 指定章节读取）
+> - 各阶段 EXECUTION_PLAN（仅在 Worker Ticket 明确列出时按需读取）
 > - `AGENTS.md` 的全部章节（仅在需要确认硬规则时读取 Non-negotiable rules 与需要的章节）
 >
 > 项目真相文档与本文件的优先级：
@@ -12,7 +12,7 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-09-05 | 更新人：Orchestrator（项目结构整理） | 对应功能基线 SHA：5de4952
+> 上一次更新：2026-09-05 | 更新人：Orchestrator（文档归档整理） | 对应功能基线 SHA：5de4952
 
 ---
 
@@ -92,7 +92,7 @@ P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7
 
 ## 5. 证据与 CI 快速入口（失败才读全文，否则只用链接）
 
-> 以下为历史验证快照，不是 `2ad59b9` 的全量证据；本次只读审计范围见 [2026-09-05 架构审计](2026-09-05-architecture-audit.md)。
+> 以下为历史验证快照，不是 `2ad59b9` 的全量证据；本次只读审计范围见 [2026-09-05 架构审计](./2026-09-05-architecture-audit.md)。
 
 - 最近全量 CI：<https://github.com/Mirror18/RAGForge/actions/runs/32577917976>
 - Phase 6 证据：`tests/evidence/phase6-*.v1.json`（8 类：evaluation / security / capacity / recovery / cost / observability / multi-instance / real-RAG）
@@ -112,7 +112,8 @@ P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7
 | 卡片 ID | 标题 | 优先级 | 状态 | 担当 Agent | branch | worktree | Token 预算 | 实际消耗 | 完成 SHA | 备注 |
 |---|---|---|---|---|---|---|---:|---:|---|---|
 | GOV-01 | 对齐 dataH 的 Agent-first 工程入口与文档导航 | P0 / 用户追加 | ✅ integrated | Orchestrator | main | RAGForge | 6,000 | 未记录 | 4ca4a65 | 新增 START_HERE、仓库级 Skill、治理目录 Agent 循环入口 |
-| GOV-02 | 前后端物理归拢、共享目录边界和项目文档手册化 | P0 / 用户追加 | ✅ integrated | Orchestrator | main | RAGForge | 12,000 | 未记录 | 见本提交 | frontend/backend 归拢；保留 contracts/tests/fixtures/scripts 独立；补齐 README、config/private 和项目手册 |
+| GOV-02 | 前后端物理归拢、共享目录边界和项目文档手册化 | P0 / 用户追加 | ✅ integrated | Orchestrator | main | RAGForge | 12,000 | 未记录 | f628993 | frontend/backend 归拢；保留有实际跨应用职责的共享目录；补齐 README、config/private 和工程手册 |
+| GOV-03 | 按实际正文合并 docs 并建立记录归档 | P0 / 用户追加 | ✅ integrated | Orchestrator | main | RAGForge | 10,000 | 未记录 | 见本提交 | 01–07 主文档保留源正文；08-records 保留状态/任务/风险/追溯/证据/复盘；执行细节不复制，回到 Git history |
 | ARCH-DOC-01 | 开源知识库架构演进文档 | P2 / 用户追加 | ✅ integrated | A24 / Orchestrator | codex/arch-knowledge-evolution-a24 | RAGForge-worktrees/codex-arch-knowledge-evolution-a24 | 10,000 | 约 10,600（Worker 估算，+6%） | 5de49528dd461198d3fd60059c8acb9f3c92891b | ADR-0013 已由项目负责人接受并合并 main；本地文档门禁通过，远程 CI 未核验；实现仍待拆卡，不改变 P7D-03 阻塞 |
 | AGENT-OPT-01 | Agent 效率文档骨架落地 | P0 | ✅ completed | Orchestrator | main | RAGForge | 8,000 | 未记录 | 609ef5c9a1284bef71ed9295910aeb9c48d383cb | 已由主线提交完成；历史实际 token 未记录，不重复执行 |
 | P7C-04 | durable BM25 ADR + 实现（R-023） | P0 | ✅ completed | A2 | codex/p7-durable-bm25-a2 | RAGForge-worktrees/codex-p7-durable-bm25-a2 | 10,000 | 7,600 | a427362546d19a37d1b61759526371fcdaa5105a | 已合并至 75da5cb；ADR-0012 Accepted，Qdrant payload 重建与重启命中 1/1，Server/Worker/contract 门禁通过，未新增迁移；R-023 CLOSED |
@@ -157,11 +158,11 @@ P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7
 | 需求 | 只需要读这些文件 |
 |---|---|
 | 契约细节 | `contracts/<domain>/*.schema.json` + `contracts/openapi/ragforge-api-v1.yaml` |
-| 架构原则 | 仅对应 ADR：`docs/02-architecture/adr/NNNN-*.md`（按编号精确打开） |
-| 质量门禁 | `docs/03-delivery/DEFINITION_OF_DONE.md` 中与当前卡片对应的 1–2 节即可 |
-| 测试策略 | `docs/04-quality/TEST_STRATEGY.md` 中与卡片范围相关的章节 |
-| 安全规则 | `docs/06-security-compliance/SECURITY_BASELINE.md` 对应威胁条目（不读全文） |
-| 许可证登记 | `docs/07-research/UPSTREAM_REUSE_REGISTER.md`（仅引入新依赖时） |
+| 架构原则 | `docs/07-架构决策记录.md` 中与当前卡片对应的 ADR 章节 |
+| 质量门禁 | `docs/04-交付路线与质量门禁.md` 中与当前卡片对应的章节 |
+| 测试策略 | `docs/04-交付路线与质量门禁.md` 中与卡片范围相关的章节 |
+| 安全规则 | `docs/06-安全合规与研究.md` 中对应威胁条目（不读全文） |
+| 许可证登记 | `docs/06-安全合规与研究.md`（仅引入新依赖时） |
 | 阶段证据/CI | 仅看 `tests/evidence/phaseX-*.json` 的 `summary` 字段或 `passed` 顶层字段，不展开 detail 数组 |
 
 ---

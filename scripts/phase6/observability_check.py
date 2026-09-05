@@ -18,7 +18,7 @@ OBS_DIR = ROOT / "deploy" / "compose" / "observability"
 DASHBOARD = OBS_DIR / "grafana" / "dashboards" / "ragforge-phase6-oncall.json"
 ALERTS = OBS_DIR / "prometheus-rules.yml"
 OTEL = OBS_DIR / "otel-collector.yaml"
-RUNBOOK_DIR = ROOT / "docs" / "05-operations" / "runbooks"
+RUNBOOK_DOCUMENT = ROOT / "docs" / "05-部署运维与恢复.md"
 
 REQUIRED_FILES = (
     OVERLAY,
@@ -44,16 +44,22 @@ REQUIRED_PANEL_TITLES = {
     "最近备份时间与恢复点年龄",
 }
 REQUIRED_ALERTS = {
-    "RAGForgeLoginErrorRateHigh": "provider-outage.md",
-    "RAGForgeAnswerErrorRateHigh": "provider-outage.md",
-    "RAGForgeActiveIndexUnavailable": "ingestion-backlog.md",
-    "RAGForgeUnauthorizedEgress": "unauthorized-egress.md",
-    "RAGForgeProviderTimeoutRateHigh": "provider-outage.md",
-    "RAGForgeQueueAgeHigh": "ingestion-backlog.md",
-    "RAGForgeDeadLetterQueueNotEmpty": "ingestion-backlog.md",
-    "RAGForgeDatabaseCapacityHigh": "database-capacity.md",
-    "RAGForgeRecoveryPointStale": "database-capacity.md",
+    "RAGForgeLoginErrorRateHigh": "runbook-provider-outage",
+    "RAGForgeAnswerErrorRateHigh": "runbook-provider-outage",
+    "RAGForgeActiveIndexUnavailable": "runbook-ingestion-backlog",
+    "RAGForgeUnauthorizedEgress": "runbook-unauthorized-egress",
+    "RAGForgeProviderTimeoutRateHigh": "runbook-provider-outage",
+    "RAGForgeQueueAgeHigh": "runbook-ingestion-backlog",
+    "RAGForgeDeadLetterQueueNotEmpty": "runbook-ingestion-backlog",
+    "RAGForgeDatabaseCapacityHigh": "runbook-database-capacity",
+    "RAGForgeRecoveryPointStale": "runbook-database-capacity",
 }
+REQUIRED_RUNBOOKS = (
+    "provider-outage.md",
+    "ingestion-backlog.md",
+    "unauthorized-egress.md",
+    "database-capacity.md",
+)
 FORBIDDEN_SECRET_PATTERNS = (
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
@@ -114,7 +120,7 @@ def validate() -> dict[str, object]:
     for alert, runbook in REQUIRED_ALERTS.items():
         if f"alert: {alert}" not in alerts_text:
             fail(f"missing alert: {alert}")
-        if f"runbook: docs/05-operations/runbooks/{runbook}" not in alerts_text:
+        if f"runbook: docs/05-部署运维与恢复.md#{runbook}" not in alerts_text:
             fail(f"alert {alert} is not linked to {runbook}")
     if alerts_text.count("severity: P1") < 5:
         fail("P1 alert coverage is unexpectedly small")
@@ -137,11 +143,16 @@ def validate() -> dict[str, object]:
         if identity_key not in otel_text:
             fail(f"OTel identity projection missing: {identity_key}")
 
-    runbooks = {
-        path.name: read(path)
-        for path in sorted(RUNBOOK_DIR.glob("*.md"))
-        if path.name in {f for f in ("provider-outage.md", "ingestion-backlog.md", "unauthorized-egress.md", "database-capacity.md")}
-    }
+    runbook_document = read(RUNBOOK_DOCUMENT)
+    runbooks: dict[str, str] = {}
+    for name in REQUIRED_RUNBOOKS:
+        anchor = f'<a id="runbook-{Path(name).stem}"></a>'
+        start = runbook_document.find(anchor)
+        if start < 0:
+            fail(f"missing runbook anchor: {name}")
+        next_anchor = runbook_document.find('<a id="runbook-', start + len(anchor))
+        end = next_anchor if next_anchor >= 0 else len(runbook_document)
+        runbooks[name] = runbook_document[start:end]
     required_headings = (
         "1. 症状与用户影响",
         "2. 安全边界和禁止动作",
@@ -156,7 +167,7 @@ def validate() -> dict[str, object]:
         for heading in required_headings:
             if heading not in content:
                 fail(f"runbook {name} missing fixed heading: {heading}")
-    if set(runbooks) != {"provider-outage.md", "ingestion-backlog.md", "unauthorized-egress.md", "database-capacity.md"}:
+    if set(runbooks) != set(REQUIRED_RUNBOOKS):
         fail("required Phase 6 runbook set is incomplete")
 
     return {

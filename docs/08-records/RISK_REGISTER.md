@@ -43,7 +43,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 | ID | 风险 | P | I | 分数 | 缓解/验证 | Owner | 状态 |
 |---|---|---:|---:|---:|---|---|---|
-| P0-BENCH-001 | RAGFlow 全局 dataset 没有 query-level `space_id` 过滤，基准中 q-013/q-014/q-032 暴露跨空间来源 | 4 | 5 | 20 | Phase 1 将 `space_id` 设为 query/mutation 强制字段，增加允许来源/禁止来源/拒答安全回归集；证据：[`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md) | Security / Retrieval | OPEN |
+| P0-BENCH-001 | RAGFlow 全局 dataset 没有 query-level `space_id` 过滤，基准中 q-013/q-014/q-032 暴露跨空间来源 | 4 | 5 | 20 | Phase 1 将 `space_id` 设为 query/mutation 强制字段，增加允许来源/禁止来源/拒答安全回归集；证据：[`PHASE_0_BENCHMARK_RESULTS.md`](./phase-0/PHASE_0_BENCHMARK_RESULTS.md) | Security / Retrieval | OPEN |
 | P0-BENCH-002 | AnythingLLM 对 image-only PDF 生成伪 OCR，且 q-032 泄漏 `BETA-COMET-29` | 4 | 5 | 20 | parser/OCR 必须暴露状态、证据和失败原因；生成前后执行 provenance/forbidden-source 校验；纳入 Phase 1 安全验收 | Ingestion / Security | OPEN |
 | P0-BENCH-003 | AnythingLLM 重复 basename 导致 36 份中只有 35 份入库，同名来源也使 citation 无法安全区分 | 4 | 4 | 16 | source identity 使用稳定 source/document ID，不以 basename 作为唯一键；增加 duplicate-name contract test | Ingestion / Retrieval | OPEN |
 | P0-BENCH-004 | RAGFlow 重启约 37 秒才 ready，并出现 `Load term.freq FAIL!`；Elasticsearch 达服务限制约 69% | 3 | 4 | 12 | 建立 readiness probe、启动超时预算、ES 资源基线和告警；重启恢复作为 Phase 1 integration gate | Operations | MITIGATING |
@@ -68,7 +68,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 - `R-003` 仍为 OPEN：Phase 3 已把 `space_id` 贯穿 source/revision/artifact/object key，并通过跨空间拒绝测试；Qdrant、chunk 和内容查询尚未实现，不能关闭全局跨空间风险。
 - `R-006` 仍为 OPEN：Phase 3 已验证 MIME/大小/路径/符号链接/内容寻址和 OCR 失败边界，但生产 quarantine、AV、sandbox、压缩炸弹专门 corpus 尚未完成。
 - `R-007` 进入 MITIGATING：Outbox、RabbitMQ retry/DLQ、PostgreSQL 幂等唯一约束和 20 次并发副作用测试已通过；真实完整 ingestion side-effect handler 与索引成本仍留给后续阶段。
-- `R-010` 继续 MITIGATING：PDFBox 2.0.30、POI 5.4.0、MinIO SDK 8.6.0、OkHttp JVM 5.1.0、Tesseract/Leptonica 运行时已记录于 [`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md)；Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 的 Syft/Grype 通过，正式发布仍必须复核传递依赖、训练数据和目标发行包许可证。
+- `R-010` 继续 MITIGATING：PDFBox 2.0.30、POI 5.4.0、MinIO SDK 8.6.0、OkHttp JVM 5.1.0、Tesseract/Leptonica 运行时已记录于 [`DEPENDENCY_AND_LICENSE_EVIDENCE.md`](./phase-3/DEPENDENCY_AND_LICENSE_EVIDENCE.md)；Run [31706823033](https://github.com/Mirror18/RAGForge/actions/runs/31706823033) 的 Syft/Grype 通过，正式发布仍必须复核传递依赖、训练数据和目标发行包许可证。
 - `R-020` 继续 MITIGATING：MinIO 测试镜像使用固定 release tag 但尚未锁定生产 digest；发布前必须完成 digest、SBOM、许可证和镜像扫描。
 - `R-022` 已关闭：`TesseractOcrEngineTest` 真实执行两份无文本层合成 PDF，Windows `5.4.0.20240606` 与 Ubuntu CI `5.3.4-1build5` 均 2/2 成功；Parse Report 具备 artifact、页码、版本、触发原因与 `COMPLETED` 审计状态，证据见 [`phase3-ocr-runtime-summary.json`](../../tests/evidence/phase3-ocr-runtime-summary.json)。
 
@@ -192,7 +192,7 @@ Probability（P）与 Impact（I）各 1–5，Score = P × I。15–25 为高�
 
 ## 20. 知识执行架构提案风险（2026-09-05）
 
-版本：`knowledge-evolution-risks.v1`；状态均为设计风险 OPEN，不构成上线漏洞结论或风险接受。[ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md)已于 2026-09-05 接受；风险在实施验证前保持 OPEN。
+版本：`knowledge-evolution-risks.v1`；状态均为设计风险 OPEN，不构成上线漏洞结论或风险接受。[ADR-0013](../07-架构决策记录.md)已于 2026-09-05 接受；风险在实施验证前保持 OPEN。
 
 | ID | 风险 | 概率 | 影响 | 分值 | 计划缓解与关闭证据 | Owner | 状态 |
 |---|---|---:|---:|---:|---|---|---|

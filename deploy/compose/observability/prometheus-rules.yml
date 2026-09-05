@@ -11,7 +11,7 @@ groups:
           summary: 登录接口 5xx 错误率超过 5%
           user_impact: 用户无法登录或建立会话
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/provider-outage.md
+          runbook: docs/05-部署运维与恢复.md#runbook-provider-outage
 
       - alert: RAGForgeAnswerErrorRateHigh
         expr: sum(rate(ragforge_answer_requests_total{status="error"}[5m])) / clamp_min(sum(rate(ragforge_answer_requests_total[5m])), 1) > 0.05
@@ -23,7 +23,7 @@ groups:
           summary: 问答错误率超过 5%
           user_impact: 用户无法得到答案或 SSE 提前结束
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/provider-outage.md
+          runbook: docs/05-部署运维与恢复.md#runbook-provider-outage
 
       - alert: RAGForgeActiveIndexUnavailable
         expr: min(ragforge_active_index_healthy) == 0
@@ -35,7 +35,7 @@ groups:
           summary: active index 不可用
           user_impact: 检索和问答会拒答或返回 degraded 状态
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+          runbook: docs/05-部署运维与恢复.md#runbook-ingestion-backlog
 
       - alert: RAGForgeUnauthorizedEgress
         expr: increase(ragforge_egress_denied_total[5m]) > 0
@@ -47,7 +47,7 @@ groups:
           summary: 检测到被拒绝的未授权云端出境尝试
           user_impact: 当前请求被 fail-closed 拒绝；需确认是否存在攻击或错误配置
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/unauthorized-egress.md
+          runbook: docs/05-部署运维与恢复.md#runbook-unauthorized-egress
 
   - name: ragforge.phase6.latency
     rules:
@@ -61,7 +61,7 @@ groups:
           summary: retrieval p95 超过 1.5 秒
           user_impact: 问答首事件和完整答案变慢
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+          runbook: docs/05-部署运维与恢复.md#runbook-ingestion-backlog
 
       - alert: RAGForgeSSEFirstEventLatencyHigh
         expr: histogram_quantile(0.95, sum by (le) (rate(ragforge_sse_first_event_seconds_bucket[10m]))) > 0.5
@@ -73,7 +73,7 @@ groups:
           summary: SSE first event p95 超过 500ms
           user_impact: 用户等待问答开始的时间变长
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/provider-outage.md
+          runbook: docs/05-部署运维与恢复.md#runbook-provider-outage
 
       - alert: RAGForgeProviderTimeoutRateHigh
         expr: sum(rate(ragforge_provider_timeouts_total[5m])) / clamp_min(sum(rate(ragforge_provider_calls_total[5m])), 1) > 0.05
@@ -85,7 +85,7 @@ groups:
           summary: provider timeout 比例超过 5%
           user_impact: 生成失败、降级或问答拒答
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/provider-outage.md
+          runbook: docs/05-部署运维与恢复.md#runbook-provider-outage
 
   - name: ragforge.phase6.ingestion
     rules:
@@ -99,7 +99,7 @@ groups:
           summary: ingestion 队列最老消息超过 15 分钟
           user_impact: 新内容不能及时检索
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+          runbook: docs/05-部署运维与恢复.md#runbook-ingestion-backlog
 
       - alert: RAGForgeDeadLetterQueueNotEmpty
         expr: sum(ragforge_dlq_messages) > 0
@@ -111,7 +111,7 @@ groups:
           summary: DLQ 存在未处理消息
           user_impact: 部分文档可能没有完成摄取
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/ingestion-backlog.md
+          runbook: docs/05-部署运维与恢复.md#runbook-ingestion-backlog
 
   - name: ragforge.phase6.capacity-and-recovery
     rules:
@@ -125,7 +125,7 @@ groups:
           summary: 数据库连接池使用率超过 80%
           user_impact: API 请求可能排队或失败
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/database-capacity.md
+          runbook: docs/05-部署运维与恢复.md#runbook-database-capacity
 
       - alert: RAGForgeRecoveryPointStale
         expr: time() - ragforge_backup_last_success_timestamp_seconds > 86400
@@ -137,4 +137,4 @@ groups:
           summary: 最近成功备份超过 24 小时
           user_impact: 发生故障时可能无法满足 RPO 24 小时
           dashboard: RAGForge Phase 6 On-call
-          runbook: docs/05-operations/runbooks/database-capacity.md
+          runbook: docs/05-部署运维与恢复.md#runbook-database-capacity

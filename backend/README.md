@@ -4,9 +4,9 @@
 
 | 目录 | 职责 | 生命周期 |
 |---|---|---|
-| [`server/`](server/) | 模块化单体、同步 API、认证、空间权限、检索、回答、审计和 Flyway | 主应用进程 |
-| [`ingestion-worker/`](ingestion-worker/) | 异步来源同步、解析、分块、向量和候选索引任务 | 独立 Worker 进程 |
-| [`ai-runtime/`](ai-runtime/) | OCR、rerank 等窄职责模型运行时 | 可选独立 Python 服务 |
+| [`server/`](./server/) | 模块化单体、同步 API、认证、空间权限、检索、回答、审计和 Flyway | 主应用进程 |
+| [`ingestion-worker/`](./ingestion-worker/) | 异步来源同步、解析、分块、向量和候选索引任务 | 独立 Worker 进程 |
+| [`ai-runtime/`](./ai-runtime/) | OCR、rerank 等窄职责模型运行时 | 可选独立 Python 服务 |
 
 Server 与 Worker 共享根目录 Maven reactor，但 Worker 不复用 Server Controller 或 Repository；AI Runtime 不是第二业务后端。公开 API 与跨进程事件以 [`contracts/`](../contracts/) 为唯一契约源。
 

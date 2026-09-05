@@ -6,7 +6,7 @@
 - 主分支：`main`
 - 主 Agent：Orchestrator
 - 允许的外部写入：main 本地验证通过后 push 到现有 `origin`，仅用于触发 GitHub Actions；禁止 force-push、改写历史、创建 release。
-- 技术基线：Java 21 + Spring Boot 3.5.x，维持 [ADR-0002](../../02-architecture/adr/0002-java-ai-version-baseline.md) 已验收基线；本阶段**不**升级 Java/Boot，也不引入未登记的第三方源码。
+- 技术基线：Java 21 + Spring Boot 3.5.x，维持 [ADR-0002](../../07-架构决策记录.md) 已验收基线；本阶段**不**升级 Java/Boot，也不引入未登记的第三方源码。
 
 ## 依赖顺序
 
@@ -27,7 +27,7 @@ P4-A checklist/contract
 
 | Task | 目标 | 允许写入 | 只读依赖 | 单一 owner | 关键验收 | 不负责 |
 |---|---|---|---|---|---|---|
-| P4-A | checklist、验收口径、执行记录 | `docs/03-delivery/PHASE_4_CHECKLIST.md`、`docs/08-records/phase-4/` | ROADMAP Phase 4、ADR-0003/0006、[INGESTION_PIPELINE](../../02-architecture/INGESTION_PIPELINE.md)、[RETRIEVAL_AND_CHAT](../../02-architecture/RETRIEVAL_AND_CHAT.md)、[RAG_EVALUATION](../../04-quality/RAG_EVALUATION.md) | 主 Agent | checklist 未勾选、量化门槛明确（Recall@10>=0.90、MRR@10>=0.75）、所有权表提交 | 任何运行时代码 |
+| P4-A | checklist、验收口径、执行记录 | `docs/04-交付路线与质量门禁.md` 的 Phase 4 章节、`docs/08-records/phase-4/` | ROADMAP Phase 4、ADR-0003/0006、[INGESTION_PIPELINE](../../02-架构与领域设计.md)、[RETRIEVAL_AND_CHAT](../../02-架构与领域设计.md)、[RAG_EVALUATION](../../04-交付路线与质量门禁.md) | 主 Agent | checklist 未勾选、量化门槛明确（Recall@10>=0.90、MRR@10>=0.75）、所有权表提交 | 任何运行时代码 |
 | P4-B | chunk/index/retrieval 领域契约与 chunk-studio/playground REST 投影 | `contracts/`（chunking-domain、index-version、retrieval-profile）、contract tests | P4-A | Contract Agent | schema parse、space/version/correlation、override 状态机、profile 不可变、敏感字段禁止 | migration、consumer 实现 |
 | P4-C | ParentChunk/ChildChunk/ChunkOverride/IndexVersion/RetrievalProfile 持久化与状态机 | `backend/server/src/main/resources/db/migration/` 单一序列（V9 起）、chunk/index/profile repository | P4-B | Persistence Agent | PostgreSQL migration、FK、状态机、space isolation、active pointer 单行、rollback tests | Qdrant、检索实现 |
 | P4-D | 父子分块引擎：标题/表格/代码/列表边界、token 估算、引用锚点、overlap | chunking 模块、合成 fixture、chunking unit/quality tests | P4-B、P4-C | Chunking Agent | 边界不硬切、parent/child 范围与锚点可验证、确定性、Windows/Linux 一致 | embedding、索引写入 |
@@ -62,7 +62,7 @@ P4-A checklist/contract
 | P4-G | 完成并合入 | `041bf34` + `e27ae75`：Chunk Studio、Retrieval Playground、override ref 持久化与 Web 修复 |
 | P4-H | 完成 | `phase4-retrieval-benchmark.json`、`phase4-1m-qdrant.json`、`phase4-isolation-and-override.json`；CI Phase 4 gate 已接入 |
 
-## 阶段量化门槛（来自 [RAG_EVALUATION](../../04-quality/RAG_EVALUATION.md) §4.1 与 ROADMAP Phase 4 退出条件）
+## 阶段量化门槛（来自 [RAG_EVALUATION](../../04-交付路线与质量门禁.md) §4.1 与 ROADMAP Phase 4 退出条件）
 
 - P4-EXIT-01：30 问检索基准 `Recall@10 >= 0.90`、`MRR@10 >= 0.75`（版本化记录 dataset/index/profile 配置）。
 - P4-EXIT-02：100 万 child chunk 数据量下检索 p95 时延与召回目标有可复现证据。

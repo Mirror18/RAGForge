@@ -5,9 +5,9 @@
 > 如果你是被指派「日常执行任务」的 AI Agent，请**不要阅读本文件全文**（除非你的任务明确是「审计 / 阶段复盘 / 发布验收」）。
 >
 > 日常运行的正确入口顺序：
-> 1. **先读 [`AGENT_STATE_CARD.md`](AGENT_STATE_CARD.md)** —— 压缩版状态卡，~1k tokens，涵盖基线 SHA / 当前阶段 / 卡片依赖图 / 分派表 / 停机条件。
-> 2. 再读 [`TASK_BOARD.md`](TASK_BOARD.md) 中与你职责对应的卡片范围（不要整包复制）。
-> 3. Worker 角色只读自己的 Ticket：[`tickets/<CARD_ID>-<slug>.yaml`](tickets/TICKET_TEMPLATE.yaml)。
+> 1. **先读 [`AGENT_STATE_CARD.md`](./AGENT_STATE_CARD.md)** —— 压缩版状态卡，~1k tokens，涵盖基线 SHA / 当前阶段 / 卡片依赖图 / 分派表 / 停机条件。
+> 2. 再读 [`TASK_BOARD.md`](./TASK_BOARD.md) 中与你职责对应的卡片范围（不要整包复制）。
+> 3. Worker 角色只读自己的 Ticket：[`tickets/<CARD_ID>-<slug>.yaml`](./tickets/TICKET_TEMPLATE.yaml)。
 > 4. 只有当状态卡与代码事实发生冲突，或你的任务属于「阶段验收」「发布治理」时，才回到本文件逐段核对。
 >
 > 本文件是**治理级 / 证据级权威记录**，保留所有历史阶段的审计证据、基线 SHA、CI 链接与风险说明。日常重复读取会造成显著 Token 浪费（~180 行 / 单轮 8–15k tokens 不等），应当通过状态卡摘要来避免。
@@ -38,12 +38,12 @@
 - 风险与需求追溯基线。
 - 多 Agent 一任务一分支一 worktree 的协作、集成与中文提交规则。
 - 可直接复用的多 Agent 循环执行提示词。
-- Phase 0 可复现验收资产、33 条问题和真实 benchmark 结果；见 [`PHASE_0_BENCHMARK_RESULTS.md`](phase-0/PHASE_0_BENCHMARK_RESULTS.md)。
-- Phase 0 上游许可证、精确 commit、LICENSE/NOTICE 和 use mode 闸门；见 [`UPSTREAM_REUSE_REGISTER.md`](../07-research/UPSTREAM_REUSE_REGISTER.md)。
+- Phase 0 可复现验收资产、33 条问题和真实 benchmark 结果；见 [`PHASE_0_BENCHMARK_RESULTS.md`](./phase-0/PHASE_0_BENCHMARK_RESULTS.md)。
+- Phase 0 上游许可证、精确 commit、LICENSE/NOTICE 和 use mode 闸门；见 [`UPSTREAM_REUSE_REGISTER.md`](../06-安全合规与研究.md)。
 - Phase 0 checklist、风险、追溯矩阵和 retrospective 已闭环。
-- Phase 1 工程/领域骨架已实现：契约、Java server/worker、Vue/Python 骨架、core Compose、Flyway、Valkey Session、CSRF、空间 RBAC、audit/outbox、幂等和 CI 门禁；见 [`PHASE_1_IMPLEMENTATION_RESULTS.md`](phase-1/PHASE_1_IMPLEMENTATION_RESULTS.md)。
-- Phase 1 本地 Compose 启动、健康、备份冒烟、跨空间 API smoke、Python contract 和前端门禁已取得证据；见 [`PHASE_1_CHECKLIST.md`](../03-delivery/PHASE_1_CHECKLIST.md)。
-- Phase 2 Provider、Prompt、Space Binding、Run/Step/SSE、取消/重试和 usage ledger 已实现并通过全量 Maven 84/84；见 [`PHASE_2_CHECKLIST.md`](../03-delivery/PHASE_2_CHECKLIST.md)。
+- Phase 1 工程/领域骨架已实现：契约、Java server/worker、Vue/Python 骨架、core Compose、Flyway、Valkey Session、CSRF、空间 RBAC、audit/outbox、幂等和 CI 门禁；见 [`PHASE_1_IMPLEMENTATION_RESULTS.md`](./phase-1/PHASE_1_IMPLEMENTATION_RESULTS.md)。
+- Phase 1 本地 Compose 启动、健康、备份冒烟、跨空间 API smoke、Python contract 和前端门禁已取得证据；见 [`PHASE_1_CHECKLIST.md`](../04-交付路线与质量门禁.md)。
+- Phase 2 Provider、Prompt、Space Binding、Run/Step/SSE、取消/重试和 usage ledger 已实现并通过全量 Maven 84/84；见 [`PHASE_2_CHECKLIST.md`](../04-交付路线与质量门禁.md)。
 - Phase 2 本地真实 Ollama `qwen3.5:9b` Run 全链路验收已通过；Run、Step、ModelInvocation、Usage Ledger 均成功，证据见 [`phase2-local-ollama-run.json`](../../tests/evidence/phase2-local-ollama-run.json)。
 - Phase 2 Mock 云协议 4/4、20 链路并发 1/1、出境隔离 5/5、契约 25/25 已通过；workflow 已将三组 deterministic gate 接入 CI。
 - Phase 3 SourceConnector、版本化 schema/V8 migration、Outbox/RabbitMQ/worker 幂等、文件/本地目录/Git connector、原生解析/真实 Tesseract OCR 和 Local/MinIO 对象存储已合入 main；实现合并提交为 `ad91c515fa83ec62627903a8a39a65a8f21f3b0d`，真实 OCR 任务最终合并提交为 `2ca3a75`。
@@ -52,7 +52,7 @@
 ## 2. 当前声明
 
 - Phase 3 已完成阶段闭环：原生格式 6/6、image-only PDF 2/2、真实 Tesseract OCR 2/2；检索、分块、引用回答仍未进入本阶段。
-- Phase 4 已完成阶段闭环（2026-08-21）：P4-D 父子分块、P4-E embedding cache/Qdrant candidate index、P4-F dense/BM25/RRF/rerank/parent expansion、P4-G Chunk Studio/Retrieval Playground 与 P4-H 评测/规模/证据已合入 main。阶段合并提交包括 `300569b`、`ab81ed1`、`1f6450e`、`fed0034`、`041bf34`、`e27ae75`、`ca6db93` 及其对应 worker commits。30 问 Recall@10 `0.965517`、MRR@10 `0.827586`；Qdrant 1M synthetic child points Recall@10 `1.0`、p95 `1101.3382 ms`；空间过滤/索引切换回滚/override 冲突 targeted Maven 17/17。证据见 [`PHASE_4_CHECKLIST.md`](../03-delivery/PHASE_4_CHECKLIST.md)、[`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json)、[`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json) 和 [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json)。技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段未升级 Java/Boot。
+- Phase 4 已完成阶段闭环（2026-08-21）：P4-D 父子分块、P4-E embedding cache/Qdrant candidate index、P4-F dense/BM25/RRF/rerank/parent expansion、P4-G Chunk Studio/Retrieval Playground 与 P4-H 评测/规模/证据已合入 main。阶段合并提交包括 `300569b`、`ab81ed1`、`1f6450e`、`fed0034`、`041bf34`、`e27ae75`、`ca6db93` 及其对应 worker commits。30 问 Recall@10 `0.965517`、MRR@10 `0.827586`；Qdrant 1M synthetic child points Recall@10 `1.0`、p95 `1101.3382 ms`；空间过滤/索引切换回滚/override 冲突 targeted Maven 17/17。证据见 [`PHASE_4_CHECKLIST.md`](../04-交付路线与质量门禁.md)、[`phase4-retrieval-benchmark.json`](../../tests/evidence/phase4-retrieval-benchmark.json)、[`phase4-1m-qdrant.json`](../../tests/evidence/phase4-1m-qdrant.json) 和 [`phase4-isolation-and-override.json`](../../tests/evidence/phase4-isolation-and-override.json)。技术基线维持 Java 21 + Spring Boot 3.5.x，本阶段未升级 Java/Boot。
 - 尚未复制任何第三方源码。
 - 尚未选择根级开源许可证。
 - 本轮 Phase 5 实现合并提交：material worker `624c6df` / no-ff merge `49368e4`，graph worker `c874df3` / no-ff merge `49d9160`；授权上下文、embedding route/provider adapter、版本化材料读取服务、prompt hash resolver、active retrieval identity 和 opt-in production graph 及回归测试均已纳入。Phase 5 阶段闭环提交为 `4e04771`，远程记录提交为 `0fe22db`。
@@ -107,7 +107,7 @@
 
 - 记录更正：本轮已补齐真实 RAG graph stream boundary、本地 2 并发成本证据、ADR-0011 多实例 live fan-out 演练和阶段治理例外记录；下一阶段入口为 Phase 7 Linux 交付与可公开准备。云端/生产级质量与成本仍是本阶段明确边界，不得由本地证据外推。
 
-Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 RAG graph 流式/并发成本、retention/audit/cost/SSE cleanup 和多实例事件扇出演练均已有证据，代码与 CI 质量门禁已闭环。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../03-delivery/PHASE_6_CHECKLIST.md)；下一阶段为 Phase 7，R-005/R-012 需在相关高风险变更时重新开启复核。
+Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 RAG graph 流式/并发成本、retention/audit/cost/SSE cleanup 和多实例事件扇出演练均已有证据，代码与 CI 质量门禁已闭环。在线 API/SSE 性能门槛和 standalone 本地 Ollama TTFT 已有真实证据；必须继续保持 `space_id`、revision/artifact immutable、provenance、Evidence 外引用零容忍和 at-least-once 幂等边界。Phase 6 执行计划与 Checklist 见 [`PHASE_6_EXECUTION_PLAN.md`](./phase-6/PHASE_6_EXECUTION_PLAN.md) 与 [`PHASE_6_CHECKLIST.md`](../04-交付路线与质量门禁.md)；下一阶段为 Phase 7，R-005/R-012 需在相关高风险变更时重新开启复核。
 
 ## 6. 更新规则
 
@@ -128,7 +128,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 本地成熟模型默认已切换为 Ollama `qwen3.5:9b`，真实 LOCAL_ONLY RAG E2E 已通过：Run `9aa79e04-f5ff-4a35-b055-fc4471ed52de`，correlation `01a02f13-0b19-7636-bb87-ba447596280e`，完成序列 9、1 条结构化 citation，前端显示 `本地 Ollama（LOCAL_ONLY）`。此前 `qwen3.5:0.8b` 的 citation range 不满足投影约束，已保留为风险证据并不再作为默认验收模型。
 - RAG prompt 初始化与校验已强化为 `claim_text` 必须是 `answer_text` 的精确连续子串；无效可选字符范围由服务端安全回退为文本定位，伪造 citation UUID 仍严格拒绝。
 - 常用本地知识库入口已加入业务流：前端可选择本地 `notes` 文件夹，仅提交 Markdown，并以文件夹相对路径进入当前空间；`.obsidian` 目录、附件和非 Markdown 文件被过滤，服务端继续执行路径遍历、绝对路径和控制字符拒绝。`.env.local` 已配置本机 notes 根路径供本地开发约定使用，但浏览器仍要求用户显式选择文件夹，避免服务端任意读取本机文件。
-- 本轮证据和限制见 [`2026-08-23-mimo-notes-business-loop.md`](2026-08-23-mimo-notes-business-loop.md)。实际个人 notes 文件选择/摄取未在自动化浏览器工具中伪造完成，待用户在浏览器文件选择器中执行一次后再补充真实 corpus 摄取证据；个人 notes 不进入 Git、CI、长期 evidence 或云端调用。
+- 本轮证据和限制见 [`2026-08-23-mimo-notes-business-loop.md`](./2026-08-23-mimo-notes-business-loop.md)。实际个人 notes 文件选择/摄取未在自动化浏览器工具中伪造完成，待用户在浏览器文件选择器中执行一次后再补充真实 corpus 摄取证据；个人 notes 不进入 Git、CI、长期 evidence 或云端调用。
 ## 8.1 核心业务闭环增量（2026-08-24）
 
 - 服务端新增受空间隔离保护的 conversation 历史查询、conversation run 列表和软归档；归档会话保留历史 answer/citation provenance，并拒绝新问题写入。
@@ -146,7 +146,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 
 ## 10. Phase 7 代码反向审计（2026-08-29）
 
-- 当前执行入口为 [`PHASE_7_CHECKLIST.md`](../03-delivery/PHASE_7_CHECKLIST.md) 与 [`PHASE_7_EXECUTION_PLAN.md`](phase-7/PHASE_7_EXECUTION_PLAN.md)。二者以 production code 和可重跑门禁为依据，覆盖并取代此前“Phase 7 只剩部署”的任务判断。
+- 当前执行入口为 [`PHASE_7_CHECKLIST.md`](../04-交付路线与质量门禁.md) 与 [`PHASE_7_EXECUTION_PLAN.md`](./phase-7/PHASE_7_EXECUTION_PLAN.md)。二者以 production code 和可重跑门禁为依据，覆盖并取代此前“Phase 7 只剩部署”的任务判断。
 - 已确认的产品断点：注册只产生 `USER` 且没有平台管理员 bootstrap；OpenAPI 的 Provider connection test 没有 Controller 实现；Model Profile 可在没有 verified capabilities 时直接 `PUBLISHED`；generation request 固定 `stream=false`；Git/local connectors 未接 Server/Web；feedback、审计/成本管理视图缺失。
 - 已确认的检索断点：BM25 是进程内 `InMemoryBm25CandidateStore`；空间虽绑定 RERANK route，production retrieval 仍使用 `LexicalReranker`；`backend/ai-runtime` 只有包骨架。现状不能被描述为 durable lexical 或真实模型 rerank。
 - 已确认的交付断点：Server/Worker 镜像为 UID 10001，但 Web 仍为默认 nginx root；Server/Worker 在 Compose 中没有应用级 healthcheck，三类应用也没有完整 capability/只读写路径/资源限额/digest 证据。
@@ -215,7 +215,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - P7D-00 Actions Node.js 24 运行时升级与 P7D-01 容器加固均已完成；P7D-01 证据 [`phase7-container-hardening.v1.json`](../../tests/evidence/phase7-container-hardening.v1.json) 为 PASS，覆盖 server、worker、web 的 non-root、health、capability、只读文件系统、受控临时写路径、资源限制和日志轮转。
 - 本治理变更以 `main`/`origin/main` 当时同步的记录提交 `d299c0c` 为基线；quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对候选 `00bee66` 全绿，检查 annotations 为空。该运行确认 P7D-00/P7D-01 的远程工作流基线已通过。
 - 下一项为 P7D-02「发布镜像与供应链硬化」：锁定基础镜像和应用镜像 immutable digest，针对目标镜像生成 SBOM/Grype SARIF，并对目标镜像执行 Secret 审计；不得创建 release、推送生产镜像、执行生产迁移或使用生产 Secret。
-- P7D-02 worker ticket 已建立于 [`P7D-02-a21.yaml`](tickets/P7D-02-a21.yaml)，基线为 `d299c0cb2329519136359d2a714a84a08f73b256`，依赖 P7D-01 已满足。
+- P7D-02 worker ticket 已建立于 [`P7D-02-a21.yaml`](./tickets/P7D-02-a21.yaml)，基线为 `d299c0cb2329519136359d2a714a84a08f73b256`，依赖 P7D-01 已满足。
 
 ## 19. P7D-02 供应链扫描阻塞（2026-08-30）
 
@@ -230,7 +230,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 - 已新增任务板卡 `P7D-02R`（board.v4），从阻塞提交 `20c7f87` 派生，预算 10,000 tokens；目标是修复目标镜像中的 Critical/High 漏洞并在 `grype --fail-on high` 下重新验收。
 - ownership 明确为：根 `pom.xml`、`backend/server/pom.xml`、`backend/ingestion-worker/pom.xml`、`deploy/docker/`、`deploy/compose/`、`scripts/ci/`、`tests/ci/` 和本卡证据文件。禁止修改 Server/Worker 业务源码、Web 源码、契约、数据库迁移、治理文档和 release 文件。
 - P7D-02R 允许升级直接/传递依赖和基础镜像 digest，但不允许降低 Grype 阈值、增加无 owner/期限/补偿控制的漏洞例外或把未修复高危项标记为通过；若修复仍需超出上述 ownership，必须 BLOCKED 回报。
-- ticket 已建立于 [`P7D-02R-a22.yaml`](tickets/P7D-02R-a22.yaml)，现已分派至 A22 隔离 worktree `codex/p7-supply-chain-remediation-a22`，基线为 `20c7f87`；P7D-03 在本卡完成后解除冻结。
+- ticket 已建立于 [`P7D-02R-a22.yaml`](./tickets/P7D-02R-a22.yaml)，现已分派至 A22 隔离 worktree `codex/p7-supply-chain-remediation-a22`，基线为 `20c7f87`；P7D-03 在本卡完成后解除冻结。
 
 ## 21. P7D-02R 供应链漏洞修复完成（2026-08-30）
 
@@ -242,7 +242,7 @@ Phase 6 已完成阶段闭环（显式豁免人工/red-team 门槛）。真实 R
 
 ## 22. P7D-03 Ubuntu 部署验收票据与环境阻塞（2026-08-30）
 
-- P7D-03 已按 P7D-02R 完成创建票据 [`P7D-03-a23.yaml`](tickets/P7D-03-a23.yaml)，基线为 `6fa7f48`，预算 18,000 tokens；ownership 限定为部署文档、Compose 运行入口、`tests/e2e/` 与 Ubuntu smoke 证据，不允许修改业务源码、契约、迁移或 release。
+- P7D-03 已按 P7D-02R 完成创建票据 [`P7D-03-a23.yaml`](./tickets/P7D-03-a23.yaml)，基线为 `6fa7f48`，预算 18,000 tokens；ownership 限定为部署文档、Compose 运行入口、`tests/e2e/` 与 Ubuntu smoke 证据，不允许修改业务源码、契约、迁移或 release。
 - 只读环境检查显示 WSL 仅有运行中的 `docker-desktop`，没有独立 Ubuntu 24.04 发行版；Docker Engine 运行在 Docker Desktop。由于本卡验收条件要求“干净 Ubuntu 24.04 + 无继承卷”，不能将当前 Windows/共享 Compose 环境冒充通过，A23 暂不创建 worker worktree。
 - 按 AGENTS.md E6，P7D-03 标记为 BLOCKED，阻塞条件是外部 Ubuntu 24.04 执行环境缺失；获得独立 Ubuntu 24.04 WSL/VM 后可从 `6fa7f48` 重新分派，P7D-04~07 保持等待。
 

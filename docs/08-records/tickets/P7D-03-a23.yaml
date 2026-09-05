@@ -13,7 +13,7 @@ budget:
   accounting: worker self-report plus evidence summary
 scope:
   ownership:
-    - docs/05-operations/DEPLOYMENT.md
+    - docs/05-部署运维与恢复.md
     - deploy/README.md
     - deploy/compose/README.md
     - deploy/compose/
@@ -21,7 +21,7 @@ scope:
     - tests/evidence/phase7-ubuntu-smoke.v1.json
   read_only:
     - docs/08-records/tickets/P7D-03-a23.yaml
-    - docs/05-operations/DEPLOYMENT.md
+    - docs/05-部署运维与恢复.md
     - deploy/README.md
     - deploy/compose/README.md
     - deploy/compose/compose.yaml
@@ -40,7 +40,7 @@ scope:
     - docs/08-records/AGENT_STATE_CARD.md
     - docs/08-records/PROJECT_STATUS.md
     - docs/08-records/TASK_BOARD.md
-    - ROADMAP.md
+    - docs/04-交付路线与质量门禁.md
     - RISK_REGISTER.md
     - TRACEABILITY_MATRIX.md
     - AGENTS.md
@@ -69,7 +69,7 @@ acceptance:
   - id: A1
     text: Ubuntu 24.04 clean-environment preflight, Docker/Compose versions, project/network/volume isolation and no inherited application data are evidenced.
   - id: A2
-    text: Deployment follows docs/05-operations/DEPLOYMENT.md and uses immutable application/infrastructure image references with no production credentials.
+    text: Deployment follows docs/05-部署运维与恢复.md and uses immutable application/infrastructure image references with no production credentials.
   - id: A3
     text: All ten journeys pass with synthetic fixtures; every API request is space-scoped where applicable and citations retain document/chunk provenance.
   - id: A4
