@@ -63,7 +63,7 @@ scope:
     - docs/08-records/RISK_REGISTER.md
     - docs/08-records/TRACEABILITY_MATRIX.md
     - AGENTS.md
-    - docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md
+    - docs/00-governance/AGENT_LOOP_PROMPT.md
     - MEMORY.md
     - docs/08-records/TASK_BOARD.md
     - apps/web/

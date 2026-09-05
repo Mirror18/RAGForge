@@ -3,7 +3,7 @@
 > 本看板与 [`AGENT_STATE_CARD.md`](AGENT_STATE_CARD.md) §6 的分派表一一对应，是 Agent 执行任务的预算与验收真源。
 > 每张卡片有独立 Token 预算、依赖、归属目录、必跑测试；**超预算 20% 必须停下汇报**。
 >
-> 版本：`board.v5` | 生效基线：Phase 7 `p2-execution` | 生成日期：2026-08-30
+> 版本：`board.v6` | 生效基线：Phase 7 `p2-execution` | 生成日期：2026-09-05
 
 ---
 
@@ -17,6 +17,28 @@
 6. **阶段推进**：优先级必须严格按 P0 → P1 → P2。P2 的部署卡片在 P0、P1 全部通过前不得启动。
 
 ---
+
+## 0.5 人类任务总览（先看这里）
+
+本表回答两个问题：**要开发什么**，以及**完成后用户/系统会得到什么**。状态以本看板与[状态卡](AGENT_STATE_CARD.md)为准；卡片下面保留预算、ownership、验收命令和依赖。已完成任务的实施细节、改动文件、真实测试结果、风险和下一步写在对应 Git commit body 中，不在本表追加执行日志。
+
+| 任务包 | 要开发什么 | 达成效果 | 当前状态 |
+|---|---|---|---|
+| P7C-01～03 | 来源、任务和索引生命周期 | 用户能提交来源、看到每个任务/文件状态，失败可重试，索引能从 candidate 发布到 active、回滚或退役 | ✅ 完成 |
+| P7C-04～05R | 持久化 lexical 检索和真实 rerank | 重启后仍能检索；RERANK 只有真实 adapter 探测成功才可发布，不再用声明值冒充能力 | ✅ 完成 |
+| P7C-06～08 | 可核验问答、上下文跳转和管理闭环 | 普通用户能从新会话问答、查看可定位引用、反馈，并进入来源/检索上下文；管理员能看健康、成本、反馈和审计 | ✅ 完成 |
+| P7Q-01～06 | 开发工具链、契约和 Web 回归 | 同一候选 SHA 可做 preflight、全量 JVM/Web/契约/RAG 评估；页面有路由、分页、刷新恢复和关键旅程测试 | ✅ 完成 |
+| P7D-00～02R | 发布工作流、容器和供应链 | Actions 使用兼容运行时；三类应用加固；镜像可追溯，SBOM/Grype/Secret 门禁通过 | ✅ 完成 |
+| P7D-03 | 独立 Ubuntu 24.04 从零部署验收 | 能按部署文档完成初始化、摄取、active index、带引用问答、反馈、审计、跨空间拒绝和云出境拒绝 | ⛔ 阻塞：缺少独立 Ubuntu 24.04 WSL/VM |
+| P7D-04～07 | 观测、升级/回滚、公共化和阶段闭环 | 形成可定位故障、可恢复升级、可审查公共仓库和完整 Phase 7 证据 | ⏳ 等待 P7D-03 |
+| ARCH-DOC-01 | 版本化知识执行架构演进 | 已接受 ADR-0013 和设计边界；后续可拆成可实现的契约、迁移、执行快照和恢复任务 | ✅ 文档完成；实现待拆卡 |
+| GOV-01 | Agent-first 入口和文档收敛 | 人类从 START_HERE 找到下一步；Agent 按状态卡→任务板→Ticket 工作；稳定代码路径不变 | ✅ 本次整理 |
+
+### 如何查看一个任务的完整记录
+
+1. 在本表或下方卡片找到任务 ID 和完成 SHA。
+2. 执行 `git show --format=fuller <SHA>`，查看提交正文中的完成内容、影响文件、验证、风险、回滚和下一步。
+3. 如果只知道任务 ID，先用 `git log --all --oneline --grep='<任务ID>'` 搜索；状态卡/项目状态只用于导航和审计，不替代 Git history。
 
 ## 1. P0：阻断 MVP 的实现断点（9 张卡片，预算合计 ≈64,000 tokens）
 
@@ -90,6 +112,12 @@ P7C-04（可并行） ─► P7C-05
 
 > 本轮架构文档预算单独核算，不计入下方历史 Phase 7 实现预算；不自动调度新实现。新增治理/研究文档是本卡必要集成内容，状态见状态卡 §6。
 
+## 3.2 用户追加：项目入口与文档收敛
+
+| 卡片 ID | 标题 | 前置 | Ownership | Token 预算 | 验收输出 | 必跑测试/门禁 |
+|---|---|---|---|---:|---|---|
+| GOV-01 | 对齐 dataH 的 Agent-first 工程入口：建立人类 START_HERE、仓库级 Skill、治理目录下的 Agent 循环提示词；精简根 README 和文档索引；不重命名已经稳定的 `apps/` 代码边界 | 无 | `.agents/skills/ragforge-development/`、`README.md`、`docs/README.md`、`docs/00-governance/START_HERE.md`、`docs/00-governance/AGENT_LOOP_PROMPT.md`、`MEMORY.md`、`docs/08-records/TASK_BOARD.md`、`docs/08-records/AGENT_STATE_CARD.md`、`docs/08-records/tickets/TICKET_TEMPLATE.yaml` | 6,000 | 人类从单一入口能找到当前阻塞和下一步；Agent 能按状态卡→任务板→Ticket 路由；旧提示词路径不再被引用；没有状态/任务第二真源 | `quick_validate.py`、Markdown links、path index、format、git diff --check |
+
 ---
 
 ## 4. 预算汇总
@@ -113,3 +141,5 @@ P7C-04（可并行） ─► P7C-05
 > board.v4 结构变更：新增 P7D-02R 漏洞修复与重新验收卡，并将 P7D-03 的前置调整为 P7D-02R。结构变更提交：`d5e16ca`。
 
 > board.v5 结构变更：新增用户指定的 ARCH-DOC-01 文档卡；来源基线 `2ad59b9`，状态与提交见状态卡 §6。
+
+> board.v6 结构变更：新增 GOV-01，按 dataH 的 Agent-first 入口整理 RAGForge 文档与仓库级 Skill；不改变业务代码和 Phase 7 依赖。

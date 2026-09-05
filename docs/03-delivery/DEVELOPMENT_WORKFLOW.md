@@ -65,7 +65,7 @@ CI 和公开仓库只使用合成/授权样本。真实 Obsidian 仓库仅作为
 
 ## 7. 多 Agent 并行开发
 
-多 Agent 采用“主 Agent 编排 + 一任务一分支一 worktree + 主分支顺序集成”。主 Agent 不把存在共享契约、迁移序号或同一文件写冲突的任务强行并行化。执行规则以根目录 [AGENTS.md](../../AGENTS.md) 为准，可直接使用 [多 Agent 循环执行提示词](MULTI_AGENT_LOOP_PROMPT.md)。
+多 Agent 采用“主 Agent 编排 + 一任务一分支一 worktree + 主分支顺序集成”。主 Agent 不把存在共享契约、迁移序号或同一文件写冲突的任务强行并行化。执行规则以根目录 [AGENTS.md](../../AGENTS.md) 为准，可直接使用[多 Agent 循环执行提示词](../00-governance/AGENT_LOOP_PROMPT.md)。
 
 每个执行 Agent 在独立 worktree 中完成一个有验收边界的任务，运行相关测试并以中文 Conventional Commit 提交。主 Agent 审查后按依赖顺序合并，每批合并运行仓库级验证；一个 Phase 的全部退出条件满足后，再提交中文阶段验收记录。
 

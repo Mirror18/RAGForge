@@ -12,7 +12,7 @@
 > | **硬规则（不可变）** | [`AGENTS.md`](AGENTS.md) 的 Non-negotiable rules 章节 | 任何 Agent 启动时只读该节；其他章节按需进入 |
 > | **任务预算 / 验收标准** | [`docs/08-records/TASK_BOARD.md`](docs/08-records/TASK_BOARD.md) | Orchestrator 分派时引用；Worker 通过 Ticket 继承摘要 |
 > | **任务细化指令** | [`docs/08-records/tickets/*.yaml`](docs/08-records/tickets/) | Worker Agent 只读取分派给自己的那份 Ticket |
-> | **角色专用提示词** | [`docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md`](docs/03-delivery/MULTI_AGENT_LOOP_PROMPT.md) | 只在启动对应角色的 Agent 时一次性读取对应章节 |
+> | **角色专用提示词** | [`docs/00-governance/AGENT_LOOP_PROMPT.md`](docs/00-governance/AGENT_LOOP_PROMPT.md) | 只在启动对应角色的 Agent 时一次性读取对应章节 |
 > | **治理 / 阶段 / 证据级权威** | [`docs/08-records/PROJECT_STATUS.md`](docs/08-records/PROJECT_STATUS.md) + 各阶段 CHECKLIST / EXECUTION_PLAN | 只在审计 / 阶段复盘 / 发布验收时读取；日常执行不得打开全文 |
 >
 > 若在 `AGENT_STATE_CARD.md` 与 `PROJECT_STATUS.md` 之间发现冲突，**一律以 PROJECT_STATUS 为准**，并立即建议 Orchestrator 回写修正状态卡。

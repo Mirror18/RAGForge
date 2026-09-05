@@ -1,23 +1,38 @@
-# RAGForge Documentation Map
+# RAGForge 文档索引
 
-| 区域 | 内容 | 主要入口 |
+先读[从这里开始](00-governance/START_HERE.md)。本索引负责导航，不复制状态和任务验收；同一事实只在其权威文档维护。
+
+## 文档分区
+
+| 分区 | 内容 | 入口 |
 |---|---|---|
-| `00-governance` | 目的、边界、工作和授权方式 | [项目章程](00-governance/PROJECT_CHARTER.md) |
-| `01-product` | PRD、角色和验收故事 | [PRD](01-product/PRD.md) |
-| `02-architecture` | 系统/领域/摄取/检索/API 和 ADR | [总体架构](02-architecture/ARCHITECTURE.md) |
-| `03-delivery` | Phase、研发流程、完成定义 | [路线图](03-delivery/ROADMAP.md) / [当前 Phase 7 清单](03-delivery/PHASE_7_CHECKLIST.md) / [多 Agent Loop](03-delivery/MULTI_AGENT_LOOP_PROMPT.md) |
-| `04-quality` | 测试、RAG 评估、性能和数据政策 | [测试策略](04-quality/TEST_STRATEGY.md) |
-| `05-operations` | 部署、观测、备份和 Runbook | [部署设计](05-operations/DEPLOYMENT.md) |
-| `06-security-compliance` | 安全、威胁、出境、开源合规 | [安全基线](06-security-compliance/SECURITY_BASELINE.md) |
-| `07-research` | GitHub 项目调研、引用和复用登记 | [基准调研](07-research/GITHUB_BENCHMARK.md) |
-| `08-records` | 状态、风险、追溯和阶段复盘 | [项目状态](08-records/PROJECT_STATUS.md) / [风险表](08-records/RISK_REGISTER.md) |
+| `00-governance` | 项目章程、授权、Agent 工作流和协作约定 | [START_HERE](00-governance/START_HERE.md) / [项目章程](00-governance/PROJECT_CHARTER.md) |
+| `01-product` | 产品目标、范围、角色和用户故事 | [PRD](01-product/PRD.md) |
+| `02-architecture` | 总体架构、领域、摄取、检索、API 和 ADR | [总体架构](02-architecture/ARCHITECTURE.md) / [ADR 索引](02-architecture/adr/README.md) |
+| `03-delivery` | 路线图、阶段清单、完成定义和开发流程 | [路线图](03-delivery/ROADMAP.md) / [Phase 7](03-delivery/PHASE_7_CHECKLIST.md) |
+| `04-quality` | 测试策略、RAG 评估、性能和测试数据政策 | [测试策略](04-quality/TEST_STRATEGY.md) |
+| `05-operations` | 部署、备份、观测和 Runbook | [部署设计](05-operations/DEPLOYMENT.md) |
+| `06-security-compliance` | 安全基线、威胁、出境、留存和 OSS 合规 | [安全基线](06-security-compliance/SECURITY_BASELINE.md) |
+| `07-research` | GitHub 对标、参考资料和上游复用登记 | [GitHub 调研](07-research/GITHUB_BENCHMARK.md) |
+| `08-records` | 状态、任务、风险、追溯、阶段计划、证据和复盘 | [状态卡](08-records/AGENT_STATE_CARD.md) / [任务板](08-records/TASK_BOARD.md) |
 
-文档状态约定：规划文档描述当前基线；ADR 保存不可变决策历史；records 保存有日期的执行证据。当前阶段为 Phase 7 `implementation-reconciliation`；实现状态必须由代码路径和可重跑测试证明，不能由历史阶段声明、契约占位或 UI 文案推断。
+## 权威关系
 
-## 架构演进提案（2026-09-05）
+- 硬规则：根目录 [`AGENTS.md`](../AGENTS.md)。
+- 日常状态：[`AGENT_STATE_CARD.md`](08-records/AGENT_STATE_CARD.md)。
+- 任务定义与预算：[`TASK_BOARD.md`](08-records/TASK_BOARD.md)；Worker 只读自己的 Ticket。
+- 任务目标与达成效果：[`TASK_BOARD.md` 人类任务总览](08-records/TASK_BOARD.md#05-人类任务总览先看这里)；任务执行细节、测试和风险以 Git commit body 为准。
+- 产品范围：[`PRD.md`](01-product/PRD.md)；架构决策：[`02-architecture/adr/`](02-architecture/adr/)。
+- 审计、阶段和证据级记录：[`PROJECT_STATUS.md`](08-records/PROJECT_STATUS.md)、风险表、追溯矩阵和阶段记录。
 
+## 当前架构演进
+
+- [GitHub 知识库对标](07-research/2026-09-05-knowledge-architecture-benchmark.md)
 - [目标架构、差距与迁移设计](02-architecture/ARCHITECTURE_EVOLUTION.md)
-- [GitHub 知识库对标与来源](07-research/2026-09-05-knowledge-architecture-benchmark.md)
-- [ADR-0013：版本化知识执行（Proposed）](02-architecture/adr/0013-versioned-knowledge-execution.md)
+- [ADR-0013：版本化知识执行](02-architecture/adr/0013-versioned-knowledge-execution.md)
 
-提案与现行 Accepted 基线分别标注；PRD、路线图、风险和追溯矩阵的增量内容均为计划，不表示应用实现或阶段验收完成。
+ADR-0013 已接受，但实现仍需拆成有 ownership、契约和测试的任务卡；文档接受不等于运行时完成。
+
+## 如何维护
+
+新需求先更新 PRD、路线图、风险和追溯；架构变化新增 ADR；运行证据放到 `docs/08-records/` 或 `tests/evidence/`；不要把聊天记录、临时草稿或 README 的复制内容当作第二个事实源。
