@@ -172,3 +172,14 @@
 | RF-IAM-003 | 平台用户生命周期管理与停用 | `UserAdminController`、`UserAdminService`、`UserRepository`、`V16__user_lifecycle_management.sql`、`ServerIntegrationTest.platformAdminCanManageUsersButRegularUserCannot` | 平台管理员可列出/创建/编辑/停用；普通用户 403；自我降权/停用保护；停用登录/session 失效；无密码返回和无明文持久化 | 首个 `PLATFORM_ADMIN` 需受控运维 bootstrap；真实浏览器视觉验收待补 |
 | RF-SPACE-003 | 知识空间增删查改与成员管理 | `SpaceController`、`SpaceService`、`SpaceRepository`、`SpaceMemberView`、`ServerIntegrationTest.spaceAdminCanUpdateArchiveAndManageMembersWithVersionChecks` | 空间编辑/归档、成员列表、角色修改、成员移除；版本冲突和最后管理员保护；归档采用可审计软删除 | 平台管理员不自动获得所有空间 membership；生产恢复/删除策略仍按空间 retention 文档执行 |
 | RF-WEB-003 | 可理解的管理入口、浏览器时区和 Prompt 选择稳定性 | `PersonalSpaceView.vue`、`App.vue`、`format.ts`、`ControlCenterView.vue`、`BusinessFlowView.vue`；Web format/build | 账号/空间管理入口可见；日期时间使用浏览器 IANA 时区；`selectedPromptTemplateId` 已声明；Chat route 默认云端 MiMo 且保持显式授权 | 真实浏览器交互/视觉证据待下一轮用测试账号补充；Embedding/Rerank 仍为本地能力 |
+
+## 知识执行架构演进（2026-09-05，设计提案）
+
+版本：`knowledge-evolution-traceability.v1`。下列全部为 Proposed，未执行运行时验收；文档交付卡为 [ARCH-DOC-01](TASK_BOARD.md)，技术设计与验收映射见[架构演进](../02-architecture/ARCHITECTURE_EVOLUTION.md)，不是当前功能完成证据。
+
+| 需求 ID | 来源 | 架构决策 | 计划验证 | 风险 | 实现状态 |
+|---|---|---|---|---|---|
+| RF-ARCH-001 | [PRD §8](../01-product/PRD.md) | [ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md) | 阶段崩溃/重复投递/租约/取消/跨空间/固定版本重放 | R-055、R-058 | 待审批与拆卡 |
+| RF-ARCH-002 | PRD §8 | ADR-0013；沿用 ADR-0006/0012 | 解析产物完整性、质量拒绝、发布失败保持旧索引、原子切换 | R-055 | 待审批与拆卡 |
+| RF-ARCH-003 | PRD §8 | ADR-0013；沿用现有 Evidence Bundle | 同路径检索评估、固定配置对比、成本/延迟与安全门禁 | R-057 | 待审批与拆卡 |
+| RF-ARCH-004 | PRD §8 | ADR-0013；保持 ADR-0004 空间 RBAC | 来源暂停/错误/删除/撤权、历史引用和缓存再授权 | R-056、R-059 | 待审批与拆卡 |

@@ -13,3 +13,11 @@
 | `08-records` | 状态、风险、追溯和阶段复盘 | [项目状态](08-records/PROJECT_STATUS.md) / [风险表](08-records/RISK_REGISTER.md) |
 
 文档状态约定：规划文档描述当前基线；ADR 保存不可变决策历史；records 保存有日期的执行证据。当前阶段为 Phase 7 `implementation-reconciliation`；实现状态必须由代码路径和可重跑测试证明，不能由历史阶段声明、契约占位或 UI 文案推断。
+
+## 架构演进提案（2026-09-05）
+
+- [目标架构、差距与迁移设计](02-architecture/ARCHITECTURE_EVOLUTION.md)
+- [GitHub 知识库对标与来源](07-research/2026-09-05-knowledge-architecture-benchmark.md)
+- [ADR-0013：版本化知识执行（Proposed）](02-architecture/adr/0013-versioned-knowledge-execution.md)
+
+提案与现行 Accepted 基线分别标注；PRD、路线图、风险和追溯矩阵的增量内容均为计划，不表示应用实现或阶段验收完成。

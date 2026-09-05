@@ -88,3 +88,7 @@ RAGFlow 的指标来自检索测试页面，AnythingLLM 的指标来自生成回
 2. 每个借鉴项已在 [`UPSTREAM_REUSE_REGISTER.md`](UPSTREAM_REUSE_REGISTER.md) 固定许可证、精确 commit 和 use mode。
 3. 首个验收数据集已由仓库内脚本可复现生成，并保留 manifest/hash。
 4. 竞品实验没有改变 RAGForge 的模块化单体 + 独立 ingestion worker 技术基线；Phase 1 入口和未决风险记录在 [`PHASE_0_RETROSPECTIVE.md`](../08-records/retrospectives/PHASE_0_RETROSPECTIVE.md)。
+
+## 2026-09-05 增量架构调研
+
+新增 [知识库架构对标与取舍](2026-09-05-knowledge-architecture-benchmark.md)，研究 RAGFlow、Dify、Onyx，并以 Haystack 补充组件化流水线参考。历史 Phase 0 的版本、许可证与复用决定仍属于当时记录；本次 HEAD 观察不更新旧依赖版本或批准范围。设计结果见[架构演进提案](../02-architecture/ARCHITECTURE_EVOLUTION.md)。

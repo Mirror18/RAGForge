@@ -36,7 +36,7 @@ scope:
     - docs/07-research/GITHUB_BENCHMARK.md
     - docs/03-delivery/DEFINITION_OF_DONE.md
   read_limits:
-    - DEFINITION_OF_DONE.md 只读第1节及第7节文档适用项；TASK_BOARD.md只读ARCH-DOC-01卡。
+    - DEFINITION_OF_DONE.md 只读第1节文档适用项；TASK_BOARD.md只读ARCH-DOC-01卡。
     - 其他架构文档只读相关小节；不得广搜代码；审计证据由编排者另行提供。
   non_goals:
     - 不改应用代码、可执行契约、迁移、依赖、部署配置或 AGENTS.md。

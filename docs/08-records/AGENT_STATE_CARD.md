@@ -109,7 +109,7 @@ P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7
 
 | 卡片 ID | 标题 | 优先级 | 状态 | 担当 Agent | branch | worktree | Token 预算 | 实际消耗 | 完成 SHA | 备注 |
 |---|---|---|---|---|---|---|---:|---:|---|---|
-| ARCH-DOC-01 | 开源知识库架构演进文档 | P2 / 用户追加 | drafting | A24 / Orchestrator | codex/arch-knowledge-evolution-a24 | RAGForge-worktrees/codex-arch-knowledge-evolution-a24 | 10,000 | — | — | 仅文档提案；ADR 保持 Proposed；不改变 P7D-03 阻塞和已有实施状态 |
+| ARCH-DOC-01 | 开源知识库架构演进文档 | P2 / 用户追加 | documented-local / pending integration | A24 / Orchestrator | codex/arch-knowledge-evolution-a24 | RAGForge-worktrees/codex-arch-knowledge-evolution-a24 | 10,000 | 约 10,600（Worker 估算，+6%） | 79d7e76a2dd716915a56f777b2b1a57d246d15cf | 文档与本地门禁通过；ADR Proposed；未合并 main、未核验该候选远程 CI；不改变 P7D-03 阻塞 |
 | AGENT-OPT-01 | Agent 效率文档骨架落地 | P0 | ✅ completed | Orchestrator | main | RAGForge | 8,000 | 未记录 | 609ef5c9a1284bef71ed9295910aeb9c48d383cb | 已由主线提交完成；历史实际 token 未记录，不重复执行 |
 | P7C-04 | durable BM25 ADR + 实现（R-023） | P0 | ✅ completed | A2 | codex/p7-durable-bm25-a2 | RAGForge-worktrees/codex-p7-durable-bm25-a2 | 10,000 | 7,600 | a427362546d19a37d1b61759526371fcdaa5105a | 已合并至 75da5cb；ADR-0012 Accepted，Qdrant payload 重建与重启命中 1/1，Server/Worker/contract 门禁通过，未新增迁移；R-023 CLOSED |
 | P7C-01 | 来源任务中心后端 API | P0 | ✅ completed | A3 | codex/p7-source-task-api-a3 | RAGForge-worktrees/codex-p7-source-task-api-a3 | 8,000 | 5,800 | e4a9481710aabe31a6271adbcac9a30b7c7dfc08 | 已合并至 d35eb8e；V21 追加迁移；A1–A5 通过 |

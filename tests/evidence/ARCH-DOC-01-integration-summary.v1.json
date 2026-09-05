@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "scope": "documentation-only",
+  "baseline_sha": "2ad59b9ff2552cece954ce875e6c153f54536f1d",
+  "baseline": [
+    {
+      "command": "python scripts/ci/check_markdown_links.py",
+      "exit_code": 0,
+      "duration_ms": 781,
+      "output": "Markdown link check passed: 168 files scanned.\n"
+    },
+    {
+      "command": "python scripts/ci/format_check.py",
+      "exit_code": 0,
+      "duration_ms": 1938,
+      "output": "Format gate passed: 843 tracked files checked for whitespace, Python and JSON syntax.\n"
+    },
+    {
+      "command": "python scripts/ci/architecture_check.py",
+      "exit_code": 0,
+      "duration_ms": 109,
+      "output": "Architecture check passed: modular-monolith/worker directories exist; core services are unprofiled and application services are isolated behind app.\n"
+    },
+    {
+      "command": "python scripts/ci/path_index_check.py",
+      "exit_code": 0,
+      "duration_ms": 141,
+      "output": "Path index check passed: canonical Docker, Compose, and local-start paths are indexed.\n"
+    },
+    {
+      "command": "python scripts/ci/secret_scan.py",
+      "exit_code": 0,
+      "duration_ms": 1640,
+      "output": "Secret scan passed: no supported credential pattern found in tracked text files.\n"
+    }
+  ],
+  "candidate": [
+    {
+      "command": "python scripts/ci/check_markdown_links.py",
+      "exit_code": 0,
+      "duration_ms": 266,
+      "output": "Markdown link check passed: 171 files scanned.\n"
+    },
+    {
+      "command": "python scripts/ci/format_check.py",
+      "exit_code": 0,
+      "duration_ms": 406,
+      "output": "Format gate passed: 850 tracked files checked for whitespace, Python and JSON syntax.\n"
+    },
+    {
+      "command": "python scripts/ci/architecture_check.py",
+      "exit_code": 0,
+      "duration_ms": 63,
+      "output": "Architecture check passed: modular-monolith/worker directories exist; core services are unprofiled and application services are isolated behind app.\n"
+    },
+    {
+      "command": "python scripts/ci/path_index_check.py",
+      "exit_code": 0,
+      "duration_ms": 78,
+      "output": "Path index check passed: canonical Docker, Compose, and local-start paths are indexed.\n"
+    },
+    {
+      "command": "python scripts/ci/secret_scan.py",
+      "exit_code": 0,
+      "duration_ms": 750,
+      "output": "Secret scan passed: no supported credential pattern found in tracked text files.\n"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "duration_ms": 47,
+      "output": "warning: in the working copy of 'docs/01-product/PRD.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/03-delivery/ROADMAP.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/07-research/GITHUB_BENCHMARK.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/07-research/UPSTREAM_REUSE_REGISTER.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/AGENT_STATE_CARD.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/RISK_REGISTER.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/TRACEABILITY_MATRIX.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/08-records/tickets/ARCH-DOC-01-a24.yaml', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'docs/README.md', CRLF will be replaced by LF the next time Git touches it\n"
+    }
+  ],
+  "remote_ci": "not_verified",
+  "runtime_tests": "not_run_documentation_only",
+  "candidate_description": "79d7e76 plus orchestrator documentation integration; exact reviewed content identified by file hashes below",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0
+  },
+  "review": {
+    "architecture": "PASS_document_design",
+    "security": "PASS_proposed_boundary_review_only",
+    "accepted_adrs_modified": false,
+    "runtime_changes": false,
+    "merge_status": "not_merged_remote_CI_not_verified",
+    "adr_status": "Proposed_pending_human_acceptance",
+    "worker_token_used_estimate": 10600,
+    "worker_token_limit": 10000
+  },
+  "reviewed_file_hashes": {
+    "docs/01-product/PRD.md": "0ec3921fd5224fc920bd46dadd94a07c3dbee577ff2b53bf054fba88a36b0e64",
+    "docs/02-architecture/API_AND_EVENTS.md": "947d57bf1ad501fe55a5f626324d56bcd09cdd522d2eaae54c6b24c85412b1bb",
+    "docs/02-architecture/ARCHITECTURE.md": "05e4ae95d5a1d265be7654cfe9d115c0c590298ac6f276e0ec2c9423b699dc4d",
+    "docs/02-architecture/ARCHITECTURE_EVOLUTION.md": "0f9c3f3111ed5cd630980070befdd0d6b229638e1046e6e50c4053163583b307",
+    "docs/02-architecture/DOMAIN_MODEL.md": "b0ff8b52a0eb4563e9302d17721f13d9cd3bbb101b50d0ae21d54238c6bc5885",
+    "docs/02-architecture/INGESTION_PIPELINE.md": "ded34605155df0a322d0bc44f4cf078a39ef64ea377eea0b7f48e702d7cd691a",
+    "docs/02-architecture/RETRIEVAL_AND_CHAT.md": "352fa831a1155ba0ff65c3c09298b4afdd62dc071996c871d5bd338df1b4d108",
+    "docs/02-architecture/adr/0013-versioned-knowledge-execution.md": "bd57a72eb8526271b6ec49cb4973bfa12267c3477216f068e8838fbe0f198936",
+    "docs/02-architecture/adr/README.md": "b9cef576847214dcb5bfe99c88ff20ce3790a92e8d728f698ba515310eff46e7",
+    "docs/03-delivery/ROADMAP.md": "8e9a68f7e70e6ee82656b7f8cd09ee45bb405a9928e8b8f9432d281571f2224b",
+    "docs/07-research/2026-09-05-knowledge-architecture-benchmark.md": "6ef02a1c6e194f731b446596fd554e01da7e42e425f49238178c21e6466f05a3",
+    "docs/07-research/GITHUB_BENCHMARK.md": "702c08174b74048b4d19c27b3cb5f0306a6dd80a23f28e9325e68bbb1a469a44",
+    "docs/07-research/UPSTREAM_REUSE_REGISTER.md": "fd8b76c5aff172abcb173b17d51847ec4f4d0a90bf2085345a545f739ec064fd",
+    "docs/08-records/2026-09-05-architecture-audit.md": "76de75bdd18787c69faad7e9aedbb31a863fc5ff2ea67d86db39cec9fcff604a",
+    "docs/08-records/AGENT_STATE_CARD.md": "88e3a4cf804a939a574743135fc9a9d8c19235962df581ee3ea8ae0b82d857ee",
+    "docs/08-records/RISK_REGISTER.md": "66df4decec5e26c339e1e52900a1a980ff841ba194d38c5754106effc407e0b9",
+    "docs/08-records/TASK_BOARD.md": "855a476bf9de994bbe40d16f476d35e4d8b47aa2862eb99a84df2425daeb3f82",
+    "docs/08-records/TRACEABILITY_MATRIX.md": "7a43501c2418dd12f647ff34242b9ca76608b3ebf5a5d4a9fe2879c9ed76bd1e",
+    "docs/08-records/tickets/ARCH-DOC-01-a24.yaml": "a3ea2a5c24b8de9713ce5d4f8cc3461666733e81e6a8643f0b56be04ee30be74",
+    "docs/README.md": "ef1457aa90be1fece9e90bb070d329ed7fb945c5d82294ed745284a0d29819b0",
+    "tests/evidence/ARCH-DOC-01-worker-summary.v1.json": "1a33e2628a0fadeaef4340fec7a3987b07d2f5f23c7f5d990db4c00c5bcb7637"
+  }
+}

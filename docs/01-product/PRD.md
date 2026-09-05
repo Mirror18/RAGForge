@@ -138,3 +138,16 @@ RAGForge 是供企业内部团队部署的通用知识助手。它把分散文�
 - [RAGFlow：数据摄取与 Retrieval Test 产品参考](https://github.com/infiniflow/ragflow)
 - [AnythingLLM：工作区和本地优先体验参考](https://github.com/Mintplex-Labs/anything-llm)
 - [Spring AI：Java AI 应用抽象](https://github.com/spring-projects/spring-ai)
+
+## 8. 知识执行架构演进需求（2026-09-05，Proposed）
+
+版本：`knowledge-evolution-requirements.v1`。本节是用户要求的架构文档规划，待 [ADR-0013](../02-architecture/adr/0013-versioned-knowledge-execution.md) 经人类明确接受后再拆实施卡；不修改当前交付承诺、不代表功能已实现。[设计与迁移](../02-architecture/ARCHITECTURE_EVOLUTION.md) 是技术细节唯一入口。
+
+| 需求 ID | 用户价值与拟议变化 | 验收场景（计划，尚未执行） |
+|---|---|---|
+| RF-ARCH-001 | 管理员能定位并重放摄取的失败阶段；在现有版本化 job/step 上完善可复现输入和受控阶段边界 | 重复投递和 Worker 崩溃恢复不重复发布；配置变更不能污染运行中任务 |
+| RF-ARCH-002 | 管理员能检查解析产物和质量拒绝原因，再发布候选索引 | 扫描页、空文本、解析部分失败的合成样本被明确展示或阻断；旧 active 索引在失败后仍可用 |
+| RF-ARCH-003 | 用户问答、检索调试和离线评估使用同一检索执行计划与快照 | 固定数据、版本、权限和参数时走同一执行路径；基线/候选对比保留配置与 provenance，不承诺模型输出逐字相同 |
+| RF-ARCH-004 | 管理员可区分来源暂停、同步失败、删除和访问收回的影响 | 同步失败不被误判为来源删除；已删除或不再授权内容不可通过历史引用、缓存、重放再次获取 |
+
+范围约束：保持单部署租户、多知识空间和空间级 RBAC；不新增文档 ACL、跨空间检索、通用流程画布、GraphRAG 或自动云端降级。复用既有 Chunk Studio、Retrieval Playground、版本化索引和 Provider 路由能力。
