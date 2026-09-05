@@ -88,7 +88,7 @@ function Wait-ForLog([string]$LogPath, [string]$Pattern, [int]$Attempts = 90, [S
 }
 
 function Wait-ForApplicationPid([string]$LogPath, [string]$ApplicationName, [int]$Attempts = 30) {
-    $pattern = "Starting {0} using .* with PID (?<pid>\d+)" -f [regex]::Escape($ApplicationName)
+    $pattern = "Starting {0}.* using .* with PID (?<pid>\d+)" -f [regex]::Escape($ApplicationName)
     for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
         if (Test-Path -LiteralPath $LogPath) {
             $match = Select-String -LiteralPath $LogPath -Pattern $pattern -AllMatches -ErrorAction SilentlyContinue | Select-Object -Last 1
@@ -102,13 +102,16 @@ function Wait-ForApplicationPid([string]$LogPath, [string]$ApplicationName, [int
     throw "$ApplicationName 未保持运行：$LogPath"
 }
 
-function Invoke-MavenCompile([string]$Module, [string]$LogPath) {
-    Write-Host "预编译 $Module（Java 21，完整主编译）..."
-    & $maven @mavenJava21Arguments "-pl" $Module "clean" "compile" *> $LogPath
+function Invoke-MavenPackage([string]$Module, [string]$JarPath, [string]$LogPath) {
+    Write-Host "构建 $Module 可执行 JAR（Java 21，完整主编译）..."
+    & $maven @mavenJava21Arguments "-pl" $Module "clean" "compile" "jar:jar" "spring-boot:repackage" *> $LogPath
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "$Module 编译失败，最近日志：" -ForegroundColor Yellow
+        Write-Host "$Module 构建失败，最近日志：" -ForegroundColor Yellow
         Get-Content -LiteralPath $LogPath -Tail 60 -ErrorAction SilentlyContinue
-        throw "$Module 编译失败（退出码 $LASTEXITCODE）。"
+        throw "$Module 构建失败（退出码 $LASTEXITCODE）。"
+    }
+    if (-not (Test-Path -LiteralPath $JarPath)) {
+        throw "$Module 未生成可执行 JAR：$JarPath"
     }
 }
 
@@ -133,6 +136,7 @@ $docker = Get-RequiredCommand "docker" "请安装并启动 Docker Desktop。"
 $maven = Get-RequiredCommand "mvn.cmd" "请安装 Maven 并加入 PATH。"
 $npm = Get-RequiredCommand "npm.cmd" "请安装 Node.js LTS 并加入 PATH。"
 $javaHome = Find-Java21
+$java = Join-Path $javaHome "bin\java.exe"
 
 & $docker info --format "{{.ServerVersion}}" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Docker Engine 不可用，请确认 Docker Desktop 已启动。" }
@@ -190,15 +194,14 @@ try {
         "-Dmaven.compiler.compilerVersion=21",
         "-Dmaven.compiler.useIncrementalCompilation=false"
     )
-    $mavenJava21ArgumentLine = $mavenJava21Arguments -join " "
-    $mavenSpringBootRunArgumentLine = "$mavenJava21ArgumentLine -Dmaven.test.skip=true -Dspring-boot.run.fork=false"
+    $serverJar = Join-Path $repoRoot "backend\server\target\ragforge-server-0.1.0-SNAPSHOT.jar"
+    $workerJar = Join-Path $repoRoot "backend\ingestion-worker\target\ragforge-ingestion-worker-0.1.0-SNAPSHOT.jar"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
-    Invoke-MavenCompile "backend/server" (Join-Path $runtimeDirectory "server-compile.log")
-    # Explicit Java 21 properties override machine profiles. Compilation is
-    # completed synchronously above so the background run cannot expose a
-    # partially populated target/classes directory.
-    $server = Start-Process -FilePath $maven -ArgumentList "$mavenSpringBootRunArgumentLine -pl backend/server spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    Invoke-MavenPackage "backend/server" $serverJar (Join-Path $runtimeDirectory "server-compile.log")
+    # Run the immutable repackaged JAR so IDE/Maven output refreshes cannot
+    # replace classes after the build has completed.
+    $server = Start-Process -FilePath $java -ArgumentList "-jar `"$serverJar`"" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -217,8 +220,8 @@ try {
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
-    Invoke-MavenCompile "backend/ingestion-worker" (Join-Path $runtimeDirectory "worker-compile.log")
-    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenSpringBootRunArgumentLine -Dspring-boot.run.arguments=--ragforge.ingestion.enabled=true -pl backend/ingestion-worker spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    Invoke-MavenPackage "backend/ingestion-worker" $workerJar (Join-Path $runtimeDirectory "worker-compile.log")
+    $worker = Start-Process -FilePath $java -ArgumentList "-jar `"$workerJar`" --ragforge.ingestion.enabled=true" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
     try {
         Wait-ForLog (Join-Path $runtimeDirectory "worker.log") "Started IngestionWorkerApplication in " 90 $worker

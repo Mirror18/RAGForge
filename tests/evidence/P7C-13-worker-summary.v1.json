@@ -19,7 +19,7 @@
     {
       "name": "Maven server compile",
       "result": "passed",
-      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed; each module is synchronously clean-compiled with a complete main compile, while only the app run skips test compilation; incremental compilation is disabled and Spring Boot fork mode is disabled."
+      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed; each module is synchronously clean-compiled, packaged and repackaged as an executable JAR, while the app runs directly from the immutable JAR without test compilation or IDE target/classes interference."
     },
     {
       "name": "Maven worker compile",
