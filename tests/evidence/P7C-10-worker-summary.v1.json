@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "P7C-10",
+  "status": "PASS",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "failedCases": [],
+    "durationMs": 0
+  },
+  "acceptance": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true
+  },
+  "checks": [
+    {
+      "name": "PowerShell UTF-8 parse",
+      "result": "passed",
+      "details": "start-local.ps1 parsed with explicit UTF-8 input and no syntax errors."
+    },
+    {
+      "name": "Startup option static check",
+      "result": "passed",
+      "details": "CheckOllama is present, obsolete SkipModelCheck is absent, and model validation is opt-in guarded."
+    },
+    {
+      "name": "Diff whitespace check",
+      "result": "passed",
+      "details": "git diff --check returned exit code 0."
+    }
+  ],
+  "notes": [
+    "Default startup still configures the Ollama endpoint for runtime use but does not contact it.",
+    "Cloud routing remains explicit; no silent fallback was introduced."
+  ]
+}
