@@ -19,7 +19,7 @@
     {
       "name": "Maven server compile",
       "result": "passed",
-      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed, test compilation skipped for app startup, and each module is synchronously clean-compiled before the background run; incremental compilation is disabled."
+      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed, test compilation skipped for app startup, each module is synchronously clean-compiled before the run, incremental compilation is disabled, and Spring Boot fork mode is disabled."
     },
     {
       "name": "Maven worker compile",

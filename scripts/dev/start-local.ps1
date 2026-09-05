@@ -192,13 +192,14 @@ try {
         "-Dmaven.test.skip=true"
     )
     $mavenJava21ArgumentLine = $mavenJava21Arguments -join " "
+    $mavenSpringBootRunArgumentLine = "$mavenJava21ArgumentLine -Dspring-boot.run.fork=false"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
     Invoke-MavenCompile "backend/server" (Join-Path $runtimeDirectory "server-compile.log")
     # Explicit Java 21 properties override machine profiles. Compilation is
     # completed synchronously above so the background run cannot expose a
     # partially populated target/classes directory.
-    $server = Start-Process -FilePath $maven -ArgumentList "$mavenJava21ArgumentLine -pl backend/server spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    $server = Start-Process -FilePath $maven -ArgumentList "$mavenSpringBootRunArgumentLine -pl backend/server spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -218,7 +219,7 @@ try {
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
     Invoke-MavenCompile "backend/ingestion-worker" (Join-Path $runtimeDirectory "worker-compile.log")
-    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenJava21ArgumentLine -Dspring-boot.run.arguments=--ragforge.ingestion.enabled=true -pl backend/ingestion-worker spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenSpringBootRunArgumentLine -Dspring-boot.run.arguments=--ragforge.ingestion.enabled=true -pl backend/ingestion-worker spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
     try {
         Wait-ForLog (Join-Path $runtimeDirectory "worker.log") "Started IngestionWorkerApplication in " 90 $worker
