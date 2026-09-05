@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$ProjectName = "ragforge-p1",
     [int]$ServerPort = 25082,
@@ -87,6 +87,16 @@ function Wait-ForLog([string]$LogPath, [string]$Pattern, [int]$Attempts = 90, [S
     throw "服务未在 $Attempts 秒内完成启动：$LogPath"
 }
 
+function Invoke-MavenCompile([string]$Module, [string]$LogPath) {
+    Write-Host "预编译 $Module（Java 21，跳过测试编译）..."
+    & $maven @mavenJava21Arguments "-pl" $Module "clean" "compile" *> $LogPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "$Module 编译失败，最近日志：" -ForegroundColor Yellow
+        Get-Content -LiteralPath $LogPath -Tail 60 -ErrorAction SilentlyContinue
+        throw "$Module 编译失败（退出码 $LASTEXITCODE）。"
+    }
+}
+
 function Assert-OllamaModels {
     try {
         $response = Invoke-RestMethod -TimeoutSec 5 -Uri "http://127.0.0.1:11434/api/tags"
@@ -158,12 +168,22 @@ try {
     $env:RAGFORGE_OUTBOX_RELAY_ENABLED = "true"
     $env:RAGFORGE_RUN_EVENT_FANOUT_ENABLED = "true"
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
-    $mavenJava21Arguments = "-Dmaven.compiler.release=21 -Dmaven.compiler.source=21 -Dmaven.compiler.target=21 -Dmaven.compiler.compilerVersion=21 -Dmaven.compiler.useIncrementalCompilation=false -Dmaven.test.skip=true"
+    $mavenJava21Arguments = @(
+        "-Dmaven.compiler.release=21",
+        "-Dmaven.compiler.source=21",
+        "-Dmaven.compiler.target=21",
+        "-Dmaven.compiler.compilerVersion=21",
+        "-Dmaven.compiler.useIncrementalCompilation=false",
+        "-Dmaven.test.skip=true"
+    )
+    $mavenJava21ArgumentLine = $mavenJava21Arguments -join " "
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
-    # Clean before spring-boot:run so stale target/classes cannot survive a branch
-    # switch or source move. Explicit Java 21 properties override machine profiles.
-    $server = Start-Process -FilePath $maven -ArgumentList "$mavenJava21Arguments -pl backend/server clean spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    Invoke-MavenCompile "backend/server" (Join-Path $runtimeDirectory "server-compile.log")
+    # Explicit Java 21 properties override machine profiles. Compilation is
+    # completed synchronously above so the background run cannot expose a
+    # partially populated target/classes directory.
+    $server = Start-Process -FilePath $maven -ArgumentList "$mavenJava21ArgumentLine -pl backend/server spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -180,7 +200,8 @@ try {
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
-    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenJava21Arguments -pl backend/ingestion-worker clean spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    Invoke-MavenCompile "backend/ingestion-worker" (Join-Path $runtimeDirectory "worker-compile.log")
+    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenJava21ArgumentLine -pl backend/ingestion-worker spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
     try {
         Wait-ForLog (Join-Path $runtimeDirectory "worker.log") "Started IngestionWorkerApplication in " 90 $worker

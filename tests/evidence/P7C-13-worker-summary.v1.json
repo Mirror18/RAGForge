@@ -19,7 +19,7 @@
     {
       "name": "Maven server compile",
       "result": "passed",
-      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed, test compilation skipped for app startup, target cleaned before run, and incremental compilation disabled."
+      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed, test compilation skipped for app startup, and each module is synchronously clean-compiled before the background run; incremental compilation is disabled."
     },
     {
       "name": "Maven worker compile",
@@ -44,7 +44,7 @@
     {
       "name": "PowerShell and diff checks",
       "result": "passed",
-      "details": "UTF-8 PowerShell parse, static compiler-argument check and git diff --check passed."
+      "details": "Windows PowerShell 5.1 UTF-8 parse through the .bat entry, static compiler-argument check and git diff --check passed."
     }
   ],
   "notes": [
