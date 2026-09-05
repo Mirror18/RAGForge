@@ -112,3 +112,7 @@ NONE -> ACTIVE -> NEEDS_REVIEW -> ACTIVE
 - 大型原文和模型响应不直接堆入高频业务表，改存对象并保留 hash/URI。
 - JSONB 用于连接器/供应商扩展配置，但核心过滤、约束和报表字段结构化。
 - 软删除不能代替历史版本；用户隐私删除需要单独的可验证清理流程。
+
+## 7. 领域增量提案（Proposed）
+
+[演进总设计](ARCHITECTURE_EVOLUTION.md)复用现有 PipelineVersion、PipelineStepExecution、ParsedArtifact/ParseReport 与 Evidence/Citation，提出 ArtifactManifest、IndexValidationResult 和 RetrievalExecutionSnapshot 的概念职责。准确命名、空间身份及保留边界见总设计第 3、5 节；这些值对象或记录不是已发布 DTO、数据库表或新建迁移。[ADR-0013](adr/0013-versioned-knowledge-execution.md)待人工决策。

@@ -93,3 +93,7 @@ Parse Report 包含：
 - 每 Step 时延、重试、DLQ、队列深度、最老消息年龄。
 - embedding token、成本、cache hit 和 provider error。
 - published/failed index count、索引大小、孤儿 point count。
+
+## 10. 摄取演进提案（Proposed）
+
+[演进总设计](ARCHITECTURE_EVOLUTION.md)第 1 节区分设计与局部代码事实：所查生产 handler 当前每文档一个 parent，child 按字符上限/换行切分且无 overlap，不能把第 6 节目标当成已经实现。第 4 节拟在现有幂等、candidate validation 与原子发布上补版本化产物清单、质量证据及租约重放约束；不重新发明 SourceConnector 或 Deletion Job。分块行为变更需单独离线评估，[ADR-0013](adr/0013-versioned-knowledge-execution.md)尚未接受。

@@ -1,5 +1,7 @@
 # 检索、引用与对话生成
 
+> 基线阅读说明：下述链路与默认配置包含设计目标。所查生产服务当前先执行 dense 再执行 BM25，不能将第 2 节的并行目标当作已实现；持久化 lexical payload 与查询时重建统计沿用 [ADR-0012](adr/0012-durable-bm25.md)。
+
 ## 1. 在线链路
 
 ```mermaid
@@ -89,3 +91,7 @@ MVP 工具：
 - Production generation 使用 Provider 原生流协议：Ollama 为 NDJSON，OpenAI-compatible/MiMo 为 SSE。Provider frame 不直接进入浏览器或持久化；服务端只增量解码结构化输出根级 `answer_text`，按最多 4096 UTF-16 code unit 的事件片段保存为 `answer.delta`。完整 JSON、claim 和 citation token allow-list 仍必须在终态统一校验；失败、拒答或取消时客户端必须清除暂态文本。
 - Answer 创建期间使用预分配的稳定 `answer_id` 关联 delta/citation/done。同实例 cancel 直接触发当前 `CancellationToken`；其他实例的 cancel 通过 durable run-event fan-out 通知生成实例。HTTP stream、总输出（1 MB）和回答请求均有限时/限长；取消后的 delta 由事件存储再次 fail-closed 拒绝。
 - 调用重试创建新 invocation；usage ledger 用供应商 request ID 或本地幂等键去重。
+
+## 8. 检索执行演进提案（Proposed）
+
+[演进总设计](ARCHITECTURE_EVOLUTION.md)第 5 节建议 Chat、Playground、Evaluation 共用 retrieval application port，以 RetrievalExecutionSnapshot 固定 index/profile/模型及有效参数；已有混合检索、Evidence Bundle 和 citation allow-list 继续作为基础。快照不固定权限，历史回答、引用、物料、缓存和重放仍须当前授权；删除与撤权约束不能随索引回滚撤销。具体生命周期与验收统一见总设计，[ADR-0013](adr/0013-versioned-knowledge-execution.md)尚未接受。

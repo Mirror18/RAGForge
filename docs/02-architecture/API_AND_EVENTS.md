@@ -79,3 +79,7 @@ POST   /api/v1/spaces/{spaceId}/runs/{runId}/cancel
 ## 6. OpenAPI 生命周期
 
 OpenAPI 是对外 REST 契约的事实来源。CI 至少检查语法、lint、breaking change、生成客户端一致性和敏感字段示例。API 尚未实现前，`contracts/openapi/` 只保留规范和 README，不提交虚假可用接口。
+
+## 7. 执行契约演进提案（Proposed）
+
+[演进总设计](ARCHITECTURE_EVOLUTION.md)提出阶段 lineage、质量判定与检索执行快照；概念字段不等于已发布 API 或 event schema。本轮不改 `contracts`、不添加可用接口示例、不预先发布新事件名。人工接受 [ADR-0013](adr/0013-versioned-knowledge-execution.md)后，由单一契约 owner 定义字段与兼容性，落实 producer/consumer tests；破坏性事件变更新 major version，旧客户端不得把未知快照版本当成可重放版本。
