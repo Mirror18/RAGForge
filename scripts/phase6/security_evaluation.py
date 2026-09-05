@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "tests" / "evidence" / "phase6-security.v1.json"
 MAVEN = Path(r"D:\tools\maven\apache-maven-3.9.6\bin\mvn.cmd")
 LICENSE_REGISTER = ROOT / "docs" / "06-安全合规与研究.md"
-THIRD_PARTY_NOTICES = ROOT / "THIRD_PARTY_NOTICES.md"
+THIRD_PARTY_NOTICES = ROOT / "docs" / "06-安全合规与研究.md"
 
 
 def run(name: str, command: list[str], *, blocked_if_missing: bool = False) -> dict[str, Any]:
@@ -81,7 +81,7 @@ def check_license_traceability() -> dict[str, Any]:
     passed = bool(register and notices and "SPDX" in register and "精确版本/Commit" in notices)
     return {
         "name": "license-traceability-policy",
-        "command": "read docs/06-安全合规与研究.md and THIRD_PARTY_NOTICES.md",
+        "command": "read docs/06-安全合规与研究.md third-party-notices section",
         "status": "passed" if passed else "failed",
         "exit_code": 0 if passed else 1,
         "raw_output_persisted": False,
@@ -139,7 +139,7 @@ def main() -> int:
             "license_policy": results[6]["status"],
             "license_policy_evidence": [
                 "docs/06-安全合规与研究.md",
-                "THIRD_PARTY_NOTICES.md",
+                "docs/06-安全合规与研究.md",
             ],
         },
         "passed": passed_results,

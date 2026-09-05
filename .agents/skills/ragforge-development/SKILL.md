@@ -9,7 +9,7 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 ## 开始前
 
-1. 日常任务先读 [`docs/08-records/AGENT_STATE_CARD.md`](../../../docs/08-records/AGENT_STATE_CARD.md) 和 [`docs/08-records/TASK_BOARD.md`](../../../docs/08-records/TASK_BOARD.md)。只有审计、阶段闭环或状态冲突时才读取 `PROJECT_STATUS.md`、路线图和阶段计划。
+1. 日常任务先读 [`docs/08-项目状态卡.md`](../../../docs/08-项目状态卡.md) 和 [`docs/09-项目任务总台账.md`](../../../docs/09-项目任务总台账.md)。只有审计、阶段闭环或状态冲突时才读取 [`docs/10-项目状态审计记录.md`](../../../docs/10-项目状态审计记录.md)、交付主文档的相关章节和对应阶段记录。
 2. 执行 `git status --short --branch`，保留用户已有改动；按任务板的卡片、Ticket、ownership 和预算工作。
 3. Worker 只读 Ticket 的 allow-list，不通过全仓搜索补上下文；Orchestrator 负责分派、合并、状态卡和阶段闭环。
 

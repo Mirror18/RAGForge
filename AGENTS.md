@@ -21,12 +21,12 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 ### Orchestrator responsibility
 
 - One primary agent acts as orchestrator. It owns task decomposition, dependency ordering, worktree allocation, integration, full verification, project-status updates, and phase closure.
-- **Daily-entry rule (token efficiency):** The orchestrator first reads `docs/08-records/AGENT_STATE_CARD.md` (the compressed state card, ~1k tokens) and `docs/08-records/TASK_BOARD.md` (the budgeted task board). It only opens `PROJECT_STATUS.md`, `ROADMAP.md`, and phase checklists when doing audit, phase closure, or when the state card conflicts with code facts. Under no circumstances should the orchestrator re-read these long governance documents every round.
+- **Daily-entry rule (token efficiency):** The orchestrator first reads `docs/08-项目状态卡.md` (the compressed state card, ~1k tokens) and `docs/09-项目任务总台账.md` (the budgeted task board). It only opens `docs/10-项目状态审计记录.md`, the relevant section of `docs/04-交付路线与质量门禁.md`, and the relevant phase record when doing audit, phase closure, or when the state card conflicts with code facts. Under no circumstances should the orchestrator re-read these long governance documents every round.
 - Tasks are taken from the board card-by-card (never "do Phase 7" as one task). Each card has an explicit token budget recorded in the board and mirrored in the per-worker ticket.
 - Only parallelize concrete tasks that can be completed and tested independently. Contracts, shared schemas, migrations, dependency/BOM files, and architecture decisions are coordination points and must have one explicit owner.
 - Keep at most one agent editing a given file or schema area. If ownership is unclear, serialize the work.
 - The orchestrator keeps the primary worktree on `main`. Worker agents never implement features directly in the primary worktree.
-- After each batch of 1–3 successfully-merged cards, the orchestrator updates `docs/08-records/AGENT_STATE_CARD.md` §1 (baseline SHA) and §6 (dispatch table: status / actual tokens / commit SHA / notes). Other sections of the state card are edited only during audit-grade corrections.
+- After each batch of 1–3 successfully-merged cards, the orchestrator updates `docs/08-项目状态卡.md` §1 (baseline SHA) and §6 (dispatch table: status / actual tokens / commit SHA / notes). Other sections of the state card are edited only during audit-grade corrections.
 
 ### Branch and worktree isolation
 
@@ -44,14 +44,14 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 - Prefer parallel work by bounded ownership such as `contracts`, one application module, one test suite, or one documentation area.
 - API/event contracts are defined before provider and consumer implementations. When both sides run in parallel, they use the same committed contract baseline and contract tests.
 - Database migrations are append-only and have a single sequence owner per batch. Agents must not independently invent colliding migration versions.
-- Root build files, dependency locks/BOMs, Compose files, shared libraries, ADRs, `AGENTS.md`, `PROJECT_STATUS.md`, `RISK_REGISTER.md`, and `TRACEABILITY_MATRIX.md` are integration-sensitive. Assign one owner or leave final edits to the orchestrator.
+- Root build files, dependency locks/BOMs, Compose files, shared libraries, ADRs, `AGENTS.md`, `docs/10-项目状态审计记录.md`, `docs/11-风险登记表.md`, and `docs/12-需求追溯矩阵.md` are integration-sensitive. Assign one owner or leave final edits to the orchestrator.
 - If an agent discovers a required change outside its ownership, it reports the exact proposed change to the orchestrator instead of editing it silently.
 
 ### Worker completion contract
 
 Before reporting completion, each worker must:
 
-1. Re-read only its acceptance ticket (`docs/08-records/tickets/<CARD_ID>-<agent>.yaml`). Do **not** re-read AGENTS.md, PROJECT_STATUS, ROADMAP, ADRs, or the whole contracts/ directory unless the ticket explicitly lists those paths in `read_only`.
+1. Re-read only its acceptance ticket (`.agents/tickets/<CARD_ID>-<agent>.yaml`). Do **not** re-read AGENTS.md, the project audit record, the delivery document, ADRs, or the whole contracts/ directory unless the ticket explicitly lists those paths in `read_only`.
 2. Modify only files inside the ticket's `ownership` whitelist. If a required change falls outside the whitelist, the worker proposes the exact delta to the orchestrator instead of editing silently.
 3. Read only files listed in the ticket's `read_only`. Do not run broad `Grep` / `SearchCodebase` / `Glob` outside the ticket scope to discover context. Ask the orchestrator to extend the `read_only` list if genuinely needed.
 4. Implement the smallest vertical slice including tests, failure paths, permission/space isolation, observability, and any documentation owned by this card.
@@ -81,7 +81,7 @@ When a user prompt says "keep working on Phase 7" (or similar scope), route as: 
 
 The orchestrator writes every ticket's `scope.read_only` as an allow-list of exact file paths (and, when tooling supports it, exact line ranges). The worker never falls back to "open backend/server/ingestion and read all controllers". General rules:
 
-- Long governance documents (`docs/08-records/PROJECT_STATUS.md`, `docs/04-交付路线与质量门禁.md`, `docs/06-安全合规与研究.md`): a worker may read at most one or two named subsections, never the full file.
+- Long governance documents (`docs/10-项目状态审计记录.md`, `docs/04-交付路线与质量门禁.md`, `docs/06-安全合规与研究.md`): a worker may read at most one or two named subsections, never the full file.
 - Contracts: read only the domain-specific schema files and OpenAPI YAML touched by the card. Do not pre-read `contracts/README.md` unless the ticket says so.
 - ADRs: read only the numbered ADR the card explicitly references.
 - Evidence JSON under `tests/evidence/*.json`: if the ticket only needs to confirm a gate, read the top-level `passed`/`summary` fields only; the detail array should not enter the context.
@@ -97,16 +97,16 @@ Any intermediate artifact longer than 50 lines goes into a file under `tests/evi
 
 ### E4. Budget enforcement
 
-- Every card has a `token_limit` recorded in `docs/08-records/TASK_BOARD.md`.
+- Every card has a `token_limit` recorded in `docs/09-项目任务总台账.md`.
 - The same limit is mirrored into the worker ticket and consumed by `report_schema.budget.token_used` self-report.
 - Hard rule: if a worker reports `token_used > 1.2 × token_limit` and acceptance is still `status != PASS`, the orchestrator must stop, inspect why, and either (a) split the card into smaller tickets with their own budgets or (b) explicitly approve an overrun, recording it in state-card §6 `notes` and TASK_BOARD.md remarks.
 - Soft rule: if an orchestrator burns > `TASK_BOARD` total P0+P1+P2 × 1.2 in a single phase without finishing the phase checklists, it stops, requests a human audit, and a fresh Audit Agent reconciles the drift.
 
 ### E5. Single source of truth (no duplicated state)
 
-- **Project state**: `docs/08-records/AGENT_STATE_CARD.md` is the daily single source. `docs/08-records/PROJECT_STATUS.md` is the authoritative audit record only for phase-closure / release-decision / security-incident scenarios. If they conflict, PROJECT_STATUS wins, and the state card is corrected in a dedicated integration commit (never patched inside a worker task).
-- **Task definition**: `TASK_BOARD.md` is the board. `AGENT_STATE_CARD.md` §6 dispatch table is the execution snapshot. Worker tickets are the per-invocation contracts. Do not duplicate card acceptance criteria into ad-hoc chat messages; always reference the board + ticket.
-- **Memory / lessons learned**: `MEMORY.md` stores only session-wise engineering lessons, not project state. If an agent writes "current phase / next task / completed SHA" anywhere other than the state card, that write must be rejected by the orchestrator at integration review.
+- **Project state**: `docs/08-项目状态卡.md` is the daily single source. `docs/10-项目状态审计记录.md` is the authoritative audit record only for phase-closure / release-decision / security-incident scenarios. If they conflict, the audit record wins, and the state card is corrected in a dedicated integration commit (never patched inside a worker task).
+- **Task definition**: `docs/09-项目任务总台账.md` is the board. `docs/08-项目状态卡.md` §6 dispatch table is the execution snapshot. Worker tickets under `.agents/tickets/` are the per-invocation contracts. Do not duplicate card acceptance criteria into ad-hoc chat messages; always reference the board + ticket.
+- **Memory / lessons learned**: `docs/13-Agent工程记忆.md` stores only session-wise engineering lessons, not project state. If an agent writes "current phase / next task / completed SHA" anywhere other than the state card, that write must be rejected by the orchestrator at integration review.
 
 ### E6. Stopping conditions (mandatory)
 
@@ -148,12 +148,12 @@ An agent halts and reports to the human if and only if any of the following appl
 
 - Releases follow Semantic Versioning and must record an entry in `CHANGELOG.md`. Never cut a release without an explicit human decision on the version number, changelog content, and rollback point.
 - Each release must reference the exact commit SHA, the deployment artifact/SBOM, and the rollback procedure; see `docs/05-部署运维与恢复.md` and the Main/Release pipeline in `docs/04-交付路线与质量门禁.md`.
-- Before a release, verify that the phase exit-criteria evidence is committed under `docs/08-records/`.
+- Before a release, verify that the phase exit-criteria records are committed as the numbered `docs/` project records and the structured evidence is committed under `tests/evidence/`.
 
 ## Security incidents and dependency response
 
-- Report suspected vulnerabilities through `SECURITY.md`. Do not disclose a confirmed vulnerability in a public commit before coordinated disclosure.
-- Triage critical/high vulnerabilities promptly (target: initial triage within 24 hours of confirmation), record the decision in `RISK_REGISTER.md`, and land a fix or documented mitigation before the next release.
+- Report suspected vulnerabilities through `.github/SECURITY.md` and the security process in `docs/06-安全合规与研究.md`. Do not disclose a confirmed vulnerability in a public commit before coordinated disclosure.
+- Triage critical/high vulnerabilities promptly (target: initial triage within 24 hours of confirmation), record the decision in `docs/11-风险登记表.md`, and land a fix or documented mitigation before the next release.
 - Dependency updates run on a maintained cadence (for example Dependabot or Renovate). The BOM owner reviews each update for license, vulnerability, and maintenance health before merging; see `docs/06-安全合规与研究.md`.
 
 ## Directory ownership
@@ -164,7 +164,7 @@ An agent halts and reports to the human if and only if any of the following appl
 - `backend/ai-runtime`: OCR and rerank runtime only; it is not a second business backend.
 - `contracts`: source of truth for public API and event contracts.
 - `tests`: cross-application and acceptance tests; unit tests stay with their modules.
-- `docs/08-records`: dated decision evidence, reviews, risks, and retrospectives.
+- `docs/08–32`: flat project records for state, tasks, audit, risks, traceability, phase plans, evidence summaries, and retrospectives; Worker YAML contracts live under `.agents/tickets/`.
 
 ## Quality gates
 

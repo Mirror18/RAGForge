@@ -6,9 +6,9 @@ RAGForge 是面向企业内部、多用户知识空间的商业级 RAG 学习工
 
 不知道下一步做什么时，打开 [`docs/README.md`](./docs/README.md)，然后按顺序阅读 01–07 主文档。要执行任务时只走：
 
-1. [状态卡](./docs/08-records/AGENT_STATE_CARD.md)
-2. [任务板](./docs/08-records/TASK_BOARD.md)
-3. 对应 [Worker Ticket](./docs/08-records/tickets/)
+1. [项目状态卡](./docs/08-项目状态卡.md)
+2. [项目任务总台账](./docs/09-项目任务总台账.md)
+3. 对应 [Worker Ticket](./.agents/tickets/)
 4. 独立 worktree、验证、中文 Conventional Commit
 
 当前主线和阻塞以状态卡为准；任务目标与达到的效果以任务板为准；实际改动、测试、风险和回滚以 Git commit body 为准。
@@ -36,6 +36,6 @@ config/ deploy/ libs/      # 配置、运行资产和受约束复用库
 
 ## 根目录保留的机器/平台文件
 
-`AGENTS.md` 是仓库硬规则，必须留在根目录；`CHANGELOG.md` 是发布历史，按 Keep a Changelog 保留在根目录。GitHub 识别的 `CONTRIBUTING.md`、`SECURITY.md` 和 `THIRD_PARTY_NOTICES.md` 现在只做入口指针，完整内容统一维护在 [`docs/04-交付路线与质量门禁.md`](./docs/04-交付路线与质量门禁.md)、[`docs/06-安全合规与研究.md`](./docs/06-安全合规与研究.md)。
+`AGENTS.md` 是仓库硬规则，必须留在根目录；`README.md` 是项目入口；`CHANGELOG.md` 是发布历史，按 Keep a Changelog 保留在根目录。GitHub 的贡献和安全入口放在 `.github/`；许可证、第三方说明和 Agent 经验不再在根目录复制，分别维护在 [`docs/06-安全合规与研究.md`](./docs/06-安全合规与研究.md) 和 [`docs/13-Agent工程记忆.md`](./docs/13-Agent工程记忆.md)。
 
 不要提交凭据、个人 Obsidian 内容、生产数据、raw prompt、构建产物或未经批准的第三方源码；本机敏感配置放在被 `.gitignore` 保护的 [`config/private/`](./config/private/)。
