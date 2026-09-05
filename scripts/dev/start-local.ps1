@@ -61,13 +61,13 @@ function Assert-PortAvailable([int]$Port, [string]$ParameterName) {
 
 function Wait-ForHttp([string]$Uri, [int]$Attempts = 180, [System.Diagnostics.Process]$Process = $null) {
     for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
-        if ($Process -and $Process.HasExited) {
-            throw "Process exited before its health endpoint became ready: $Uri (exit code $($Process.ExitCode))"
-        }
         try {
             $response = Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 -Uri $Uri
             if ($response.StatusCode -eq 200) { return }
         } catch {
+            if ($Process -and $Process.HasExited) {
+                throw "Process exited before its health endpoint became ready: $Uri (exit code $($Process.ExitCode))"
+            }
             if ($attempt -eq $Attempts) { throw "服务未在 $Attempts 秒内就绪：$Uri" }
             Start-Sleep -Seconds 1
         }
@@ -76,15 +76,30 @@ function Wait-ForHttp([string]$Uri, [int]$Attempts = 180, [System.Diagnostics.Pr
 
 function Wait-ForLog([string]$LogPath, [string]$Pattern, [int]$Attempts = 90, [System.Diagnostics.Process]$Process = $null) {
     for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
-        if ($Process -and $Process.HasExited) {
-            throw "Process exited before its startup log became ready: $LogPath (exit code $($Process.ExitCode))"
-        }
         if (Test-Path -LiteralPath $LogPath) {
             if (Select-String -LiteralPath $LogPath -Pattern $Pattern -Quiet -ErrorAction SilentlyContinue) { return }
+        }
+        if ($Process -and $Process.HasExited) {
+            throw "Process exited before its startup log became ready: $LogPath (exit code $($Process.ExitCode))"
         }
         Start-Sleep -Seconds 1
     }
     throw "服务未在 $Attempts 秒内完成启动：$LogPath"
+}
+
+function Wait-ForApplicationPid([string]$LogPath, [string]$ApplicationName, [int]$Attempts = 30) {
+    $pattern = "Starting {0} using .* with PID (?<pid>\d+)" -f [regex]::Escape($ApplicationName)
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        if (Test-Path -LiteralPath $LogPath) {
+            $match = Select-String -LiteralPath $LogPath -Pattern $pattern -AllMatches -ErrorAction SilentlyContinue | Select-Object -Last 1
+            if ($match -and $match.Matches.Count -gt 0) {
+                $applicationPid = [int]$match.Matches[0].Groups["pid"].Value
+                if (Get-Process -Id $applicationPid -ErrorAction SilentlyContinue) { return $applicationPid }
+            }
+        }
+        Start-Sleep -Seconds 1
+    }
+    throw "$ApplicationName 未保持运行：$LogPath"
 }
 
 function Invoke-MavenCompile([string]$Module, [string]$LogPath) {
@@ -193,6 +208,8 @@ try {
         Get-Content (Join-Path $runtimeDirectory "server.err.log") -Tail 40 -ErrorAction SilentlyContinue
         throw
     }
+    $serverApplicationPid = Wait-ForApplicationPid (Join-Path $runtimeDirectory "server.log") "RagForgeServerApplication"
+    Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $serverApplicationPid
 
     Write-Host "[3/4] 启动 Worker..."
     $env:RAGFORGE_INGESTION_ENABLED = "true"
@@ -201,7 +218,7 @@ try {
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
     Invoke-MavenCompile "backend/ingestion-worker" (Join-Path $runtimeDirectory "worker-compile.log")
-    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenJava21ArgumentLine -pl backend/ingestion-worker spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    $worker = Start-Process -FilePath $maven -ArgumentList "$mavenJava21ArgumentLine -Dspring-boot.run.arguments=--ragforge.ingestion.enabled=true -pl backend/ingestion-worker spring-boot:run" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
     try {
         Wait-ForLog (Join-Path $runtimeDirectory "worker.log") "Started IngestionWorkerApplication in " 90 $worker
@@ -211,6 +228,8 @@ try {
         Get-Content (Join-Path $runtimeDirectory "worker.err.log") -Tail 40 -ErrorAction SilentlyContinue
         throw
     }
+    $workerApplicationPid = Wait-ForApplicationPid (Join-Path $runtimeDirectory "worker.log") "IngestionWorkerApplication"
+    Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $workerApplicationPid
 
     if (-not $SkipWeb) {
         Write-Host "启动 Web..."
@@ -236,7 +255,7 @@ try {
     Write-Host "[4/4] 本地运行环境已就绪。" -ForegroundColor Green
     Write-Host "  Web:       $(if ($SkipWeb) { '已跳过' } else { "http://127.0.0.1:$WebPort" })"
     Write-Host "  Server:    http://127.0.0.1:$ServerPort"
-    Write-Host "  Worker:    PID $($worker.Id)"
+    Write-Host "  Worker:    PID $workerApplicationPid"
     Write-Host "  Health:    http://127.0.0.1:$ServerPort/actuator/health"
     Write-Host "  RabbitMQ:  http://127.0.0.1:$($ports.RABBITMQ_MANAGEMENT_PORT)"
     Write-Host "  MinIO:     http://127.0.0.1:$($ports.S3_CONSOLE_PORT)"
