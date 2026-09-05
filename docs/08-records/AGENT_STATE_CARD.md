@@ -12,15 +12,15 @@
 > 2. 本文件 = 日常运行状态的最近快照（每次合并后更新）
 > 3. `PROJECT_STATUS.md` = 审计/阶段/证据级权威记录（状态卡与它冲突时，以 PROJECT_STATUS 为准并回写修正状态卡）
 >
-> 上一次更新：2026-08-30 | 更新人：Orchestrator | 对应功能基线 SHA：3efab02
+> 上一次更新：2026-09-05 | 更新人：Orchestrator（架构审计） | 对应功能基线 SHA：2ad59b9
 
 ---
 
 ## 1. 快照元信息（10 行以内，Agent 一眼定位）
 
 - **阶段**：Phase 7（`p2-execution`）
-- **主线功能基线 SHA**：`3efab02`；最近远程全绿候选：`f0ce7d2318ec16da8a70626c0f646d4a47a1227d`（本地功能审计修复已推送至 `origin/main`）
-- **当前远程 CI**：quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对 `00bee66` 全绿；P7D-00/P7D-01 本地与远程验收通过，检查 annotations 为空
+- **主线功能基线 SHA**：`2ad59b9ff2552cece954ce875e6c153f54536f1d`（2026-09-05 只读审计；主线相对本地缓存 origin/main ahead 6，未刷新远程）；本 SHA 的远程 CI 未核验。
+- **历史远程 CI（不代表当前基线）**：quality Run [33309154863](https://github.com/Mirror18/RAGForge/actions/runs/33309154863) 对 `00bee66` 全绿；P7D-00/P7D-01 本地与远程验收通过，检查 annotations 为空
 - **状态卡锚点提交**：`609ef5c9a1284bef71ed9295910aeb9c48d383cb`（Agent 效率文档骨架已落主线）。
 - **最近阶段完成**：Phase 6（2026-08-23，`completed-with-explicit-waiver`，豁免人工评审 / red-team 签名门槛，见 PROJECT_STATUS §89）
 - **当前工作包完成度（P7-A..H）**：
@@ -65,7 +65,7 @@ P7-B（已完成）
 │    └─► P7C-05 真实 RERANK adapter（apps/ai-runtime + server）
 P7C-06 ─► P7E 卡片（P7Q-01~06，见 TASK_BOARD.md）
 P7Q-01~06 全部通过 + 当前候选远程 CI 全绿 → 进入 P7-F 容器加固
-P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户显式批准 release）
+P7-F（P7D-02R 已完成）→ P7-G（P7D-03 独立 Ubuntu 环境阻塞）→ P7-H 阶段闭环（需用户显式批准 release）
 ```
 
 **写冲突禁止并行的共享资产**：
@@ -89,6 +89,8 @@ P7-F → P7-G Ubuntu/观测/升级 → P7-H 供应链 & 阶段闭环（需用户
 ---
 
 ## 5. 证据与 CI 快速入口（失败才读全文，否则只用链接）
+
+> 以下为历史验证快照，不是 `2ad59b9` 的全量证据；本次只读审计范围见 [2026-09-05 架构审计](2026-09-05-architecture-audit.md)。
 
 - 最近全量 CI：<https://github.com/Mirror18/RAGForge/actions/runs/32577917976>
 - Phase 6 证据：`tests/evidence/phase6-*.v1.json`（8 类：evaluation / security / capacity / recovery / cost / observability / multi-instance / real-RAG）
