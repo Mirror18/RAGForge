@@ -6,6 +6,8 @@
 python scripts/dev/core.py config
 python scripts/dev/core.py up
 python scripts/dev/core.py health
+# 需要本地模型时，额外检查 Ollama
+python scripts/dev/core.py health --check-ollama
 python scripts/dev/core.py ps
 python scripts/dev/core.py backup-smoke --dry-run
 python scripts/dev/core.py down

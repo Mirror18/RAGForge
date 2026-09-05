@@ -65,8 +65,9 @@ python scripts/dev/core.py --project-name ragforge-p1-orch-check --env-file depl
 
 ## 健康、备份与失败路径
 
-- `scripts/ops/health_probe.py` 检查 PostgreSQL、Qdrant、RabbitMQ、Valkey、MinIO 和 Ollama；
-  任一失败都会返回非零退出码。统一入口会把派生端口传给 probe，并支持启动窗口重试。
+- `scripts/ops/health_probe.py` 默认检查 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO；
+  必需服务失败会返回非零退出码。使用 `--check-ollama` 时才把 Ollama 加入检查。统一入口
+  会把派生端口传给 probe，并支持启动窗口重试。
 - `scripts/ops/backup_smoke.py` 通过容器内 `pg_dump` 写入 gitignore 目录 `tmp/backups/`；
   容器未运行、命令失败或输出异常过短都会失败，不上传备份也不打印密码。
 - `scripts/ci/validate_compose.py` 调用 `docker compose config`，检查必需服务、Ollama profile、

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Probe the Phase 1 core dependencies and fail with actionable diagnostics."""
+"""Probe required core dependencies and optionally check the Ollama endpoint."""
 
 from __future__ import annotations
 
@@ -105,11 +105,10 @@ def host_probe_url(base_url: str) -> str:
     return urllib.parse.urlunparse((parsed.scheme or "http", netloc, "/api/tags", "", "", ""))
 
 
-def build_results(timeout: float) -> list[Result]:
+def build_results(timeout: float, *, check_ollama: bool = False) -> list[Result]:
     rabbit_user = os.environ.get("RABBITMQ_DEFAULT_USER", "ragforge")
     rabbit_password = os.environ.get("RABBITMQ_DEFAULT_PASS", "change-me")
-    ollama_base = os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
-    return [
+    results = [
         tcp_probe("postgres", "localhost", env_int("POSTGRES_PORT", 25432), timeout),
         http_probe("qdrant", f"http://localhost:{env_int('QDRANT_PORT', 26333)}/readyz", timeout),
         http_probe(
@@ -121,8 +120,11 @@ def build_results(timeout: float) -> list[Result]:
         ),
         valkey_probe("localhost", env_int("VALKEY_PORT", 26379), os.environ.get("VALKEY_PASSWORD", "change-me"), timeout),
         http_probe("minio", f"http://localhost:{env_int('S3_PORT', 29000)}/minio/health/ready", timeout),
-        http_probe("ollama", host_probe_url(ollama_base), timeout),
     ]
+    if check_ollama:
+        ollama_base = os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+        results.append(http_probe("ollama", host_probe_url(ollama_base), timeout))
+    return results
 
 
 def main() -> int:
@@ -130,6 +132,11 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=3.0, help="每个 probe 的超时时间（秒）")
     parser.add_argument("--retries", type=int, default=10, help="启动窗口内的检查次数")
     parser.add_argument("--retry-delay", type=float, default=2.0, help="检查失败后的等待秒数")
+    parser.add_argument(
+        "--check-ollama",
+        action="store_true",
+        help="额外检查 Ollama；默认启动和 core 健康检查不要求 Ollama",
+    )
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error("--timeout 必须大于 0")
@@ -140,11 +147,12 @@ def main() -> int:
     try:
         results = []
         for attempt in range(1, args.retries + 1):
-            results = build_results(args.timeout)
+            results = build_results(args.timeout, check_ollama=args.check_ollama)
             failures = [result for result in results if not result.ok]
             if not failures:
                 print(json.dumps([result.__dict__ for result in results], ensure_ascii=False, indent=2))
-                print("健康检查通过：所有 core 依赖可达。")
+                scope = "所有 core 依赖（含 Ollama）" if args.check_ollama else "所有必需 core 依赖"
+                print(f"健康检查通过：{scope}可达。")
                 return 0
             if attempt < args.retries:
                 print(
@@ -162,7 +170,8 @@ def main() -> int:
     if failures:
         print("健康检查失败：" + ", ".join(result.name for result in failures), file=sys.stderr)
         return 1
-    print("健康检查通过：所有 core 依赖可达。")
+    scope = "所有 core 依赖（含 Ollama）" if args.check_ollama else "所有必需 core 依赖"
+    print(f"健康检查通过：{scope}可达。")
     return 0
 
 
