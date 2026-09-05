@@ -19,7 +19,7 @@
     {
       "name": "Maven server compile",
       "result": "passed",
-      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed, target cleaned before run, and incremental compilation disabled."
+      "details": "JDK 21 release/source/target/compilerVersion explicitly fixed, test compilation skipped for app startup, target cleaned before run, and incremental compilation disabled."
     },
     {
       "name": "Maven worker compile",
@@ -50,6 +50,7 @@
   "notes": [
     "The worker uses the existing local RabbitMQ and MinIO environment variables from start-local.ps1.",
     "Worker startup was observed after target cleanup and completed with Started IngestionWorkerApplication.",
+    "Application startup skips test compilation; test compilation remains covered by the separate Maven regression command.",
     "No bootstrap token or platform administrator was created."
   ]
 }
