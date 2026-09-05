@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "P7C-11",
+  "status": "PASS",
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "failedCases": [],
+    "durationMs": 0
+  },
+  "acceptance": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true
+  },
+  "checks": [
+    {
+      "name": "Health probe unit tests",
+      "result": "passed",
+      "details": "2 tests passed; default results contain five required services and explicit mode adds Ollama."
+    },
+    {
+      "name": "Health probe CLI help",
+      "result": "passed",
+      "details": "--check-ollama is exposed."
+    },
+    {
+      "name": "Core health CLI help",
+      "result": "passed",
+      "details": "health --check-ollama is exposed and forwarded by the core entrypoint."
+    },
+    {
+      "name": "Default health probe",
+      "result": "passed",
+      "details": "PostgreSQL, Qdrant, RabbitMQ, Valkey and MinIO returned healthy; Ollama was not required."
+    },
+    {
+      "name": "Diff whitespace check",
+      "result": "passed",
+      "details": "git diff --check returned exit code 0."
+    }
+  ],
+  "notes": [
+    "Ollama remains available as an explicit local-model health check via --check-ollama.",
+    "The default probe does not silently enable a cloud route."
+  ]
+}
