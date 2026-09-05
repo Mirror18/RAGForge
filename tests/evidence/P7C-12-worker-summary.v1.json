@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "P7C-12",
+  "status": "PASS",
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failedCases": [],
+    "durationMs": 0
+  },
+  "acceptance": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true
+  },
+  "checks": [
+    {
+      "name": "Maven server compile",
+      "result": "passed",
+      "details": "JDK 21 compile with Maven incremental compilation disabled."
+    },
+    {
+      "name": "Startup option static check",
+      "result": "passed",
+      "details": "Server and Worker arguments include -Dmaven.compiler.useIncrementalCompilation=false."
+    },
+    {
+      "name": "Session unauthorized response",
+      "result": "passed",
+      "details": "GET /api/v1/sessions/current returned HTTP 401 application/problem+json with AUTHENTICATION_REQUIRED."
+    },
+    {
+      "name": "Diff whitespace check",
+      "result": "passed",
+      "details": "git diff --check returned exit code 0."
+    }
+  ],
+  "notes": [
+    "Full start-local.bat rerun completed core, Server, Worker and Web startup.",
+    "Ollama was not started or required."
+  ]
+}
