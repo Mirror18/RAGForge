@@ -4,6 +4,7 @@ import com.ragforge.ingestion.objectstore.ContentAddressedObjectStore;
 import com.ragforge.ingestion.objectstore.ObjectKey;
 import com.ragforge.ingestion.objectstore.StoredObject;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -15,11 +16,14 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,8 +51,10 @@ class SpaceCandidateIndexBuilderTest {
         ContentAddressedObjectStore store = mock(ContentAddressedObjectStore.class);
         OllamaEmbeddingClient embedding = mock(OllamaEmbeddingClient.class);
         QdrantIndexWriter qdrant = mock(QdrantIndexWriter.class);
-        ResultSet rowOne = row(documentOne, childOne, revisionOne, parentOne, hashOne, textOne, keyOne);
-        ResultSet rowTwo = row(documentTwo, childTwo, revisionTwo, parentTwo, hashTwo, textTwo, keyTwo);
+        ResultSet rowOne = row(documentOne, childOne, revisionOne, parentOne, hashOne, textOne, keyOne,
+                UUID.randomUUID(), hashOne);
+        ResultSet rowTwo = row(documentTwo, childTwo, revisionTwo, parentTwo, hashTwo, textTwo, keyTwo,
+                UUID.randomUUID(), hashTwo);
         when(jdbc.query(anyString(), any(RowMapper.class), eq(spaceId))).thenAnswer(invocation -> {
             RowMapper mapper = invocation.getArgument(1);
             return List.of(mapper.mapRow(rowOne, 0), mapper.mapRow(rowTwo, 1));
@@ -74,10 +80,80 @@ class SpaceCandidateIndexBuilderTest {
         verify(qdrant).createAndUpsert(anyString(), eq(2), eq(spaceId), eq(result.indexId()), any(List.class));
         verify(qdrant).validateCandidate(anyString(), eq(spaceId), eq(result.indexId()), any(List.class));
         verify(jdbc).query(contains("d.active_revision_id"), any(RowMapper.class), eq(spaceId));
+        assertShadowOutcome(jdbc, spaceId, "PASS");
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void recordsShadowFailureWithoutBlockingExistingReadyTransition() throws Exception {
+        UUID spaceId = UUID.randomUUID();
+        UUID documentId = UUID.randomUUID();
+        UUID revisionId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        UUID childId = UUID.randomUUID();
+        String text = "lineage not backfilled yet";
+        String textHash = sha256(text);
+        ObjectKey key = key(spaceId, revisionId, textHash);
+
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ContentAddressedObjectStore store = mock(ContentAddressedObjectStore.class);
+        OllamaEmbeddingClient embedding = mock(OllamaEmbeddingClient.class);
+        QdrantIndexWriter qdrant = mock(QdrantIndexWriter.class);
+        ResultSet row = row(documentId, childId, revisionId, parentId, textHash, text, key, null, null);
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(spaceId))).thenAnswer(invocation -> {
+            RowMapper mapper = invocation.getArgument(1);
+            return List.of(mapper.mapRow(row, 0));
+        });
+        when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(spaceId))).thenReturn(3);
+        when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
+        when(store.get(key)).thenReturn(new StoredObject(key, "text/plain", text.length(), textHash,
+                Instant.now(), text.getBytes(StandardCharsets.UTF_8)));
+        when(embedding.embed(text)).thenReturn(List.of(0.1, 0.2));
+        when(qdrant.validateCandidate(anyString(), eq(spaceId), any(UUID.class), any(List.class)))
+                .thenReturn(new QdrantIndexWriter.Validation(true, true));
+
+        SpaceCandidateIndexBuilder builder = new SpaceCandidateIndexBuilder(jdbc, store, embedding, qdrant,
+                "nomic-embed-text:latest");
+        SpaceCandidateIndexBuilder.IndexResult result = builder.build(spaceId, Instant.now());
+
+        assertThat(result.indexId()).isNotNull();
+        assertShadowOutcome(jdbc, spaceId, "FAIL");
+        verify(jdbc).update(contains("SET index_state = 'READY'"), eq(spaceId), eq(result.indexId()));
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void rejectsCrossSpaceArtifactBeforeWritingShadowVerdict() throws Exception {
+        UUID requestedSpace = UUID.randomUUID();
+        UUID artifactSpace = UUID.randomUUID();
+        UUID revisionId = UUID.randomUUID();
+        String text = "wrong space artifact";
+        String textHash = sha256(text);
+        ObjectKey key = key(artifactSpace, revisionId, textHash);
+
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ContentAddressedObjectStore store = mock(ContentAddressedObjectStore.class);
+        OllamaEmbeddingClient embedding = mock(OllamaEmbeddingClient.class);
+        QdrantIndexWriter qdrant = mock(QdrantIndexWriter.class);
+        ResultSet row = row(UUID.randomUUID(), UUID.randomUUID(), revisionId, UUID.randomUUID(), textHash, text,
+                key, UUID.randomUUID(), textHash);
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(requestedSpace))).thenAnswer(invocation -> {
+            RowMapper mapper = invocation.getArgument(1);
+            return List.of(mapper.mapRow(row, 0));
+        });
+
+        SpaceCandidateIndexBuilder builder = new SpaceCandidateIndexBuilder(jdbc, store, embedding, qdrant,
+                "nomic-embed-text:latest");
+
+        assertThatThrownBy(() -> builder.build(requestedSpace, Instant.now()))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("does not belong to the requested space");
+        verify(jdbc, never()).update(contains("index_validation_results"), any(Object[].class));
     }
 
     private static ResultSet row(UUID documentId, UUID childId, UUID revisionId, UUID parentId,
-                                 String textHash, String text, ObjectKey key) throws Exception {
+                                 String textHash, String text, ObjectKey key, UUID manifestId,
+                                 String manifestContentHash) throws Exception {
         ResultSet row = mock(ResultSet.class);
         when(row.getObject("source_document_id", UUID.class)).thenReturn(documentId);
         when(row.getObject("child_id", UUID.class)).thenReturn(childId);
@@ -91,7 +167,27 @@ class SpaceCandidateIndexBuilderTest {
         when(row.getString("sha256")).thenReturn(key.contentHash());
         when(row.getLong("byte_length")).thenReturn((long) text.length());
         when(row.getString("media_type")).thenReturn("text/plain");
+        when(row.getObject("manifest_id", UUID.class)).thenReturn(manifestId);
+        when(row.getString("manifest_content_hash")).thenReturn(manifestContentHash);
         return row;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void assertShadowOutcome(JdbcTemplate jdbc, UUID spaceId, String outcome) {
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Object[]> arguments = ArgumentCaptor.forClass(Object[].class);
+        verify(jdbc, times(4)).update(sql.capture(), arguments.capture());
+        for (int index = 0; index < sql.getAllValues().size(); index++) {
+            if (sql.getAllValues().get(index).contains("index_validation_results")) {
+                assertThat(sql.getAllValues().get(index))
+                        .contains("ON CONFLICT (space_id, index_version_id, quality_policy_version) DO NOTHING");
+                Object[] values = arguments.getAllValues().get(index);
+                assertThat(values[1]).isEqualTo(spaceId);
+                assertThat(values[5]).isEqualTo(outcome);
+                return;
+            }
+        }
+        throw new AssertionError("shadow validation insert was not recorded");
     }
 
     private static ObjectKey key(UUID spaceId, UUID revisionId, String hash) {

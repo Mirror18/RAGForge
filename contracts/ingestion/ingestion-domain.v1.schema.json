@@ -209,6 +209,23 @@
       "x-ragforge-uniqueness": ["spaceId", "documentRevisionId", "pipelineVersionId", "parserName", "parserVersion"],
       "description": "An immutable lineage record binds a revision and parser configuration to controlled artifact references. It contains no content bytes, extracted text, credentials, or client filesystem path. A retry with the same identity returns the existing record; different immutable input is rejected."
     },
+    "indexValidationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["indexValidationResultId", "spaceId", "indexVersionId", "manifestSetHash", "qualityPolicyVersion", "outcome", "shadow", "checkedAt"],
+      "properties": {
+        "indexValidationResultId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "indexVersionId": {"$ref": "#/$defs/uuidV7"},
+        "manifestSetHash": {"$ref": "#/$defs/sha256"},
+        "qualityPolicyVersion": {"type": "string", "minLength": 1, "maxLength": 120},
+        "outcome": {"type": "string", "enum": ["PASS", "FAIL"]},
+        "shadow": {"type": "boolean", "const": true},
+        "checkedAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "indexVersionId", "qualityPolicyVersion"],
+      "description": "An immutable, space-scoped shadow verdict binds one candidate index to the manifest set hash and quality policy version. It contains no document body, credentials, or client filesystem path, and has no authority to publish an index."
+    },
     "pipelineVersion": {
       "type": "object",
       "additionalProperties": false,
