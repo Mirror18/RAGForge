@@ -11,25 +11,26 @@ meta:
   migration_owner: false
 scope:
   ownership:
-    - backend/server/src/main/java/com/ragforge/server/answer/JdbcRevisionArtifactMaterialService.java
-    - backend/server/src/main/java/com/ragforge/server/answer/RevisionArtifactMaterialResolver.java
-    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiController.java
-    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiProjectionStore.java
-    - backend/server/src/test/java/com/ragforge/server/answer/AnswerApiControllerTest.java
-    - backend/server/src/test/java/com/ragforge/server/answer/JdbcRevisionArtifactMaterialServiceTest.java
+    - backend/server/src/main/java/com/ragforge/server/ingestion/JdbcRevisionArtifactMaterialService.java
+    - backend/server/src/main/java/com/ragforge/server/answer/integration/RevisionArtifactMaterialResolver.java
+    - backend/server/src/main/java/com/ragforge/server/answer/api/AnswerApiController.java
+    - backend/server/src/main/java/com/ragforge/server/answer/api/AnswerApiProjectionStore.java
+    - backend/server/src/test/java/com/ragforge/server/answer/api/AnswerApiControllerTest.java
+    - backend/server/src/test/java/com/ragforge/server/answer/integration/RevisionArtifactMaterialResolverTest.java
+    - backend/server/src/test/java/com/ragforge/server/ingestion/JdbcRevisionArtifactMaterialServiceTest.java
     - tests/evidence/ARCH-IMP-04A-worker-summary.v1.json
   read_only:
     - .agents/tickets/ARCH-IMP-04A-a27.yaml
     - docs/07-架构决策记录.md
     - docs/02-项目架构与领域模型.md
-    - backend/server/src/main/java/com/ragforge/server/security/SessionSpaceAnswerAuthorizer.java
-    - backend/server/src/main/java/com/ragforge/server/answer/JdbcAnswerPersistence.java
+    - backend/server/src/main/java/com/ragforge/server/answer/integration/SessionSpaceAnswerAuthorizer.java
+    - backend/server/src/main/java/com/ragforge/server/answer/persistence/JdbcAnswerPersistence.java
     - backend/server/src/main/resources/db/migration/V12__phase5_answer_history.sql
     - backend/server/src/main/resources/db/migration/V21__phase7_source_task_center.sql
-    - backend/server/src/main/java/com/ragforge/server/answer/JdbcRevisionArtifactMaterialService.java
-    - backend/server/src/main/java/com/ragforge/server/answer/RevisionArtifactMaterialResolver.java
-    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiController.java
-    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiProjectionStore.java
+    - backend/server/src/main/java/com/ragforge/server/ingestion/JdbcRevisionArtifactMaterialService.java
+    - backend/server/src/main/java/com/ragforge/server/answer/integration/RevisionArtifactMaterialResolver.java
+    - backend/server/src/main/java/com/ragforge/server/answer/api/AnswerApiController.java
+    - backend/server/src/main/java/com/ragforge/server/answer/api/AnswerApiProjectionStore.java
   forbidden:
     - docs/08-项目状态卡.md
     - docs/09-项目任务总台账.md
