@@ -126,6 +126,36 @@ test.describe("P7Q-03 Web 8 journeys", () => {
   });
 });
 
+test("[P7C-15 列表分页] business flow and answer history show ten rows per page", async ({ page }) => {
+  const api = createSyntheticApi({ largeCollections: true });
+  await login(page, api);
+  await apiJson(page, `/api/v1/spaces/${SYNTHETIC.spaceId}/sources/uploads`, "POST", "synthetic-pagination");
+
+  await page.goto(`/?view=flow&spaceId=${SYNTHETIC.spaceId}`);
+  const jobsTable = page.getByRole("table", { name: "导入任务列表" });
+  await expect(jobsTable).toBeVisible();
+  await expect(jobsTable.locator("tbody tr")).toHaveCount(10);
+  await expect(page.locator('[data-pagination="ingestion-jobs"]')).toContainText("第 1 / 2 页 · 共 17 条");
+  await page.locator('[data-pagination="ingestion-jobs"]').getByRole("button", { name: "下一页" }).click();
+  await expect(jobsTable.locator("tbody tr")).toHaveCount(7);
+  await expect(page.locator('[data-pagination="ingestion-jobs"]')).toContainText("第 2 / 2 页 · 共 17 条");
+
+  await page.goto(`/?view=answer&spaceId=${SYNTHETIC.spaceId}`);
+  const historyTable = page.getByRole("table", { name: "问答历史表格" });
+  await expect(historyTable).toBeVisible();
+  await expect(historyTable.locator('tbody > tr:not(.history-detail-row)')).toHaveCount(10);
+  await expect(page.locator('[data-pagination="conversation-history"]')).toContainText("会话：第 1 / 3 页 · 共 23 条");
+  await historyTable.locator('tbody > tr:not(.history-detail-row)').first().locator(".history-select").click();
+  await expect(page.locator('[data-pagination="conversation-runs"]')).toContainText("运行记录：第 1 / 3 页 · 共 23 条");
+  await expect(page.locator('[data-pagination="conversation-runs"] button[aria-label="下一页"]')).toBeEnabled();
+  await page.locator('[data-pagination="conversation-runs"] button[aria-label="下一页"]').click();
+  await expect(page.locator('[data-pagination="conversation-runs"]')).toContainText("运行记录：第 2 / 3 页 · 共 23 条");
+  await page.locator('[data-pagination="conversation-history"] button[aria-label="下一页"]').click();
+  await expect(historyTable.locator('tbody > tr:not(.history-detail-row)')).toHaveCount(10);
+  await expect(historyTable).toContainText("Synthetic conversation 11");
+  await expect(page.locator('[data-pagination="conversation-history"]')).toContainText("会话：第 2 / 3 页 · 共 23 条");
+});
+
 test("[P7Q-06 URL + 分页] restores route state and traverses all large synthetic collections", async ({ page }) => {
   const api = createSyntheticApi({ largeCollections: true });
   await login(page, api);
@@ -152,7 +182,7 @@ test("[P7Q-06 URL + 分页] restores route state and traverses all large synthet
     await fetch(`/api/v1/spaces/${spaceId}/sources/uploads`, { method: "POST", credentials: "include", body: "synthetic" });
   }, SYNTHETIC.spaceId);
   expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/sources`)).toBe(120);
-  expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/jobs`)).toBe(7);
+  expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/jobs`)).toBe(17);
   expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/indexes`)).toBe(6);
   expect(api.requests.filter((request) => request.path.endsWith("/sources")).length).toBeGreaterThan(1);
 });
@@ -186,7 +216,7 @@ test("[P7C-14 演示截图] captures the complete synthetic business loop", asyn
 
   await apiJson(page, `/api/v1/spaces/${SYNTHETIC.spaceId}/sources/uploads`, "POST", "synthetic-demo");
   await page.goto(`/?view=flow&spaceId=${SYNTHETIC.spaceId}`);
-  await expect(page.locator(".flow-config .job-list")).toBeVisible();
+  await expect(page.getByRole("table", { name: "导入任务列表" })).toBeVisible();
   await page.screenshot({ path: asset("02-资料导入.png"), fullPage: true });
 
   await apiJson(page, `/api/v1/spaces/${SYNTHETIC.spaceId}/indexes/${SYNTHETIC.indexId}/publish`, "POST");
@@ -198,7 +228,7 @@ test("[P7C-14 演示截图] captures the complete synthetic business loop", asyn
   await expect(page.locator(".answer-result")).toContainText("synthetic answer");
   await expect(page.locator(".citation-section")).toBeVisible();
   await page.screenshot({ path: asset("04-带引用问答.png"), fullPage: true });
-  await page.getByRole("button", { name: /Synthetic conversation/ }).click();
+  await page.locator('.history-table tbody > tr:not(.history-detail-row)').first().locator(".history-select").click();
   await expect(page.locator(".history-detail")).toContainText("本会话的运行记录");
   await page.screenshot({ path: asset("05-历史会话.png"), fullPage: true });
 });

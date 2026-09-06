@@ -71,7 +71,23 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
   let conversationStatus = "ACTIVE";
   let jobPolls = 0;
   const requests: SyntheticRequest[] = [];
-  const conversations = [{ id: SYNTHETIC.conversationId, title: "Synthetic conversation", status: "ACTIVE", version: 1, createdAt: now, updatedAt: now }];
+  const conversations = Array.from({ length: options.largeCollections ? 23 : 1 }, (_, index) => ({
+    id: index === 0 ? SYNTHETIC.conversationId : `0190f5c2-7c1e-7abc-8def-${String(5000 + index).padStart(12, "0")}`,
+    title: index === 0 ? "Synthetic conversation" : `Synthetic conversation ${index + 1}`,
+    status: "ACTIVE",
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+  }));
+  const conversationRuns = (conversationId: string) => Array.from({ length: options.largeCollections ? 23 : 1 }, (_, index) => ({
+    runId: index === 0 ? SYNTHETIC.runId : `0190f5c2-7c1e-7abc-8def-${String(6000 + index).padStart(12, "0")}`,
+    conversationId,
+    spaceId: SYNTHETIC.spaceId,
+    status: cancelled ? "CANCELLED" : "COMPLETED",
+    correlationId: SYNTHETIC.correlationId,
+    promptVersionId: SYNTHETIC.promptVersionId,
+    createdAt: now,
+  }));
   const page = <T>(items: T[], url: URL): { items: T[]; nextCursor: string | null } => {
     const size = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20) || 20, 1), 20);
     const cursor = url.searchParams.get("cursor");
@@ -80,7 +96,7 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
     return { items: result, nextCursor: start + result.length < items.length ? `synthetic-${start + result.length}` : null };
   };
   const largeSources = Array.from({ length: 120 }, (_, index) => ({ source: { sourceId: `0190f5c2-7c1e-7abc-8def-${String(2000 + index).padStart(12, "0")}`, spaceId: SYNTHETIC.spaceId, displayName: `Synthetic source ${index + 1}`, connectorType: "GIT", rootRef: `synthetic/source/${index + 1}`, gitBranch: "main", versionNo: 1, sourceState: "ACTIVE" }, checkpoint: null }));
-  const largeJobs = Array.from({ length: 7 }, (_, index) => ({ ...job("SUCCEEDED"), job: { ...job("SUCCEEDED").job, id: `0190f5c2-7c1e-7abc-8def-${String(3000 + index).padStart(12, "0")}` } }));
+  const largeJobs = Array.from({ length: 17 }, (_, index) => ({ ...job("SUCCEEDED"), job: { ...job("SUCCEEDED").job, id: `0190f5c2-7c1e-7abc-8def-${String(3000 + index).padStart(12, "0")}` } }));
   const largeIndexes = Array.from({ length: 6 }, (_, index) => ({ indexVersionId: `0190f5c2-7c1e-7abc-8def-${String(4000 + index).padStart(12, "0")}`, spaceId: SYNTHETIC.spaceId, versionNo: index + 1, state: index === 0 && published ? "ACTIVE" : "READY", childChunkCount: 1, validationVectorDimension: 3 }));
   const fulfill = async (route: Route, status: number, body: object | string, contentType = "application/json"): Promise<void> => {
     await route.fulfill({ status, contentType, headers: { "X-Correlation-Id": SYNTHETIC.correlationId }, body: typeof body === "string" ? body : JSON.stringify(body) });
@@ -125,10 +141,13 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
     if (path.endsWith("/sources") && request.method() === "GET") return fulfill(route, 200, page(options.largeCollections ? largeSources : [], url));
     if (path.endsWith("/jobs") && request.method() === "GET") return fulfill(route, 200, page(options.largeCollections ? (uploaded ? largeJobs : []) : [], url));
     if (path.endsWith("/space-bindings") && request.method() === "GET") return fulfill(route, 200, { version: 1, chatRouteId: SYNTHETIC.routeId, embeddingRouteId: null, rerankRouteId: null, promptVersionId: SYNTHETIC.promptVersionId, cloudEgressEnabled: false, cloudEgressAuthorization: null });
-    if (path.endsWith("/conversations") && request.method() === "GET") return fulfill(route, 200, { items: conversationStatus === "ARCHIVED" && url.searchParams.get("includeArchived") !== "true" ? [] : conversations.map((item) => ({ ...item, status: conversationStatus })), nextCursor: null });
+    if (path.endsWith("/conversations") && request.method() === "GET") return fulfill(route, 200, page(conversationStatus === "ARCHIVED" && url.searchParams.get("includeArchived") !== "true" ? [] : conversations.map((item) => ({ ...item, status: conversationStatus })), url));
     if (path.endsWith("/conversations") && request.method() === "POST") return fulfill(route, 201, { id: SYNTHETIC.conversationId, conversationId: SYNTHETIC.conversationId, title: "Synthetic conversation", status: "ACTIVE", version: 1, createdAt: now, updatedAt: now, spaceId: SYNTHETIC.spaceId });
     if (path.includes("/conversations/" + SYNTHETIC.conversationId + "/archive") && request.method() === "POST") { conversationStatus = "ARCHIVED"; return fulfill(route, 200, { id: SYNTHETIC.conversationId, status: "ARCHIVED" }); }
-    if (path.includes("/conversations/" + SYNTHETIC.conversationId + "/runs") && request.method() === "GET") return fulfill(route, 200, { items: [{ runId: SYNTHETIC.runId, conversationId: SYNTHETIC.conversationId, spaceId: SYNTHETIC.spaceId, status: cancelled ? "CANCELLED" : "COMPLETED", createdAt: now }], nextCursor: null });
+    if (path.includes("/conversations/") && path.endsWith("/runs") && request.method() === "GET") {
+      const conversationId = path.split("/conversations/")[1]?.split("/runs")[0] ?? SYNTHETIC.conversationId;
+      return fulfill(route, 200, page(conversationRuns(conversationId), url));
+    }
     if (path.includes("/conversations/" + SYNTHETIC.conversationId + "/runs") && request.method() === "POST") return fulfill(route, 202, { runId: SYNTHETIC.runId, conversationId: SYNTHETIC.conversationId, spaceId: SYNTHETIC.spaceId, version: 1, status: cancelled ? "CANCELLED" : "IN_PROGRESS", correlationId: SYNTHETIC.correlationId, modelRouteId: SYNTHETIC.routeId, promptVersionId: SYNTHETIC.promptVersionId, usageLedgerId: null, cancelRequested: false, error: null, createdAt: now, startedAt: now, finishedAt: null });
     if (path.includes("/answers/" + SYNTHETIC.runId + "/cancel") && request.method() === "POST") { cancelled = true; return fulfill(route, 202, { runId: SYNTHETIC.runId, spaceId: SYNTHETIC.spaceId, status: "CANCELLED", firstCancellation: true, eventId: null, correlationId: SYNTHETIC.correlationId, reason: "synthetic cancellation" }); }
     if (path.includes("/answers/" + SYNTHETIC.runId + "/feedback") && request.method() === "POST") return fulfill(route, 201, { id: SYNTHETIC.evidenceId, spaceId: SYNTHETIC.spaceId, runId: SYNTHETIC.runId, evidenceId: SYNTHETIC.evidenceId, actorUserId: SYNTHETIC.userId, sentiment: "HELPFUL", version: 1, createdAt: now, updatedAt: now });
