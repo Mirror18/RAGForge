@@ -9,6 +9,7 @@ import AuthView from "./AuthView.vue";
 import PersonalSpaceView from "./PersonalSpaceView.vue";
 import BusinessFlowView from "./BusinessFlowView.vue";
 import { currentTimeZone, formatDateTime } from "./format";
+import { roleLabel } from "./i18n";
 import { readRoute, routeSearch, type ControlSection, type RouteState, type View } from "./router";
 
 const initialRoute: RouteState = readRoute();
@@ -22,7 +23,7 @@ const apiStatus = ref<"checking" | "ready" | "unavailable" | "unauthenticated">(
 const checkedAt = ref("");
 const session = ref<CurrentSession | null>(null);
 const spaces = ref<Space[]>([]);
-const selectedSpaceId = ref(routeContext.value?.spaceId ?? "");
+const selectedSpaceId = ref(initialRoute.spaceId || routeContext.value?.spaceId || "");
 const workspaceError = ref("");
 const authMode = ref<"login" | "register" | "bootstrap">("login");
 const authEmail = ref("");
@@ -42,17 +43,18 @@ const profileBId = ref("");
 
 const selectedSpace = computed(() => spaces.value.find((space) => space.spaceId === selectedSpaceId.value) ?? null);
 const currentRole = computed(() => selectedSpace.value?.role ?? (session.value?.user.platformRole === "PLATFORM_ADMIN" ? "PLATFORM_ADMIN" : "未加载"));
+const currentRoleLabel = computed(() => roleLabel(currentRole.value));
 const isViewer = computed(() => selectedSpace.value?.role === "VIEWER");
 const canEdit = computed(() => !isViewer.value && Boolean(selectedSpaceId.value));
 const statusText = computed(() => apiStatus.value === "ready" ? "会话与 API 可用" : apiStatus.value === "unauthenticated" ? "请登录后继续" : apiStatus.value === "unavailable" ? "API 不可用" : "正在检查会话");
 const pageMeta = computed(() => {
-  if (view.value === "flow") return { kicker: "Workspace / Guided flow", title: "业务闭环", description: "从本地知识库到可核验答案，一步一步完成真实服务端流程。" };
-  if (view.value === "answer") return { kicker: "Workspace / Answer", title: "带引用问答", description: "在当前空间内运行问答，并保留证据、引用和 Run 追踪。" };
-  if (view.value === "studio") return { kicker: "Tools / Chunk Studio", title: "Chunk Studio", description: "检查 chunk 的来源、索引状态和人工修订审计。" };
-  if (view.value === "playground") return { kicker: "Tools / Retrieval", title: "Retrieval Playground", description: "以只读方式比较候选检索配置和 evidence trace。" };
-  if (view.value === "control") return { kicker: "Manage / Configuration", title: "配置中心", description: "管理 Provider、模型路由、Prompt 版本和 Run。" };
-  if (view.value === "profile") return { kicker: "Account / Personal space", title: "个人空间", description: "管理账号与知识空间，切换当前工作的内容边界。" };
-  return { kicker: "Workspace", title: "业务闭环", description: "从本地知识库到可核验答案，一步一步完成真实服务端流程。" };
+  if (view.value === "flow") return { kicker: "工作台 / 业务向导", title: "业务闭环", description: "跟着四步向导，把知识导入当前空间并完成一次可核验问答。" };
+  if (view.value === "answer") return { kicker: "工作台 / 问答", title: "带引用问答", description: "在当前空间提问，查看回答、证据和可追踪的运行记录。" };
+  if (view.value === "studio") return { kicker: "专业工具 / 内容证据", title: "内容证据", description: "查看内容来源、索引状态和人工修订记录。" };
+  if (view.value === "playground") return { kicker: "专业工具 / 检索实验", title: "检索实验", description: "只读比较检索候选结果，不会改变正在使用的版本。" };
+  if (view.value === "control") return { kicker: "管理 / 高级设置", title: "高级设置", description: "管理员可在这里配置模型服务、回答规则和运行记录。" };
+  if (view.value === "profile") return { kicker: "账号 / 知识空间", title: "个人空间", description: "管理账号和知识空间，切换当前工作的内容边界。" };
+  return { kicker: "工作台", title: "业务闭环", description: "跟着四步向导，把知识导入当前空间并完成一次可核验问答。" };
 });
 function persistRoute(): void {
   if (typeof window === "undefined") return;
@@ -171,16 +173,16 @@ onMounted(checkApiHealth);
 
     <div v-else class="app-frame">
       <aside class="app-sidebar" aria-label="产品导航">
-        <button type="button" class="brand-lockup" aria-label="返回业务闭环" @click="openView('flow')"><span class="brand-symbol">R</span><span><strong>RAGForge</strong><small>Knowledge workspace</small></span></button>
-        <div class="sidebar-section"><span class="sidebar-label">工作台</span><button id="flow-tab" type="button" class="side-nav-item" :class="{ active: view === 'flow' }" :aria-current="view === 'flow' ? 'page' : undefined" @click="openView('flow')"><span class="nav-icon">⌂</span><span><strong>业务闭环</strong><small>知识库 → 答案</small></span></button><button id="answer-tab" type="button" class="side-nav-item" :class="{ active: view === 'answer' }" :aria-current="view === 'answer' ? 'page' : undefined" @click="openView('answer')"><span class="nav-icon">✦</span><span><strong>带引用问答</strong><small>运行一次可核验回答</small></span></button></div>
-        <div class="sidebar-section"><span class="sidebar-label">工具</span><button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="openView('studio')"><span class="nav-icon">▦</span><span><strong>Chunk Studio</strong><small>内容与 provenance</small></span></button><button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="openView('playground')"><span class="nav-icon">⌁</span><span><strong>Retrieval Playground</strong><small>只读检索实验</small></span></button></div>
-        <div class="sidebar-section"><span class="sidebar-label">管理</span><button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' }" :aria-current="view === 'control' ? 'page' : undefined" @click="openControl('spaces')"><span class="nav-icon">⚙</span><span><strong>配置中心</strong><small>Provider · Prompt · Run</small></span></button><button id="personal-space-tab" type="button" class="side-nav-item" :class="{ active: view === 'profile' }" :aria-current="view === 'profile' ? 'page' : undefined" @click="openView('profile')"><span class="nav-icon">◎</span><span><strong>个人空间</strong><small>账号与空间</small></span></button></div>
-        <div class="sidebar-footer"><div class="sidebar-user"><span class="user-avatar">{{ session.user.displayName.slice(0, 1).toUpperCase() }}</span><span><strong>{{ session.user.displayName }}</strong><small>{{ currentRole }}</small></span></div><button type="button" class="sidebar-logout" @click="logout">退出登录</button></div>
+        <button type="button" class="brand-lockup" aria-label="返回业务闭环" @click="openView('flow')"><span class="brand-symbol">R</span><span><strong>RAGForge</strong><small>知识工作台</small></span></button>
+        <div class="sidebar-section"><span class="sidebar-label">工作台</span><button id="flow-tab" type="button" class="side-nav-item" :class="{ active: view === 'flow' }" :aria-current="view === 'flow' ? 'page' : undefined" @click="openView('flow')"><span class="nav-icon">⌂</span><span><strong>业务向导</strong><small>导入知识 → 得到答案</small></span></button><button id="answer-tab" type="button" class="side-nav-item" :class="{ active: view === 'answer' }" :aria-current="view === 'answer' ? 'page' : undefined" @click="openView('answer')"><span class="nav-icon">✦</span><span><strong>带引用问答</strong><small>提问并查看证据</small></span></button></div>
+        <div class="sidebar-section"><span class="sidebar-label">专业工具</span><button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="openView('studio')"><span class="nav-icon">▦</span><span><strong>内容证据</strong><small>来源与修订记录</small></span></button><button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="openView('playground')"><span class="nav-icon">⌁</span><span><strong>检索实验</strong><small>只读比较检索结果</small></span></button></div>
+        <div class="sidebar-section"><span class="sidebar-label">管理</span><button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' }" :aria-current="view === 'control' ? 'page' : undefined" @click="openControl('spaces')"><span class="nav-icon">⚙</span><span><strong>高级设置</strong><small>管理员配置与追踪</small></span></button><button id="personal-space-tab" type="button" class="side-nav-item" :class="{ active: view === 'profile' }" :aria-current="view === 'profile' ? 'page' : undefined" @click="openView('profile')"><span class="nav-icon">◎</span><span><strong>个人空间</strong><small>账号与空间</small></span></button></div>
+        <div class="sidebar-footer"><div class="sidebar-user"><span class="user-avatar">{{ session.user.displayName.slice(0, 1).toUpperCase() }}</span><span><strong>{{ session.user.displayName }}</strong><small>{{ currentRoleLabel }}</small></span></div><button type="button" class="sidebar-logout" @click="logout">退出登录</button></div>
       </aside>
 
       <section class="app-main">
         <header class="topbar"><div class="page-heading"><span class="eyebrow">{{ pageMeta.kicker }}</span><h1>{{ pageMeta.title }}</h1><p>{{ pageMeta.description }}</p></div><div class="topbar-actions"><div class="status-chip" :class="apiStatus" aria-live="polite"><span class="status-dot" aria-hidden="true"></span>{{ statusText }}</div><button type="button" class="icon-button" :disabled="apiStatus === 'checking'" aria-label="刷新工作区状态" title="刷新工作区状态" @click="checkApiHealth">↻</button></div></header>
-        <section class="workspace-context" aria-label="当前工作空间上下文"><div class="space-switcher"><span class="context-label">当前空间</span><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }}</option></select><small class="timezone-note">时间显示：{{ currentTimeZone() }}</small></div><div class="context-stat"><span class="context-label">角色</span><strong>{{ currentRole }}</strong></div><div class="context-stat"><span class="context-label">版本</span><strong>v{{ selectedSpace?.version ?? "—" }}</strong></div><div class="context-id"><span class="context-label">space_id</span><code>{{ selectedSpaceId || "尚未创建空间" }}</code></div><button type="button" class="secondary-button context-profile" @click="openView('profile')">管理空间</button></section>
+        <section class="workspace-context" aria-label="当前工作空间上下文"><div class="space-switcher"><span class="context-label">当前空间</span><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }}</option></select><small class="timezone-note">时间显示：{{ currentTimeZone() }}</small></div><div class="context-stat"><span class="context-label">当前角色</span><strong>{{ currentRoleLabel }}</strong></div><div class="context-stat"><span class="context-label">空间版本</span><strong>v{{ selectedSpace?.version ?? "—" }}</strong></div><div class="context-id"><span class="context-label">空间标识</span><code>{{ selectedSpaceId || "尚未创建空间" }}</code></div><button type="button" class="secondary-button context-profile" @click="openView('profile')">管理空间</button></section>
         <p v-if="workspaceError" class="alert error" role="alert">{{ workspaceError }}</p>
         <PersonalSpaceView v-if="spaces.length === 0 || view === 'profile'" :session="session" :spaces="spaces" :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-creating="spaceCreating" @select-space="(spaceId) => { selectedSpaceId = spaceId; openView('flow'); }" @create-space="createSpace" @open-action="openPersonalAction" @logout="logout" @refresh="checkApiHealth" />
         <BusinessFlowView v-else-if="view === 'flow'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :current-user-id="session.user.userId" @start-answer="(config) => { answerDefaults = config; openView('answer'); }" @open-control="openControl" />

@@ -4,6 +4,7 @@ import { ApiError, getActiveIndex, getIngestionJob, getParseReport, ingestWebSou
 import SourceLibraryView from "./SourceLibraryView.vue";
 import TaskCenterView from "./TaskCenterView.vue";
 import IndexLifecycleView from "./IndexLifecycleView.vue";
+import { purposeLabel, stateLabel } from "./i18n";
 
 const props = defineProps<{
   selectedSpaceId: string;
@@ -60,6 +61,20 @@ const hasIndexIdentity = computed(() => Boolean(activeIndex.value?.pointer.activ
 const canStart = computed(() => Boolean(props.selectedSpaceId && hasPublishedModel.value && hasPublishedPrompt.value && hasIndexIdentity.value));
 const canManage = computed(() => props.currentRole === "SPACE_ADMIN" || props.currentRole === "PLATFORM_ADMIN");
 const needsRuntimeSetup = computed(() => Boolean(props.selectedSpaceId && (!hasPublishedModel.value || !hasPublishedPrompt.value)));
+const hasImportedContent = computed(() => jobs.value.length > 0 || indexes.value.length > 0 || Boolean(activeIndex.value));
+const activeStep = computed(() => {
+  if (!props.selectedSpaceId) return 1;
+  if (!hasImportedContent.value) return 2;
+  if (!hasIndexIdentity.value) return 3;
+  return 4;
+});
+const nextAction = computed(() => {
+  if (!props.selectedSpaceId) return "先在顶部选择或创建一个知识空间";
+  if (!hasImportedContent.value) return "选择一份资料，导入到当前空间";
+  if (!hasIndexIdentity.value) return "等待摄取完成，然后发布待发布索引";
+  if (!hasPublishedModel.value || !hasPublishedPrompt.value) return "管理员只需完成一次回答配置";
+  return "输入问题，开始一次带引用问答";
+});
 
 function apiPath(suffix: string): string {
   return `/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}${suffix}`;
@@ -94,9 +109,11 @@ async function applyChatBinding(route: ModelRoute): Promise<void> {
     : "已切换到本地 Ollama：空间绑定已关闭云端出境。";
 }
 
-async function selectRuntimeMode(): Promise<void> {
+async function selectRuntimeMode(nextMode?: "LOCAL" | "MIMO"): Promise<void> {
   const previousMode = runtimeMode.value;
-  const providerType = runtimeMode.value === "MIMO" ? "MIMO" : "OLLAMA";
+  const targetMode = nextMode ?? runtimeMode.value;
+  runtimeMode.value = targetMode;
+  const providerType = targetMode === "MIMO" ? "MIMO" : "OLLAMA";
   const route = chatRoutes.value.find((item) => {
     const profileId = item.candidates[0]?.modelProfileId;
     const profile = modelProfiles.value.find((candidate) => candidate.modelProfileId === profileId);
@@ -104,7 +121,8 @@ async function selectRuntimeMode(): Promise<void> {
     return provider?.providerType === providerType;
   });
   if (!route) {
-    error.value = runtimeMode.value === "MIMO" ? "当前空间还没有已发布的 MiMo Chat route，请先在配置中心初始化。" : "当前空间还没有可用的本地 Ollama Chat route。";
+    runtimeMode.value = previousMode;
+    error.value = targetMode === "MIMO" ? "当前空间还没有已发布的 MiMo 云端路线，请先在高级设置中初始化。" : "当前空间还没有可用的本地模型路线。";
     return;
   }
   selectedRouteId.value = route.modelRouteId;
@@ -359,30 +377,26 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
 
 <template>
   <details class="advanced-source">
-    <summary><span><small>可选入口</small><strong>从公开网页加载内容</strong></span><span class="summary-action">需显式授权 · 展开</span></summary>
+    <summary><span><small>可选入口</small><strong>从公开网页导入资料</strong></span><span class="summary-action">需要明确授权 · 展开</span></summary>
     <div class="advanced-source-body">
-      <p>网页只会进入当前空间，且必须通过服务端白名单与公网地址策略；Git 来源请在下方“来源库”统一管理。</p>
+      <p>网页只会进入当前空间，并且必须通过服务端白名单和公网地址策略；网页内容会离开本机，Git 来源请在下方“来源与任务管理”中维护。</p>
       <div class="web-source-form"><div class="field"><label for="web-source-url">网页链接</label><input id="web-source-url" v-model="webUrl" type="url" placeholder="https://example.com/knowledge" /></div><label class="check-row"><input v-model="webEgressApproved" type="checkbox" />我确认本次加载允许访问已配置白名单的公开网页</label><button type="button" class="secondary-button" :disabled="uploadBusy || !webUrl.trim() || !webEgressApproved" @click="ingestWeb">{{ uploadBusy ? "加载中…" : "加载网页到知识库" }}</button></div>
     </div>
   </details>
   <section class="view-section business-flow" aria-labelledby="business-flow-heading">
-    <div class="section-heading"><div><p class="eyebrow">00 · Guided business flow</p><h2 id="business-flow-heading">业务闭环</h2><p>按真实服务端状态完成配置，再进入问答。这里不接受手填不存在的资源，也不会把前端选中状态当成权限依据。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "可进入问答" : "尚有步骤未完成" }}</div></div>
+    <div class="section-heading"><div><p class="eyebrow">00 · 四步业务向导</p><h2 id="business-flow-heading">从资料到答案</h2><p>只需要按顺序完成四步：选择空间、导入资料、发布索引、开始问答。模型和回答规则由向导自动带入，不需要手填内部编号。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "已准备好提问" : `下一步：${nextAction}` }}</div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
-    <SourceLibraryView :selected-space-id="selectedSpaceId" :current-role="currentRole" />
-    <TaskCenterView :selected-space-id="selectedSpaceId" :current-role="currentRole" />
+    <div class="next-action-banner"><span class="next-action-index">{{ String(activeStep).padStart(2, "0") }}</span><div><span class="card-label">现在要做什么</span><strong>{{ nextAction }}</strong><p>页面会读取服务端真实状态；完成后下一步会自动解锁。</p></div></div>
+    <details class="advanced-management"><summary><span><small>可选管理</small><strong>来源与任务管理</strong></span><span class="summary-action">需要维护 Git 来源或排查任务时再展开</span></summary><div class="advanced-management-grid"><SourceLibraryView :selected-space-id="selectedSpaceId" :current-role="currentRole" /><TaskCenterView :selected-space-id="selectedSpaceId" :current-role="currentRole" /></div></details>
     <section v-if="needsRuntimeSetup" class="card setup-card" aria-labelledby="setup-heading">
-      <div><span class="card-label">先验证运行环境</span><h3 id="setup-heading">还没有可用的问答模型</h3><p class="muted">先在配置中心登记并实测 Provider，再发布与实测结果匹配的模型配置。完整 RAG 还需要 P7-CORE-05 接入真实 Rerank；页面不会创建未经验证的伪闭环。</p></div>
-      <div class="setup-actions"><button type="button" :disabled="!canManage" @click="emit('open-control', 'providers')">前往 Provider 验证</button></div>
-      <small v-if="!canManage" class="permission-hint">当前角色没有配置权限，请让空间管理员完成模型配置。</small>
+      <div><span class="card-label">只需管理员完成一次</span><h3 id="setup-heading">当前空间还没有可用的回答配置</h3><p class="muted">管理员需要先验证模型服务，再发布模型能力和回答规则。配置完成后，普通使用者只需导入资料和提问，向导会自动复用已发布版本。</p></div>
+      <div class="setup-actions"><button type="button" :disabled="!canManage" @click="emit('open-control', 'providers')">打开一次性配置</button></div>
+      <small v-if="!canManage" class="permission-hint">当前角色没有配置权限，请让空间管理员完成这一步。</small>
     </section>
-    <div class="flow-steps"><article class="card flow-step done"><span class="step-number">01</span><div><strong>空间</strong><p>{{ selectedSpaceId ? `当前空间 ${selectedSpaceId}` : "请选择空间" }}</p></div><span class="step-state">{{ selectedSpaceId ? "完成" : "待完成" }}</span></article><article class="card flow-step" :class="{ done: hasPublishedModel }"><span class="step-number">02</span><div><strong>模型路由</strong><p>{{ hasPublishedModel ? `${selectedProvider?.providerType} · ${selectedProfile?.purpose}` : "需要 ACTIVE route、PUBLISHED profile 和 ACTIVE provider" }}</p></div><span class="step-state">{{ hasPublishedModel ? "完成" : "去配置" }}</span></article><article class="card flow-step" :class="{ done: hasPublishedPrompt }"><span class="step-number">03</span><div><strong>Prompt 版本</strong><p>{{ hasPublishedPrompt ? `已发布 v${promptVersion?.version}` : "需要已发布的 Prompt version" }}</p></div><span class="step-state">{{ hasPublishedPrompt ? "完成" : "去配置" }}</span></article><article class="card flow-step" :class="{ done: hasIndexIdentity }"><span class="step-number">04</span><div><strong>数据与索引</strong><p>{{ hasIndexIdentity ? `active index v${activeIndex?.index?.versionNo ?? "?"}` : "上传 Markdown 并等待 Worker 发布 active index" }}</p></div><span class="step-state">{{ hasIndexIdentity ? "完成" : "待完成" }}</span></article><article class="card flow-step" :class="{ done: canStart }"><span class="step-number">05</span><div><strong>带引用问答</strong><p>{{ canStart ? "运行配置已准备好，可开始回答" : "完成前置步骤后解锁" }}</p></div><span class="step-state">{{ canStart ? "已解锁" : "锁定" }}</span></article></div>
+    <div class="flow-steps"><article class="card flow-step" :class="{ done: Boolean(selectedSpaceId), current: activeStep === 1 }"><span class="step-number">01</span><div><strong>选择空间</strong><p>{{ selectedSpaceId ? "当前空间已确定，资料和回答都会隔离在这里" : "请在页面顶部选择或创建空间" }}</p></div><span class="step-state">{{ selectedSpaceId ? "已完成" : "当前步骤" }}</span></article><article class="card flow-step" :class="{ done: hasImportedContent, current: activeStep === 2 }"><span class="step-number">02</span><div><strong>导入资料</strong><p>{{ hasImportedContent ? `已提交 ${jobs.length} 个摄取任务` : "选择 Markdown、TXT、PDF、DOCX、PPTX 或 XLSX" }}</p></div><span class="step-state">{{ hasImportedContent ? "已完成" : "当前步骤" }}</span></article><article class="card flow-step" :class="{ done: hasIndexIdentity, current: activeStep === 3 }"><span class="step-number">03</span><div><strong>发布索引</strong><p>{{ hasIndexIdentity ? `当前使用第 ${activeIndex?.index?.versionNo ?? "—"} 版索引` : "等待任务完成后，点击“发布为当前版本”" }}</p></div><span class="step-state">{{ hasIndexIdentity ? "已完成" : "当前步骤" }}</span></article><article class="card flow-step" :class="{ done: canStart, current: activeStep === 4 }"><span class="step-number">04</span><div><strong>开始问答</strong><p>{{ canStart ? "回答配置已自动带入，现在可以提问" : "回答配置或索引还未准备好" }}</p></div><span class="step-state">{{ canStart ? "已解锁" : "等待前置步骤" }}</span></article></div>
 
-    <div class="flow-layout"><div class="card flow-config"><div class="card-title"><div><span class="card-label">01 · Data source + setup</span><h3>接入内容并确认问答配置</h3></div><button type="button" class="quiet-button" :disabled="loading" @click="loadFlow">{{ loading ? "读取中…" : "刷新真实状态" }}</button></div><div class="source-entry"><div><strong>常用本地知识库</strong><p class="muted">选择 notes 文件夹或单个文件（Markdown、TXT、PDF、DOCX、PPTX、XLSX）。服务端自动排除 .obsidian、附件和不支持的文件。</p></div><div class="source-actions"><label class="file-picker" for="flow-folder"><span>选择 notes 文件夹</span><input id="flow-folder" type="file" webkitdirectory directory multiple accept=".md,.markdown,.txt,.pdf,.docx,.pptx,.xlsx,text/markdown,text/plain,application/pdf" @change="chooseFolder" /></label><label class="file-picker secondary-picker" for="flow-file"><span>选择单个文件</span><input id="flow-file" type="file" accept=".md,.markdown,.txt,.pdf,.docx,.pptx,.xlsx,text/markdown,text/plain,application/pdf" @change="chooseFile" /></label></div><div v-if="selectedFiles.length" class="selected-files"><span>{{ selectedFiles.length }} 个文件已选择</span><button type="button" :disabled="uploadBusy" @click="uploadFile">{{ uploadBusy ? "提交中…" : "上传并发起摄取" }}</button></div></div><div v-if="jobs.length" class="job-list"><div v-for="item in jobs" :key="item.job.id" class="job-row"><span>{{ item.job.id }}</span><strong>{{ item.job.status }}</strong><small>{{ item.steps.map((step) => `${step.stepName}:${step.status}`).join(" · ") || "等待 Worker" }}</small><button v-if="item.job.documentRevisionId" type="button" class="quiet-button" @click="showParseReport(item.job.documentRevisionId)">查看 Parse Report</button></div></div><div v-if="parseReport" class="parse-report"><strong>Parse Report：{{ parseReport.status }}</strong><span>{{ parseReport.parserName }} {{ parseReport.parserVersion }} · {{ parseReport.characterCount }} 字符 · {{ parseReport.tokenCount }} tokens</span><small>{{ parseReport.errors || "无错误" }}</small></div><div class="section-divider"><span>02 · Runtime setup</span><small>以下资源必须是服务端真实存在且已发布的版本</small></div><div class="form-grid"><div class="field wide"><label for="flow-route">ACTIVE Model Route</label><select id="flow-route" v-model="selectedRouteId" @change="selectedProfileId = selectedRoute?.candidates[0]?.modelProfileId ?? ''"><option value="">请选择 route</option><option v-for="item in modelRoutes" :key="item.modelRouteId" :value="item.modelRouteId">{{ item.purpose }} · {{ item.status }}</option></select></div><div class="field"><label for="flow-profile">PUBLISHED Model Profile</label><select id="flow-profile" v-model="selectedProfileId"><option value="">请选择 profile</option><option v-for="item in modelProfiles.filter((candidate) => candidate.status === 'PUBLISHED')" :key="item.modelProfileId" :value="item.modelProfileId">{{ item.purpose }} · {{ item.status }}</option></select></div><div class="field"><label for="flow-model">模型名</label><input id="flow-model" v-model="model" placeholder="qwen3.5:9b" /></div><div class="field wide"><label for="flow-prompt">PUBLISHED Prompt Template</label><select id="flow-prompt" v-model="selectedPromptTemplateId" @change="refreshPromptVersion"><option value="">请选择 Prompt</option><option v-for="item in promptTemplates" :key="item.promptTemplateId" :value="item.promptTemplateId">{{ item.name }} · {{ item.currentVersion ? `v${item.currentVersion}` : "未发布" }}</option></select></div><div v-if="promptVersion" class="prompt-version-summary field wide"><label>当前 Prompt version</label><output>v{{ promptVersion.version }} · {{ promptVersion.state }} · {{ promptVersion.contentHash }}</output><small>messages: {{ promptVersion.messages.length }} · variables: {{ Object.keys(promptVersion.variableSchema).join(", ") || "—" }} · output: {{ Object.keys(promptVersion.outputContract).join(", ") || "—" }}</small></div></div><div class="flow-boundary-note" :class="{ warning: !hasIndexIdentity }"><strong>真实状态：</strong><span>{{ hasIndexIdentity ? "active index 已由服务端原子发布，可以进入问答。" : indexes.some((item) => item.state === 'READY') ? "候选索引 READY，必须点击发布才能进入问答。" : "上传后等待 Worker 完成 parse、chunk、embedding 和索引验证；刷新可读取服务端状态。" }}</span></div><div class="button-row"><button type="button" :disabled="!canStart" @click="startAnswer">进入带引用问答</button><button type="button" class="secondary-button" @click="emit('open-control', 'providers')">配置 Provider / 模型 / Prompt</button></div></div><aside class="flow-side"><div class="card"><span class="card-label">当前权限</span><h3>{{ currentRole }}</h3><p>配置是否可写由服务端权限裁决。当前向导只读取真实状态，不绕过 VIEWER 或跨空间访问。</p></div><div class="card"><span class="card-label">已读取资源</span><ul class="flow-resource-list"><li>{{ providerConnections.length }} 个 Provider connection</li><li>{{ modelProfiles.length }} 个 Model Route / Profile</li><li>{{ promptTemplates.length }} 个 Prompt template</li><li>{{ jobs.length }} 个 ingestion job</li><li>{{ indexes.length }} 个 index version</li></ul></div></aside></div>
+    <div class="flow-layout"><div class="card flow-config"><div class="card-title"><div><span class="card-label">第 2 步 · 导入资料</span><h3>把资料放进当前空间</h3><p class="muted">向导会自动等待摄取任务完成，并在下方展示可发布的索引。</p></div><button type="button" class="quiet-button" :disabled="loading" @click="loadFlow">{{ loading ? "读取中…" : "刷新状态" }}</button></div><div class="source-entry"><div><strong>从本机选择资料</strong><p class="muted">支持 Markdown、TXT、PDF、DOCX、PPTX、XLSX。浏览器只提交你明确选择的文件，服务端会排除 .obsidian 和不支持的文件。</p></div><div class="source-actions"><label class="file-picker" for="flow-folder"><span>选择资料文件夹</span><input id="flow-folder" type="file" webkitdirectory directory multiple accept=".md,.markdown,.txt,.pdf,.docx,.pptx,.xlsx,text/markdown,text/plain,application/pdf" @change="chooseFolder" /></label><label class="file-picker secondary-picker" for="flow-file"><span>选择单个文件</span><input id="flow-file" type="file" accept=".md,.markdown,.txt,.pdf,.docx,.pptx,.xlsx,text/markdown,text/plain,application/pdf" @change="chooseFile" /></label></div><div v-if="selectedFiles.length" class="selected-files"><span>{{ selectedFiles.length }} 个文件已选择</span><button type="button" :disabled="uploadBusy" @click="uploadFile">{{ uploadBusy ? "提交中…" : "开始导入" }}</button></div></div><div v-if="jobs.length" class="job-list"><div v-for="item in jobs" :key="item.job.id" class="job-row"><span>导入任务</span><strong>{{ stateLabel(item.job.status) }}</strong><small>{{ item.steps.map((step) => `${step.stepName}:${stateLabel(step.status)}`).join(" · ") || "等待后台处理" }}</small><button v-if="item.job.documentRevisionId" type="button" class="quiet-button" @click="showParseReport(item.job.documentRevisionId)">查看解析结果</button></div></div><div v-if="parseReport" class="parse-report"><strong>解析结果：{{ stateLabel(parseReport.status) }}</strong><span>{{ parseReport.parserName }} {{ parseReport.parserVersion }} · {{ parseReport.characterCount }} 字符 · {{ parseReport.tokenCount }} 个词元</span><small>{{ parseReport.errors || "没有错误" }}</small></div><details class="advanced-config"><summary>查看自动带入的回答配置</summary><p class="field-hint">普通用户不需要修改这些内容；管理员只在首次配置或切换模型时使用。</p><div class="form-grid"><div class="field wide"><label for="flow-route">模型路线</label><select id="flow-route" v-model="selectedRouteId" @change="selectedProfileId = selectedRoute?.candidates[0]?.modelProfileId ?? ''"><option value="">自动选择已发布路线</option><option v-for="item in modelRoutes" :key="item.modelRouteId" :value="item.modelRouteId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-profile">模型能力档案</label><select id="flow-profile" v-model="selectedProfileId"><option value="">自动选择已发布档案</option><option v-for="item in modelProfiles.filter((candidate) => candidate.status === 'PUBLISHED')" :key="item.modelProfileId" :value="item.modelProfileId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-model">模型名称</label><input id="flow-model" v-model="model" placeholder="例如 qwen3.5:9b" /></div><div class="field wide"><label for="flow-prompt">回答规则模板</label><select id="flow-prompt" v-model="selectedPromptTemplateId" @change="refreshPromptVersion"><option value="">自动选择已发布模板</option><option v-for="item in promptTemplates" :key="item.promptTemplateId" :value="item.promptTemplateId">{{ item.name }} · {{ item.currentVersion ? `第 ${item.currentVersion} 版` : "未发布" }}</option></select></div><div v-if="promptVersion" class="prompt-version-summary field wide"><label>当前回答规则</label><output>第 {{ promptVersion.version }} 版 · {{ stateLabel(promptVersion.state) }}</output><small>内部版本哈希：{{ promptVersion.contentHash }}</small></div></div></details><div class="section-divider"><span>第 3 步 · 发布索引</span><small>任务完成后，只有验证通过的版本可以发布</small></div><div class="flow-boundary-note" :class="{ warning: !hasIndexIdentity }"><strong>{{ hasIndexIdentity ? "可以提问" : indexes.some((item) => item.state === 'READY') ? "还差一步" : "正在处理" }}：</strong><span>{{ hasIndexIdentity ? "当前索引已由服务端原子发布，可以进入问答。" : indexes.some((item) => item.state === 'READY') ? "下方会出现“发布为当前版本”按钮，点击后才能用于回答。" : "等待后台完成解析、切分、向量化和索引验证；页面不会伪造进度。" }}</span></div><div class="button-row"><button type="button" :disabled="!canStart" @click="startAnswer">去提问</button><button type="button" class="secondary-button" @click="emit('open-control', 'providers')">管理员高级设置</button></div></div><aside class="flow-side"><div class="card"><span class="card-label">当前权限</span><h3>{{ stateLabel(currentRole) }}</h3><p>配置和写入权限由服务端裁决。你只需要关注当前步骤，技术细节已自动收拢。</p></div><div class="card runtime-choice"><span class="card-label">回答方式</span><h3>选择本地或云端</h3><p>默认推荐本地回答；云端回答只有在你明确选择并授权后才会启用。</p><div class="runtime-options"><button type="button" :class="{ selected: runtimeMode === 'LOCAL' }" :disabled="!chatRoutes.some((item) => item.egressClass === 'LOCAL')" @click="selectRuntimeMode('LOCAL')"><strong>本地回答</strong><small>不离开本机</small></button><button type="button" :class="{ selected: runtimeMode === 'MIMO' }" :disabled="!chatRoutes.some((item) => item.egressClass === 'CLOUD')" @click="selectRuntimeMode('MIMO')"><strong>MiMo 云端</strong><small>每次明确授权</small></button></div></div><div class="card"><span class="card-label">后台真实状态</span><ul class="flow-resource-list"><li>{{ providerConnections.length }} 个模型服务连接</li><li>{{ modelProfiles.length }} 个模型能力档案</li><li>{{ promptTemplates.length }} 个回答规则模板</li><li>{{ jobs.length }} 个导入任务</li><li>{{ indexes.length }} 个索引版本</li></ul></div></aside></div>
   </section>
-  <div v-if="props.selectedSpaceId" class="card runtime-switcher" aria-label="Chat 模型路线切换">
-    <div><span class="card-label">Chat route switch</span><strong>选择本次问答模型</strong><p class="muted">切换只选择已发布的 Chat route；出境授权由服务端空间绑定强制校验，不会自动回退。</p></div>
-    <div class="field"><label for="runtime-mode">Chat provider</label><select id="runtime-mode" v-model="runtimeMode" @change="selectRuntimeMode"><option value="LOCAL">本地 Ollama（LOCAL_ONLY）</option><option value="MIMO" :disabled="!chatRoutes.some((item) => item.egressClass === 'CLOUD')">Xiaomi MiMo（显式云端授权）</option></select></div>
-  </div>
   <IndexLifecycleView
     v-if="props.selectedSpaceId"
     :indexes="indexes"
@@ -425,4 +439,24 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
   .summary-action { display: none; }
   .web-source-form { align-items: stretch; flex-direction: column; }
 }
+</style>
+
+<style scoped>
+.advanced-management { margin-top: 18px; border: 1px solid #e3e9f4; border-radius: 14px; background: #fbfdff; }
+.advanced-management summary { padding: 13px 16px; color: #4d6486; cursor: pointer; font-size: .78rem; font-weight: 800; list-style: none; }
+.advanced-management summary::-webkit-details-marker { display: none; }
+.advanced-management summary::after { float: right; content: "+"; color: #7081bd; font-size: 1rem; }
+.advanced-management[open] summary::after { content: "–"; }
+.advanced-management-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 0 14px 14px; }
+.advanced-config { margin-top: 14px; border: 1px solid #e4e9f3; border-radius: 12px; background: #fbfdff; }
+.advanced-config summary { padding: 11px 13px; color: #546d92; cursor: pointer; font-size: .76rem; font-weight: 800; }
+.advanced-config .field-hint { margin: 0 13px 12px; }
+.runtime-choice { border-color: #d8e1f7; background: linear-gradient(145deg, #f6f9ff, #fff); }
+.runtime-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.runtime-options button { display: grid; gap: 4px; justify-items: start; padding: 11px 12px; border: 1px solid #d9e2f1; border-radius: 10px; background: #fff; color: #466181; text-align: left; }
+.runtime-options button.selected { border-color: #7a96e8; background: #eef4ff; box-shadow: 0 0 0 2px rgba(122, 150, 232, .12); }
+.runtime-options button:disabled { cursor: not-allowed; opacity: .48; }
+.runtime-options button strong { color: #315b97; font-size: .78rem; }
+.runtime-options button small { color: #8190a5; font-size: .68rem; }
+@media (max-width: 700px) { .advanced-management-grid, .runtime-options { grid-template-columns: 1fr; } }
 </style>
