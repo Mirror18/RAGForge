@@ -1,0 +1,79 @@
+meta:
+  card_id: ARCH-IMP-01
+  title: 固化受控摄取执行契约与 ArtifactManifest lineage
+  milestone: M4
+  priority: P0
+  agent_slug: a25
+  branch: codex/m4-execution-contract-a25
+  worktree: D:/project/learning/RAGForge-worktrees/codex-m4-execution-contract-a25
+  base_sha: 15f1fc1c2c9682869b2a59194812b68eba5a6deb
+  dependencies_satisfied: true
+  migration_owner: true
+  migration_next: V23
+scope:
+  ownership:
+    - contracts/ingestion/ingestion-domain.v1.schema.json
+    - contracts/ingestion/README.md
+    - backend/server/src/main/resources/db/migration/V23__m4_artifact_manifest.sql
+    - backend/server/src/main/java/com/ragforge/server/ingestion/IngestionRepository.java
+    - backend/server/src/test/java/com/ragforge/server/ingestion/Phase3IngestionPersistenceIntegrationTest.java
+    - backend/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/BusinessIngestionSideEffectHandler.java
+    - backend/ingestion-worker/src/test/java/com/ragforge/ingestion/pipeline/BusinessIngestionSideEffectHandlerTest.java
+    - tests/evidence/ARCH-IMP-01-worker-summary.v1.json
+  read_only:
+    - .agents/tickets/ARCH-IMP-01-a25.yaml
+    - docs/07-架构决策记录.md
+    - docs/02-项目架构与领域模型.md
+    - contracts/ingestion/ingestion-domain.v1.schema.json
+    - contracts/ingestion/README.md
+    - backend/server/src/main/resources/db/migration/V8__phase3_versioned_ingestion.sql
+    - backend/server/src/main/java/com/ragforge/server/ingestion/IngestionRepository.java
+    - backend/server/src/test/java/com/ragforge/server/ingestion/Phase3IngestionPersistenceIntegrationTest.java
+    - backend/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/BusinessIngestionSideEffectHandler.java
+    - backend/ingestion-worker/src/test/java/com/ragforge/ingestion/pipeline/BusinessIngestionSideEffectHandlerTest.java
+    - scripts/ci/contract_test.py
+  forbidden:
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - docs/10-项目状态审计记录.md
+    - docs/11-风险登记表.md
+    - docs/12-需求追溯矩阵.md
+    - contracts/openapi/ragforge-api-v1.yaml
+    - backend/server/src/main/java/com/ragforge/server/retrieval/
+    - backend/server/src/main/java/com/ragforge/server/answer/
+    - deploy/
+    - pom.xml
+acceptance:
+  criteria:
+    A1: ArtifactManifest 是不可变、space-scoped 的契约与持久化记录，绑定 revision、pipeline/parser 版本、父 artifact、content hash、受控 object reference 和位置映射版本。
+    A2: V23 为 append-only migration；所有查询和外键携带 space_id；manifest 不保存正文、credential 或客户端路径。
+    A3: Worker 写入 manifest 时复用服务端生成的 artifact identity；相同 space/revision/pipeline/parser/content hash 的重投幂等，不同输入不得覆盖既有 manifest。
+    A4: Server persistence 和 Worker 单元/集成测试覆盖同空间幂等、跨空间拒绝和 hash 不一致拒绝；本卡不改变 active pointer、candidate validation、chunking 或发布行为。
+    A5: Schema、migration 和现有实现保持兼容；未声明执行 RetrievalExecutionSnapshot、质量阈值或任何生产数据迁移。
+tests:
+  must_run:
+    - python scripts/ci/contract_test.py
+    - mvn -q -pl backend/server -am test -Dtest=Phase3IngestionPersistenceIntegrationTest
+    - mvn -q -pl backend/ingestion-worker -am test -Dtest=BusinessIngestionSideEffectHandlerTest
+    - python scripts/ci/architecture_check.py
+    - python scripts/ci/format_check.py
+    - python scripts/ci/secret_scan.py
+    - git diff --check
+  evidence_file: tests/evidence/ARCH-IMP-01-worker-summary.v1.json
+budget:
+  token_limit: 9000
+report_schema:
+  card_id: string
+  status: PASS | BLOCKED | FAIL
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string]}
+  tests: {custom: [{name: string, passed: integer, failed: integer, details: string}]}
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string | null}
+  warnings: [string]
+  risks: [string]
+  acceptance_met: {A1: boolean, A2: boolean, A3: boolean, A4: boolean, A5: boolean}
+  integration_notes: string
+  evidence_file: string
