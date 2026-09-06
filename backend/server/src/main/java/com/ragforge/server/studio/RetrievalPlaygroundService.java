@@ -19,6 +19,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.AssertTrue;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -101,9 +103,17 @@ public class RetrievalPlaygroundService {
         this(authorization, profiles, indexes, new LocalRetrievalPort(retrieval), audit);
     }
 
+    @Autowired
     public RetrievalPlaygroundService(SpaceAuthorization authorization, RetrievalProfileRepository profiles,
-                                      IndexRepository indexes, RetrievalPort retrievalPort,
-                                      AuditOutboxService audit) {
+                                      IndexRepository indexes, ObjectProvider<RetrievalPort> retrievalPorts,
+                                      RetrievalService retrieval, AuditOutboxService audit) {
+        this(authorization, profiles, indexes,
+                retrievalPorts.getIfAvailable(() -> new LocalRetrievalPort(retrieval)), audit);
+    }
+
+    private RetrievalPlaygroundService(SpaceAuthorization authorization, RetrievalProfileRepository profiles,
+                                       IndexRepository indexes, RetrievalPort retrievalPort,
+                                       AuditOutboxService audit) {
         this.authorization = authorization;
         this.profiles = profiles;
         this.indexes = indexes;

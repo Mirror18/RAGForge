@@ -17,7 +17,7 @@ import java.util.UUID;
 
 /** PostgreSQL persistence for immutable retrieval execution identities. */
 @Repository
-public final class RetrievalExecutionSnapshotRepository {
+public class RetrievalExecutionSnapshotRepository {
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 

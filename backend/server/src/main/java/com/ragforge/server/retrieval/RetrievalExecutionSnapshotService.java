@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /** Application boundary for creating and safely replaying retrieval snapshots. */
 @Service
-public final class RetrievalExecutionSnapshotService {
+public class RetrievalExecutionSnapshotService {
     private final RetrievalExecutionSnapshotRepository repository;
 
     public RetrievalExecutionSnapshotService(RetrievalExecutionSnapshotRepository repository) {
