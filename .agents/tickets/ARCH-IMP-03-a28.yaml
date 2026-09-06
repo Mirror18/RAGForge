@@ -1,0 +1,84 @@
+meta:
+  card_id: ARCH-IMP-03
+  title: 实现 RetrievalExecutionSnapshot 与三入口共享检索 port
+  milestone: M4
+  priority: P0
+  agent_slug: a28
+  branch: codex/m4-retrieval-snapshot-a28
+  worktree: D:/project/learning/RAGForge-worktrees/codex-m4-retrieval-snapshot-a28
+  base_sha: bd82be650e128474206a52d5f447d42c424b8b99
+  dependencies_satisfied: true
+  migration_owner: true
+  migration_next: V25
+scope:
+  ownership:
+    - contracts/retrieval/retrieval-execution-snapshot.v1.schema.json
+    - contracts/retrieval/README.md
+    - backend/server/src/main/resources/db/migration/V25__m4_retrieval_execution_snapshots.sql
+    - backend/server/src/main/java/com/ragforge/server/retrieval/RetrievalExecutionSnapshot.java
+    - backend/server/src/main/java/com/ragforge/server/retrieval/RetrievalExecutionSnapshotRepository.java
+    - backend/server/src/main/java/com/ragforge/server/retrieval/RetrievalExecutionSnapshotService.java
+    - backend/server/src/main/java/com/ragforge/server/answer/RetrievalPort.java
+    - backend/server/src/main/java/com/ragforge/server/answer/integration/RetrievalServicePortAdapter.java
+    - backend/server/src/main/java/com/ragforge/server/studio/RetrievalPlaygroundService.java
+    - backend/server/src/test/java/com/ragforge/server/retrieval/RetrievalExecutionSnapshotTest.java
+    - backend/server/src/test/java/com/ragforge/server/answer/RAGAnswerServiceTest.java
+    - backend/server/src/test/java/com/ragforge/server/answer/integration/RetrievalServicePortAdapterTest.java
+    - backend/server/src/test/java/com/ragforge/server/studio/RetrievalPlaygroundServiceTest.java
+    - tests/evidence/ARCH-IMP-03-worker-summary.v1.json
+  read_only:
+    - .agents/tickets/ARCH-IMP-03-a28.yaml
+    - docs/07-架构决策记录.md
+    - docs/02-项目架构与领域模型.md
+    - backend/server/src/main/resources/db/migration/V24__m4_index_validation_results.sql
+    - backend/server/src/main/java/com/ragforge/server/retrieval/RetrievalService.java
+    - backend/server/src/main/java/com/ragforge/server/answer/integration/RetrievalExecutionResolver.java
+    - backend/server/src/main/java/com/ragforge/server/answer/RAGAnswerService.java
+    - backend/server/src/main/java/com/ragforge/server/studio/RetrievalPlaygroundService.java
+    - backend/server/src/test/java/com/ragforge/server/retrieval/RetrievalServiceTest.java
+    - scripts/phase4/retrieval_benchmark.py
+    - scripts/ci/rag_evaluation_gate.py
+    - tests/evidence/phase4-retrieval-benchmark.json
+  forbidden:
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - docs/10-项目状态审计记录.md
+    - contracts/openapi/ragforge-api-v1.yaml
+    - backend/server/src/main/java/com/ragforge/server/ingestion/
+    - backend/server/src/main/java/com/ragforge/server/answer/api/
+    - deploy/
+    - pom.xml
+acceptance:
+  criteria:
+    A1: RetrievalExecutionSnapshot 是不可变、space-scoped 的记录，固定一次执行的 index、profile、effective parameters、route 与 evidence identity。
+    A2: V25 为 append-only migration；未知快照版本、跨空间引用和缺少当前授权必须 fail-closed。
+    A3: Chat、Answer API 与 Retrieval Playground 共用 application port；不复制 dense/BM25/RRF/rerank 算法，不改变默认召回结果。
+    A4: 三入口同输入 evidence identity、一致空间隔离和快照重放测试通过；持久化记录按执行身份幂等。
+    A5: 使用合成身份运行离线 RAG evaluation gate，记录配置版本与基线比较；不得把 Python 参考实现宣称为共享 Java port。
+tests:
+  must_run:
+    - python scripts/ci/contract_test.py
+    - mvn -q -pl backend/server -am test -Dtest=RetrievalExecutionSnapshotTest,RAGAnswerServiceTest,RetrievalServicePortAdapterTest,RetrievalPlaygroundServiceTest
+    - python scripts/ci/rag_evaluation_gate.py
+    - python scripts/ci/architecture_check.py
+    - python scripts/ci/format_check.py
+    - python scripts/ci/secret_scan.py
+    - git diff --check
+  evidence_file: tests/evidence/ARCH-IMP-03-worker-summary.v1.json
+budget:
+  token_limit: 10000
+report_schema:
+  card_id: string
+  status: PASS | BLOCKED | FAIL
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string]}
+  tests: {custom: [{name: string, passed: integer, failed: integer, details: string}]}
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string | null}
+  warnings: [string]
+  risks: [string]
+  acceptance_met: {A1: boolean, A2: boolean, A3: boolean, A4: boolean, A5: boolean}
+  integration_notes: string
+  evidence_file: string
