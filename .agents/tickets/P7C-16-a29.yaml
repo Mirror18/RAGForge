@@ -1,0 +1,73 @@
+meta:
+  card_id: P7C-16
+  title: 将索引生命周期改为每页十条数据列表
+  milestone: M1
+  priority: P1
+  agent_slug: a29
+  branch: codex/p7c16-index-list-a29
+  worktree: D:/project/learning/RAGForge-worktrees/codex-p7c16-index-list-a29
+  base_sha: 68b01d5
+  dependencies_satisfied: true
+  migration_owner: false
+scope:
+  ownership:
+    - frontend/ragforge-web/src/IndexLifecycleView.vue
+    - frontend/ragforge-web/tests/e2e/web-journeys.spec.ts
+    - frontend/ragforge-web/tests/fixtures/synthetic-api.ts
+    - frontend/ragforge-web/README.md
+    - docs/15-业务操作演示.md
+    - docs/assets/business-demo/03-索引发布.png
+    - tests/evidence/P7C-16-index-list-pagination.v1.json
+  read_only:
+    - .agents/tickets/P7C-16-a29.yaml
+    - docs/00-需求处理与最终效果.md
+    - docs/03-功能与用户结果.md
+    - frontend/ragforge-web/package.json
+    - frontend/ragforge-web/src/api.ts
+    - frontend/ragforge-web/src/BusinessFlowView.vue
+    - frontend/ragforge-web/tests/fixtures/synthetic-api.ts
+  forbidden:
+    - AGENTS.md
+    - backend/
+    - contracts/
+    - deploy/
+    - pom.xml
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - docs/10-项目状态审计记录.md
+    - docs/11-风险登记表.md
+    - docs/12-需求追溯矩阵.md
+acceptance:
+  criteria:
+    A1: 索引生命周期版本改为可横向滚动的数据列表，每页固定显示不超过 10 条，并显示当前页、总页数和总条数。
+    A2: 当前版本/上一版本指针摘要保留；待发布版本仍可发布，当前版本仍可按既有权限回滚或退役。
+    A3: 状态、验证结果、构建依据、配置版本、空状态、加载动作和操作按钮均有清晰中文展示，移动端不破坏可读性。
+    A4: 不改变现有 API、space_id 隔离、索引 candidate/active/retired 语义、权限判断和发布/回滚/退役行为。
+    A5: 浏览器回归覆盖至少 16 条合成索引版本的第一页、第二页和生命周期操作入口，并记录证据。
+tests:
+  must_run:
+    - npm run build --prefix frontend/ragforge-web
+    - npm run format:check --prefix frontend/ragforge-web
+    - npm run test:unit --prefix frontend/ragforge-web
+    - npm run test:e2e --prefix frontend/ragforge-web
+    - python scripts/ci/check_markdown_links.py
+    - python scripts/ci/secret_scan.py
+    - git diff --check
+  evidence_file: tests/evidence/P7C-16-index-list-pagination.v1.json
+budget:
+  token_limit: 5000
+report_schema:
+  card_id: string
+  status: PASS | BLOCKED | FAIL
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string]}
+  tests: {custom: [{name: string, passed: integer, failed: integer, details: string}]}
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string | null}
+  warnings: [string]
+  risks: [string]
+  acceptance_met: {A1: boolean, A2: boolean, A3: boolean, A4: boolean, A5: boolean}
+  integration_notes: string
+  evidence_file: string
