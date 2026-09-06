@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "P7C-14",
+  "status": "PASS",
+  "capturedAt": "2026-09-06T18:12:00+08:00",
+  "baseSha": "111adf8",
+  "implementationHead": "9c98b8d",
+  "summary": {
+    "build": "passed",
+    "typecheck": "passed",
+    "unit": { "files": 1, "tests": 10, "failed": 0 },
+    "e2e": { "tests": 12, "passed": 12, "failed": 0 },
+    "markdownLinks": "passed",
+    "secretScan": "passed",
+    "diffCheck": "passed"
+  },
+  "acceptance": {
+    "A1_chineseFirstUi": true,
+    "A2_fourStepGuide": true,
+    "A3_simplifiedConfiguration": true,
+    "A4_historyTableAndRestore": true,
+    "A5_spaceBoundaryAndReadOnlyArchive": true,
+    "A6_syntheticBrowserDemo": true
+  },
+  "browserDemo": {
+    "fixture": "synthetic-space-and-answer",
+    "cloudEgress": false,
+    "screenshots": [
+      "docs/assets/business-demo/01-空间与向导.png",
+      "docs/assets/business-demo/02-资料导入.png",
+      "docs/assets/business-demo/03-索引发布.png",
+      "docs/assets/business-demo/04-带引用问答.png",
+      "docs/assets/business-demo/05-历史会话.png"
+    ],
+    "journeys": ["J1", "J2", "J3", "J4", "J5", "J6", "J7", "J8", "J9", "P7Q-06"]
+  },
+  "notes": [
+    "历史恢复覆盖带 runId 的链接恢复、会话表格、运行记录展开和最近回答加载。",
+    "归档会话只读；继续提问需新建会话。",
+    "截图和浏览器用例均使用合成数据，不读取个人资料，不写入真实密钥。"
+  ]
+}
