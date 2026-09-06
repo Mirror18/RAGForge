@@ -7,6 +7,7 @@ import com.ragforge.server.answer.Citation;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * Process-local public projection used by the HTTP adapter until the durable answer history port is wired.
@@ -58,19 +59,34 @@ public final class AnswerApiProjectionStore {
     }
 
     public CitationPreview preview(UUID spaceId, UUID runId, UUID evidenceId) {
+        return preview(spaceId, runId, evidenceId, ignored -> true);
+    }
+
+    public CitationPreview preview(UUID spaceId, UUID runId, UUID evidenceId,
+                                   Predicate<CitationPreview> currentMaterialAccess) {
+        if (currentMaterialAccess == null) {
+            throw new AnswerApiNotFoundException("Citation is not available in this space");
+        }
+        CitationPreview preview;
         if (persistence != null) {
-            return persistence.findCitationPreview(spaceId, runId, evidenceId)
+            preview = persistence.findCitationPreview(spaceId, runId, evidenceId)
                     .flatMap(citation -> persistence.findAnswerByRun(spaceId, runId)
                             .map(answer -> CitationPreview.from(citation, answer.correlationId())))
                     .orElseThrow(() -> new AnswerApiNotFoundException(
                             "Citation not found"));
+        } else {
+            Answer answer = find(spaceId, runId)
+                    .orElseThrow(() -> new AnswerApiNotFoundException("Answer not found"));
+            preview = answer.citations().stream()
+                    .filter(citation -> citation.evidenceId().equals(evidenceId))
+                    .findFirst()
+                    .map(citation -> CitationPreview.from(answer, citation))
+                    .orElseThrow(() -> new AnswerApiNotFoundException("Citation not found"));
         }
-        Answer answer = find(spaceId, runId).orElseThrow(() -> new AnswerApiNotFoundException("Answer not found"));
-        return answer.citations().stream()
-                .filter(citation -> citation.evidenceId().equals(evidenceId))
-                .findFirst()
-                .map(citation -> CitationPreview.from(answer, citation))
-                .orElseThrow(() -> new AnswerApiNotFoundException("Citation not found"));
+        if (!currentMaterialAccess.test(preview)) {
+            throw new AnswerApiNotFoundException("Citation is not available in this space");
+        }
+        return preview;
     }
 
     public record CitationPreview(UUID evidenceId, UUID spaceId, UUID correlationId, UUID runId,

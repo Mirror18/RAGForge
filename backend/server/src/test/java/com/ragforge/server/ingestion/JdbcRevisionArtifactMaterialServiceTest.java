@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class JdbcRevisionArtifactMaterialServiceTest {
@@ -70,6 +71,25 @@ class JdbcRevisionArtifactMaterialServiceTest {
 
         assertThat(material).isNull();
         assertThat(read[0]).isFalse();
+    }
+
+    @Test
+    void currentReadabilityUsesTheSameSpaceScopedDeletedSourceBoundaryWithoutReadingStorage() throws Exception {
+        JdbcTemplate jdbc = pointerQuery(0, TEXT.length(), HASH);
+        boolean[] read = {false};
+        ArtifactContentReader reader = (space, uri, artifactHash, byteLength, token) -> {
+            read[0] = true;
+            return new byte[0];
+        };
+
+        boolean readable = new JdbcRevisionArtifactMaterialService(jdbc, reader)
+                .isCurrentReadable(SPACE, REVISION, REF, HASH);
+
+        assertThat(readable).isTrue();
+        assertThat(read[0]).isFalse();
+        org.mockito.ArgumentCaptor<String> sql = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class), eq(SPACE), eq(REVISION), eq(REF), eq(HASH));
+        assertThat(sql.getValue()).contains("JOIN sources s", "s.deleted_at IS NULL", "s.lifecycle_state <> 'DELETED'");
     }
 
     private static JdbcTemplate pointerQuery(int start, int end, String hash) throws Exception {

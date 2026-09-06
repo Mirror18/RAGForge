@@ -12,6 +12,7 @@ import com.ragforge.server.answer.Citation;
 import com.ragforge.server.answer.Claim;
 import com.ragforge.server.answer.RAGAnswerService;
 import com.ragforge.server.answer.GenerationStreamObserver;
+import com.ragforge.server.common.ApiException;
 import com.ragforge.server.common.CorrelationIdFilter;
 import com.ragforge.server.common.UuidV7;
 import com.ragforge.server.identity.SessionPrincipal;
@@ -23,6 +24,7 @@ import com.ragforge.server.run.RunRepository;
 import com.ragforge.server.retrieval.EvidenceBundle;
 import com.ragforge.server.space.SpaceRole;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -49,6 +51,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -118,7 +121,7 @@ class AnswerApiControllerTest {
         Answer answer = completedAnswer();
         projections.saveIfAbsent(answer);
         AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
-                objectMapper, projections);
+                objectMapper, projections, null, null, (space, revision, ref, hash) -> true);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
         when(authorization.requireMember(eq(spaceId), any())).thenReturn(SpaceRole.VIEWER);
 
@@ -129,6 +132,66 @@ class AnswerApiControllerTest {
                 .andExpect(jsonPath("$.documentRevisionId").value(answer.citations().getFirst().documentRevisionId().toString()))
                 .andReturn().getResponse().getContentAsString();
         assertThat(response).doesNotContain("fullText", "rawText", "documentContent", "quote", "url", "prompt");
+    }
+
+    @Test
+    void historicalAnswerAndCitationPreviewRequireCurrentMaterialAccess() {
+        RAGAnswerService answerService = mock(RAGAnswerService.class);
+        RunEventService eventService = mock(RunEventService.class);
+        SpaceAuthorization authorization = mock(SpaceAuthorization.class);
+        when(authorization.requireMember(eq(spaceId), any())).thenReturn(SpaceRole.VIEWER);
+        AnswerApiProjectionStore projections = new AnswerApiProjectionStore();
+        projections.saveIfAbsent(completedAnswer());
+        AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
+                objectMapper, projections, null, null, (space, revision, ref, hash) -> false);
+
+        assertThatThrownBy(() -> controller.get(spaceId, runId, authentication()))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> controller.citationPreview(spaceId, runId, evidenceId, authentication()))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> controller.events(spaceId, runId, null, authentication(),
+                new MockHttpServletRequest(), new MockHttpServletResponse())).isInstanceOf(ApiException.class);
+        verify(eventService, never()).openStream(any(), any(), any(), any());
+    }
+
+    @Test
+    void historicalAnswerRejectsCrossSpaceLookupAndAllowsCurrentAuthorizedMaterial() {
+        RAGAnswerService answerService = mock(RAGAnswerService.class);
+        RunEventService eventService = mock(RunEventService.class);
+        SpaceAuthorization authorization = mock(SpaceAuthorization.class);
+        when(authorization.requireMember(eq(spaceId), any())).thenReturn(SpaceRole.VIEWER);
+        UUID otherSpace = UuidV7.random();
+        when(authorization.requireMember(eq(otherSpace), any())).thenReturn(SpaceRole.VIEWER);
+        Answer answer = completedAnswer();
+        AnswerApiProjectionStore projections = new AnswerApiProjectionStore();
+        projections.saveIfAbsent(answer);
+        AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
+                objectMapper, projections, null, null, (space, revision, ref, hash) -> space.equals(spaceId));
+
+        assertThat(controller.get(spaceId, runId, authentication())).isEqualTo(answer);
+        assertThatThrownBy(() -> controller.get(otherSpace, runId, authentication()))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void historicalAnswerStopsBeforeMaterialAccessWhenMembershipIsRevoked() {
+        RAGAnswerService answerService = mock(RAGAnswerService.class);
+        RunEventService eventService = mock(RunEventService.class);
+        SpaceAuthorization authorization = mock(SpaceAuthorization.class);
+        when(authorization.requireMember(eq(spaceId), any())).thenThrow(new ApiException(HttpStatus.FORBIDDEN,
+                "space_access_denied", "Access denied", "Current membership is required"));
+        AnswerApiProjectionStore projections = new AnswerApiProjectionStore();
+        projections.saveIfAbsent(completedAnswer());
+        boolean[] materialAccessed = {false};
+        AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
+                objectMapper, projections, null, null, (space, revision, ref, hash) -> {
+                    materialAccessed[0] = true;
+                    return true;
+                });
+
+        assertThatThrownBy(() -> controller.get(spaceId, runId, authentication()))
+                .isInstanceOf(ApiException.class);
+        assertThat(materialAccessed[0]).isFalse();
     }
 
     @Test
