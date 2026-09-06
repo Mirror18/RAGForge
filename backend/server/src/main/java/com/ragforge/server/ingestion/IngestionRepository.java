@@ -340,6 +340,85 @@ public class IngestionRepository {
         }
     }
 
+    /**
+     * Persists an immutable, space-scoped lineage manifest. Repeating the exact
+     * write is safe for at-least-once delivery; a different write for the same
+     * revision/parser identity is rejected instead of being overwritten.
+     */
+    @Transactional
+    public ArtifactManifest persistArtifactManifest(NewArtifactManifest input) {
+        Optional<ArtifactManifest> existing = findArtifactManifest(input.spaceId(), input.documentRevisionId(),
+                input.pipelineVersionId(), input.parserName(), input.parserVersion());
+        if (existing.isPresent()) {
+            ArtifactManifest manifest = existing.get();
+            if (sameImmutableInput(manifest, input)) return manifest;
+            throw new IllegalStateException("artifact manifest identity already has different immutable input");
+        }
+        Integer validReferences = jdbc.queryForObject("""
+                SELECT COUNT(*)
+                FROM artifacts parent_artifact
+                JOIN artifacts object_artifact
+                  ON object_artifact.id = ? AND object_artifact.space_id = parent_artifact.space_id
+                JOIN pipeline_versions pipeline
+                  ON pipeline.id = ? AND pipeline.space_id = parent_artifact.space_id
+                WHERE parent_artifact.id = ?
+                  AND parent_artifact.space_id = ?
+                  AND parent_artifact.document_revision_id = ?
+                  AND object_artifact.document_revision_id = ?
+                  AND object_artifact.sha256 = ?
+                  AND object_artifact.storage_uri = ?
+                  AND pipeline.parser_name = ?
+                  AND pipeline.parser_version = ?
+                """, Integer.class, input.objectArtifactId(), input.pipelineVersionId(), input.parentArtifactId(),
+                input.spaceId(), input.documentRevisionId(), input.documentRevisionId(), input.contentHash(),
+                input.objectRef(), input.parserName(), input.parserVersion());
+        if (validReferences == null || validReferences != 1) {
+            throw new IllegalArgumentException("artifact manifest references must belong to the requested space, revision and pipeline");
+        }
+        jdbc.update("""
+                INSERT INTO artifact_manifests
+                    (id, space_id, document_revision_id, pipeline_version_id, parent_artifact_id,
+                     object_artifact_id, content_hash, object_ref, parser_name, parser_version,
+                     location_mapping_version, immutable, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
+                """, input.id(), input.spaceId(), input.documentRevisionId(), input.pipelineVersionId(),
+                input.parentArtifactId(), input.objectArtifactId(), input.contentHash(), input.objectRef(),
+                input.parserName(), input.parserVersion(), input.locationMappingVersion(), timestamp(input.createdAt()));
+        return findArtifactManifest(input.spaceId(), input.documentRevisionId(), input.pipelineVersionId(),
+                input.parserName(), input.parserVersion()).orElseThrow();
+    }
+
+    public Optional<ArtifactManifest> findArtifactManifest(UUID spaceId, UUID documentRevisionId,
+                                                            UUID pipelineVersionId, String parserName,
+                                                            String parserVersion) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT id, space_id, document_revision_id, pipeline_version_id, parent_artifact_id,
+                           object_artifact_id, content_hash, object_ref, parser_name, parser_version,
+                           location_mapping_version, created_at
+                    FROM artifact_manifests
+                    WHERE space_id = ? AND document_revision_id = ? AND pipeline_version_id = ?
+                      AND parser_name = ? AND parser_version = ?
+                    """, (rs, row) -> new ArtifactManifest(rs.getObject("id", UUID.class),
+                    rs.getObject("space_id", UUID.class), rs.getObject("document_revision_id", UUID.class),
+                    rs.getObject("pipeline_version_id", UUID.class), rs.getObject("parent_artifact_id", UUID.class),
+                    rs.getObject("object_artifact_id", UUID.class), rs.getString("content_hash"),
+                    rs.getString("object_ref"), rs.getString("parser_name"), rs.getString("parser_version"),
+                    rs.getString("location_mapping_version"), instant(rs, "created_at")),
+                    spaceId, documentRevisionId, pipelineVersionId, parserName, parserVersion));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private static boolean sameImmutableInput(ArtifactManifest manifest, NewArtifactManifest input) {
+        return manifest.parentArtifactId().equals(input.parentArtifactId())
+                && manifest.objectArtifactId().equals(input.objectArtifactId())
+                && manifest.contentHash().equalsIgnoreCase(input.contentHash())
+                && manifest.objectRef().equals(input.objectRef())
+                && manifest.locationMappingVersion().equals(input.locationMappingVersion());
+    }
+
     @Transactional
     public ActivePointer publishActivePointer(NewActivePointer input) {
         Boolean parsed = jdbc.queryForObject("""
@@ -676,6 +755,14 @@ public class IngestionRepository {
                                       OcrTriggerReason ocrTriggerReason, OcrAuditState ocrAuditState,
                                       String gitCommitSha, Instant discoveredAt, Instant createdAt) {}
     public record RevisionBundle(UUID revisionId, UUID artifactId, UUID parseReportId) {}
+    public record NewArtifactManifest(UUID id, UUID spaceId, UUID documentRevisionId, UUID pipelineVersionId,
+                                      UUID parentArtifactId, UUID objectArtifactId, String contentHash,
+                                      String objectRef, String parserName, String parserVersion,
+                                      String locationMappingVersion, Instant createdAt) {}
+    public record ArtifactManifest(UUID id, UUID spaceId, UUID documentRevisionId, UUID pipelineVersionId,
+                                   UUID parentArtifactId, UUID objectArtifactId, String contentHash,
+                                   String objectRef, String parserName, String parserVersion,
+                                   String locationMappingVersion, Instant createdAt) {}
     public record NewActivePointer(UUID id, UUID spaceId, UUID sourceDocumentId, UUID activeRevisionId,
                                    int versionNo, Instant updatedAt) {}
     public record ActivePointer(UUID id, UUID spaceId, UUID sourceDocumentId, UUID activeRevisionId,

@@ -30,6 +30,7 @@ import java.util.UUID;
 @ConditionalOnProperty(name = "ragforge.ingestion.enabled", havingValue = "true")
 public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHandler {
     private static final String PARSER_VERSION = "1.0.0";
+    private static final String LOCATION_MAPPING_VERSION = "object-key.v1";
     private static final int MAX_CHILD_CHARS = 2000;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
@@ -75,6 +76,9 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         persistRevision(spaceId, sourceId, context.sourceDocumentId(), revisionId, context.revisionNo(),
                 payload.sourceVersion() == null || payload.sourceVersion().isBlank() ? context.sourceVersion() : payload.sourceVersion(),
                 context.path(), payload, parsed, textArtifact, textKey.value(), now);
+        persistArtifactManifest(manifestWrite(UuidV7.random(), spaceId, revisionId, context.pipelineVersionId(),
+                artifactId, textArtifactId, textArtifact.sha256(), textKey.value(), parsed.report().parserName(),
+                parsed.report().parserVersion(), now));
         step(spaceId, jobId, attemptId, "PARSE", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
         step(spaceId, jobId, attemptId, "PERSIST", "SUCCEEDED", artifactId, textArtifactId, parsed.report().parseReportId(), Instant.now());
 
@@ -127,7 +131,7 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
 
     private DocumentContext loadContext(UUID spaceId, UUID sourceId, UUID jobId) {
         return jdbc.queryForObject("""
-                SELECT j.source_document_id, d.canonical_source_path,
+                SELECT j.source_document_id, j.pipeline_version_id, d.canonical_source_path,
                        COALESCE(MAX(r.revision_no), 0) + 1 AS revision_no,
                        COALESCE((SELECT sv.id FROM source_versions sv WHERE sv.space_id = j.space_id AND sv.source_id = j.source_id ORDER BY sv.version_no DESC LIMIT 1), NULL) AS source_version_id,
                        COALESCE((SELECT sv.version_no::text FROM source_versions sv WHERE sv.space_id = j.space_id AND sv.source_id = j.source_id ORDER BY sv.version_no DESC LIMIT 1), '1') AS source_version
@@ -136,7 +140,8 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
                 WHERE j.space_id = ? AND j.id = ? AND j.source_id = ?
                 GROUP BY j.source_document_id, d.canonical_source_path, j.space_id, j.source_id
                 """, (rs, row) -> new DocumentContext(rs.getObject("source_document_id", UUID.class),
-                rs.getString("canonical_source_path"), rs.getInt("revision_no"), rs.getString("source_version")), spaceId, jobId, sourceId);
+                rs.getObject("pipeline_version_id", UUID.class), rs.getString("canonical_source_path"),
+                rs.getInt("revision_no"), rs.getString("source_version")), spaceId, jobId, sourceId);
     }
 
     private void persistRevision(UUID spaceId, UUID sourceId, UUID documentId, UUID revisionId, int revisionNo,
@@ -173,6 +178,67 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
                 report.ocrPageCount(), report.parserName(), report.parserVersion(), report.durationMs(), json(report.warnings()),
                 json(report.errors()), report.extractedTextArtifactId(), report.ocr().status().name(), report.ocr().engine(),
                 report.ocr().engineVersion(), report.ocr().triggerReason().name(), report.ocr().auditState().name(), Timestamp.from(now));
+    }
+
+    private void persistArtifactManifest(ManifestWrite input) {
+        List<ManifestWrite> existing = jdbc.query("""
+                SELECT parent_artifact_id, object_artifact_id, content_hash, object_ref,
+                       location_mapping_version
+                FROM artifact_manifests
+                WHERE space_id = ? AND document_revision_id = ? AND pipeline_version_id = ?
+                  AND parser_name = ? AND parser_version = ?
+                """, (rs, row) -> new ManifestWrite(null, input.spaceId(), input.documentRevisionId(),
+                input.pipelineVersionId(), rs.getObject("parent_artifact_id", UUID.class),
+                rs.getObject("object_artifact_id", UUID.class), rs.getString("content_hash"),
+                rs.getString("object_ref"), input.parserName(), input.parserVersion(),
+                rs.getString("location_mapping_version"), null), input.spaceId(), input.documentRevisionId(),
+                input.pipelineVersionId(), input.parserName(), input.parserVersion());
+        if (!existing.isEmpty()) {
+            if (sameManifestInput(existing.get(0), input)) return;
+            throw new IllegalStateException("artifact manifest identity already has different immutable input");
+        }
+        Integer validReferences = jdbc.queryForObject("""
+                SELECT COUNT(*)
+                FROM artifacts parent_artifact
+                JOIN artifacts object_artifact
+                  ON object_artifact.id = ? AND object_artifact.space_id = parent_artifact.space_id
+                JOIN pipeline_versions pipeline
+                  ON pipeline.id = ? AND pipeline.space_id = parent_artifact.space_id
+                WHERE parent_artifact.id = ? AND parent_artifact.space_id = ?
+                  AND parent_artifact.document_revision_id = ?
+                  AND object_artifact.document_revision_id = ?
+                  AND object_artifact.sha256 = ? AND object_artifact.storage_uri = ?
+                  AND pipeline.parser_name = ? AND pipeline.parser_version = ?
+                """, Integer.class, input.objectArtifactId(), input.pipelineVersionId(), input.parentArtifactId(),
+                input.spaceId(), input.documentRevisionId(), input.documentRevisionId(), input.contentHash(),
+                input.objectRef(), input.parserName(), input.parserVersion());
+        if (validReferences == null || validReferences != 1) {
+            throw new IllegalStateException("artifact manifest references must belong to the requested space, revision and pipeline");
+        }
+        jdbc.update("""
+                INSERT INTO artifact_manifests
+                    (id, space_id, document_revision_id, pipeline_version_id, parent_artifact_id,
+                     object_artifact_id, content_hash, object_ref, parser_name, parser_version,
+                     location_mapping_version, immutable, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
+                """, input.id(), input.spaceId(), input.documentRevisionId(), input.pipelineVersionId(),
+                input.parentArtifactId(), input.objectArtifactId(), input.contentHash(), input.objectRef(),
+                input.parserName(), input.parserVersion(), input.locationMappingVersion(), Timestamp.from(input.createdAt()));
+    }
+
+    static ManifestWrite manifestWrite(UUID id, UUID spaceId, UUID documentRevisionId, UUID pipelineVersionId,
+                                       UUID parentArtifactId, UUID objectArtifactId, String contentHash,
+                                       String objectRef, String parserName, String parserVersion, Instant createdAt) {
+        return new ManifestWrite(id, spaceId, documentRevisionId, pipelineVersionId, parentArtifactId, objectArtifactId,
+                contentHash, objectRef, parserName, parserVersion, LOCATION_MAPPING_VERSION, createdAt);
+    }
+
+    private static boolean sameManifestInput(ManifestWrite existing, ManifestWrite input) {
+        return existing.parentArtifactId().equals(input.parentArtifactId())
+                && existing.objectArtifactId().equals(input.objectArtifactId())
+                && existing.contentHash().equalsIgnoreCase(input.contentHash())
+                && existing.objectRef().equals(input.objectRef())
+                && existing.locationMappingVersion().equals(input.locationMappingVersion());
     }
 
     private List<Chunk> persistChunks(UUID spaceId, UUID revisionId, UUID textArtifactId, String text, Instant now) {
@@ -261,7 +327,11 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     private static String headingJson(String text) { String first = text.lines().filter(line -> line.startsWith("#")).findFirst().orElse(""); String heading = first.replaceFirst("^#+\\s*", "").replace("\"", ""); return heading.isBlank() ? "[]" : "[\"" + heading + "\"]"; }
     private static String sha256(byte[] value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); } catch (Exception e) { throw new IllegalStateException(e); } }
 
-    private record DocumentContext(UUID sourceDocumentId, String path, int revisionNo, String sourceVersion) { }
+    private record DocumentContext(UUID sourceDocumentId, UUID pipelineVersionId, String path, int revisionNo,
+                                   String sourceVersion) { }
+    record ManifestWrite(UUID id, UUID spaceId, UUID documentRevisionId, UUID pipelineVersionId,
+                         UUID parentArtifactId, UUID objectArtifactId, String contentHash, String objectRef,
+                         String parserName, String parserVersion, String locationMappingVersion, Instant createdAt) { }
     record ChunkRange(int start, int end) { }
     private record Chunk(UUID parentId, UUID childId, String contentRef, String textHash, String text) { }
 }
