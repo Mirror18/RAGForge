@@ -45,6 +45,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -76,9 +77,10 @@ public class AnswerApiController {
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerPersistencePort persistence,
                         AnswerAuthorizationContextFactory authorizationContexts,
-                        RunRepository runs, JdbcRevisionArtifactMaterialService materials) {
+                        RunRepository runs, Optional<JdbcRevisionArtifactMaterialService> materials) {
         this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore(persistence),
-                authorizationContexts, runs, materials == null ? null : materials::isCurrentReadable);
+                authorizationContexts, runs, materials == null ? null : materials
+                        .map(service -> (HistoryMaterialAccess) service::isCurrentReadable).orElse(null));
     }
 
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,

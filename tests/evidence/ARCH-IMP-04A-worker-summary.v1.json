@@ -11,7 +11,12 @@
     {
       "name": "mvn -q -pl backend/server -am test -Dtest=AnswerApiControllerTest,JdbcRevisionArtifactMaterialServiceTest",
       "result": "passed",
-      "environmentNote": "Executed with installed JDK 21 after overriding a stale process JAVA_HOME pointing to JDK 8."
+      "environmentNote": "Executed with installed JDK 21 after overriding a stale process JAVA_HOME pointing to JDK 8; includes Optional.empty() controller construction."
+    },
+    {
+      "name": "Phase5ProductionGraphContextTest within mvn -q -pl backend/server -am test",
+      "result": "passed",
+      "environmentNote": "Spring Boot started with the default object-storage-disabled graph and completed Flyway migration through V23 before the extra full-suite run was manually stopped."
     },
     {
       "name": "python scripts/ci/architecture_check.py",

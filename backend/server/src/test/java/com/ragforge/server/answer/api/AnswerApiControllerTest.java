@@ -6,6 +6,7 @@ import com.ragforge.server.answer.Abstention;
 import com.ragforge.server.answer.AbstentionReason;
 import com.ragforge.server.answer.Answer;
 import com.ragforge.server.answer.AnswerProvenance;
+import com.ragforge.server.answer.AnswerPersistencePort;
 import com.ragforge.server.answer.AnswerRequest;
 import com.ragforge.server.answer.AnswerStatus;
 import com.ragforge.server.answer.Citation;
@@ -36,6 +37,7 @@ import org.mockito.ArgumentCaptor;
 import java.time.Instant;
 import java.util.List;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -45,6 +47,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -192,6 +195,14 @@ class AnswerApiControllerTest {
         assertThatThrownBy(() -> controller.get(spaceId, runId, authentication()))
                 .isInstanceOf(ApiException.class);
         assertThat(materialAccessed[0]).isFalse();
+    }
+
+    @Test
+    void optionalMaterialServiceAllowsTheDefaultObjectStorageDisabledGraphToConstruct() {
+        assertThatCode(() -> new AnswerApiController(mock(RAGAnswerService.class), mock(RunEventService.class),
+                mock(SpaceAuthorization.class), objectMapper, mock(AnswerPersistencePort.class),
+                mock(AnswerAuthorizationContextFactory.class), mock(RunRepository.class), Optional.empty()))
+                .doesNotThrowAnyException();
     }
 
     @Test
