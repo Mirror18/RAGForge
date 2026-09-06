@@ -1,0 +1,74 @@
+meta:
+  card_id: P7C-15
+  title: 将业务向导与带引用回答页面改为每页十条数据列表
+  milestone: M1
+  priority: P1
+  agent_slug: a29
+  branch: codex/p7c15-list-a29
+  worktree: D:/project/learning/RAGForge-worktrees/codex-p7c15-list-a29
+  base_sha: cff8298
+  dependencies_satisfied: true
+  migration_owner: false
+scope:
+  ownership:
+    - frontend/ragforge-web/src/BusinessFlowView.vue
+    - frontend/ragforge-web/src/AnswerView.vue
+    - frontend/ragforge-web/tests/e2e/web-journeys.spec.ts
+    - frontend/ragforge-web/README.md
+    - docs/15-业务操作演示.md
+    - tests/evidence/P7C-15-list-pagination.v1.json
+  read_only:
+    - .agents/tickets/P7C-15-a29.yaml
+    - docs/00-需求处理与最终效果.md
+    - docs/03-功能与用户结果.md
+    - frontend/ragforge-web/package.json
+    - frontend/ragforge-web/src/api.ts
+    - frontend/ragforge-web/src/App.vue
+    - frontend/ragforge-web/src/SourceLibraryView.vue
+    - frontend/ragforge-web/src/TaskCenterView.vue
+    - frontend/ragforge-web/tests/fixtures/synthetic-api.ts
+  forbidden:
+    - AGENTS.md
+    - backend/
+    - contracts/
+    - deploy/
+    - pom.xml
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - docs/10-项目状态审计记录.md
+    - docs/11-风险登记表.md
+    - docs/12-需求追溯矩阵.md
+acceptance:
+  criteria:
+    A1: 业务向导中的资料列表和任务列表均改为表格/数据列表，每页固定显示不超过 10 条，支持上一页、下一页和当前页状态。
+    A2: 带引用回答页面的会话历史和展开后的运行记录均按每页 10 条展示，切换会话或刷新后分页状态不产生跨空间或错误数据。
+    A3: 空状态、首尾页、加载中、分页禁用和错误状态均有清晰中文反馈；历史回答仍可点击恢复，归档会话保持只读。
+    A4: 不改变现有 API、space_id 隔离、结构化 citation/provenance、角色权限和云端出境语义。
+    A5: 浏览器回归覆盖至少 10 条以上合成列表的分页边界、问答历史分页与恢复，并记录证据。
+tests:
+  must_run:
+    - npm run build --prefix frontend/ragforge-web
+    - npm run format:check --prefix frontend/ragforge-web
+    - npm run test:unit --prefix frontend/ragforge-web
+    - npm run test:e2e --prefix frontend/ragforge-web
+    - python scripts/ci/check_markdown_links.py
+    - python scripts/ci/secret_scan.py
+    - git diff --check
+  evidence_file: tests/evidence/P7C-15-list-pagination.v1.json
+budget:
+  token_limit: 6000
+report_schema:
+  card_id: string
+  status: PASS | BLOCKED | FAIL
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string]}
+  tests: {custom: [{name: string, passed: integer, failed: integer, details: string}]}
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string | null}
+  warnings: [string]
+  risks: [string]
+  acceptance_met: {A1: boolean, A2: boolean, A3: boolean, A4: boolean, A5: boolean}
+  integration_notes: string
+  evidence_file: string
