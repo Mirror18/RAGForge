@@ -54,7 +54,7 @@ class Phase3IngestionPersistenceIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.execute("TRUNCATE ingestion_idempotency, pipeline_step_executions, ingestion_job_attempts, "
+        jdbc.execute("TRUNCATE artifact_manifests, ingestion_idempotency, pipeline_step_executions, ingestion_job_attempts, "
                 + "ingestion_jobs, active_document_pointers, parse_reports, document_revisions, artifacts, "
                 + "pipeline_versions, source_checkpoints, source_documents, source_versions, sources, "
                 + "outbox_events, knowledge_spaces, users CASCADE");
@@ -208,6 +208,74 @@ class Phase3IngestionPersistenceIntegrationTest {
                 .hasMessageContaining("parsed revision");
         assertThat(ingestion.findSourceDocument(space, documentId)).get()
                 .extracting(IngestionRepository.SourceDocument::activeRevisionId).isEqualTo(successfulRevisionId);
+    }
+
+    @Test
+    void artifactManifestIsIdempotentImmutableAndFailsClosedAcrossSpaces() {
+        UUID spaceA = createSpace("manifest-a");
+        UUID spaceB = createSpace("manifest-b");
+        UUID sourceId = UUID.randomUUID();
+        UUID sourceVersionId = UUID.randomUUID();
+        UUID documentId = UUID.randomUUID();
+        UUID revisionId = UUID.randomUUID();
+        UUID pipelineId = UUID.randomUUID();
+        UUID sourceArtifactId = UUID.randomUUID();
+        UUID textArtifactId = UUID.randomUUID();
+        UUID reportId = UUID.randomUUID();
+        UUID correlation = UUID.randomUUID();
+        Instant now = Instant.parse("2026-09-06T00:00:00Z");
+        String sourceHash = "a".repeat(64);
+        String textHash = "b".repeat(64);
+        String textRef = "spaces/" + spaceA + "/sources/" + sourceId + "/revisions/" + revisionId
+                + "/artifacts/" + textArtifactId + "/sha256/" + textHash;
+
+        ingestion.createSourceVersion(new IngestionRepository.NewSourceVersion(sourceVersionId, spaceA, sourceId, 1,
+                IngestionRepository.ConnectorType.LOCAL_DIRECTORY, "Manifest fixture",
+                IngestionRepository.SourceState.ACTIVE, "file:manifest", "[]", "[]", false, correlation, now));
+        ingestion.createPipelineVersion(new IngestionRepository.NewPipelineVersion(pipelineId, spaceA, 1,
+                "manifest", "native-fixture-parser", "1.0.0", "c".repeat(64), correlation, now));
+        ingestion.createSourceDocument(new IngestionRepository.NewSourceDocument(documentId, spaceA, sourceId,
+                "manifest-object", "manifest.md", "manifest.md", 1,
+                IngestionRepository.DocumentState.ACTIVE, null, correlation, now));
+        ingestion.persistRevisionBundle(new IngestionRepository.RevisionBundleInput(
+                spaceA, documentId, revisionId, 1, "source-v1", "manifest.md", sourceHash,
+                sourceArtifactId, 1, IngestionRepository.ArtifactKind.SOURCE_BYTES, "text/markdown", 16,
+                sourceHash, "spaces/" + spaceA + "/sources/" + sourceId + "/revisions/" + revisionId
+                        + "/artifacts/" + sourceArtifactId + "/sha256/" + sourceHash,
+                "{}", reportId, 1, IngestionRepository.ParseStatus.SUCCEEDED, 1, 16, 4, 1, 0,
+                "native-fixture-parser", "1.0.0", 1, "[]", "[]", sourceArtifactId,
+                IngestionRepository.OcrStatus.NOT_REQUESTED, null, null,
+                IngestionRepository.OcrTriggerReason.NONE, IngestionRepository.OcrAuditState.NOT_APPLICABLE,
+                null, now, now));
+        jdbc.update("""
+                INSERT INTO artifacts (id, space_id, source_document_id, document_revision_id, version_no, artifact_kind,
+                    media_type, byte_length, sha256, storage_uri, metadata, immutable, created_at)
+                VALUES (?, ?, ?, ?, 1, 'PARSED_TEXT', 'text/plain', 12, ?, ?, '{}'::jsonb, TRUE, ?)
+                """, textArtifactId, spaceA, documentId, revisionId, textHash, textRef, java.sql.Timestamp.from(now));
+
+        IngestionRepository.NewArtifactManifest input = new IngestionRepository.NewArtifactManifest(
+                UUID.randomUUID(), spaceA, revisionId, pipelineId, sourceArtifactId, textArtifactId, textHash,
+                textRef, "native-fixture-parser", "1.0.0", "object-key.v1", now);
+        IngestionRepository.ArtifactManifest first = ingestion.persistArtifactManifest(input);
+        IngestionRepository.ArtifactManifest retry = ingestion.persistArtifactManifest(
+                new IngestionRepository.NewArtifactManifest(UUID.randomUUID(), spaceA, revisionId, pipelineId,
+                        sourceArtifactId, textArtifactId, textHash, textRef, "native-fixture-parser", "1.0.0",
+                        "object-key.v1", now.plusSeconds(1)));
+        assertThat(retry.id()).isEqualTo(first.id());
+        assertThat(ingestion.findArtifactManifest(spaceB, revisionId, pipelineId, "native-fixture-parser", "1.0.0"))
+                .isEmpty();
+        assertThatThrownBy(() -> ingestion.persistArtifactManifest(new IngestionRepository.NewArtifactManifest(
+                UUID.randomUUID(), spaceA, revisionId, pipelineId, sourceArtifactId, textArtifactId,
+                "d".repeat(64), textRef, "native-fixture-parser", "1.0.0", "object-key.v1", now)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("different immutable input");
+        assertThatThrownBy(() -> ingestion.persistArtifactManifest(new IngestionRepository.NewArtifactManifest(
+                UUID.randomUUID(), spaceB, revisionId, pipelineId, sourceArtifactId, textArtifactId, textHash,
+                textRef, "native-fixture-parser", "1.0.0", "object-key.v1", now)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("requested space");
+        assertThatThrownBy(() -> jdbc.update("UPDATE artifact_manifests SET object_ref = 'tampered' WHERE id = ?", first.id()))
+                .isInstanceOf(DataAccessException.class);
     }
 
     private UUID createSpace(String name) {

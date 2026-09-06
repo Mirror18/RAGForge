@@ -187,6 +187,28 @@
       "x-ragforge-uniqueness": ["spaceId", "artifactId"],
       "description": "An artifact is a bounded reference to stored bytes or derived output; it never contains document text."
     },
+    "artifactManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactManifestId", "spaceId", "documentRevisionId", "pipelineVersionId", "parentArtifactId", "objectArtifactId", "contentHash", "objectRef", "parserName", "parserVersion", "locationMappingVersion", "immutable", "createdAt"],
+      "properties": {
+        "artifactManifestId": {"$ref": "#/$defs/uuidV7"},
+        "spaceId": {"$ref": "#/$defs/uuidV7"},
+        "documentRevisionId": {"$ref": "#/$defs/uuidV7"},
+        "pipelineVersionId": {"$ref": "#/$defs/uuidV7"},
+        "parentArtifactId": {"$ref": "#/$defs/uuidV7"},
+        "objectArtifactId": {"$ref": "#/$defs/uuidV7"},
+        "contentHash": {"$ref": "#/$defs/sha256"},
+        "objectRef": {"type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^spaces/[0-9a-fA-F-]{36}/sources/[0-9a-fA-F-]{36}/revisions/[0-9a-fA-F-]{36}/artifacts/[0-9a-fA-F-]{36}/sha256/[0-9a-fA-F]{64}$"},
+        "parserName": {"type": "string", "minLength": 1, "maxLength": 120},
+        "parserVersion": {"type": "string", "minLength": 1, "maxLength": 120},
+        "locationMappingVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "immutable": {"type": "boolean", "const": true},
+        "createdAt": {"$ref": "#/$defs/timestamp"}
+      },
+      "x-ragforge-uniqueness": ["spaceId", "documentRevisionId", "pipelineVersionId", "parserName", "parserVersion"],
+      "description": "An immutable lineage record binds a revision and parser configuration to controlled artifact references. It contains no content bytes, extracted text, credentials, or client filesystem path. A retry with the same identity returns the existing record; different immutable input is rejected."
+    },
     "pipelineVersion": {
       "type": "object",
       "additionalProperties": false,

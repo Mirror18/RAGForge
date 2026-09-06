@@ -1,0 +1,23 @@
+{
+  "cardId": "ARCH-IMP-01",
+  "generatedAt": "2026-09-06T11:52:00+08:00",
+  "status": "PASS",
+  "summary": {
+    "artifactManifest": "V23 adds immutable, space-scoped manifest lineage with revision, pipeline, parent/object artifact, hash, controlled object reference and location mapping version.",
+    "idempotency": "The repository returns an existing manifest only for the same immutable input and rejects a conflicting hash or reference.",
+    "isolation": "Composite foreign keys and repository predicates include space_id; the PostgreSQL integration test rejects a cross-space write."
+  },
+  "checks": [
+    {"command": "python scripts/ci/contract_test.py", "result": "PASS", "total": 52, "passed": 52, "failed": 0},
+    {"command": "python scripts/ci/architecture_check.py", "result": "PASS"},
+    {"command": "python scripts/ci/format_check.py", "result": "PASS", "trackedFiles": 788},
+    {"command": "python scripts/ci/secret_scan.py", "result": "PASS"},
+    {"command": "mvn -q -pl backend/server -am test -Dtest=Phase3IngestionPersistenceIntegrationTest", "result": "PASS", "total": 4, "passed": 4, "failed": 0, "runtime": "Java 21; PostgreSQL and Valkey Testcontainers"},
+    {"command": "mvn -q -pl backend/ingestion-worker -am test -Dtest=BusinessIngestionSideEffectHandlerTest", "result": "PASS", "total": 4, "passed": 4, "failed": 0, "runtime": "Java 21"},
+    {"command": "git diff --check", "result": "PASS"}
+  ],
+  "notes": [
+    "The first server-test invocation used JAVA_HOME=C:/Program Files/Java/jdk-8 and stopped at compilation target validation; the required command was rerun with the locally installed JDK 21 and passed.",
+    "This card does not change active-pointer, candidate validation, chunking, index build, or publish behavior."
+  ]
+}

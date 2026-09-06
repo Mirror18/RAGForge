@@ -72,4 +72,27 @@ class BusinessIngestionSideEffectHandlerTest {
         assertThat(BusinessIngestionSideEffectHandler.chunkRanges("Linux\ndf -h\nfree -h"))
                 .containsExactly(new BusinessIngestionSideEffectHandler.ChunkRange(0, 19));
     }
+
+    @Test
+    void derivesManifestLineageFromControlledArtifactReferences() {
+        UUID spaceId = UUID.randomUUID();
+        UUID revisionId = UUID.randomUUID();
+        UUID pipelineId = UUID.randomUUID();
+        UUID parentArtifactId = UUID.randomUUID();
+        UUID objectArtifactId = UUID.randomUUID();
+        String hash = "a".repeat(64);
+        String objectRef = "spaces/" + spaceId + "/sources/" + UUID.randomUUID() + "/revisions/" + revisionId
+                + "/artifacts/" + objectArtifactId + "/sha256/" + hash;
+
+        BusinessIngestionSideEffectHandler.ManifestWrite manifest = BusinessIngestionSideEffectHandler.manifestWrite(
+                UUID.randomUUID(), spaceId, revisionId, pipelineId, parentArtifactId, objectArtifactId, hash,
+                objectRef, "native-fixture-parser", "1.0.0", Instant.parse("2026-09-06T00:00:00Z"));
+
+        assertThat(manifest.spaceId()).isEqualTo(spaceId);
+        assertThat(manifest.parentArtifactId()).isEqualTo(parentArtifactId);
+        assertThat(manifest.objectArtifactId()).isEqualTo(objectArtifactId);
+        assertThat(manifest.contentHash()).isEqualTo(hash);
+        assertThat(manifest.objectRef()).isEqualTo(objectRef);
+        assertThat(manifest.locationMappingVersion()).isEqualTo("object-key.v1");
+    }
 }
