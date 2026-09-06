@@ -97,7 +97,22 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
   };
   const largeSources = Array.from({ length: 120 }, (_, index) => ({ source: { sourceId: `0190f5c2-7c1e-7abc-8def-${String(2000 + index).padStart(12, "0")}`, spaceId: SYNTHETIC.spaceId, displayName: `Synthetic source ${index + 1}`, connectorType: "GIT", rootRef: `synthetic/source/${index + 1}`, gitBranch: "main", versionNo: 1, sourceState: "ACTIVE" }, checkpoint: null }));
   const largeJobs = Array.from({ length: 17 }, (_, index) => ({ ...job("SUCCEEDED"), job: { ...job("SUCCEEDED").job, id: `0190f5c2-7c1e-7abc-8def-${String(3000 + index).padStart(12, "0")}` } }));
-  const largeIndexes = Array.from({ length: 6 }, (_, index) => ({ indexVersionId: `0190f5c2-7c1e-7abc-8def-${String(4000 + index).padStart(12, "0")}`, spaceId: SYNTHETIC.spaceId, versionNo: index + 1, state: index === 0 && published ? "ACTIVE" : "READY", childChunkCount: 1, validationVectorDimension: 3 }));
+  const largeIndexes = Array.from({ length: 16 }, (_, index) => ({
+    indexVersionId: index === 0 ? SYNTHETIC.indexId : `0190f5c2-7c1e-7abc-8def-${String(4000 + index).padStart(12, "0")}`,
+    spaceId: SYNTHETIC.spaceId,
+    versionNo: index + 1,
+    state: index === 0 && published ? "ACTIVE" : "READY",
+    candidateCollection: "synthetic-candidates",
+    embeddingProfileVersion: "embedding-v1",
+    chunkingStrategyVersion: "chunk-v1",
+    documentRevisionCount: index + 1,
+    childChunkCount: (index + 1) * 2,
+    validationVectorDimension: 3,
+    sampleRetrievalPassed: true,
+    spaceFilterPassed: true,
+    activatedAt: index === 0 && published ? now : null,
+    createdAt: now,
+  }));
   const fulfill = async (route: Route, status: number, body: object | string, contentType = "application/json"): Promise<void> => {
     await route.fulfill({ status, contentType, headers: { "X-Correlation-Id": SYNTHETIC.correlationId }, body: typeof body === "string" ? body : JSON.stringify(body) });
   };
