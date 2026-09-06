@@ -14,6 +14,7 @@ scope:
     - frontend/ragforge-web/src/BusinessFlowView.vue
     - frontend/ragforge-web/src/AnswerView.vue
     - frontend/ragforge-web/tests/e2e/web-journeys.spec.ts
+    - frontend/ragforge-web/tests/fixtures/synthetic-api.ts
     - frontend/ragforge-web/README.md
     - docs/15-业务操作演示.md
     - tests/evidence/P7C-15-list-pagination.v1.json
