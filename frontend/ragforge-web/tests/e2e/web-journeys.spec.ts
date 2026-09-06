@@ -156,6 +156,22 @@ test("[P7C-15 列表分页] business flow and answer history show ten rows per p
   await expect(page.locator('[data-pagination="conversation-history"]')).toContainText("会话：第 2 / 3 页 · 共 23 条");
 });
 
+test("[P7C-16 索引列表分页] index lifecycle shows ten versions per page", async ({ page }) => {
+  const api = createSyntheticApi({ largeCollections: true });
+  await login(page, api);
+  await apiJson(page, `/api/v1/spaces/${SYNTHETIC.spaceId}/sources/uploads`, "POST", "synthetic-index-pagination");
+  await page.goto(`/?view=flow&spaceId=${SYNTHETIC.spaceId}`);
+
+  const indexTable = page.getByRole("table", { name: "索引生命周期列表" });
+  await expect(indexTable).toBeVisible();
+  await expect(indexTable.locator("tbody tr")).toHaveCount(10);
+  await expect(page.locator('[data-pagination="index-lifecycle"]')).toContainText("第 1 / 2 页 · 共 16 条");
+  await expect(indexTable.getByRole("button", { name: "发布为当前版本" })).toHaveCount(10);
+  await page.locator('[data-pagination="index-lifecycle"] button[aria-label="下一页"]').click();
+  await expect(indexTable.locator("tbody tr")).toHaveCount(6);
+  await expect(page.locator('[data-pagination="index-lifecycle"]')).toContainText("第 2 / 2 页 · 共 16 条");
+});
+
 test("[P7Q-06 URL + 分页] restores route state and traverses all large synthetic collections", async ({ page }) => {
   const api = createSyntheticApi({ largeCollections: true });
   await login(page, api);
@@ -183,7 +199,7 @@ test("[P7Q-06 URL + 分页] restores route state and traverses all large synthet
   }, SYNTHETIC.spaceId);
   expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/sources`)).toBe(120);
   expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/jobs`)).toBe(17);
-  expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/indexes`)).toBe(6);
+  expect(await collect(`/api/v1/spaces/${SYNTHETIC.spaceId}/indexes`)).toBe(16);
   expect(api.requests.filter((request) => request.path.endsWith("/sources")).length).toBeGreaterThan(1);
 });
 
