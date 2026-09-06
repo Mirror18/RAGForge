@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ragforge.server.audit.AuditOutboxService;
 import com.ragforge.server.common.ApiException;
 import com.ragforge.server.common.UuidV7;
+import com.ragforge.server.answer.EvidenceBundleSnapshot;
+import com.ragforge.server.answer.RetrievalPort;
 import com.ragforge.server.identity.SessionPrincipal;
 import com.ragforge.server.index.IndexRepository;
+import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.SpaceAuthorization;
 import com.ragforge.server.retrieval.EvidenceBundle;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
@@ -21,8 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /** Read-only A/B retrieval experiment adapter with a structured, redacted trace. */
@@ -86,16 +92,22 @@ public class RetrievalPlaygroundService {
     private final SpaceAuthorization authorization;
     private final RetrievalProfileRepository profiles;
     private final IndexRepository indexes;
-    private final RetrievalService retrieval;
+    private final RetrievalPort retrievalPort;
     private final AuditOutboxService audit;
 
     public RetrievalPlaygroundService(SpaceAuthorization authorization, RetrievalProfileRepository profiles,
                                       IndexRepository indexes, RetrievalService retrieval,
                                       AuditOutboxService audit) {
+        this(authorization, profiles, indexes, new LocalRetrievalPort(retrieval), audit);
+    }
+
+    public RetrievalPlaygroundService(SpaceAuthorization authorization, RetrievalProfileRepository profiles,
+                                      IndexRepository indexes, RetrievalPort retrievalPort,
+                                      AuditOutboxService audit) {
         this.authorization = authorization;
         this.profiles = profiles;
         this.indexes = indexes;
-        this.retrieval = retrieval;
+        this.retrievalPort = Objects.requireNonNull(retrievalPort, "retrievalPort");
         this.audit = audit;
     }
 
@@ -144,10 +156,11 @@ public class RetrievalPlaygroundService {
                                RetrievalProfileRepository.RetrievalProfileVersion profile,
                                String originalQuery, List<Double> queryVector) {
         long started = System.nanoTime();
-        RetrievalService.Trace serviceTrace;
+        RetrievalPort.RetrievalTraceSnapshot serviceTrace;
         try {
-            serviceTrace = retrieval.trace(new RetrievalService.Request(spaceId, indexVersionId, profile,
-                    originalQuery, queryVector));
+            serviceTrace = retrievalPort.trace(new RetrievalPort.RetrievalRequest(spaceId, UUID.randomUUID(),
+                    UUID.randomUUID(), originalQuery, queryVector), indexVersionId, profile,
+                    new CancellationToken());
         } catch (IllegalArgumentException exception) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "retrieval_trace_unavailable",
                     "Retrieval trace unavailable", "The configured retrieval pipeline rejected the experiment");
@@ -158,11 +171,11 @@ public class RetrievalPlaygroundService {
                 new StageTrace(toHits(serviceTrace.bm25().candidates()), toMetrics(serviceTrace.bm25())),
                 new StageTrace(toHits(serviceTrace.rrf().candidates()), toMetrics(serviceTrace.rrf())),
                 new StageTrace(toHits(serviceTrace.rerank().candidates()), toMetrics(serviceTrace.rerank())),
-                toContext(serviceTrace.context()), toEvidence(serviceTrace.evidence()));
+                toContext(serviceTrace.context()), toEvidence(serviceTrace.snapshot().bundle()));
         ProfileSide response = new ProfileSide(indexVersionId,
                 new ProfileRef(profile.profileId(), profile.versionNo(), true), responseTrace,
-                new SideMetrics(milliseconds(elapsed), serviceTrace.evidence().evidence().size()));
-        return new SideResult(response, serviceTrace.evidence());
+                new SideMetrics(milliseconds(elapsed), serviceTrace.snapshot().bundle().evidence().size()));
+        return new SideResult(response, serviceTrace.snapshot().bundle());
     }
 
     private RetrievalProfileRepository.RetrievalProfileVersion findProfile(UUID spaceId, ProfileRef ref) {
@@ -183,7 +196,7 @@ public class RetrievalPlaygroundService {
         }
     }
 
-    private static StageMetrics toMetrics(RetrievalService.StageTrace trace) {
+    private static StageMetrics toMetrics(RetrievalPort.StageTrace trace) {
         return new StageMetrics(trace.candidates().size(), trace.latencyMs());
     }
 
@@ -191,12 +204,12 @@ public class RetrievalPlaygroundService {
         return Duration.ofNanos(Math.max(0, nanos)).toNanos() / 1_000_000.0;
     }
 
-    private static List<TraceHit> toHits(List<RetrievalService.TraceCandidate> values) {
+    private static List<TraceHit> toHits(List<RetrievalPort.TraceCandidate> values) {
         return values.stream().map(value -> new TraceHit(value.childChunkId(), value.documentRevisionId(),
                 value.rank(), value.score(), value.contentRef(), value.textHash())).toList();
     }
 
-    private static ContextTrace toContext(RetrievalService.ContextTrace context) {
+    private static ContextTrace toContext(RetrievalPort.ContextTrace context) {
         return new ContextTrace(context.childChunkIds(), context.totalTokens(), context.maxContextTokens(),
                 context.truncated());
     }
@@ -223,5 +236,65 @@ public class RetrievalPlaygroundService {
     }
 
     private record SideResult(ProfileSide response, EvidenceBundle bundle) {
+    }
+
+    /** Compatibility bridge: the retrieval algorithm remains in RetrievalService. */
+    private static final class LocalRetrievalPort implements RetrievalPort {
+        private final RetrievalService retrieval;
+
+        private LocalRetrievalPort(RetrievalService retrieval) {
+            this.retrieval = Objects.requireNonNull(retrieval, "retrieval");
+        }
+
+        @Override
+        public EvidenceBundleSnapshot retrieve(RetrievalRequest request, CancellationToken cancellationToken) {
+            throw new UnsupportedOperationException("Playground uses the trace application port");
+        }
+
+        @Override
+        public RetrievalTraceSnapshot trace(RetrievalRequest request, UUID indexVersionId,
+                                             RetrievalProfileRepository.RetrievalProfileVersion profile,
+                                             CancellationToken cancellationToken) {
+            RetrievalService.Trace value = retrieval.trace(new RetrievalService.Request(request.spaceId(),
+                    indexVersionId, profile, request.query(), request.queryEmbedding()));
+            return new RetrievalTraceSnapshot(snapshot(value.evidence()), stage(value.dense()), stage(value.bm25()),
+                    stage(value.rrf()), stage(value.rerank()), context(value.context()));
+        }
+
+        private static EvidenceBundleSnapshot snapshot(EvidenceBundle bundle) {
+            String identity = bundle.spaceId() + "|" + bundle.indexVersionId() + "|" + bundle.profileId() + "|"
+                    + bundle.profileVersion() + "|" + bundle.evidence().stream()
+                    .map(item -> item.evidenceId() + ":" + item.textHash() + ":" + item.anchor().tokenStart()
+                            + ":" + item.anchor().tokenEnd()).sorted().reduce("", String::concat);
+            UUID bundleId = UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8));
+            return new EvidenceBundleSnapshot(bundleId, 1, hash(identity),
+                    "evidence:playground:" + hash(identity).substring(0, 16), bundle, List.of(),
+                    hash(bundle.spaceId().toString()),
+                    hash(bundle.indexVersionId().toString()));
+        }
+
+        private static RetrievalPort.StageTrace stage(RetrievalService.StageTrace value) {
+            return new RetrievalPort.StageTrace(value.candidates().stream().map(item ->
+                    new RetrievalPort.TraceCandidate(item.childChunkId(), item.documentRevisionId(), item.contentRef(),
+                            item.textHash(), item.rank(), item.score(), item.reason())).toList(), value.latencyMs());
+        }
+
+        private static RetrievalPort.ContextTrace context(RetrievalService.ContextTrace value) {
+            return new RetrievalPort.ContextTrace(value.childChunkIds(), value.totalTokens(),
+                    value.maxContextTokens(), value.truncated());
+        }
+
+        private static String hash(String value) {
+            try {
+                byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+                StringBuilder result = new StringBuilder(64);
+                for (byte item : digest) {
+                    result.append(String.format("%02x", item));
+                }
+                return result.toString();
+            } catch (Exception failure) {
+                throw new IllegalStateException("SHA-256 is required by the runtime", failure);
+            }
+        }
     }
 }

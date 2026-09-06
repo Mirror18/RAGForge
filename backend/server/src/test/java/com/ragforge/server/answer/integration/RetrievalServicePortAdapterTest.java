@@ -56,6 +56,22 @@ class RetrievalServicePortAdapterTest {
         assertThat(snapshot.materialById()).containsKey(EVIDENCE);
     }
 
+    @Test
+    void traceAndAnswerCallsShareTheSameEvidenceIdentityForOneExecution() {
+        RetrievalService retrieval = mock(RetrievalService.class);
+        when(retrieval.retrieve(any())).thenReturn(bundle("Linux 查看磁盘空间"));
+        RetrievalServicePortAdapter adapter = adapter(retrieval, "Linux 上使用 df -h 查看磁盘空间。");
+
+        EvidenceBundleSnapshot answer = adapter.retrieve(request("Linux 查看磁盘空间"), new CancellationToken());
+        RetrievalPort.RetrievalTraceSnapshot trace = adapter.trace(request("Linux 查看磁盘空间"),
+                new CancellationToken());
+
+        assertThat(trace.snapshot().evidenceBundleId()).isEqualTo(answer.evidenceBundleId());
+        assertThat(trace.snapshot().evidenceBundleHash()).isEqualTo(answer.evidenceBundleHash());
+        assertThat(trace.snapshot().bundle().evidence()).extracting(EvidenceBundle.Evidence::evidenceId)
+                .containsExactly(EVIDENCE);
+    }
+
     private static RetrievalServicePortAdapter adapter(RetrievalService retrieval, String material) {
         RetrievalServicePortAdapter.EvidenceMaterialResolver materials = (evidence, request, token) -> material;
         RetrievalExecutionResolver execution = (space, run, correlation) -> new RetrievalExecutionResolver.Execution(
