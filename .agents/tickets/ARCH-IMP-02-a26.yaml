@@ -1,0 +1,72 @@
+meta:
+  card_id: ARCH-IMP-02
+  title: 增加版本化解析质量影子判定
+  milestone: M4
+  priority: P0
+  agent_slug: a26
+  branch: codex/m4-quality-shadow-a26
+  worktree: D:/project/learning/RAGForge-worktrees/codex-m4-quality-shadow-a26
+  base_sha: PENDING_DISPATCH_COMMIT
+  dependencies_satisfied: true
+  migration_owner: true
+  migration_next: V24
+scope:
+  ownership:
+    - contracts/ingestion/ingestion-domain.v1.schema.json
+    - contracts/ingestion/README.md
+    - backend/server/src/main/resources/db/migration/V24__m4_index_validation_results.sql
+    - backend/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilder.java
+    - backend/ingestion-worker/src/test/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilderTest.java
+    - tests/evidence/ARCH-IMP-02-worker-summary.v1.json
+  read_only:
+    - .agents/tickets/ARCH-IMP-02-a26.yaml
+    - docs/07-架构决策记录.md
+    - docs/02-项目架构与领域模型.md
+    - contracts/ingestion/ingestion-domain.v1.schema.json
+    - contracts/ingestion/README.md
+    - backend/server/src/main/resources/db/migration/V23__m4_artifact_manifest.sql
+    - backend/server/src/main/java/com/ragforge/server/index/IndexValidation.java
+    - backend/server/src/main/java/com/ragforge/server/index/CandidateIndexService.java
+    - backend/server/src/main/java/com/ragforge/server/index/IndexRepository.java
+    - backend/ingestion-worker/src/main/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilder.java
+    - backend/ingestion-worker/src/test/java/com/ragforge/ingestion/pipeline/SpaceCandidateIndexBuilderTest.java
+    - scripts/ci/contract_test.py
+  forbidden:
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - backend/server/src/main/java/com/ragforge/server/retrieval/
+    - backend/server/src/main/java/com/ragforge/server/answer/
+    - pom.xml
+acceptance:
+  criteria:
+    A1: 质量结果是不可变、space-scoped 的记录，绑定 index、ArtifactManifest 集合 hash 与策略版本。
+    A2: V24 为 append-only migration；所有查询和外键包含 space_id；不保存正文或凭据。
+    A3: Shadow PASS/FAIL 都会记录，质量失败不得改变 READY、active pointer 或 publish 行为。
+    A4: 同 index 重投幂等、跨空间拒绝、影子 PASS/FAIL 均有测试。
+    A5: 不修改检索算法、质量阈值启用策略或生产数据。
+tests:
+  must_run:
+    - python scripts/ci/contract_test.py
+    - mvn -q -pl backend/ingestion-worker -am test -Dtest=SpaceCandidateIndexBuilderTest
+    - python scripts/ci/architecture_check.py
+    - python scripts/ci/format_check.py
+    - python scripts/ci/secret_scan.py
+    - git diff --check
+  evidence_file: tests/evidence/ARCH-IMP-02-worker-summary.v1.json
+budget:
+  token_limit: 8000
+report_schema:
+  card_id: string
+  status: PASS | BLOCKED | FAIL
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string]}
+  tests: {custom: [{name: string, passed: integer, failed: integer, details: string}]}
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string | null}
+  warnings: [string]
+  risks: [string]
+  acceptance_met: {A1: boolean, A2: boolean, A3: boolean, A4: boolean, A5: boolean}
+  integration_notes: string
+  evidence_file: string

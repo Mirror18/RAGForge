@@ -1,0 +1,70 @@
+meta:
+  card_id: ARCH-IMP-04A
+  title: 强化历史答案与物料读取的当前授权检查
+  milestone: M4
+  priority: P0
+  agent_slug: a27
+  branch: codex/m4-history-authorization-a27
+  worktree: D:/project/learning/RAGForge-worktrees/codex-m4-history-authorization-a27
+  base_sha: PENDING_DISPATCH_COMMIT
+  dependencies_satisfied: true
+  migration_owner: false
+scope:
+  ownership:
+    - backend/server/src/main/java/com/ragforge/server/answer/JdbcRevisionArtifactMaterialService.java
+    - backend/server/src/main/java/com/ragforge/server/answer/RevisionArtifactMaterialResolver.java
+    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiController.java
+    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiProjectionStore.java
+    - backend/server/src/test/java/com/ragforge/server/answer/AnswerApiControllerTest.java
+    - backend/server/src/test/java/com/ragforge/server/answer/JdbcRevisionArtifactMaterialServiceTest.java
+    - tests/evidence/ARCH-IMP-04A-worker-summary.v1.json
+  read_only:
+    - .agents/tickets/ARCH-IMP-04A-a27.yaml
+    - docs/07-架构决策记录.md
+    - docs/02-项目架构与领域模型.md
+    - backend/server/src/main/java/com/ragforge/server/security/SessionSpaceAnswerAuthorizer.java
+    - backend/server/src/main/java/com/ragforge/server/answer/JdbcAnswerPersistence.java
+    - backend/server/src/main/resources/db/migration/V12__phase5_answer_history.sql
+    - backend/server/src/main/resources/db/migration/V21__phase7_source_task_center.sql
+    - backend/server/src/main/java/com/ragforge/server/answer/JdbcRevisionArtifactMaterialService.java
+    - backend/server/src/main/java/com/ragforge/server/answer/RevisionArtifactMaterialResolver.java
+    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiController.java
+    - backend/server/src/main/java/com/ragforge/server/answer/AnswerApiProjectionStore.java
+  forbidden:
+    - docs/08-项目状态卡.md
+    - docs/09-项目任务总台账.md
+    - backend/server/src/main/resources/db/migration/
+    - backend/server/src/main/java/com/ragforge/server/ingestion/
+    - pom.xml
+acceptance:
+  criteria:
+    A1: 历史答案、citation 与派生物料读取在返回前重新核验当前 space 授权和删除状态。
+    A2: 删除或撤权后不得返回正文、派生摘录或 citation preview；跨空间必须失败。
+    A3: 保留现有结构化 Evidence 与 material reference，不引入文档 ACL 或新缓存。
+    A4: 覆盖删除、撤权、跨空间和正常授权矩阵；完成安全评审测试。
+    A5: 不修改来源/Job 重放、迁移、检索算法或发布行为。
+tests:
+  must_run:
+    - mvn -q -pl backend/server -am test -Dtest=AnswerApiControllerTest,JdbcRevisionArtifactMaterialServiceTest
+    - python scripts/ci/architecture_check.py
+    - python scripts/ci/format_check.py
+    - python scripts/ci/secret_scan.py
+    - git diff --check
+  evidence_file: tests/evidence/ARCH-IMP-04A-worker-summary.v1.json
+budget:
+  token_limit: 4500
+report_schema:
+  card_id: string
+  status: PASS | BLOCKED | FAIL
+  commit_sha: string
+  base_sha: string
+  branch: string
+  worktree: string
+  changed_files: {count: integer, list: [string]}
+  tests: {custom: [{name: string, passed: integer, failed: integer, details: string}]}
+  budget: {token_used: integer, token_limit: integer, overrun_reason: string | null}
+  warnings: [string]
+  risks: [string]
+  acceptance_met: {A1: boolean, A2: boolean, A3: boolean, A4: boolean, A5: boolean}
+  integration_notes: string
+  evidence_file: string
