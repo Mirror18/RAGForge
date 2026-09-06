@@ -13,6 +13,7 @@ import com.ragforge.server.common.ApiException;
 import com.ragforge.server.common.CorrelationIdFilter;
 import com.ragforge.server.common.UuidV7;
 import com.ragforge.server.identity.SessionPrincipal;
+import com.ragforge.server.ingestion.JdbcRevisionArtifactMaterialService;
 import com.ragforge.server.provider.SpaceAuthorization;
 import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.adapter.EgressDecision;
@@ -63,6 +64,7 @@ public class AnswerApiController {
     private final AnswerEventPublisher publisher;
     private final AnswerSseEventAdapter sseAdapter;
     private final AnswerAuthorizationContextFactory authorizationContexts;
+    private final HistoryMaterialAccess historyMaterialAccess;
     private final ConcurrentMap<RunScope, ActiveGeneration> activeGenerations = new ConcurrentHashMap<>();
 
     public AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
@@ -74,9 +76,9 @@ public class AnswerApiController {
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerPersistencePort persistence,
                         AnswerAuthorizationContextFactory authorizationContexts,
-                        RunRepository runs) {
+                        RunRepository runs, JdbcRevisionArtifactMaterialService materials) {
         this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore(persistence),
-                authorizationContexts, runs);
+                authorizationContexts, runs, materials == null ? null : materials::isCurrentReadable);
     }
 
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
@@ -87,12 +89,19 @@ public class AnswerApiController {
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerApiProjectionStore projections,
                         AnswerAuthorizationContextFactory authorizationContexts) {
-        this(answers, events, authorization, objectMapper, projections, authorizationContexts, null);
+        this(answers, events, authorization, objectMapper, projections, authorizationContexts, null, null);
     }
 
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerApiProjectionStore projections,
                         AnswerAuthorizationContextFactory authorizationContexts, RunRepository runs) {
+        this(answers, events, authorization, objectMapper, projections, authorizationContexts, runs, null);
+    }
+
+    AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
+                        ObjectMapper objectMapper, AnswerApiProjectionStore projections,
+                        AnswerAuthorizationContextFactory authorizationContexts, RunRepository runs,
+                        HistoryMaterialAccess historyMaterialAccess) {
         this.answers = answers;
         this.events = events;
         this.authorization = authorization;
@@ -101,6 +110,7 @@ public class AnswerApiController {
         this.publisher = new AnswerEventPublisher(events, objectMapper, projections.persistence(), runs);
         this.sseAdapter = new AnswerSseEventAdapter(objectMapper);
         this.authorizationContexts = authorizationContexts;
+        this.historyMaterialAccess = historyMaterialAccess;
     }
 
     @PostMapping(value = "/answers", consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -158,7 +168,10 @@ public class AnswerApiController {
     @GetMapping(value = "/answers/{runId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Answer get(@PathVariable UUID spaceId, @PathVariable UUID runId, Authentication authentication) {
         requireMember(spaceId, authentication);
-        return projections.find(spaceId, runId).orElseThrow(() -> notFound("answer_not_found", "Answer not found"));
+        Answer answer = projections.find(spaceId, runId)
+                .orElseThrow(() -> notFound("answer_not_found", "Answer not found"));
+        requireCurrentHistoryAccess(answer);
+        return answer;
     }
 
     @GetMapping(value = "/answers/{runId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -167,6 +180,7 @@ public class AnswerApiController {
                              Authentication authentication, HttpServletRequest request,
                              HttpServletResponse response) {
         requireMember(spaceId, authentication);
+        projections.find(spaceId, runId).ifPresent(this::requireCurrentHistoryAccess);
         response.setHeader("Cache-Control", "no-cache");
         response.setHeader(CorrelationIdFilter.HEADER, CorrelationIdFilter.current(request));
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
@@ -218,7 +232,11 @@ public class AnswerApiController {
                                                                      @PathVariable UUID evidenceId,
                                                                      Authentication authentication) {
         requireMember(spaceId, authentication);
-        return projections.preview(spaceId, runId, evidenceId);
+        try {
+            return projections.preview(spaceId, runId, evidenceId, this::isCurrentMaterialReadable);
+        } catch (AnswerApiProjectionStore.AnswerApiNotFoundException unavailable) {
+            throw notFound("citation_not_available", "Citation is not available");
+        }
     }
 
     ObjectNode eventEnvelope(RunEvent event) {
@@ -251,6 +269,24 @@ public class AnswerApiController {
         if (principal == null) throw new ApiException(HttpStatus.UNAUTHORIZED, "authentication_required",
                 "Authentication required", "A valid session is required");
         authorization.requireMember(spaceId, principal);
+    }
+
+    private void requireCurrentHistoryAccess(Answer answer) {
+        if (answer.citations().stream().anyMatch(citation -> !isCurrentMaterialReadable(
+                new AnswerApiProjectionStore.CitationPreview(citation.evidenceId(), citation.spaceId(),
+                        citation.correlationId(), citation.runId(), citation.evidenceBundleId(),
+                        citation.evidenceBundleVersion(), citation.evidenceBundleHash(), citation.indexVersionId(),
+                        citation.retrievalProfileId(), citation.retrievalProfileVersion(),
+                        citation.documentRevisionId(), citation.parentChunkId(), citation.childChunkId(),
+                        citation.contentRef(), citation.textHash(), citation.anchor(), citation.citationAllowed())))) {
+            throw notFound("answer_not_available", "Answer is not available");
+        }
+    }
+
+    private boolean isCurrentMaterialReadable(AnswerApiProjectionStore.CitationPreview citation) {
+        return citation != null && citation.citationAllowed() && historyMaterialAccess != null
+                && historyMaterialAccess.isCurrentReadable(citation.spaceId(), citation.documentRevisionId(),
+                citation.contentRef(), citation.textHash());
     }
 
     private void requireWrite(UUID spaceId, Authentication authentication) {
@@ -324,6 +360,11 @@ public class AnswerApiController {
     }
 
     private record RunScope(UUID spaceId, UUID runId) {
+    }
+
+    @FunctionalInterface
+    interface HistoryMaterialAccess {
+        boolean isCurrentReadable(UUID spaceId, UUID documentRevisionId, String contentRef, String textHash);
     }
 
     private static final class ActiveGeneration {

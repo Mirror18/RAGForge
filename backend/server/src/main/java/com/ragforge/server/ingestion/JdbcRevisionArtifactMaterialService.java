@@ -68,6 +68,20 @@ public final class JdbcRevisionArtifactMaterialService implements RevisionArtifa
         }
     }
 
+    /**
+     * Checks a citation's current material boundary without reading its object body.
+     * Historical references remain immutable, but source deletion must take effect
+     * before a later answer or citation response exposes their derived content.
+     */
+    public boolean isCurrentReadable(UUID spaceId, UUID documentRevisionId, String contentRef,
+                                     String expectedTextHash) {
+        if (spaceId == null || documentRevisionId == null || contentRef == null || contentRef.isBlank()
+                || expectedTextHash == null || !expectedTextHash.matches("[0-9a-fA-F]{64}")) {
+            return false;
+        }
+        return findPointer(spaceId, documentRevisionId, contentRef, expectedTextHash).isPresent();
+    }
+
     private Optional<MaterialPointer> findPointer(UUID spaceId, UUID revisionId,
                                                    String contentRef, String textHash) {
         return jdbc.query("""
@@ -76,6 +90,8 @@ public final class JdbcRevisionArtifactMaterialService implements RevisionArtifa
                 FROM child_chunks c
                 JOIN document_revisions r
                   ON r.id = c.document_revision_id AND r.space_id = c.space_id
+                JOIN sources s
+                  ON s.id = r.source_id AND s.space_id = r.space_id
                 JOIN parse_reports p
                   ON p.document_revision_id = r.id AND p.space_id = r.space_id
                  AND p.status = 'SUCCEEDED'
@@ -87,6 +103,7 @@ public final class JdbcRevisionArtifactMaterialService implements RevisionArtifa
                 WHERE c.space_id = ? AND c.document_revision_id = ?
                   AND c.content_ref = ? AND lower(c.text_hash) = lower(?)
                   AND r.revision_state = 'PARSED' AND r.immutable = TRUE
+                  AND s.deleted_at IS NULL AND s.lifecycle_state <> 'DELETED'
                 ORDER BY c.chunk_index
                 LIMIT 1
                 """, (rs, row) -> new MaterialPointer(

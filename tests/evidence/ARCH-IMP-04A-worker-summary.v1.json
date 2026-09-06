@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "v1",
+  "cardId": "ARCH-IMP-04A",
+  "status": "PASS",
+  "summary": {
+    "currentAuthorization": "Historical answer and citation preview require current space membership and per-citation material readability.",
+    "deletionBoundary": "Material pointer lookup rejects deleted sources before object content is read.",
+    "crossSpaceBoundary": "Stored projections and material lookup both retain the requested space identifier."
+  },
+  "checks": [
+    {
+      "name": "mvn -q -pl backend/server -am test -Dtest=AnswerApiControllerTest,JdbcRevisionArtifactMaterialServiceTest",
+      "result": "passed",
+      "environmentNote": "Executed with installed JDK 21 after overriding a stale process JAVA_HOME pointing to JDK 8."
+    },
+    {
+      "name": "python scripts/ci/architecture_check.py",
+      "result": "passed"
+    },
+    {
+      "name": "python scripts/ci/format_check.py",
+      "result": "passed"
+    },
+    {
+      "name": "python scripts/ci/secret_scan.py",
+      "result": "passed"
+    },
+    {
+      "name": "git diff --check",
+      "result": "passed"
+    }
+  ]
+}
