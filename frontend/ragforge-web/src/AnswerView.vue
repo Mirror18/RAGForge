@@ -83,11 +83,18 @@ const includeArchived = ref(false);
 const historyLoading = ref(false);
 const historyError = ref("");
 const historySearch = ref("");
-const visibleHistory = computed(() => {
+const pageSize = 10;
+const historyPage = ref(1);
+const historyRunsPage = ref(1);
+const filteredHistory = computed(() => {
   const query = historySearch.value.trim().toLocaleLowerCase();
   if (!query) return history.value;
   return history.value.filter((item) => [item.id, item.title, item.status].join(" ").toLocaleLowerCase().includes(query));
 });
+const historyPageCount = computed(() => Math.max(1, Math.ceil(filteredHistory.value.length / pageSize)));
+const visibleHistory = computed(() => filteredHistory.value.slice((historyPage.value - 1) * pageSize, historyPage.value * pageSize));
+const historyRunsPageCount = computed(() => Math.max(1, Math.ceil(historyRuns.value.length / pageSize)));
+const visibleHistoryRuns = computed(() => historyRuns.value.slice((historyRunsPage.value - 1) * pageSize, historyRunsPage.value * pageSize));
 const selectedHistory = computed(() => history.value.find((item) => item.id === conversationId.value) ?? null);
 const selectedConversationArchived = computed(() => selectedHistory.value?.status === "ARCHIVED");
 
@@ -263,12 +270,24 @@ function resetAnswer(): void {
   streamAttempts.value = 0;
 }
 
+function setHistoryPage(nextPage: number): void {
+  historyPage.value = Math.min(Math.max(nextPage, 1), historyPageCount.value);
+}
+
+function setHistoryRunsPage(nextPage: number): void {
+  historyRunsPage.value = Math.min(Math.max(nextPage, 1), historyRunsPageCount.value);
+}
+
 async function loadHistory(): Promise<void> {
   if (!props.selectedSpaceId) return;
   historyLoading.value = true; historyError.value = "";
   try {
     history.value = await listAnswerConversations(props.selectedSpaceId, includeArchived.value);
-    if (conversationId.value) historyRuns.value = await listConversationRuns(props.selectedSpaceId, conversationId.value);
+    setHistoryPage(historyPage.value);
+    if (conversationId.value) {
+      historyRuns.value = await listConversationRuns(props.selectedSpaceId, conversationId.value);
+      setHistoryRunsPage(historyRunsPage.value);
+    }
   } catch (error) { historyError.value = safeApiError(error, "问答历史加载失败。"); }
   finally { historyLoading.value = false; }
 }
@@ -288,9 +307,10 @@ async function loadHistoricalAnswer(runId: string, conversationIdHint?: string):
 
 async function selectHistory(item: ConversationHistoryItem): Promise<void> {
   if (isActive.value) return;
-  resetAnswer(); conversationId.value = item.id; historyRuns.value = [];
+  resetAnswer(); conversationId.value = item.id; historyRuns.value = []; historyRunsPage.value = 1;
   try {
     historyRuns.value = await listConversationRuns(props.selectedSpaceId, item.id);
+    setHistoryRunsPage(historyRunsPage.value);
     if (historyRuns.value[0]) await loadHistoricalAnswer(historyRuns.value[0].runId, item.id);
     else notice.value = "已打开会话，但还没有可查看的运行记录。";
   }
@@ -502,6 +522,7 @@ function newConversation(): void {
   resetAnswer();
   conversationId.value = "";
   historyRuns.value = [];
+  historyRunsPage.value = 1;
   question.value = "";
   notice.value = "已开启新会话；提交问题后服务端会创建会话。";
 }
@@ -512,16 +533,17 @@ async function restoreInitialRun(): Promise<void> {
 }
 
 watch(() => props.selectedSpaceId, (next, previous) => {
-  if (next !== previous) { resetAnswer(); conversationId.value = ""; historyRuns.value = []; void loadHistory(); }
+  if (next !== previous) { resetAnswer(); conversationId.value = ""; historyRuns.value = []; historyPage.value = 1; historyRunsPage.value = 1; void loadHistory(); }
 });
-watch(includeArchived, () => { void loadHistory(); });
+watch(historySearch, () => { historyPage.value = 1; });
+watch(includeArchived, () => { historyPage.value = 1; historyRunsPage.value = 1; void loadHistory(); });
 watch(() => props.initialRunId, (next) => { if (next && props.selectedSpaceId) void loadHistoricalAnswer(next, conversationId.value || undefined); });
 onMounted(() => { void restoreInitialRun(); });
 onBeforeUnmount(() => abortController?.abort());
 </script>
 
 <template>
-  <aside class="card answer-history" aria-label="问答历史"><div class="card-title"><div><span class="card-label">历史记录</span><h3>查找并继续已有会话</h3><p class="muted history-intro">点击一行会自动打开最近一次回答；归档记录仍可查看。</p></div><div class="history-actions"><button type="button" class="secondary-button" :disabled="isActive" @click="newConversation">新建会话</button><label class="history-toggle"><input v-model="includeArchived" type="checkbox" />显示归档</label></div></div><div class="history-search"><label for="answer-history-search">搜索会话</label><input id="answer-history-search" v-model="historySearch" maxlength="120" placeholder="按标题、状态或标识搜索" /></div><p v-if="historyError" class="alert error">{{ historyError }}</p><p v-if="historyLoading" class="muted">正在读取历史记录…</p><div v-else-if="!history.length" class="muted">还没有问答历史。点击“新建会话”后提交第一个问题，会话会自动出现在这里。</div><div v-else-if="!visibleHistory.length" class="muted">没有匹配的会话，请换一个关键词。</div><div v-else class="history-table-wrap"><table class="history-table" aria-label="问答历史表格"><thead><tr><th scope="col">会话</th><th scope="col">状态</th><th scope="col">最近更新</th><th scope="col">操作</th></tr></thead><tbody><template v-for="item in visibleHistory" :key="item.id"><tr :class="{ selected: conversationId === item.id }"><td><button type="button" class="history-select" @click="selectHistory(item)"><strong>{{ item.title }}</strong><small>{{ item.id }}</small></button></td><td><span class="history-status" :class="item.status.toLowerCase()">{{ item.status === "ARCHIVED" ? "已归档" : "可继续" }}</span></td><td><span class="history-date">{{ new Date(item.updatedAt).toLocaleString() }}</span></td><td><div class="history-actions"><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="archiveHistory(item)">归档</button><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="renameHistory(item)">重命名</button><button type="button" class="danger-button" @click="deleteHistory(item)">移除</button></div></td></tr><tr v-if="conversationId === item.id" class="history-detail-row"><td colspan="4"><div class="history-detail"><div class="history-detail-heading"><strong>{{ historyRuns.length ? "本会话的运行记录" : "本会话暂无运行记录" }}</strong><small v-if="selectedConversationArchived">归档会话仅支持查看</small></div><div v-if="historyRuns.length" class="run-history-table"><div class="run-history-head"><span>运行时间</span><span>状态</span><span>运行标识</span><span></span></div><button v-for="run in historyRuns" :key="run.runId" type="button" class="run-history-row" @click="loadHistoricalRun(run)"><span>{{ run.createdAt ? new Date(run.createdAt).toLocaleString() : "时间未知" }}</span><span>{{ run.status === "COMPLETED" || run.status === "SUCCEEDED" ? "已完成" : run.status === "CANCELLED" ? "已取消" : run.status === "FAILED" ? "失败" : "处理中" }}</span><code>{{ run.runId }}</code><b>打开回答 →</b></button></div></div></td></tr></template></tbody></table></div></aside>
+  <aside class="card answer-history" aria-label="问答历史"><div class="card-title"><div><span class="card-label">历史记录</span><h3>查找并继续已有会话</h3><p class="muted history-intro">点击一行会自动打开最近一次回答；归档记录仍可查看。</p></div><div class="history-actions"><button type="button" class="secondary-button" :disabled="isActive" @click="newConversation">新建会话</button><label class="history-toggle"><input v-model="includeArchived" type="checkbox" />显示归档</label></div></div><div class="history-search"><label for="answer-history-search">搜索会话</label><input id="answer-history-search" v-model="historySearch" maxlength="120" placeholder="按标题、状态或标识搜索" /></div><p v-if="historyError" class="alert error">{{ historyError }}</p><p v-if="historyLoading" class="muted">正在读取历史记录…</p><div v-else-if="!history.length" class="muted">还没有问答历史。点击“新建会话”后提交第一个问题，会话会自动出现在这里。</div><div v-else-if="!filteredHistory.length" class="muted">没有匹配的会话，请换一个关键词。</div><div v-else class="history-table-wrap"><table class="history-table" aria-label="问答历史表格"><thead><tr><th scope="col">会话</th><th scope="col">状态</th><th scope="col">最近更新</th><th scope="col">操作</th></tr></thead><tbody><template v-for="item in visibleHistory" :key="item.id"><tr :class="{ selected: conversationId === item.id }"><td><button type="button" class="history-select" @click="selectHistory(item)"><strong>{{ item.title }}</strong><small>{{ item.id }}</small></button></td><td><span class="history-status" :class="item.status.toLowerCase()">{{ item.status === "ARCHIVED" ? "已归档" : "可继续" }}</span></td><td><span class="history-date">{{ new Date(item.updatedAt).toLocaleString() }}</span></td><td><div class="history-actions"><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="archiveHistory(item)">归档</button><button v-if='item.status !== "ARCHIVED"' type="button" class="quiet-button" @click="renameHistory(item)">重命名</button><button type="button" class="danger-button" @click="deleteHistory(item)">移除</button></div></td></tr><tr v-if="conversationId === item.id" class="history-detail-row"><td colspan="4"><div class="history-detail"><div class="history-detail-heading"><strong>{{ historyRuns.length ? "本会话的运行记录" : "本会话暂无运行记录" }}</strong><small v-if="selectedConversationArchived">归档会话仅支持查看</small></div><div v-if="historyRuns.length" class="run-history-table"><div class="run-history-head"><span>运行时间</span><span>状态</span><span>运行标识</span><span></span></div><button v-for="run in visibleHistoryRuns" :key="run.runId" type="button" class="run-history-row" @click="loadHistoricalRun(run)"><span>{{ run.createdAt ? new Date(run.createdAt).toLocaleString() : "时间未知" }}</span><span>{{ run.status === "COMPLETED" || run.status === "SUCCEEDED" ? "已完成" : run.status === "CANCELLED" ? "已取消" : run.status === "FAILED" ? "失败" : "处理中" }}</span><code>{{ run.runId }}</code><b>打开回答 →</b></button></div><div class="pagination-bar" data-pagination="conversation-runs"><span>运行记录：第 {{ historyRunsPage }} / {{ historyRunsPageCount }} 页 · 共 {{ historyRuns.length }} 条</span><div><button type="button" class="quiet-button" :disabled="historyRunsPage <= 1" aria-label="上一页" @click="setHistoryRunsPage(historyRunsPage - 1)">上一页</button><button type="button" class="quiet-button" :disabled="historyRunsPage >= historyRunsPageCount" aria-label="下一页" @click="setHistoryRunsPage(historyRunsPage + 1)">下一页</button></div></div></div></td></tr></template></tbody></table></div><div class="pagination-bar" data-pagination="conversation-history"><span>会话：第 {{ historyPage }} / {{ historyPageCount }} 页 · 共 {{ filteredHistory.length }} 条</span><div><button type="button" class="quiet-button" :disabled="historyPage <= 1" aria-label="上一页" @click="setHistoryPage(historyPage - 1)">上一页</button><button type="button" class="quiet-button" :disabled="historyPage >= historyPageCount" aria-label="下一页" @click="setHistoryPage(historyPage + 1)">下一页</button></div></div></aside>
   <section class="view-section answer-view" aria-labelledby="answer-heading">
     <div class="section-heading"><div><p class="eyebrow">03 · 可核验回答</p><h2 id="answer-heading">带引用问答</h2><p>回答、结构化证据和运行状态来自当前空间；系统不会把模型提供的文件名、网址或正文冒充成引用。</p></div><div class="read-only-note" :class="{ warning: status === 'degraded' || status === 'timeout' }">{{ statusLabel }}</div></div>
     <form class="card answer-form" @submit.prevent="startAnswer">
@@ -552,6 +574,7 @@ onBeforeUnmount(() => abortController?.abort());
 .history-intro { margin: 4px 0 0; font-size: .78rem; }.history-table-wrap { margin-top: 14px; overflow-x: auto; border: 1px solid #e1e9f4; border-radius: 12px; }.history-table { width: 100%; min-width: 680px; border-collapse: collapse; text-align: left; }.history-table th { padding: 10px 12px; background: #f5f8fd; color: #71809a; font-size: .7rem; font-weight: 800; }.history-table td { padding: 11px 12px; border-top: 1px solid #edf1f6; color: #405979; font-size: .78rem; vertical-align: middle; }.history-table tbody > tr.selected > td { background: #f1f7ff; }.history-table .history-select { width: 100%; padding: 0; }.history-table .history-select strong { color: #284c87; }.history-date { white-space: nowrap; color: #687893; }.history-status { display: inline-flex; padding: 4px 7px; border-radius: 999px; background: #e5f6ee; color: #19714c; font-size: .68rem; font-weight: 800; }.history-status.archived { background: #f0f2f5; color: #778399; }.history-detail-row > td { padding: 0; background: #fbfdff; }.history-detail { padding: 12px 15px 14px; }.history-detail-heading { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px; color: #355174; }.history-detail-heading small { color: #a05a14; font-size: .7rem; }.run-history-table { overflow: hidden; border: 1px solid #e3eaf4; border-radius: 9px; }.run-history-head, .run-history-row { display: grid; grid-template-columns: 1.15fr .7fr 1.4fr auto; align-items: center; gap: 12px; }.run-history-head { padding: 8px 10px; background: #f1f6fd; color: #8190a6; font-size: .68rem; font-weight: 800; }.run-history-row { width: 100%; padding: 9px 10px; border-top: 1px solid #edf1f6; border-radius: 0; color: #526b92; }.run-history-row:first-of-type { border-top: 0; }.run-history-row code { overflow-wrap: anywhere; color: #315b9a; font-size: .68rem; }.run-history-row b { color: #2f6096; font-size: .7rem; white-space: nowrap; }
 .feedback-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; color: #687893; font-size: .78rem; }.feedback-actions button { padding: 7px 10px; font-size: .74rem; }.citation-preview { margin-top: 15px; }.citation-preview .citation-details { margin-bottom: 0; }
 .answer-form { display: block; }
+.pagination-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 11px; color: #71809a; font-size: .72rem; }.pagination-bar > div { display: flex; gap: 7px; }.pagination-bar button { padding: 7px 10px; font-size: .7rem; }.history-detail .pagination-bar { padding-top: 9px; border-top: 1px solid #edf1f6; }
 .answer-form > .wide { margin-bottom: 14px; }
 .answer-config { margin-top: 14px; padding: 13px 15px; border: 1px solid #dce5f2; border-radius: 10px; background: #fafcff; }
 .answer-config summary { color: #345582; cursor: pointer; font-weight: 700; }
