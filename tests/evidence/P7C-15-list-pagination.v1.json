@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "P7C-15",
+  "status": "PASS",
+  "capturedAt": "2026-09-06T18:48:11+08:00",
+  "baseSha": "cff8298",
+  "implementationHead": "4dec084",
+  "summary": {
+    "build": "passed",
+    "typecheck": "passed",
+    "unit": { "files": 1, "tests": 10, "failed": 0 },
+    "e2e": { "tests": 13, "passed": 13, "failed": 0 },
+    "markdownLinks": "pending-final-gate",
+    "secretScan": "pending-final-gate",
+    "diffCheck": "passed"
+  },
+  "acceptance": {
+    "A1_businessFlowDataList": true,
+    "A2_answerHistoryAndRunsPagination": true,
+    "A3_chineseStatesAndArchivedReadOnly": true,
+    "A4_existingApiAndSecuritySemantics": true,
+    "A5_overTenSyntheticPaginationBoundary": true
+  },
+  "pagination": {
+    "pageSize": 10,
+    "businessFlow": { "collection": "ingestion jobs", "total": 17, "pages": 2, "pageOne": 10, "pageTwo": 7 },
+    "answerHistory": { "collection": "conversations", "total": 23, "pages": 3, "pageSize": 10 },
+    "answerRuns": { "collection": "conversation runs", "total": 23, "pages": 3, "pageSize": 10 }
+  },
+  "browserDemo": {
+    "fixture": "synthetic-space-and-answer",
+    "cloudEgress": false,
+    "screenshots": [
+      "docs/assets/business-demo/01-空间与向导.png",
+      "docs/assets/business-demo/02-资料导入.png",
+      "docs/assets/business-demo/03-索引发布.png",
+      "docs/assets/business-demo/04-带引用问答.png",
+      "docs/assets/business-demo/05-历史会话.png"
+    ],
+    "journeys": ["J1", "J2", "J3", "J4", "J5", "J6", "J7", "J8", "J9", "P7C-15", "P7Q-06"]
+  },
+  "notes": [
+    "业务向导导入任务、带引用回答会话历史和运行记录均使用客户端每页十条的数据列表。",
+    "分页只改变展示窗口，不改变服务端 cursor 分页、space_id 隔离、历史恢复、归档只读或结构化 citation/provenance。",
+    "浏览器回归和截图使用合成数据，不读取个人资料、不写入真实密钥、不启用云端出境。"
+  ]
+}
