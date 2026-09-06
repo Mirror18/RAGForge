@@ -31,6 +31,8 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 
 脚本启动 Server 和 Worker 时会先在前台清理并完成 Maven `clean compile`、`jar:jar` 与 `spring-boot:repackage`，固定使用 Java 21，再直接运行构建出的、运行期间不会被 IDE 增量编译覆盖的 JAR；应用运行阶段不触发测试编译，增量编译也不会影响运行产物，避免机器级 Maven profile 或切换分支、源码移动造成 `target/classes` 不完整，进而出现 `NoClassDefFoundError`。测试编译仍由独立回归命令执行。脚本会等待 Worker 的 Spring Boot 启动日志，并把应用 JVM PID 写入 `tmp/local-run/worker.pid`（不是 Maven 包装进程）；Worker 编译或启动失败时会返回非零并打印最近日志，不会继续报告“已就绪”。
 
+启动前会检查当前项目生成的 Server/Worker JAR 是否已有 Java 进程运行；发现旧实例时会直接失败并报告 PID，需先停止旧实例，避免重复消费和构建产物竞态。
+
 完整的当前应用运行面需要下列 Docker core 服务：
 
 | 服务 | 用途 | 默认宿主机端口 |

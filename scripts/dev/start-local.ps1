@@ -59,6 +59,16 @@ function Assert-PortAvailable([int]$Port, [string]$ParameterName) {
     if ($listener) { throw "端口 $Port 已被占用。请停止现有服务或通过 -$ParameterName 选择其他端口。" }
 }
 
+function Assert-NoRunningJarProcess([string]$JarPath, [string]$ApplicationName) {
+    $normalizedJarPath = [System.IO.Path]::GetFullPath($JarPath)
+    $processes = @(Get-CimInstance Win32_Process -Filter "Name = 'java.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine -like "*$normalizedJarPath*" })
+    if ($processes.Count -gt 0) {
+        $pids = ($processes | ForEach-Object { $_.ProcessId }) -join ", "
+        throw "$ApplicationName 已在运行（PID: $pids）。请先停止现有 JAR 进程，再执行本地启动，避免重复消费或构建产物竞态。"
+    }
+}
+
 function Wait-ForHttp([string]$Uri, [int]$Attempts = 180, [System.Diagnostics.Process]$Process = $null) {
     for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
         try {
@@ -196,6 +206,9 @@ try {
     )
     $serverJar = Join-Path $repoRoot "backend\server\target\ragforge-server-0.1.0-SNAPSHOT.jar"
     $workerJar = Join-Path $repoRoot "backend\ingestion-worker\target\ragforge-ingestion-worker-0.1.0-SNAPSHOT.jar"
+
+    Assert-NoRunningJarProcess $serverJar "Server"
+    Assert-NoRunningJarProcess $workerJar "Worker"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
     Invoke-MavenPackage "backend/server" $serverJar (Join-Path $runtimeDirectory "server-compile.log")
