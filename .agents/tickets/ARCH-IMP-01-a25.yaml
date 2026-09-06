@@ -6,7 +6,7 @@ meta:
   agent_slug: a25
   branch: codex/m4-execution-contract-a25
   worktree: D:/project/learning/RAGForge-worktrees/codex-m4-execution-contract-a25
-  base_sha: 15f1fc1c2c9682869b2a59194812b68eba5a6deb
+  base_sha: 282456a3dc77d1a071852e02db5a472cc77ddf7c
   dependencies_satisfied: true
   migration_owner: true
   migration_next: V23
