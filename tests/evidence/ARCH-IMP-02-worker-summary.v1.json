@@ -1,0 +1,45 @@
+{
+  "cardId": "ARCH-IMP-02",
+  "version": "v1",
+  "executedAt": "2026-09-06",
+  "javaRuntime": "C:\\Program Files\\Java\\jdk-21",
+  "commands": [
+    {
+      "name": "python scripts/ci/contract_test.py",
+      "passed": 52,
+      "failed": 0,
+      "details": "5 contract test modules and 22 contract artifacts passed."
+    },
+    {
+      "name": "mvn -q -pl backend/ingestion-worker -am test -Dtest=SpaceCandidateIndexBuilderTest",
+      "passed": 3,
+      "failed": 0,
+      "details": "Covers index-policy idempotent write semantics, shadow PASS, shadow FAIL without blocking READY, and cross-space object reference rejection."
+    },
+    {
+      "name": "python scripts/ci/architecture_check.py",
+      "passed": 1,
+      "failed": 0,
+      "details": "Architecture gate passed."
+    },
+    {
+      "name": "python scripts/ci/format_check.py",
+      "passed": 1,
+      "failed": 0,
+      "details": "Whitespace, Python and JSON syntax gate passed."
+    },
+    {
+      "name": "python scripts/ci/secret_scan.py",
+      "passed": 1,
+      "failed": 0,
+      "details": "No supported credential pattern found."
+    },
+    {
+      "name": "git diff --check",
+      "passed": 1,
+      "failed": 0,
+      "details": "No whitespace errors."
+    }
+  ],
+  "knownEnvironmentIssue": "The initial Maven invocation used JDK 8 and failed while compiling pre-existing Java 21 syntax. The recorded targeted test passed after JAVA_HOME was set to the local JDK 21."
+}

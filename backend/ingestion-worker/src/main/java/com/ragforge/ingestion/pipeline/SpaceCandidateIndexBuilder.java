@@ -26,6 +26,8 @@ import java.util.UUID;
 @Service
 @ConditionalOnProperty(name = "ragforge.ingestion.enabled", havingValue = "true")
 public final class SpaceCandidateIndexBuilder {
+    private static final String SHADOW_QUALITY_POLICY_VERSION = "artifact-manifest-shadow-v1";
+
     private final JdbcTemplate jdbc;
     private final ContentAddressedObjectStore store;
     private final OllamaEmbeddingClient embedding;
@@ -73,6 +75,7 @@ public final class SpaceCandidateIndexBuilder {
 
         qdrant.createAndUpsert(collection, dimension, spaceId, indexId, points);
         QdrantIndexWriter.Validation validation = qdrant.validateCandidate(collection, spaceId, indexId, points);
+        recordShadowValidation(spaceId, indexId, chunks, validation, Instant.now());
         if (!validation.sampleRetrievalPassed() || !validation.spaceFilterPassed()) {
             throw new IllegalStateException("candidate index validation failed");
         }
@@ -92,7 +95,8 @@ public final class SpaceCandidateIndexBuilder {
         return jdbc.query("""
                 SELECT d.id AS source_document_id, c.id AS child_id, c.document_revision_id,
                        c.parent_chunk_id, c.content_ref, lower(c.text_hash) AS text_hash,
-                       c.char_start, c.char_end, a.storage_uri, a.sha256, a.byte_length, a.media_type
+                       c.char_start, c.char_end, a.storage_uri, a.sha256, a.byte_length, a.media_type,
+                       m.id AS manifest_id, lower(m.content_hash) AS manifest_content_hash
                 FROM source_documents d
                 JOIN document_revisions r
                   ON r.id = d.active_revision_id AND r.space_id = d.space_id
@@ -106,6 +110,9 @@ public final class SpaceCandidateIndexBuilder {
                   ON a.id = p.extracted_text_artifact_id AND a.space_id = p.space_id
                  AND a.document_revision_id = r.id AND a.artifact_kind = 'PARSED_TEXT'
                  AND a.immutable = TRUE
+                LEFT JOIN artifact_manifests m
+                  ON m.space_id = a.space_id AND m.document_revision_id = a.document_revision_id
+                 AND m.object_artifact_id = a.id AND m.immutable = TRUE
                 WHERE d.space_id = ? AND d.current_state = 'ACTIVE'
                 ORDER BY d.canonical_source_path, c.chunk_index
                 """, (rs, row) -> new SourceChunk(
@@ -113,7 +120,8 @@ public final class SpaceCandidateIndexBuilder {
                 rs.getObject("document_revision_id", UUID.class), rs.getObject("parent_chunk_id", UUID.class),
                 rs.getString("content_ref"), rs.getString("text_hash"), rs.getInt("char_start"),
                 rs.getInt("char_end"), rs.getString("storage_uri"), rs.getString("sha256"),
-                rs.getLong("byte_length"), rs.getString("media_type")), spaceId);
+                rs.getLong("byte_length"), rs.getString("media_type"),
+                rs.getObject("manifest_id", UUID.class), rs.getString("manifest_content_hash")), spaceId);
     }
 
     private String materialize(UUID spaceId, SourceChunk chunk) {
@@ -135,6 +143,37 @@ public final class SpaceCandidateIndexBuilder {
             throw new IllegalStateException("child chunk material hash validation failed");
         }
         return slice;
+    }
+
+    /**
+     * Records provenance completeness as a shadow verdict. It deliberately has no authority over
+     * the candidate VALIDATING/READY transition or active pointer publication.
+     */
+    private void recordShadowValidation(UUID spaceId, UUID indexId, List<SourceChunk> chunks,
+                                        QdrantIndexWriter.Validation validation, Instant checkedAt) {
+        String manifestSetHash = manifestSetHash(chunks);
+        boolean passed = validation.sampleRetrievalPassed() && validation.spaceFilterPassed()
+                && chunks.stream().allMatch(SourceChunk::hasMatchingManifest);
+        jdbc.update("""
+                INSERT INTO index_validation_results
+                    (id, space_id, index_version_id, manifest_set_hash, quality_policy_version,
+                     outcome, shadow, checked_at)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE, ?)
+                ON CONFLICT (space_id, index_version_id, quality_policy_version) DO NOTHING
+                """, UuidV7.random(), spaceId, indexId, manifestSetHash, SHADOW_QUALITY_POLICY_VERSION,
+                passed ? "PASS" : "FAIL", Timestamp.from(checkedAt));
+    }
+
+    private static String manifestSetHash(List<SourceChunk> chunks) {
+        String material = String.join(String.valueOf((char) 10), chunks.stream()
+                .map(chunk -> chunk.manifestId() == null
+                        ? "missing:" + chunk.revisionId()
+                        : chunk.manifestId() + ":" + chunk.manifestContentHash())
+                .distinct()
+                .sorted()
+                .toList());
+        if (material.isEmpty()) throw new IllegalStateException("candidate index requires chunks");
+        return sha256(material.getBytes(StandardCharsets.UTF_8));
     }
 
     private int next(String sql, Object... args) {
@@ -173,5 +212,10 @@ public final class SpaceCandidateIndexBuilder {
 
     private record SourceChunk(UUID sourceDocumentId, UUID childId, UUID revisionId, UUID parentId,
                                String contentRef, String textHash, int charStart, int charEnd,
-                               String storageUri, String sha256, long byteLength, String mediaType) { }
+                               String storageUri, String sha256, long byteLength, String mediaType,
+                               UUID manifestId, String manifestContentHash) {
+        private boolean hasMatchingManifest() {
+            return manifestId != null && manifestContentHash != null && manifestContentHash.equalsIgnoreCase(sha256);
+        }
+    }
 }
