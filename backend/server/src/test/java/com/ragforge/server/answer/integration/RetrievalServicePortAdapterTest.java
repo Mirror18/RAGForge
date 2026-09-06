@@ -4,6 +4,7 @@ import com.ragforge.server.answer.RetrievalPort;
 import com.ragforge.server.answer.EvidenceBundleSnapshot;
 import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.retrieval.EvidenceBundle;
+import com.ragforge.server.retrieval.RetrievalExecutionSnapshotService;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
 import com.ragforge.server.retrieval.RetrievalService;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RetrievalServicePortAdapterTest {
@@ -56,12 +58,46 @@ class RetrievalServicePortAdapterTest {
         assertThat(snapshot.materialById()).containsKey(EVIDENCE);
     }
 
+    @Test
+    void traceAndAnswerCallsShareTheSameEvidenceIdentityForOneExecution() {
+        RetrievalService retrieval = mock(RetrievalService.class);
+        when(retrieval.retrieve(any())).thenReturn(bundle("Linux 查看磁盘空间"));
+        RetrievalServicePortAdapter adapter = adapter(retrieval, "Linux 上使用 df -h 查看磁盘空间。");
+
+        EvidenceBundleSnapshot answer = adapter.retrieve(request("Linux 查看磁盘空间"), new CancellationToken());
+        RetrievalPort.RetrievalTraceSnapshot trace = adapter.trace(request("Linux 查看磁盘空间"),
+                new CancellationToken());
+
+        assertThat(trace.snapshot().evidenceBundleId()).isEqualTo(answer.evidenceBundleId());
+        assertThat(trace.snapshot().evidenceBundleHash()).isEqualTo(answer.evidenceBundleHash());
+        assertThat(trace.snapshot().bundle().evidence()).extracting(EvidenceBundle.Evidence::evidenceId)
+                .containsExactly(EVIDENCE);
+    }
+
+    @Test
+    void configuredSnapshotServicePersistsTheVerifiedExecutionIdentity() {
+        RetrievalService retrieval = mock(RetrievalService.class);
+        when(retrieval.retrieve(any())).thenReturn(bundle("Linux 查看磁盘空间"));
+        RetrievalExecutionSnapshotService snapshots = mock(RetrievalExecutionSnapshotService.class);
+        RetrievalServicePortAdapter adapter = adapter(retrieval, "Linux 上使用 df -h 查看磁盘空间。", snapshots);
+
+        adapter.retrieve(request("Linux 查看磁盘空间"), new CancellationToken());
+
+        verify(snapshots).saveIfAbsent(any());
+    }
+
     private static RetrievalServicePortAdapter adapter(RetrievalService retrieval, String material) {
+        return adapter(retrieval, material, null);
+    }
+
+    private static RetrievalServicePortAdapter adapter(RetrievalService retrieval, String material,
+                                                       RetrievalExecutionSnapshotService snapshots) {
         RetrievalServicePortAdapter.EvidenceMaterialResolver materials = (evidence, request, token) -> material;
         RetrievalExecutionResolver execution = (space, run, correlation) -> new RetrievalExecutionResolver.Execution(
                 SPACE, INDEX, profile(), UUID.fromString("018f0f70-8e10-7b14-8f1a-cccccccccccc"), 1,
                 "evidence:linux", HASH, HASH);
-        return new RetrievalServicePortAdapter(retrieval, execution, materials);
+        return new RetrievalServicePortAdapter(retrieval, execution, materials,
+                Phase5IntegrationObserver.noop(), snapshots);
     }
 
     private static RetrievalPort.RetrievalRequest request(String query) {

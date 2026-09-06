@@ -14,6 +14,7 @@ import com.ragforge.server.provider.ProviderRepository;
 import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.run.ProviderAdapterRegistry;
 import com.ragforge.server.retrieval.RetrievalService;
+import com.ragforge.server.retrieval.RetrievalExecutionSnapshotService;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Objects;
@@ -85,14 +86,29 @@ public final class Phase5IntegrationConfiguration {
     public static RetrievalPort retrieval(RetrievalService service, RetrievalExecutionResolver executions,
                                           RetrievalServicePortAdapter.EvidenceMaterialResolver materials,
                                           Phase5IntegrationObserver observer) {
-        return new RetrievalServicePortAdapter(service, executions, materials, observer);
+        return retrieval(service, executions, materials, observer, null);
+    }
+
+    public static RetrievalPort retrieval(RetrievalService service, RetrievalExecutionResolver executions,
+                                          RetrievalServicePortAdapter.EvidenceMaterialResolver materials,
+                                          Phase5IntegrationObserver observer,
+                                          RetrievalExecutionSnapshotService snapshots) {
+        return new RetrievalServicePortAdapter(service, executions, materials, observer, snapshots);
     }
 
     public static RetrievalPort revisionArtifactRetrieval(RetrievalService service,
                                                           RetrievalExecutionResolver executions,
                                                           RevisionArtifactMaterialService materials,
                                                           Phase5IntegrationObserver observer) {
-        return retrieval(service, executions, new RevisionArtifactMaterialResolver(materials), observer);
+        return revisionArtifactRetrieval(service, executions, materials, observer, null);
+    }
+
+    public static RetrievalPort revisionArtifactRetrieval(RetrievalService service,
+                                                          RetrievalExecutionResolver executions,
+                                                          RevisionArtifactMaterialService materials,
+                                                          Phase5IntegrationObserver observer,
+                                                          RetrievalExecutionSnapshotService snapshots) {
+        return retrieval(service, executions, new RevisionArtifactMaterialResolver(materials), observer, snapshots);
     }
 
     public static RagPromptPort versionedPrompt(PromptRepository prompts,

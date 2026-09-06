@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ragforge.dev/contracts/retrieval/retrieval-execution-snapshot.v1.schema.json",
+  "title": "RetrievalExecutionSnapshot v1",
+  "description": "Immutable, space-scoped identity for one retrieval execution. It contains only redacted effective parameters and provenance identities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "spaceId",
+    "indexVersionId",
+    "profileId",
+    "profileVersion",
+    "effectiveParameters",
+    "routeVersion",
+    "executorVersion",
+    "degradationPolicy",
+    "evidenceBundleId",
+    "evidenceBundleVersion",
+    "evidenceBundleRef",
+    "datasetHash",
+    "configHash",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "retrieval-execution-snapshot.v1" },
+    "snapshotId": { "type": "string", "format": "uuid" },
+    "spaceId": { "type": "string", "format": "uuid" },
+    "indexVersionId": { "type": "string", "format": "uuid" },
+    "profileId": { "type": "string", "format": "uuid" },
+    "profileVersion": { "type": "integer", "minimum": 1 },
+    "effectiveParameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "denseTopK", "bm25TopK", "rrfK", "rrfDenseWeight", "rrfBm25Weight",
+        "rerankTopK", "maxContextChildren", "expansionMode", "maxParentsPerChild",
+        "maxNeighborsPerParent", "maxContextTokens"
+      ],
+      "properties": {
+        "denseTopK": { "type": "integer", "minimum": 1 },
+        "bm25TopK": { "type": "integer", "minimum": 1 },
+        "rrfK": { "type": "integer", "minimum": 1 },
+        "rrfDenseWeight": { "type": "number", "minimum": 0 },
+        "rrfBm25Weight": { "type": "number", "minimum": 0 },
+        "rerankTopK": { "type": "integer", "minimum": 1 },
+        "maxContextChildren": { "type": "integer", "minimum": 1 },
+        "expansionMode": { "type": "string", "enum": ["NONE", "PARENT", "NEIGHBOR", "PARENT_AND_NEIGHBOR"] },
+        "maxParentsPerChild": { "type": "integer", "minimum": 0 },
+        "maxNeighborsPerParent": { "type": "integer", "minimum": 0 },
+        "maxContextTokens": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "routeVersion": { "type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9._:/-]+$" },
+    "executorVersion": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": "^[A-Za-z0-9._:/-]+$" },
+    "degradationPolicy": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": "^[A-Za-z0-9._:/-]+$" },
+    "evidenceBundleId": { "type": "string", "format": "uuid" },
+    "evidenceBundleVersion": { "type": "integer", "minimum": 1 },
+    "evidenceBundleRef": { "type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9._:/-]+$" },
+    "datasetHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "configHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

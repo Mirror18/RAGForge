@@ -18,6 +18,7 @@ import com.ragforge.server.provider.ProviderRepository;
 import com.ragforge.server.provider.SpaceAuthorization;
 import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
+import com.ragforge.server.retrieval.RetrievalExecutionSnapshotService;
 import com.ragforge.server.retrieval.RetrievalService;
 import com.ragforge.server.run.ProviderAdapterRegistry;
 import com.ragforge.server.run.RunRepository;
@@ -71,9 +72,10 @@ public class Phase5ProductionAnswerConfiguration {
 
     @Bean
     RetrievalPort phase5Retrieval(RetrievalService retrieval, RetrievalExecutionResolver executions,
-                                  RevisionArtifactMaterialService materials) {
+                                  RevisionArtifactMaterialService materials,
+                                  RetrievalExecutionSnapshotService snapshots) {
         return Phase5IntegrationConfiguration.revisionArtifactRetrieval(retrieval, executions, materials,
-                Phase5IntegrationObserver.noop());
+                Phase5IntegrationObserver.noop(), snapshots);
     }
 
     @Bean

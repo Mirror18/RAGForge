@@ -1,0 +1,37 @@
+{
+  "evidenceVersion": "ARCH-IMP-03-worker-summary.v1",
+  "cardId": "ARCH-IMP-03",
+  "syntheticOnly": true,
+  "cloudEgress": "disabled",
+  "baseSha": "bd82be650e128474206a52d5f447d42c424b8b99",
+  "checks": {
+    "contract": { "passed": true, "summary": "52 contract tests; 23 contract artifacts checked" },
+    "java": { "passed": true, "summary": "17 tests passed across snapshot, answer, adapter and playground suites" },
+    "ragEvaluation": {
+      "passed": true,
+      "status": "PASSED",
+      "summary": "Synthetic gate passed with retrieval MRR@10 1.0, recall@10 1.0, cross-space leakage 0",
+      "configVersion": "phase6-evaluation-config-v1",
+      "datasetVersion": "phase6-evaluation-v1",
+      "datasetSha256": "3672bb6a7a5c5521795862126fd589c144102d85ef7d7d2d75deff8004efcd3b",
+      "judgeVersion": "deterministic-phase6-judge-v1",
+      "cloudEgress": "disabled"
+    },
+    "architecture": { "passed": true },
+    "format": { "passed": true },
+    "secretScan": { "passed": true },
+    "diffCheck": { "passed": true }
+  },
+  "acceptance": {
+    "A1": true,
+    "A2": true,
+    "A3": true,
+    "A4": true,
+    "A5": true
+  },
+  "notes": [
+    "RAG evaluation is synthetic-only and cloud egress is disabled; gate config and dataset versions are recorded above.",
+    "The no-argument ticket command is not runnable because rag_evaluation_gate.py requires --base-ref and --head-ref; the equivalent base-to-head gate was executed with UTF-8 process settings.",
+    "The adapter records snapshots when a snapshot service is supplied; legacy constructors remain compatible and do not persist by default."
+  ]
+}

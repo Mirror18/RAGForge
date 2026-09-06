@@ -6,6 +6,8 @@ import com.ragforge.server.provider.adapter.CancellationToken;
 import com.ragforge.server.provider.adapter.ProviderAdapterException;
 import com.ragforge.server.provider.adapter.ProviderErrorClass;
 import com.ragforge.server.retrieval.EvidenceBundle;
+import com.ragforge.server.retrieval.RetrievalExecutionSnapshot;
+import com.ragforge.server.retrieval.RetrievalExecutionSnapshotService;
 import com.ragforge.server.retrieval.RetrievalService;
 
 import java.nio.charset.StandardCharsets;
@@ -13,6 +15,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Bridges the Phase 4 retrieval service to the answer Evidence Bundle. The
@@ -30,18 +33,26 @@ public final class RetrievalServicePortAdapter implements RetrievalPort {
     private final RetrievalExecutionResolver executions;
     private final EvidenceMaterialResolver materials;
     private final Phase5IntegrationObserver observer;
+    private final RetrievalExecutionSnapshotService snapshots;
 
     public RetrievalServicePortAdapter(RetrievalService retrieval, RetrievalExecutionResolver executions,
                                        EvidenceMaterialResolver materials) {
-        this(retrieval, executions, materials, Phase5IntegrationObserver.noop());
+        this(retrieval, executions, materials, Phase5IntegrationObserver.noop(), null);
     }
 
     public RetrievalServicePortAdapter(RetrievalService retrieval, RetrievalExecutionResolver executions,
                                        EvidenceMaterialResolver materials, Phase5IntegrationObserver observer) {
+        this(retrieval, executions, materials, observer, null);
+    }
+
+    public RetrievalServicePortAdapter(RetrievalService retrieval, RetrievalExecutionResolver executions,
+                                       EvidenceMaterialResolver materials, Phase5IntegrationObserver observer,
+                                       RetrievalExecutionSnapshotService snapshots) {
         this.retrieval = Objects.requireNonNull(retrieval, "retrieval");
         this.executions = Objects.requireNonNull(executions, "executions");
         this.materials = Objects.requireNonNull(materials, "materials");
         this.observer = observer == null ? Phase5IntegrationObserver.noop() : observer;
+        this.snapshots = snapshots;
     }
 
     @Override
@@ -71,7 +82,9 @@ public final class RetrievalServicePortAdapter implements RetrievalPort {
         if (bundle.abstained() || bundle.evidence().isEmpty()) {
             observer.record(new Phase5IntegrationObserver.Decision(request.spaceId(), request.runId(),
                     request.correlationId(), "retrieval", "ABSTAINED", bundle.abstentionReason(), null));
-            return snapshot(execution, bundle, List.of());
+            EvidenceBundleSnapshot result = snapshot(execution, bundle, List.of());
+            recordSnapshot(request, execution);
+            return result;
         }
         List<EvidenceBundleSnapshot.EvidenceMaterial> resolved = new ArrayList<>();
         List<EvidenceBundle.Evidence> materiallyCorroborated = new ArrayList<>();
@@ -98,7 +111,9 @@ public final class RetrievalServicePortAdapter implements RetrievalPort {
                     "NO_VERIFIED_EVIDENCE");
             observer.record(new Phase5IntegrationObserver.Decision(request.spaceId(), request.runId(),
                     request.correlationId(), "retrieval", "ABSTAINED", abstained.abstentionReason(), null));
-            return snapshot(execution, abstained, List.of());
+            EvidenceBundleSnapshot result = snapshot(execution, abstained, List.of());
+            recordSnapshot(request, execution);
+            return result;
         }
         if (materiallyCorroborated.size() != bundle.evidence().size()) {
             bundle = new EvidenceBundle(bundle.spaceId(), bundle.indexVersionId(), bundle.profileId(),
@@ -107,7 +122,34 @@ public final class RetrievalServicePortAdapter implements RetrievalPort {
         }
         observer.record(new Phase5IntegrationObserver.Decision(request.spaceId(), request.runId(),
                 request.correlationId(), "retrieval", "SUCCEEDED", "EVIDENCE_BUNDLE_READY", null));
-        return snapshot(execution, bundle, resolved);
+        EvidenceBundleSnapshot result = snapshot(execution, bundle, resolved);
+        recordSnapshot(request, execution);
+        return result;
+    }
+
+    @Override
+    public RetrievalTraceSnapshot trace(RetrievalRequest request, CancellationToken cancellationToken) {
+        // The application port owns execution identity. The legacy adapter's
+        // retrieve path remains the single algorithm path; trace callers still
+        // receive the same verified bundle and a redacted empty stage view when
+        // the provider does not expose a trace implementation.
+        return RetrievalTraceSnapshot.empty(retrieve(request, cancellationToken));
+    }
+
+    private void recordSnapshot(RetrievalRequest request, RetrievalExecutionResolver.Execution execution) {
+        if (snapshots == null) {
+            return;
+        }
+        RetrievalExecutionSnapshot snapshot = new RetrievalExecutionSnapshot(
+                RetrievalExecutionSnapshot.SCHEMA_VERSION, UUID.randomUUID(), request.spaceId(),
+                request.runId() + ":" + request.correlationId(), execution.indexVersionId(),
+                execution.profile().profileId(), execution.profile().versionNo(),
+                RetrievalExecutionSnapshot.from(execution.profile()),
+                "retrieval-profile:" + execution.profile().profileId() + ":v" + execution.profile().versionNo(),
+                "retrieval-service-v1", "NO_UNAUTHORIZED_FALLBACK", execution.evidenceBundleId(),
+                execution.evidenceBundleVersion(), execution.evidenceBundleRef(), execution.datasetHash(),
+                execution.configHash(), java.time.Instant.now());
+        snapshots.saveIfAbsent(snapshot);
     }
 
     private static EvidenceBundleSnapshot snapshot(RetrievalExecutionResolver.Execution execution,
