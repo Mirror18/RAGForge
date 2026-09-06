@@ -149,4 +149,13 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>ragforge-isolated-output</id>
+            <build>
+                <directory>${project.basedir}/target-ragforge</directory>
+            </build>
+        </profile>
+    </profiles>
 </project>

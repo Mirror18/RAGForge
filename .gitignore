@@ -22,6 +22,7 @@ secrets/
 
 # Java
 **/target/
+**/target-ragforge/
 *.class
 
 # Node

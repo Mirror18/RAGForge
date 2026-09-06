@@ -198,14 +198,15 @@ try {
     $env:RAGFORGE_RUN_EVENT_FANOUT_ENABLED = "true"
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
     $mavenJava21Arguments = @(
+        "-Pragforge-isolated-output",
         "-Dmaven.compiler.release=21",
         "-Dmaven.compiler.source=21",
         "-Dmaven.compiler.target=21",
         "-Dmaven.compiler.compilerVersion=21",
         "-Dmaven.compiler.useIncrementalCompilation=false"
     )
-    $serverJar = Join-Path $repoRoot "backend\server\target\ragforge-server-0.1.0-SNAPSHOT.jar"
-    $workerJar = Join-Path $repoRoot "backend\ingestion-worker\target\ragforge-ingestion-worker-0.1.0-SNAPSHOT.jar"
+    $serverJar = Join-Path $repoRoot "backend\server\target-ragforge\ragforge-server-0.1.0-SNAPSHOT.jar"
+    $workerJar = Join-Path $repoRoot "backend\ingestion-worker\target-ragforge\ragforge-ingestion-worker-0.1.0-SNAPSHOT.jar"
 
     Assert-NoRunningJarProcess $serverJar "Server"
     Assert-NoRunningJarProcess $workerJar "Worker"
