@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { resolve } from "node:path";
 import { createSyntheticApi, SYNTHETIC, type SyntheticApi, type SyntheticRole } from "../fixtures/synthetic-api";
 
 async function login(page: Page, api: SyntheticApi): Promise<void> {
@@ -97,7 +98,7 @@ test.describe("P7Q-03 Web 8 journeys", () => {
   test("[J7 权限] rejects viewer mutation with structured permission error", async ({ page }) => {
     const api = create("VIEWER");
     await login(page, api);
-    await expect(page.getByText("当前角色只能查看来源；写操作由服务端权限最终裁决。")).toBeVisible();
+    await expect(page.getByText("只读成员").first()).toBeVisible();
     const denied = await apiJson(page, "/api/v1/spaces/" + SYNTHETIC.spaceId + "/sources/git", "POST", JSON.stringify({ displayName: "synthetic", remote: "https://synthetic.invalid/repo" }));
     expect(denied.status).toBe(403);
     expect(denied.body).toMatchObject({ status: 403, code: "SPACE_ACCESS_DENIED", instance: "/api/v1/spaces/" + SYNTHETIC.spaceId + "/sources/git" });
@@ -111,12 +112,24 @@ test.describe("P7Q-03 Web 8 journeys", () => {
     expect(denied.body).toMatchObject({ status: 403, code: "SPACE_ACCESS_DENIED", instance: "/api/v1/spaces/" + SYNTHETIC.otherSpaceId + "/answers/" + SYNTHETIC.runId });
     expect(api.requests.at(-1)?.path).toContain(SYNTHETIC.otherSpaceId);
   });
+
+  test("[J9 历史恢复] groups conversations in a table and opens the latest answer", async ({ page }) => {
+    const api = create();
+    await login(page, api);
+    await page.goto(`/?view=answer&spaceId=${SYNTHETIC.spaceId}&conversationId=${SYNTHETIC.conversationId}&runId=${SYNTHETIC.runId}`);
+    await expect(page.getByRole("table", { name: "问答历史表格" })).toBeVisible();
+    await expect(page.locator(".answer-result")).toContainText("synthetic answer");
+    await page.getByRole("button", { name: /Synthetic conversation/ }).click();
+    await expect(page.locator(".history-detail")).toContainText("本会话的运行记录");
+    await expect(page.locator(".history-detail")).toContainText("已完成");
+    await expect(page.locator(".answer-result")).toContainText("synthetic answer");
+  });
 });
 
 test("[P7Q-06 URL + 分页] restores route state and traverses all large synthetic collections", async ({ page }) => {
   const api = createSyntheticApi({ largeCollections: true });
   await login(page, api);
-  await page.getByRole("button", { name: "Chunk Studio" }).click();
+  await page.getByRole("button", { name: "内容证据" }).click();
   await expect(page).toHaveURL(/view=studio/);
   await page.reload();
   await expect(page.locator("#chunk-studio-heading")).toBeVisible();
@@ -161,4 +174,31 @@ test("[P7Q-06 刷新恢复] restores five shareable workbench pages", async ({ p
     await expect(page.locator(heading)).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`view=${view}`));
   }
+});
+
+test("[P7C-14 演示截图] captures the complete synthetic business loop", async ({ page }) => {
+  const api = createSyntheticApi({ largeCollections: true });
+  const asset = (name: string): string => resolve(process.cwd(), "../../docs/assets/business-demo", name);
+  await login(page, api);
+  await page.goto(`/?view=flow&spaceId=${SYNTHETIC.spaceId}`);
+  await expect(page.locator("#business-flow-heading")).toBeVisible();
+  await page.screenshot({ path: asset("01-空间与向导.png"), fullPage: true });
+
+  await apiJson(page, `/api/v1/spaces/${SYNTHETIC.spaceId}/sources/uploads`, "POST", "synthetic-demo");
+  await page.goto(`/?view=flow&spaceId=${SYNTHETIC.spaceId}`);
+  await expect(page.locator(".flow-config .job-list")).toBeVisible();
+  await page.screenshot({ path: asset("02-资料导入.png"), fullPage: true });
+
+  await apiJson(page, `/api/v1/spaces/${SYNTHETIC.spaceId}/indexes/${SYNTHETIC.indexId}/publish`, "POST");
+  await page.goto(`/?view=flow&spaceId=${SYNTHETIC.spaceId}`);
+  await expect(page.locator(".index-lifecycle")).toBeVisible();
+  await page.screenshot({ path: asset("03-索引发布.png"), fullPage: true });
+
+  await page.goto(`/?view=answer&spaceId=${SYNTHETIC.spaceId}&conversationId=${SYNTHETIC.conversationId}&runId=${SYNTHETIC.runId}`);
+  await expect(page.locator(".answer-result")).toContainText("synthetic answer");
+  await expect(page.locator(".citation-section")).toBeVisible();
+  await page.screenshot({ path: asset("04-带引用问答.png"), fullPage: true });
+  await page.getByRole("button", { name: /Synthetic conversation/ }).click();
+  await expect(page.locator(".history-detail")).toContainText("本会话的运行记录");
+  await page.screenshot({ path: asset("05-历史会话.png"), fullPage: true });
 });

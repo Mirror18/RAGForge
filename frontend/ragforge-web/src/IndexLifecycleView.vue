@@ -21,16 +21,16 @@ const previous = computed(() => props.activeIndex?.pointer.previousIndexVersionI
 const previousIndex = computed(() => props.indexes.find((item) => item.indexVersionId === previous.value) ?? null);
 
 const stateLabels: Record<string, string> = {
-  BUILDING: "candidate · 构建中",
-  VALIDATING: "candidate · 验证中",
-  READY: "candidate · 可发布",
-  ACTIVE: "active · 已激活",
-  RETIRED: "retired · 已退役",
-  FAILED: "candidate · 验证失败",
+  BUILDING: "构建中",
+  VALIDATING: "验证中",
+  READY: "待发布",
+  ACTIVE: "当前版本",
+  RETIRED: "已退役",
+  FAILED: "验证失败",
 };
 
 function stateLabel(state: string): string {
-  return stateLabels[state] ?? `candidate · ${state}`;
+  return stateLabels[state] ?? state;
 }
 
 function validationLabel(value: boolean | null): string {
@@ -55,18 +55,18 @@ function canRetire(index: IndexView): boolean {
     <div class="index-lifecycle-heading">
       <div>
         <label id="index-lifecycle-heading">索引生命周期</label>
-        <p class="muted">candidate 先构建并验证，只有 READY candidate 可以发布为 active；旧版本可回滚或退役。</p>
+        <p class="muted">索引先构建并验证，只有“待发布”版本可以成为当前版本；旧版本可回滚或退役。</p>
       </div>
       <div class="pointer-summary">
-        <span>current pointer</span>
+        <span>当前版本指针</span>
         <strong>{{ activeIndex?.pointer.activeIndexVersionId || "—" }}</strong>
-        <small>pointer v{{ activeIndex?.pointer.versionNo ?? "—" }}</small>
+        <small>指针版本 v{{ activeIndex?.pointer.versionNo ?? "—" }}</small>
       </div>
     </div>
 
     <div class="pointer-grid">
-      <div><span>当前 active</span><strong>{{ current ? `v${indexes.find((item) => item.indexVersionId === current)?.versionNo ?? "?"}` : "—" }}</strong><small>{{ current || "尚未发布" }}</small></div>
-      <div><span>previous pointer</span><strong>{{ previous ? `v${previousIndex?.versionNo ?? "?"}` : "—" }}</strong><small>{{ previous || "没有上一版" }}</small></div>
+      <div><span>当前版本</span><strong>{{ current ? `v${indexes.find((item) => item.indexVersionId === current)?.versionNo ?? "?"}` : "—" }}</strong><small>{{ current || "尚未发布" }}</small></div>
+      <div><span>上一版本指针</span><strong>{{ previous ? `v${previousIndex?.versionNo ?? "?"}` : "—" }}</strong><small>{{ previous || "没有上一版" }}</small></div>
       <button v-if="previous && canManage" type="button" class="quiet-button" :disabled="busyIndexId === previous" @click="emit('rollback', previous)">
         {{ busyIndexId === previous ? "回滚中…" : "回滚上一版" }}
       </button>
@@ -75,18 +75,18 @@ function canRetire(index: IndexView): boolean {
     <div v-if="indexes.length" class="index-lifecycle-list">
       <article v-for="item in indexes" :key="item.indexVersionId" class="lifecycle-row" :class="{ current: isCurrent(item), previous: isPrevious(item) }">
         <div class="lifecycle-main">
-          <div class="lifecycle-title"><strong>v{{ item.versionNo }}</strong><span class="state-pill" :class="item.state.toLowerCase()">{{ stateLabel(item.state) }}</span><span v-if="isCurrent(item)" class="pointer-pill">current pointer</span><span v-if="isPrevious(item)" class="pointer-pill previous-pill">previous pointer</span></div>
+          <div class="lifecycle-title"><strong>v{{ item.versionNo }}</strong><span class="state-pill" :class="item.state.toLowerCase()">{{ stateLabel(item.state) }}</span><span v-if="isCurrent(item)" class="pointer-pill">当前版本</span><span v-if="isPrevious(item)" class="pointer-pill previous-pill">上一版本</span></div>
           <small class="lifecycle-id">{{ item.indexVersionId }}</small>
           <div class="evidence-grid">
-            <span>构建依据：{{ item.documentRevisionCount }} revisions · {{ item.childChunkCount }} child chunks</span>
-            <span>验证依据：{{ item.validationVectorDimension ?? "—" }} dimensions · sample retrieval {{ validationLabel(item.sampleRetrievalPassed) }} · space filter {{ validationLabel(item.spaceFilterPassed) }}</span>
+            <span>构建依据：{{ item.documentRevisionCount }} 个修订 · {{ item.childChunkCount }} 个子分块</span>
+            <span>验证依据：{{ item.validationVectorDimension ?? "—" }} 维 · 抽样检索 {{ validationLabel(item.sampleRetrievalPassed) }} · 空间过滤 {{ validationLabel(item.spaceFilterPassed) }}</span>
             <span>配置：{{ item.embeddingProfileVersion }} · {{ item.chunkingStrategyVersion }}</span>
           </div>
           <small v-if="item.activatedAt" class="muted">激活于 {{ formatDateTime(item.activatedAt) }}</small>
         </div>
         <div class="lifecycle-actions">
           <button v-if="item.state === 'READY'" type="button" class="quiet-button" :disabled="!canManage || busyIndexId === item.indexVersionId" @click="emit('publish', item)">
-            {{ busyIndexId === item.indexVersionId ? "发布中…" : "发布为 active" }}
+            {{ busyIndexId === item.indexVersionId ? "发布中…" : "发布为当前版本" }}
           </button>
           <button v-if="canRetire(item)" type="button" class="quiet-button danger-button" :disabled="busyIndexId === item.indexVersionId" @click="emit('retire', item)">
             {{ busyIndexId === item.indexVersionId ? "退役中…" : "退役此版本" }}
@@ -94,7 +94,7 @@ function canRetire(index: IndexView): boolean {
         </div>
       </article>
     </div>
-    <p v-else class="muted">尚未生成 candidate index。</p>
+    <p v-else class="muted">尚未生成可用索引版本。</p>
   </div>
 </template>
 
