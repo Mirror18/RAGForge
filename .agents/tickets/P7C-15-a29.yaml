@@ -6,7 +6,7 @@ meta:
   agent_slug: a29
   branch: codex/p7c15-list-a29
   worktree: D:/project/learning/RAGForge-worktrees/codex-p7c15-list-a29
-  base_sha: cff8298
+  base_sha: 88b0676
   dependencies_satisfied: true
   migration_owner: false
 scope:
