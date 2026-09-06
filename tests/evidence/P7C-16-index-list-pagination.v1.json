@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "P7C-16",
+  "status": "PASS",
+  "capturedAt": "2026-09-06T19:11:18+08:00",
+  "baseSha": "68b01d5",
+  "implementationHead": "51bd26b",
+  "summary": {
+    "build": "passed",
+    "typecheck": "passed",
+    "unit": { "files": 1, "tests": 10, "failed": 0 },
+    "e2e": { "tests": 14, "passed": 14, "failed": 0 },
+    "markdownLinks": "pending-final-gate",
+    "secretScan": "pending-final-gate",
+    "diffCheck": "passed"
+  },
+  "acceptance": {
+    "A1_indexDataList": true,
+    "A2_pointerAndLifecycleActions": true,
+    "A3_chineseStatesAndResponsiveReadability": true,
+    "A4_existingApiAndSecuritySemantics": true,
+    "A5_overTenIndexPaginationBoundary": true
+  },
+  "pagination": {
+    "pageSize": 10,
+    "collection": "index versions",
+    "total": 16,
+    "pages": 2,
+    "pageOne": 10,
+    "pageTwo": 6
+  },
+  "browserDemo": {
+    "fixture": "synthetic-space-and-indexes",
+    "cloudEgress": false,
+    "screenshot": "docs/assets/business-demo/03-索引发布.png",
+    "journeys": ["J1", "J2", "J3", "J4", "J5", "J6", "J7", "J8", "J9", "P7C-15", "P7C-16", "P7Q-06", "P7C-14"]
+  },
+  "notes": [
+    "索引版本从卡片堆叠改为可横向滚动的数据列表，每页十条，保留当前/上一版本指针摘要。",
+    "发布、回滚和退役仍由原有按钮事件与服务端权限裁决，不改变 API、space_id 或生命周期语义。",
+    "浏览器回归和截图使用合成数据，不读取个人资料、不写入真实密钥、不启用云端出境。"
+  ]
+}
