@@ -75,25 +75,11 @@ class ProviderAdapterHttpTest {
     }
 
     @Test
-    void ollamaUsesApiChatAndParsesUsageAndIdentity() throws Exception {
-        behavior.set((exchange, body) -> respond(exchange, 200,
-                "{\"model\":\"llama3\",\"created_at\":\"2026-08-13T00:00:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"ollama answer\"},\"done\":true,\"prompt_eval_count\":7,\"eval_count\":11}"));
-        RequestIdentity identity = identity("ollama");
-        ProviderChatResponse response = ollama().chat(connection(ProviderType.OLLAMA), EgressDecision.LOCAL_ONLY,
-                answerRequest(identity), new CancellationToken()).toCompletableFuture().get(3, TimeUnit.SECONDS);
-
-        assertThat(observedPath.get()).isEqualTo("/api/chat");
-        assertThat(observedAuthorization.get()).isEqualTo(FAKE_AUTHORIZATION);
-        assertThat(observedRequestId.get()).isEqualTo(identity.requestId().toString());
-        assertThat(response.content()).isEqualTo("ollama answer");
-        assertThat(response.identity()).isEqualTo(identity);
-        assertThat(response.usage()).isEqualTo(new ProviderUsage(7L, 11L, 18L, UsageSource.PROVIDER_REPORTED));
-        JsonNode requestBody = MAPPER.readTree(observedBody.get());
-        assertThat(requestBody.path("format").path("type").asText()).isEqualTo("object");
-        assertThat(requestBody.path("format").path("properties").path("claims").path("items")
-                .path("properties").path("citation_tokens").path("items").path("pattern").asText())
-                .contains("-7");
-        assertThat(observedBody.get()).contains(PROMPT).contains("\"stream\":false");
+    void ollamaConnectionIsRejectedByEgressPolicy() {
+        ProviderConnection ollama = connection(ProviderType.OLLAMA);
+        assertThatThrownBy(() -> EgressPolicy.validateConnection(SPACE_ID, EgressDecision.CLOUD_ALLOWED, ollama))
+                .isInstanceOfSatisfying(ProviderAdapterException.class,
+                        error -> assertThat(error.errorClass()).isEqualTo(ProviderErrorClass.SPACE_EGRESS_DENIED));
     }
 
     private ProviderChatRequest answerRequest(RequestIdentity identity) {
@@ -104,77 +90,22 @@ class ProviderAdapterHttpTest {
     }
 
     @Test
-    void explicitNoneLocalOllamaSendsNoAuthorizationAndDoesNotResolveCredential() throws Exception {
-        behavior.set((exchange, body) -> respond(exchange, 200,
-                "{\"model\":\"qwen3.5:9b\",\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},"
-                        + "\"done\":true,\"prompt_eval_count\":3,\"eval_count\":2}"));
-        AtomicInteger resolutions = new AtomicInteger();
-        OllamaProviderAdapter adapter = new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,
-                (spaceId, credentialRef) -> {
-                    resolutions.incrementAndGet();
-                    throw new AssertionError("NONE/local Ollama must not resolve a credential");
-                });
-        RequestIdentity identity = identity("ollama-none");
-
-        ProviderChatResponse response = adapter.chat(connection(ProviderType.OLLAMA, endpoint, SPACE_ID,
-                        EgressClass.LOCAL, "opaque.credential-ref", "NONE"), EgressDecision.LOCAL_ONLY,
-                request(identity), new CancellationToken()).toCompletableFuture().get(3, TimeUnit.SECONDS);
-
-        assertThat(resolutions).hasValue(0);
-        assertThat(observedAuthorization.get()).isNull();
-        assertThat(response.model()).isEqualTo("qwen3.5:9b");
-        assertThat(response.usage()).isEqualTo(new ProviderUsage(3L, 2L, 5L, UsageSource.PROVIDER_REPORTED));
-    }
-
-    @Test
     void embeddingUsesTheExistingProviderConnectionAndParsesVector() throws Exception {
         behavior.set((exchange, body) -> respond(exchange, 200,
-                "{\"model\":\"nomic-embed\",\"embedding\":[0.1, -0.2, 0.3]}"));
-        RequestIdentity identity = identity("ollama-embedding");
-        ProviderEmbeddingResponse response = ollama().embed(connection(ProviderType.OLLAMA), EgressDecision.LOCAL_ONLY,
-                new ProviderEmbeddingRequest(SPACE_ID, identity, "nomic-embed", "question", Duration.ofSeconds(2)),
+                "{\"data\":[{\"embedding\":[0.1, -0.2, 0.3]}]}"));
+        RequestIdentity identity = identity("openai-embedding");
+        ProviderEmbeddingResponse response = openAi().embed(
+                connection(ProviderType.OPENAI_COMPATIBLE, endpoint.resolve("/v1"), SPACE_ID, EgressClass.CLOUD,
+                        "cred.test", "BEARER"),
+                EgressDecision.CLOUD_ALLOWED,
+                new ProviderEmbeddingRequest(SPACE_ID, identity, "text-embedding-3-small", "question",
+                        Duration.ofSeconds(2)),
                 new CancellationToken()).toCompletableFuture().get(3, TimeUnit.SECONDS);
 
-        assertThat(observedPath.get()).isEqualTo("/api/embeddings");
+        assertThat(observedPath.get()).isEqualTo("/v1/embeddings");
         assertThat(response.identity()).isEqualTo(identity);
         assertThat(response.embedding()).containsExactly(0.1, -0.2, 0.3);
         assertThat(observedBody.get()).contains("question");
-    }
-
-    @Test
-    void nonNoneLocalOllamaWithoutConfiguredCredentialIsRejectedBeforeHttpCall() {
-        AtomicInteger resolutions = new AtomicInteger();
-        OllamaProviderAdapter adapter = new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,
-                (spaceId, credentialRef) -> {
-                    resolutions.incrementAndGet();
-                    throw new IllegalStateException("credential is not configured");
-                });
-
-        ProviderAdapterException error = failure(adapter.chat(connection(ProviderType.OLLAMA, endpoint, SPACE_ID,
-                        EgressClass.LOCAL, "opaque.credential-ref", "BEARER"), EgressDecision.LOCAL_ONLY,
-                request(identity("ollama-bearer-missing"))));
-
-        assertThat(error.errorClass()).isEqualTo(ProviderErrorClass.AUTHENTICATION);
-        assertThat(resolutions).hasValue(1);
-        assertThat(requestCount).hasValue(0);
-    }
-
-    @Test
-    void noneCloudOllamaDoesNotBypassCredentialResolution() {
-        AtomicInteger resolutions = new AtomicInteger();
-        OllamaProviderAdapter adapter = new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,
-                (spaceId, credentialRef) -> {
-                    resolutions.incrementAndGet();
-                    throw new IllegalStateException("credential is not configured");
-                });
-
-        ProviderAdapterException error = failure(adapter.chat(connection(ProviderType.OLLAMA, endpoint, SPACE_ID,
-                        EgressClass.CLOUD, "opaque.credential-ref", "NONE"), EgressDecision.CLOUD_ALLOWED,
-                request(identity("ollama-none-cloud"))));
-
-        assertThat(error.errorClass()).isEqualTo(ProviderErrorClass.AUTHENTICATION);
-        assertThat(resolutions).hasValue(1);
-        assertThat(requestCount).hasValue(0);
     }
 
     @Test
@@ -262,12 +193,13 @@ class ProviderAdapterHttpTest {
     @Test
     void adapterRejectsCrossSpaceConnectionBeforeCredentialResolution() {
         AtomicInteger resolutions = new AtomicInteger();
-        OllamaProviderAdapter adapter = new OllamaProviderAdapter(MAPPER,
+        OpenAiCompatibleProviderAdapter adapter = new OpenAiCompatibleProviderAdapter(MAPPER,
                 (spaceId, credentialRef) -> {
                     resolutions.incrementAndGet();
                     return FAKE_AUTHORIZATION;
                 });
-        ProviderAdapterException error = failure(adapter.chat(connection(ProviderType.OLLAMA, endpoint, OTHER_SPACE_ID),
+        ProviderAdapterException error = failure(adapter.chat(
+                connection(ProviderType.OPENAI_COMPATIBLE, endpoint, OTHER_SPACE_ID),
                 EgressDecision.CLOUD_ALLOWED, request(identity("cross-space"))));
         assertThat(error.errorClass()).isEqualTo(ProviderErrorClass.SPACE_EGRESS_DENIED);
         assertThat(resolutions).hasValue(0);
@@ -351,7 +283,7 @@ class ProviderAdapterHttpTest {
 
     @Test
     void providerMismatchAndUnsupportedStreamingAreRejected() {
-        ProviderAdapterException mismatch = failure(ollama().chat(connection(ProviderType.OPENAI_COMPATIBLE),
+        ProviderAdapterException mismatch = failure(openAi().chat(connection(ProviderType.MIMO),
                 EgressDecision.LOCAL_ONLY, request(identity("mismatch"))));
         assertThat(mismatch.errorClass()).isEqualTo(ProviderErrorClass.UNSUPPORTED_CAPABILITY);
 
@@ -385,23 +317,6 @@ class ProviderAdapterHttpTest {
         assertThat(response.content()).isEqualTo("hello");
         assertThat(response.usage()).isEqualTo(new ProviderUsage(2L, 3L, 5L, UsageSource.PROVIDER_REPORTED));
         assertThat(MAPPER.readTree(observedBody.get()).path("stream").asBoolean()).isTrue();
-    }
-
-    @Test
-    void ollamaNdjsonStreamEmitsDeltasAndAggregatesUsage() throws Exception {
-        behavior.set((exchange, body) -> respond(exchange, 200,
-                "{\"model\":\"test-model\",\"message\":{\"content\":\"本地\"},\"done\":false}\n"
-                        + "{\"model\":\"test-model\",\"message\":{\"content\":\"回答\"},\"done\":true,"
-                        + "\"done_reason\":\"stop\",\"prompt_eval_count\":4,\"eval_count\":2}\n"));
-        List<String> deltas = new ArrayList<>();
-
-        ProviderChatResponse response = ollama().chatStream(connection(ProviderType.OLLAMA),
-                EgressDecision.LOCAL_ONLY, streamingRequest(identity("ollama-stream")),
-                new CancellationToken(), deltas::add).toCompletableFuture().get(3, TimeUnit.SECONDS);
-
-        assertThat(deltas).containsExactly("本地", "回答");
-        assertThat(response.content()).isEqualTo("本地回答");
-        assertThat(response.usage()).isEqualTo(new ProviderUsage(4L, 2L, 6L, UsageSource.PROVIDER_REPORTED));
     }
 
     @Test
@@ -461,18 +376,9 @@ class ProviderAdapterHttpTest {
 
     @Test
     void connectionAndRequestStringFormsRedactSecretAndPrompt() {
-        ProviderConnection connection = connection(ProviderType.OLLAMA);
+        ProviderConnection connection = connection(ProviderType.OPENAI_COMPATIBLE);
         String rendered = connection + " " + request(identity("redaction"));
         assertThat(rendered).doesNotContain(FAKE_AUTHORIZATION).doesNotContain(PROMPT);
-    }
-
-    private OllamaProviderAdapter ollama() {
-        return new OllamaProviderAdapter(HttpClient.newHttpClient(), MAPPER,
-                (spaceId, credentialRef) -> {
-                    assertThat(spaceId).isEqualTo(SPACE_ID);
-                    assertThat(credentialRef).isEqualTo("cred.test");
-                    return FAKE_AUTHORIZATION;
-                });
     }
 
     private OpenAiCompatibleProviderAdapter openAi() {

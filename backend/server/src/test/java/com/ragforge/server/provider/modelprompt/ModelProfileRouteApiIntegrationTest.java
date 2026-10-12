@@ -247,10 +247,10 @@ class ModelProfileRouteApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "displayName", key,
-                                "providerType", "OLLAMA",
+                                "providerType", "CLOUD".equals(egressClass) ? "OPENAI_COMPATIBLE" : "AI_RUNTIME",
                                 "egressClass", egressClass,
                                 "endpoint", "CLOUD".equals(egressClass) ? "https://cloud.test/v1"
-                                        : "http://ollama.test:11434",
+                                        : "http://127.0.0.1:9",
                                 "credentialRef", "vault:" + key,
                                 "status", "ACTIVE"))))
                 .andExpect(status().isCreated())

@@ -284,9 +284,9 @@ class SpaceBindingApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "displayName", label + " connection",
-                                "providerType", "OLLAMA",
-                                "egressClass", "LOCAL",
-                                "endpoint", "http://ollama.test:11434",
+                                "providerType", "OPENAI_COMPATIBLE",
+                                "egressClass", "CLOUD",
+                                "endpoint", "https://api.example.invalid/v1",
                                 "credentialRef", "vault:" + label,
                                 "status", "ACTIVE"))))
                 .andExpect(status().isCreated())

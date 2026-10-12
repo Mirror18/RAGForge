@@ -1,6 +1,6 @@
 # Deployment Assets
 
-- `compose/`：MVP 唯一正式部署资产；`compose.yaml` 默认提供 core，`app` profile 提供 Server、Worker 和 Web，`ollama`/`observability` 为显式可选 profile。
+- `compose/`：MVP 唯一正式部署资产；`compose.yaml` 默认提供 core，`app` profile 提供 Server、Worker 和 Web，`observability` 为显式可选 profile。没有 Ollama 产品路径。
 - `docker/Dockerfile`：应用统一多目标构建入口，targets 为 `server`、`worker`、`web`。
 - `docker/nginx.conf`：Web 容器的 SPA fallback 与 `/api`、`/actuator` 反向代理配置。
 - `kubernetes/`：未来预留，当前不维护双套生产配置。

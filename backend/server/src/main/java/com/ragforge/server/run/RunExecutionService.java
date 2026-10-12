@@ -447,18 +447,16 @@ public class RunExecutionService {
         if (!request.promptVersionId().equals(binding.promptVersionId())) {
             throw invalid("prompt_not_bound", "Prompt version is not the current prompt bound to this space");
         }
-        if (request.allowCloudEgress()) {
-            if (!binding.cloudEgressEnabled()) {
-                throw invalid("cloud_egress_not_bound", "Cloud egress is not enabled by the current space binding");
-            }
-            SpaceBindingRepository.CloudAuthorization authorization = binding.authorization();
-            Instant now = Instant.now();
-            if (authorization == null || authorization.expiresAt() == null
-                    || !authorization.expiresAt().isAfter(now)
-                    || authorization.approvedAt() == null || authorization.approvedAt().isAfter(now)
-                    || !scopeCoversChat(authorization.scope())) {
-                throw invalid("cloud_egress_unauthorized", "Cloud egress authorization is missing, expired, or does not cover CHAT");
-            }
+        if (!request.allowCloudEgress() || !binding.cloudEgressEnabled()) {
+            throw invalid("cloud_egress_not_bound", "Chat requires space-authorized cloud egress");
+        }
+        SpaceBindingRepository.CloudAuthorization authorization = binding.authorization();
+        Instant now = Instant.now();
+        if (authorization == null || authorization.expiresAt() == null
+                || !authorization.expiresAt().isAfter(now)
+                || authorization.approvedAt() == null || authorization.approvedAt().isAfter(now)
+                || !scopeCoversChat(authorization.scope())) {
+            throw invalid("cloud_egress_unauthorized", "Cloud egress authorization is missing, expired, or does not cover CHAT");
         }
     }
 
@@ -481,21 +479,15 @@ public class RunExecutionService {
                 .noneMatch(candidate -> candidate.profileVersionId().equals(profile.id()))) {
             throw invalid("route_profile_mismatch", "Model profile is not a candidate of the requested route");
         }
-        if (request.allowCloudEgress()
-                && route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED) {
-            throw invalid("cloud_egress_not_allowed", "Cloud egress was not explicitly allowed by the route");
+        if (connection.providerType() != ProviderRepository.ProviderType.OPENAI_COMPATIBLE
+                && connection.providerType() != ProviderRepository.ProviderType.MIMO) {
+            throw invalid("unsupported_chat_provider", "Chat requires an OpenAI-compatible cloud provider");
         }
         if (!request.allowCloudEgress()
-                && route.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY) {
-            throw invalid("cloud_candidate_not_allowed", "A local-only run cannot use a cloud route candidate");
-        }
-        if (!request.allowCloudEgress()
-                && connection.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY) {
-            throw invalid("cloud_candidate_not_allowed", "A local-only run cannot use a cloud provider candidate");
-        }
-        if (request.allowCloudEgress()
-                && connection.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED) {
-            throw invalid("cloud_route_candidate_invalid", "A cloud run requires a cloud provider candidate");
+                || route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
+                || !route.allowCloudEgress()
+                || connection.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED) {
+            throw invalid("cloud_egress_not_allowed", "Chat requires an authorized OpenAI-compatible cloud route");
         }
         EgressDecision decision = request.allowCloudEgress() ? EgressDecision.CLOUD_ALLOWED : EgressDecision.LOCAL_ONLY;
         EgressClass egressClass = connection.egressPolicy() == ProviderRepository.EgressPolicy.CLOUD_ALLOWED

@@ -30,13 +30,13 @@ public final class SpaceCandidateIndexBuilder {
 
     private final JdbcTemplate jdbc;
     private final ContentAddressedObjectStore store;
-    private final OllamaEmbeddingClient embedding;
+    private final CloudEmbeddingClient embedding;
     private final QdrantIndexWriter qdrant;
     private final String embeddingProfileVersion;
 
     public SpaceCandidateIndexBuilder(JdbcTemplate jdbc, ContentAddressedObjectStore store,
-                                      OllamaEmbeddingClient embedding, QdrantIndexWriter qdrant,
-                                      @Value("${ragforge.ollama.embedding-model:nomic-embed-text:latest}")
+                                      CloudEmbeddingClient embedding, QdrantIndexWriter qdrant,
+                                      @Value("${ragforge.embedding.model:}")
                                       String embeddingProfileVersion) {
         this.jdbc = jdbc;
         this.store = store;

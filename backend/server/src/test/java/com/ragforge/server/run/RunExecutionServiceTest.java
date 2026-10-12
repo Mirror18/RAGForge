@@ -8,6 +8,7 @@ import com.ragforge.server.prompt.PromptRepository;
 import com.ragforge.server.space.SpaceRole;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -96,6 +97,18 @@ class RunExecutionServiceTest {
     }
 
     @Test
+    void chatWithoutCloudAuthorizationFailsClosed() {
+        Fixtures fixtures = new Fixtures();
+        assertThatThrownBy(() -> fixtures.service().createRun(SPACE, CONVERSATION, fixtures.principal(),
+                new RunExecutionService.RunRequest(ROUTE, PROFILE, CONNECTION, PROMPT, "hello", false, 5),
+                UUID.randomUUID()))
+                .isInstanceOf(com.ragforge.server.common.ApiException.class)
+                .hasMessage("Chat requires space-authorized cloud egress");
+        verify(fixtures.runs, never()).createRun(any());
+        verify(fixtures.providers, never()).findRouteVersion(any(), any());
+    }
+
+    @Test
     void crossSpaceConversationCannotBeUsed() {
         Fixtures fixtures = new Fixtures();
         when(fixtures.conversations.find(SPACE, CONVERSATION)).thenReturn(Optional.empty());
@@ -118,24 +131,28 @@ class RunExecutionServiceTest {
 
         Fixtures() {
             when(spaces.findRole(SPACE, USER)).thenReturn(Optional.of(SpaceRole.EDITOR));
+            Instant now = Instant.now();
             when(bindings.findCurrent(SPACE)).thenReturn(Optional.of(new SpaceBindingRepository.SpaceBindingRecord(
-                    UUID.randomUUID(), SPACE, 1, ROUTE, null, null, PROMPT, false, null,
-                    Instant.now(), Instant.now(), UUID.randomUUID())));
+                    UUID.randomUUID(), SPACE, 1, ROUTE, null, null, PROMPT, true,
+                    new SpaceBindingRepository.CloudAuthorization(UUID.randomUUID(), USER,
+                            now.minusSeconds(60), now.plus(Duration.ofDays(1)), "CHAT"),
+                    now, now, UUID.randomUUID())));
             when(conversations.find(SPACE, CONVERSATION)).thenReturn(Optional.of(
                     new ConversationRepository.ConversationRecord(CONVERSATION, SPACE, USER, "test",
                             Instant.now(), Instant.now(), 0)));
             when(providers.findRouteVersion(SPACE, ROUTE)).thenReturn(Optional.of(new ProviderRepository.ModelRouteVersion(
                     ROUTE, SPACE, "chat", 1, ProviderRepository.RoutePurpose.CHAT,
-                    ProviderRepository.EgressPolicy.LOCAL_ONLY, false, ProviderRepository.SelectionPolicy.SINGLE,
+                    ProviderRepository.EgressPolicy.CLOUD_ALLOWED, true, ProviderRepository.SelectionPolicy.SINGLE,
                     "{}", ProviderRepository.ModelRouteStatus.PUBLISHED, Instant.now(), Instant.now(), UUID.randomUUID())));
             when(providers.findProfileVersion(SPACE, PROFILE)).thenReturn(Optional.of(new ProviderRepository.ModelProfileVersion(
                     PROFILE, SPACE, CONNECTION, "fake", 1, "fake-model", "[\"CHAT\"]", "{}", "{}",
                     4096, 256, null, null, "{}", null, "{}", ProviderRepository.ModelProfileStatus.PUBLISHED,
                     Instant.now(), Instant.now(), UUID.randomUUID())));
             when(providers.findConnection(SPACE, CONNECTION)).thenReturn(Optional.of(new ProviderRepository.ProviderConnection(
-                    CONNECTION, SPACE, "fake", "Fake", ProviderRepository.ProviderType.AI_RUNTIME,
-                    "http://localhost", "fake-ref", null, "NONE", "{}", ProviderRepository.ProviderStatus.ACTIVE,
-                    ProviderRepository.EgressPolicy.LOCAL_ONLY, Instant.now(), Instant.now(), UUID.randomUUID(), 1)));
+                    CONNECTION, SPACE, "fake", "Fake Cloud", ProviderRepository.ProviderType.OPENAI_COMPATIBLE,
+                    "https://api.example.invalid/v1", "env:OPENAI_API_KEY", null, "BEARER", "{}",
+                    ProviderRepository.ProviderStatus.ACTIVE, ProviderRepository.EgressPolicy.CLOUD_ALLOWED,
+                    Instant.now(), Instant.now(), UUID.randomUUID(), 1)));
             when(providers.listRouteCandidates(SPACE, ROUTE)).thenReturn(List.of(new ProviderRepository.RouteCandidate(
                     UUID.randomUUID(), SPACE, ROUTE, 1, PROFILE, Instant.now(), Instant.now(), UUID.randomUUID())));
             when(prompts.findVersion(SPACE, PROMPT)).thenReturn(Optional.of(new PromptRepository.PromptVersion(
@@ -153,7 +170,7 @@ class RunExecutionServiceTest {
         }
 
         RunExecutionService.RunRequest request(String message) {
-            return new RunExecutionService.RunRequest(ROUTE, PROFILE, CONNECTION, PROMPT, message, false, 5);
+            return new RunExecutionService.RunRequest(ROUTE, PROFILE, CONNECTION, PROMPT, message, true, 5);
         }
 
         RunRepository.RunRecord run(RunRepository.RunStatus status, long version, UUID id,

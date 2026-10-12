@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -243,6 +244,7 @@ class RunExecutionControllerIntegrationTest {
 
     @Test
     void cloudRequestWithoutBindingAuthorizationIsRejectedBeforeProviderInvocation() throws Exception {
+        jdbc.update("UPDATE space_binding_versions SET cloud_egress_enabled = FALSE WHERE space_id = ?", space);
         UUID conversation = createConversation(space, "Unauthorized cloud chat");
 
         withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
@@ -380,7 +382,7 @@ class RunExecutionControllerIntegrationTest {
     }
 
     private String runBody(String message) throws Exception {
-        return runBody(setup.route.id(), setup.profile.id(), setup.provider.id(), setup.prompt.id(), message, false);
+        return runBody(setup.route.id(), setup.profile.id(), setup.provider.id(), setup.prompt.id(), message, true);
     }
 
     private String runBody(UUID routeId, UUID profileId, UUID providerId, UUID promptId,
@@ -391,7 +393,7 @@ class RunExecutionControllerIntegrationTest {
 
     private RunExecutionService.RunRequest runRequest(String message) {
         return new RunExecutionService.RunRequest(setup.route.id(), setup.profile.id(), setup.provider.id(),
-                setup.prompt.id(), message, false, 5);
+                setup.prompt.id(), message, true, 5);
     }
 
     private void assertNoProviderSideEffects() {
@@ -421,9 +423,16 @@ class RunExecutionControllerIntegrationTest {
     private Setup setup(UUID requestedSpace, Instant now) {
         UUID correlation = UUID.randomUUID();
         ProviderRepository.ProviderConnection provider = providers.createConnection(
-                new ProviderRepository.NewProviderConnection(UUID.randomUUID(), requestedSpace, "fake-provider", "Fake",
-                        ProviderRepository.ProviderType.AI_RUNTIME, "http://localhost", "fake-ref", null, "NONE", "{}",
-                        ProviderRepository.ProviderStatus.ACTIVE, ProviderRepository.EgressPolicy.LOCAL_ONLY, now, correlation));
+                new ProviderRepository.NewProviderConnection(UUID.randomUUID(), requestedSpace, "fake-cloud",
+                        "Fake Cloud", ProviderRepository.ProviderType.OPENAI_COMPATIBLE,
+                        "https://api.example.invalid/v1", "env:OPENAI_API_KEY", null, "BEARER", "{}",
+                        ProviderRepository.ProviderStatus.ACTIVE, ProviderRepository.EgressPolicy.CLOUD_ALLOWED,
+                        now, correlation));
+        ProviderRepository.ProviderConnection rerankProvider = providers.createConnection(
+                new ProviderRepository.NewProviderConnection(UUID.randomUUID(), requestedSpace, "fake-rerank-runtime",
+                        "Local Rerank", ProviderRepository.ProviderType.AI_RUNTIME, "http://localhost",
+                        "fake-ref", null, "NONE", "{}", ProviderRepository.ProviderStatus.ACTIVE,
+                        ProviderRepository.EgressPolicy.LOCAL_ONLY, now, correlation));
         ProviderRepository.ModelProfileVersion profile = providers.createProfileVersion(
                 new ProviderRepository.NewModelProfileVersion(UUID.randomUUID(), requestedSpace, provider.id(), "fake", 1,
                         "fake-model", "[\"CHAT\"]", "{}", "{}", 4096, 256, null, null, "{}", null, "{}",
@@ -433,18 +442,18 @@ class RunExecutionControllerIntegrationTest {
                         "fake-embedding-model", "[\"EMBEDDING\"]", "{}", "{}", 4096, 256, 768, null, "{}", null, "{}",
                         ProviderRepository.ModelProfileStatus.PUBLISHED, now, correlation));
         ProviderRepository.ModelProfileVersion rerankProfile = providers.createProfileVersion(
-                new ProviderRepository.NewModelProfileVersion(UUID.randomUUID(), requestedSpace, provider.id(), "fake-rerank", 1,
-                        "fake-rerank-model", "[\"RERANK\"]", "{}", "{}", 4096, 256, null, null, "{}", null, "{}",
-                        ProviderRepository.ModelProfileStatus.PUBLISHED, now, correlation));
+                new ProviderRepository.NewModelProfileVersion(UUID.randomUUID(), requestedSpace, rerankProvider.id(),
+                        "fake-rerank", 1, "fake-rerank-model", "[\"RERANK\"]", "{}", "{}", 4096, 256, null, null,
+                        "{}", null, "{}", ProviderRepository.ModelProfileStatus.PUBLISHED, now, correlation));
         ProviderRepository.ModelRouteVersion route = providers.createRouteVersion(
                 new ProviderRepository.NewModelRouteVersion(UUID.randomUUID(), requestedSpace, "chat", 1,
-                        ProviderRepository.RoutePurpose.CHAT, ProviderRepository.EgressPolicy.LOCAL_ONLY, false,
+                        ProviderRepository.RoutePurpose.CHAT, ProviderRepository.EgressPolicy.CLOUD_ALLOWED, true,
                         ProviderRepository.SelectionPolicy.SINGLE, "{}", ProviderRepository.ModelRouteStatus.PUBLISHED, now, correlation));
         providers.addRouteCandidate(new ProviderRepository.NewRouteCandidate(UUID.randomUUID(), requestedSpace, route.id(),
                 1, profile.id(), now, correlation));
         ProviderRepository.ModelRouteVersion embeddingRoute = providers.createRouteVersion(
                 new ProviderRepository.NewModelRouteVersion(UUID.randomUUID(), requestedSpace, "embedding", 1,
-                        ProviderRepository.RoutePurpose.EMBEDDING, ProviderRepository.EgressPolicy.LOCAL_ONLY, false,
+                        ProviderRepository.RoutePurpose.EMBEDDING, ProviderRepository.EgressPolicy.CLOUD_ALLOWED, true,
                         ProviderRepository.SelectionPolicy.SINGLE, "{}", ProviderRepository.ModelRouteStatus.PUBLISHED, now, correlation));
         providers.addRouteCandidate(new ProviderRepository.NewRouteCandidate(UUID.randomUUID(), requestedSpace,
                 embeddingRoute.id(), 1, embeddingProfile.id(), now, correlation));
@@ -470,8 +479,9 @@ class RunExecutionControllerIntegrationTest {
                 UUID.randomUUID(), requestedSpace, "space-binding-chat", 1, prompt.id(),
                 PromptRepository.BindingStatus.ACTIVE, now, correlation));
         bindings.create(new SpaceBindingRepository.NewSpaceBinding(UUID.randomUUID(), requestedSpace, 1,
-                chatBinding.id(), embeddingBinding.id(), rerankBinding.id(), promptBinding.id(), false, null, now,
-                correlation));
+                chatBinding.id(), embeddingBinding.id(), rerankBinding.id(), promptBinding.id(), true,
+                new SpaceBindingRepository.CloudAuthorization(UUID.randomUUID(), user, now.minusSeconds(1),
+                        now.plus(Duration.ofDays(1)), "CHAT"), now, correlation));
         return new Setup(provider, profile, route, prompt, embeddingRoute, rerankRoute);
     }
 

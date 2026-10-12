@@ -20,6 +20,10 @@ public final class EgressPolicy {
             throw new ProviderAdapterException(ProviderErrorClass.SPACE_EGRESS_DENIED,
                     "Provider connection is outside the requested space");
         }
+        if (connection.providerType() == ProviderType.OLLAMA) {
+            throw new ProviderAdapterException(ProviderErrorClass.SPACE_EGRESS_DENIED,
+                    "Ollama is not a product path");
+        }
         if (decision == EgressDecision.LOCAL_ONLY && connection.egressClass() == EgressClass.CLOUD) {
             throw new ProviderAdapterException(ProviderErrorClass.SPACE_EGRESS_DENIED,
                     "Cloud provider egress is not authorized for this request");

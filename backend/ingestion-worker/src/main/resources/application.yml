@@ -25,9 +25,10 @@ ragforge:
   qdrant:
     url: ${QDRANT_URL:http://localhost:6333}
     api-key: ${QDRANT_API_KEY:}
-  ollama:
-    endpoint: ${OLLAMA_ENDPOINT:http://127.0.0.1:11434}
-    embedding-model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text:latest}
+  embedding:
+    endpoint: ${RAGFORGE_EMBEDDING_ENDPOINT:}
+    model: ${RAGFORGE_EMBEDDING_MODEL:}
+    api-key: ${RAGFORGE_EMBEDDING_API_KEY:}
   messaging:
     exchange: ${RAGFORGE_RABBITMQ_EXCHANGE:ragforge.ingestion}
     requested-queue: ${RAGFORGE_RABBITMQ_REQUESTED_QUEUE:ragforge.ingestion.jobs}

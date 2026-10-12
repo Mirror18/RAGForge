@@ -6,16 +6,8 @@ final class ProviderEndpointPaths {
     private ProviderEndpointPaths() {
     }
 
-    static URI ollamaChat(URI endpoint) {
-        return append(endpoint, "/api/chat", "/api", "/api/chat");
-    }
-
     static URI openAiChat(URI endpoint) {
         return append(endpoint, "/v1/chat/completions", "/v1", "/v1/chat/completions");
-    }
-
-    static URI ollamaEmbedding(URI endpoint) {
-        return append(endpoint, "/api/embeddings", "/api", "/api/embeddings");
     }
 
     static URI openAiEmbedding(URI endpoint) {

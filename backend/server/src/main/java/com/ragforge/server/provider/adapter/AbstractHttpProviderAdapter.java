@@ -114,8 +114,7 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
             String body = objectMapper.writeValueAsString(requestBody(request));
             HttpRequest.Builder builder = HttpRequest.newBuilder(endpoint)
                     .timeout(request.timeout())
-                    .header("Accept", providerType() == ProviderType.OLLAMA
-                            ? "application/x-ndjson" : "text/event-stream")
+                    .header("Accept", "text/event-stream")
                     .header("Content-Type", "application/json")
                     .header("X-RAGForge-Request-Id", request.identity().requestId().toString())
                     .header("X-RAGForge-Correlation-Id", request.identity().correlationId().toString())
@@ -232,9 +231,6 @@ public abstract class AbstractHttpProviderAdapter implements ProviderAdapter {
     }
 
     private String resolveAuthorization(ProviderConnection connection, UUID requestId) {
-        if (connection.isExplicitLocalNoAuth()) {
-            return null;
-        }
         try {
             return credentialResolver.resolveAuthorization(connection);
         } catch (RuntimeException exception) {

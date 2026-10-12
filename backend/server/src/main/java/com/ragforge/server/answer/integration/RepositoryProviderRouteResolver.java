@@ -124,23 +124,19 @@ public final class RepositoryProviderRouteResolver implements ProviderRouteResol
     }
 
     /**
-     * A cloud Chat request may intentionally use a local embedding route. The
-     * generation decision authorizes cloud egress for the selected Chat route;
-     * it must not force local supporting routes to become cloud routes or
-     * require an unrelated EMBEDDING cloud authorization.
+     * Embedding uses the same space-authorized cloud path as Chat. A CHAT-scoped
+     * cloud authorization also covers sending chunk text for embeddings.
      */
     private EgressDecision resolveEmbeddingDecision(UUID spaceId, UUID correlationId,
                                                     EgressDecision requestedDecision,
                                                     ProviderRepository.ModelRouteVersion route,
                                                     ProviderRepository.ProviderConnection connection,
                                                     SpaceBindingRepository.SpaceBindingRecord binding) {
-        boolean localRoute = route.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY
-                && connection.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY;
-        if (localRoute) {
-            return EgressDecision.LOCAL_ONLY;
-        }
-        if (requestedDecision == EgressDecision.LOCAL_ONLY) {
-            throw denied(spaceId, correlationId, requestedDecision, "LOCAL_ONLY_REJECTED_CLOUD_ROUTE");
+        if (connection.providerType() == ProviderRepository.ProviderType.OLLAMA
+                || route.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY
+                || connection.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY
+                || requestedDecision == EgressDecision.LOCAL_ONLY) {
+            throw denied(spaceId, correlationId, requestedDecision, "LOCAL_PRODUCT_PATH_REMOVED");
         }
         if (route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
                 || !route.allowCloudEgress()
@@ -156,12 +152,11 @@ public final class RepositoryProviderRouteResolver implements ProviderRouteResol
                                 ProviderRepository.ModelRouteVersion route,
                                 ProviderRepository.ProviderConnection connection,
                                 SpaceBindingRepository.SpaceBindingRecord binding) {
-        if (decision == EgressDecision.LOCAL_ONLY) {
-            if (route.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY
-                    || connection.egressPolicy() != ProviderRepository.EgressPolicy.LOCAL_ONLY) {
-                throw denied(spaceId, correlationId, decision, "LOCAL_ONLY_REJECTED_CLOUD_ROUTE");
-            }
-            return;
+        if (connection.providerType() == ProviderRepository.ProviderType.OLLAMA
+                || decision == EgressDecision.LOCAL_ONLY
+                || route.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY
+                || connection.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY) {
+            throw denied(spaceId, correlationId, decision, "LOCAL_PRODUCT_PATH_REMOVED");
         }
         if (route.egressPolicy() != ProviderRepository.EgressPolicy.CLOUD_ALLOWED
                 || !route.allowCloudEgress()
@@ -184,7 +179,8 @@ public final class RepositoryProviderRouteResolver implements ProviderRouteResol
             return false;
         }
         String scope = authorization.scope() == null ? "" : authorization.scope().trim().toUpperCase(java.util.Locale.ROOT);
-        return requiredScope.equals(scope) || "ALL".equals(scope);
+        return requiredScope.equals(scope) || "ALL".equals(scope)
+                || ("EMBEDDING".equals(requiredScope) && "CHAT".equals(scope));
     }
 
     private ProviderAdapterException denied(UUID spaceId, UUID correlationId,

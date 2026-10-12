@@ -55,11 +55,9 @@ public record ProviderConnection(
         }
     }
 
-    /** Only this explicitly local, no-auth connection may bypass credential resolution. */
+    /** Local unauthenticated providers are not a product path. */
     public boolean isExplicitLocalNoAuth() {
-        return providerType == ProviderType.OLLAMA
-                && egressClass == EgressClass.LOCAL
-                && "NONE".equalsIgnoreCase(authScheme);
+        return false;
     }
 
     @Override

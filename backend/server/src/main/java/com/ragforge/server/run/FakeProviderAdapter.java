@@ -19,14 +19,14 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Deterministic local adapter for the first no-RAG execution slice. */
+/** Deterministic OpenAI-compatible adapter for test-profile Chat runs. */
 @Component
 @Profile("test")
 public class FakeProviderAdapter implements ProviderAdapter {
     private final ConcurrentHashMap<String, AtomicInteger> attempts = new ConcurrentHashMap<>();
     @Override
     public ProviderType providerType() {
-        return ProviderType.AI_RUNTIME;
+        return ProviderType.OPENAI_COMPATIBLE;
     }
 
     @Override

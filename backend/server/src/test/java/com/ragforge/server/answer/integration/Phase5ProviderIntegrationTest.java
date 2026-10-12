@@ -46,7 +46,7 @@ class Phase5ProviderIntegrationTest {
 
     @Test
     void localOnlyRoutePassesSpaceIdentityAndEgressWithoutFallback() {
-        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OLLAMA,
+        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OPENAI_COMPATIBLE,
                 CompletableFuture.completedFuture(response("local-model", structuredAnswer())));
         ProviderBackedGenerationPort port = port(EgressClass.LOCAL, EgressDecision.LOCAL_ONLY, adapter,
                 (space, route, profile, model, decision, correlation) -> route(EgressClass.LOCAL, decision));
@@ -88,7 +88,7 @@ class Phase5ProviderIntegrationTest {
 
     @Test
     void staleOptionalProviderCharacterRangeIsDerivedFromClaimText() {
-        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OLLAMA,
+        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OPENAI_COMPATIBLE,
                 CompletableFuture.completedFuture(response("local-model", structuredAnswerWithStaleRange())));
         ProviderBackedGenerationPort port = port(EgressClass.LOCAL, EgressDecision.LOCAL_ONLY, adapter,
                 (space, route, profile, model, decision, correlation) -> route(EgressClass.LOCAL, decision));
@@ -102,7 +102,7 @@ class Phase5ProviderIntegrationTest {
 
     @Test
     void streamingProjectsOnlyDecodedAnswerTextAndRetainsFinalCitationValidation() {
-        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OLLAMA,
+        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OPENAI_COMPATIBLE,
                 CompletableFuture.completedFuture(response("local-model", structuredAnswer())),
                 List.of("{\"answer_text\":\"Ver", "ified.\",\"claims\":[{\"claim_text\":\"Verified.\",",
                         "\"citation_tokens\":[\"" + TOKEN + "\"]}]}"));
@@ -126,7 +126,7 @@ class Phase5ProviderIntegrationTest {
 
     @Test
     void providerFailureTimeoutAndCancellationRemainObservableAndDoNotFallback() {
-        RecordingAdapter failure = new RecordingAdapter(ProviderType.OLLAMA,
+        RecordingAdapter failure = new RecordingAdapter(ProviderType.OPENAI_COMPATIBLE,
                 CompletableFuture.failedFuture(new ProviderAdapterException(ProviderErrorClass.UNAVAILABLE,
                         "provider unavailable", RUN, 503)));
         ProviderBackedGenerationPort failedPort = port(EgressClass.LOCAL, EgressDecision.LOCAL_ONLY, failure,
@@ -136,7 +136,7 @@ class Phase5ProviderIntegrationTest {
                 .hasRootCauseInstanceOf(ProviderAdapterException.class)
                 .hasRootCauseMessage("provider unavailable");
 
-        RecordingAdapter never = new RecordingAdapter(ProviderType.OLLAMA, new CompletableFuture<>());
+        RecordingAdapter never = new RecordingAdapter(ProviderType.OPENAI_COMPATIBLE, new CompletableFuture<>());
         ProviderBackedGenerationPort timeoutPort = new ProviderBackedGenerationPort(
                 (space, route, profile, model, decision, correlation) -> route(EgressClass.LOCAL, decision),
                 registry(never), new ObjectMapper(), Duration.ofMillis(20), Phase5IntegrationObserver.noop());
@@ -183,9 +183,9 @@ class Phase5ProviderIntegrationTest {
     private static ProviderRouteResolver.ResolvedRoute route(EgressClass egressClass, EgressDecision decision) {
         return new ProviderRouteResolver.ResolvedRoute(SPACE, ROUTE, PROFILE, "local-model",
                 new ProviderConnection(SPACE, PROFILE, 1,
-                        egressClass == EgressClass.LOCAL ? ProviderType.OLLAMA : ProviderType.OPENAI_COMPATIBLE,
+                        ProviderType.OPENAI_COMPATIBLE,
                         egressClass, URI.create("http://provider.invalid"), "test-ref", "NONE"),
-                egressClass == EgressClass.LOCAL ? ProviderType.OLLAMA : ProviderType.OPENAI_COMPATIBLE, decision);
+                ProviderType.OPENAI_COMPATIBLE, decision);
     }
 
     private static GenerationPort.GenerationRequest request(EgressDecision decision) {

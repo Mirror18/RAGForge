@@ -61,7 +61,6 @@ def build_parser() -> argparse.ArgumentParser:
     down = subparsers.add_parser("down", help="停止启用 profile 的容器并保留数据卷")
     down.add_argument("--volumes", action="store_true", help="显式删除本项目数据卷")
     health = subparsers.add_parser("health", help="执行基础设施健康探针")
-    health.add_argument("--check-ollama", action="store_true", help="额外检查 Ollama 服务")
     backup = subparsers.add_parser("backup-smoke", help="执行 PostgreSQL 备份 smoke")
     backup.add_argument("--dry-run", action="store_true", help="只打印脱敏后的执行计划")
     backup.add_argument("--output", type=Path, help="备份输出路径，默认 tmp/backups 下的时间戳文件")
@@ -103,8 +102,6 @@ def main() -> int:
         return run(command, environment)
     if args.command == "health":
         command = [sys.executable, str(HEALTH_PROBE)]
-        if args.check_ollama:
-            command.append("--check-ollama")
         return run(command, environment)
     if args.command == "backup-smoke":
         command = [sys.executable, str(BACKUP_SMOKE), "--project-name", args.project_name]

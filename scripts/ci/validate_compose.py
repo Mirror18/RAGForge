@@ -77,12 +77,6 @@ def main() -> int:
         print(f"Compose 校验失败：缺少必需服务：{', '.join(missing)}", file=sys.stderr)
         return 1
 
-    with_ollama = run(compose_base(args.project_name, args.env_file, "ollama") + ["config", "--services"], environment)
-    if with_ollama.returncode != 0 or "ollama" not in with_ollama.stdout.split():
-        print("Compose 校验失败：ollama profile 未暴露 ollama 服务。", file=sys.stderr)
-        print(with_ollama.stderr.strip(), file=sys.stderr)
-        return 1
-
     with_app = run(compose_base(args.project_name, args.env_file, "app") + ["config", "--services"], environment)
     app_services = {line.strip() for line in with_app.stdout.splitlines() if line.strip()}
     missing_app = {"server", "worker", "web"} - app_services
@@ -95,7 +89,7 @@ def main() -> int:
     if "gs-" in source or "gs_" in source:
         print("Compose 校验失败：core Compose 不得引用 gs-* 项目或资源。", file=sys.stderr)
         return 1
-    required_tokens = ("OLLAMA_BASE_URL", "healthcheck:", "networks:", "volumes:")
+    required_tokens = ("healthcheck:", "networks:", "volumes:")
     missing_tokens = [token for token in required_tokens if token not in source]
     if missing_tokens:
         print(f"Compose 校验失败：缺少连接/健康/隔离声明：{missing_tokens}", file=sys.stderr)
@@ -138,34 +132,6 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    profile_rendered = run(
-        compose_base(args.project_name, args.env_file, "ollama") + ["config", "--format", "json"],
-        environment,
-    )
-    if profile_rendered.returncode != 0:
-        print("Compose 校验失败：无法读取 ollama profile 端口清单。", file=sys.stderr)
-        print(profile_rendered.stderr.strip(), file=sys.stderr)
-        return profile_rendered.returncode or 1
-    try:
-        profile_model = json.loads(profile_rendered.stdout)
-        profile_ports = {
-            int(port["published"])
-            for service in profile_model["services"].values()
-            for port in service.get("ports", [])
-            if "published" in port
-        }
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        print(f"Compose 校验失败：无法解析 ollama profile 端口清单：{exc}", file=sys.stderr)
-        return 1
-    if profile_ports != {expected_ports[name] for name in CORE_PORT_NAMES | {"OLLAMA_PORT"}}:
-        print(
-            "Compose 校验失败：ollama profile host port mismatch; "
-            f"expected={sorted(expected_ports[name] for name in CORE_PORT_NAMES | {'OLLAMA_PORT'})!r}, "
-            f"actual={sorted(profile_ports)!r}",
-            file=sys.stderr,
-        )
-        return 1
-
     app_rendered = run(
         compose_base(args.project_name, args.env_file, "app") + ["config", "--format", "json"],
         environment,
@@ -194,7 +160,7 @@ def main() -> int:
         )
         return 1
     print(
-        f"Compose 校验通过：{len(actual)} 个默认服务，ollama profile 可用；"
+        f"Compose 校验通过：{len(actual)} 个默认服务；"
         f"隔离资源 network={network_name}，volume_prefix={expected_prefix}，"
         f"port_offset={port_offset(args.project_name)}。"
     )

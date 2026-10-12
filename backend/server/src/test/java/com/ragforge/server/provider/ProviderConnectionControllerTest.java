@@ -18,7 +18,7 @@ class ProviderConnectionControllerTest {
         UUID connectionId = UUID.randomUUID();
         ProviderConnectionService.ProviderConnectionUpdateRequest request =
                 new ProviderConnectionService.ProviderConnectionUpdateRequest(
-                        "Local", "OLLAMA", "LOCAL", "http://localhost:11434", "credential-ref", "ACTIVE", 1);
+                        "Cloud", "OPENAI_COMPATIBLE", "CLOUD", "https://api.example.invalid/v1", "credential-ref", "ACTIVE", 1);
         SessionPrincipal principal = mock(SessionPrincipal.class);
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
 

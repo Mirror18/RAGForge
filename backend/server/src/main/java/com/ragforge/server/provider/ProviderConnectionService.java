@@ -68,6 +68,7 @@ public class ProviderConnectionService {
         authorization.requirePlatformAdmin(spaceId, principal);
         ProviderRepository.ProviderType providerType = providerType(request.providerType());
         ProviderRepository.EgressPolicy egressPolicy = egressPolicy(request.egressClass());
+        rejectRemovedProductPath(providerType, egressPolicy);
         ProviderRepository.ProviderStatus status = providerStatus(request.status());
         validateEndpoint(request.endpoint());
 
@@ -230,11 +231,14 @@ public class ProviderConnectionService {
             throw new ApiException(HttpStatus.PRECONDITION_FAILED, "provider_connection_version_conflict",
                     "Provider connection version conflict", "The provider connection version is stale");
         }
+        ProviderRepository.ProviderType providerType = providerType(request.providerType());
+        ProviderRepository.EgressPolicy egressPolicy = egressPolicy(request.egressClass());
+        rejectRemovedProductPath(providerType, egressPolicy);
         ProviderRepository.ProviderConnection updated = providers.updateConnection(spaceId, providerConnectionId,
                 request.version(), new ProviderRepository.NewProviderConnection(providerConnectionId, spaceId,
-                        current.providerKey(), request.displayName().trim(), providerType(request.providerType()),
+                        current.providerKey(), request.displayName().trim(), providerType,
                         request.endpoint(), request.credentialRef(), current.credentialHash(), current.authScheme(),
-                        current.nonSecretHeadersJson(), providerStatus(request.status()), egressPolicy(request.egressClass()),
+                        current.nonSecretHeadersJson(), providerStatus(request.status()), egressPolicy,
                         Instant.now(), correlationId(servletRequest))).orElseThrow(() -> new ApiException(
                         HttpStatus.PRECONDITION_FAILED, "provider_connection_version_conflict",
                         "Provider connection version conflict", "The provider connection version is stale"));
@@ -348,6 +352,18 @@ public class ProviderConnectionService {
 
     private static String responseStatus(ProviderRepository.ProviderStatus status) {
         return status == ProviderRepository.ProviderStatus.UNHEALTHY ? "DISABLED" : status.name();
+    }
+
+    private static void rejectRemovedProductPath(ProviderRepository.ProviderType type,
+                                                 ProviderRepository.EgressPolicy egress) {
+        if (type == ProviderRepository.ProviderType.OLLAMA) {
+            throw invalid("providerType", "Ollama is not a product path; register an OpenAI-compatible cloud connection");
+        }
+        if ((type == ProviderRepository.ProviderType.OPENAI_COMPATIBLE
+                || type == ProviderRepository.ProviderType.MIMO)
+                && egress != ProviderRepository.EgressPolicy.CLOUD_ALLOWED) {
+            throw invalid("egressClass", "Chat and embedding connections must use CLOUD egress");
+        }
     }
 
     private static ProviderRepository.ProviderType providerType(String value) {

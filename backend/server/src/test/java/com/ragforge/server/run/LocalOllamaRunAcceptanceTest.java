@@ -12,6 +12,7 @@ import com.ragforge.server.space.SpaceRole;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
@@ -43,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * calling Ollama as a standalone HTTP test. Its output is a safe evidence summary: it never
  * prints the provider response, the synthetic user message, or any credential value.</p>
  */
+@Disabled("Ollama product path removed by ADR-0014; real generation requires space-authorized cloud credentials")
 @SpringBootTest
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

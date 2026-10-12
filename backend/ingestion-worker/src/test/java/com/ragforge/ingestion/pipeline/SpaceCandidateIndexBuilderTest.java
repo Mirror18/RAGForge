@@ -49,7 +49,7 @@ class SpaceCandidateIndexBuilderTest {
 
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         ContentAddressedObjectStore store = mock(ContentAddressedObjectStore.class);
-        OllamaEmbeddingClient embedding = mock(OllamaEmbeddingClient.class);
+        CloudEmbeddingClient embedding = mock(CloudEmbeddingClient.class);
         QdrantIndexWriter qdrant = mock(QdrantIndexWriter.class);
         ResultSet rowOne = row(documentOne, childOne, revisionOne, parentOne, hashOne, textOne, keyOne,
                 UUID.randomUUID(), hashOne);
@@ -97,7 +97,7 @@ class SpaceCandidateIndexBuilderTest {
 
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         ContentAddressedObjectStore store = mock(ContentAddressedObjectStore.class);
-        OllamaEmbeddingClient embedding = mock(OllamaEmbeddingClient.class);
+        CloudEmbeddingClient embedding = mock(CloudEmbeddingClient.class);
         QdrantIndexWriter qdrant = mock(QdrantIndexWriter.class);
         ResultSet row = row(documentId, childId, revisionId, parentId, textHash, text, key, null, null);
         when(jdbc.query(anyString(), any(RowMapper.class), eq(spaceId))).thenAnswer(invocation -> {
@@ -133,7 +133,7 @@ class SpaceCandidateIndexBuilderTest {
 
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         ContentAddressedObjectStore store = mock(ContentAddressedObjectStore.class);
-        OllamaEmbeddingClient embedding = mock(OllamaEmbeddingClient.class);
+        CloudEmbeddingClient embedding = mock(CloudEmbeddingClient.class);
         QdrantIndexWriter qdrant = mock(QdrantIndexWriter.class);
         ResultSet row = row(UUID.randomUUID(), UUID.randomUUID(), revisionId, UUID.randomUUID(), textHash, text,
                 key, UUID.randomUUID(), textHash);

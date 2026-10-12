@@ -3,8 +3,6 @@ package com.ragforge.server.run;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.provider.adapter.CredentialResolver;
 import com.ragforge.server.provider.ProviderRepository;
-import com.ragforge.server.provider.adapter.EgressClass;
-import com.ragforge.server.provider.adapter.OllamaProviderAdapter;
 import com.ragforge.server.provider.adapter.MiMoProviderAdapter;
 import com.ragforge.server.provider.adapter.OpenAiCompatibleProviderAdapter;
 import com.ragforge.server.provider.adapter.ProviderAdapterException;
@@ -14,6 +12,7 @@ import com.ragforge.server.provider.adapter.ProviderType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -34,10 +33,8 @@ public class RunProviderAdapterConfiguration {
 
             @Override
             public String resolveAuthorization(ProviderConnection connection) {
-                if (isPersistedLocalOllamaWithoutAuth(connection, providers)) {
-                    return null;
-                }
-                if (connection.providerType() == ProviderType.MIMO) {
+                if (connection.providerType() == ProviderType.MIMO
+                        || connection.providerType() == ProviderType.OPENAI_COMPATIBLE) {
                     return resolveEnvironmentCredential(connection.credentialRef());
                 }
                 throw notConfigured();
@@ -49,31 +46,14 @@ public class RunProviderAdapterConfiguration {
         var match = credentialRef == null ? null : ENV_REFERENCE.matcher(credentialRef.trim());
         if (match == null || !match.matches()) {
             throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
-                    "MiMo credentialRef must use an env:NAME reference");
+                    "Cloud credentialRef must use an env:NAME reference");
         }
         String value = System.getenv(match.group(1));
         if (value == null || value.isBlank()) {
             throw new ProviderAdapterException(ProviderErrorClass.AUTHENTICATION,
-                    "MiMo credential environment variable is not configured");
+                    "Cloud credential environment variable is not configured");
         }
         return value;
-    }
-
-    private static boolean isPersistedLocalOllamaWithoutAuth(ProviderConnection connection,
-                                                              ProviderRepository providers) {
-        if (connection.providerType() != ProviderType.OLLAMA
-                || connection.egressClass() != EgressClass.LOCAL) {
-            return false;
-        }
-        if (connection.isExplicitLocalNoAuth()) {
-            return true;
-        }
-        return providers.findConnection(connection.spaceId(), connection.providerConnectionId())
-                .filter(persisted -> connection.spaceId().equals(persisted.spaceId())
-                        && persisted.providerType() == ProviderRepository.ProviderType.OLLAMA
-                        && persisted.egressPolicy() == ProviderRepository.EgressPolicy.LOCAL_ONLY
-                        && "NONE".equalsIgnoreCase(persisted.authScheme()))
-                .isPresent();
     }
 
     private static ProviderAdapterException notConfigured() {
@@ -82,17 +62,14 @@ public class RunProviderAdapterConfiguration {
     }
 
     @Bean
-    OllamaProviderAdapter ollamaProviderAdapter(ObjectMapper objectMapper, CredentialResolver credentials) {
-        return new OllamaProviderAdapter(objectMapper, credentials);
-    }
-
-    @Bean
+    @Profile("!test")
     OpenAiCompatibleProviderAdapter openAiCompatibleProviderAdapter(ObjectMapper objectMapper,
                                                                      CredentialResolver credentials) {
         return new OpenAiCompatibleProviderAdapter(objectMapper, credentials);
     }
 
     @Bean
+    @Profile("!test")
     MiMoProviderAdapter miMoProviderAdapter(ObjectMapper objectMapper, CredentialResolver credentials) {
         return new MiMoProviderAdapter(objectMapper, credentials);
     }

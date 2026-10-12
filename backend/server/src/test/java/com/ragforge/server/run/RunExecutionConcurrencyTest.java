@@ -69,8 +69,8 @@ class RunExecutionConcurrencyTest {
         UUID correlationId = UUID.randomUUID();
         String providerIdentity = "run-" + runId;
         ProviderConnection connection = new ProviderConnection(spaceId, providerConnectionId, 1,
-                ProviderType.AI_RUNTIME, EgressClass.CLOUD,
-                URI.create("http://127.0.0.1:" + (18_000 + index)), "fake-ref");
+                ProviderType.OPENAI_COMPATIBLE, EgressClass.CLOUD,
+                URI.create("https://api.example.invalid/v1"), "env:OPENAI_API_KEY");
         ProviderChatRequest request = new ProviderChatRequest(spaceId,
                 new RequestIdentity(runId, correlationId, providerIdentity), "fake-model",
                 List.of(new ChatMessage("user", "cloud-chain-" + index)), Duration.ofSeconds(5),

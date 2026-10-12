@@ -1,9 +1,7 @@
 name: ${COMPOSE_PROJECT_NAME:-ragforge-p1}
 
-# Provider connection contract consumed by application containers when they are
-# added. The default is host-managed Ollama; cloud routes remain opt-in.
-x-ragforge-provider:
-  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+# Chat and embedding use space-authorized OpenAI-compatible cloud APIs.
+# There is no Ollama product path and no silent cloud failover.
 
 # Runtime hardening is intentionally explicit on each application service so
 # the rendered Compose model and docker inspect output remain auditable.
@@ -146,29 +144,6 @@ services:
       retries: 12
       start_period: 10s
 
-  # Ollama is normally managed by the developer host. The optional profile is
-  # useful for a fully containerized smoke environment; application services
-  # should consume OLLAMA_BASE_URL instead of assuming a local socket.
-  ollama:
-    image: ${OLLAMA_IMAGE:-ollama/ollama:0.5.4@sha256:18bfb1d605604fd53dcad20d0556df4c781e560ebebcd923454d627c994a0e37}
-    profiles:
-      - ollama
-    restart: unless-stopped
-    ports:
-      - "${OLLAMA_PORT:-21434}:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    networks:
-      - core
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - curl -fsS http://localhost:11434/api/tags >/dev/null
-      interval: 10s
-      timeout: 10s
-      retries: 12
-      start_period: 20s
-
   server:
     <<: *ragforge-app-hardening
     image: ${RAGFORGE_SERVER_IMAGE:-ragforge/server:local}
@@ -252,8 +227,9 @@ services:
       S3_PREFIX: ${S3_PREFIX:-phase3}
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ${QDRANT_API_KEY:-change-me}
-      OLLAMA_ENDPOINT: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}
+      RAGFORGE_EMBEDDING_ENDPOINT: ${RAGFORGE_EMBEDDING_ENDPOINT:-}
+      RAGFORGE_EMBEDDING_MODEL: ${RAGFORGE_EMBEDDING_MODEL:-}
+      RAGFORGE_EMBEDDING_API_KEY: ${RAGFORGE_EMBEDDING_API_KEY:-}
     networks:
       - core
     depends_on:
@@ -326,5 +302,3 @@ volumes:
     name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_valkey-data
   minio-data:
     name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_minio-data
-  ollama-data:
-    name: ${RAGFORGE_VOLUME_PREFIX:-ragforge-p1}_ollama-data

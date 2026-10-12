@@ -37,6 +37,7 @@ import io.minio.PutObjectArgs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -66,9 +67,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Opt-in real Phase 5 proof. It requires the isolated local Compose stack and Ollama;
- * no credential, fixture body, or model response is written to the evidence file.
+ * Historical Phase 5 local-Ollama proof. The product path is now space-authorized
+ * OpenAI-compatible cloud APIs; this class stays as an ignored artifact.
  */
+@Disabled("Ollama product path removed by ADR-0014; real generation requires space-authorized cloud credentials")
 @SpringBootTest(properties = "ragforge.object-storage.enabled=true")
 @EnabledIfSystemProperty(named = "ragforge.real-e2e", matches = "true")
 class Phase5RealOllamaRagE2ETest {

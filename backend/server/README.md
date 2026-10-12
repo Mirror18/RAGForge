@@ -12,7 +12,7 @@ python scripts/dev/core.py health
 mvn -pl backend/server spring-boot:run
 ```
 
-默认 HTTP 端口为 `8080`；一键本地闭环请使用 `scripts/dev/start-local.bat`，它会显式设置本地 PostgreSQL、RabbitMQ、Valkey、MinIO、Qdrant 和 Ollama 适配器配置。健康检查：`http://127.0.0.1:8080/actuator/health`。
+默认 HTTP 端口为 `8080`；一键本地闭环请使用 `scripts/dev/start-local.bat`，它会显式设置本地 PostgreSQL、RabbitMQ、Valkey、MinIO 和 Qdrant。Chat 与 Embedding 只走空间已授权的云端连接。健康检查：`http://127.0.0.1:8080/actuator/health`。
 
 常用验证：
 
