@@ -15,6 +15,8 @@ alwaysApply: true
 2. Worker / 特性分支已合并进 `main`（或目标集成分支）
 3. 用户明确要求 push 到 GitHub
 
+**默认推送方式（用户已确认）：** 先 `--no-ff` 合并进 `main`，再 `git push origin main`；不要只推特性分支了事。合并后删除已集成的本地/远程特性分支。
+
 未获用户允许时：**可以提交前不 push**；但一旦 push，必须跟进 CI。
 
 ## A. 提交后的分支与 worktree 清理
