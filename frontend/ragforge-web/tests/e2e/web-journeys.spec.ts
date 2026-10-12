@@ -8,7 +8,7 @@ async function login(page: Page, api: SyntheticApi): Promise<void> {
   await expect(page.getByLabel("邮箱")).toBeVisible();
   await page.getByLabel("邮箱").fill("synthetic@example.invalid");
   await page.getByLabel("密码").fill("synthetic-pass-1234");
-  await page.getByRole("button", { name: "登录工作台" }).click();
+  await page.getByRole("button", { name: "进入工作台" }).click();
   await expect(page.locator(".status-chip.ready")).toContainText("API");
 }
 
@@ -220,6 +220,26 @@ test("[P7Q-06 刷新恢复] restores five shareable workbench pages", async ({ p
     await expect(page.locator(heading)).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`view=${view}`));
   }
+});
+
+test("[RF-6 登录到带引用回答] walks login to a cited answer on desktop and narrow screens", async ({ page }) => {
+  const api = create();
+  const asset = (name: string): string => resolve(process.cwd(), "../../tests/evidence/business-demo", name);
+  await login(page, api);
+  await page.locator("#answer-tab").click();
+  await expect(page.locator("#answer-heading")).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始回答" })).toBeEnabled();
+  await page.getByLabel("问题").fill(SYNTHETIC.question);
+  await page.getByRole("button", { name: "开始回答" }).click();
+  await expect(page.locator(".answer-result")).toContainText("synthetic answer");
+  await expect(page.locator(".citation-section")).toBeVisible();
+  await expect(page.locator(".citation-card")).toContainText(SYNTHETIC.evidenceId);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.screenshot({ path: asset("06-桌面-带引用问答.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("#answer-tab")).toBeVisible();
+  await expect(page.locator(".answer-result")).toContainText("synthetic answer");
+  await page.screenshot({ path: asset("07-窄屏-带引用问答.png"), fullPage: true });
 });
 
 test("[P7C-14 演示截图] captures the complete synthetic business loop", async ({ page }) => {

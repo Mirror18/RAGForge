@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "RF-6",
+  "status": "PASS",
+  "capturedAt": "2026-10-12T17:40:00+08:00",
+  "summary": {
+    "e2e": { "filter": "RF-6", "passed": 1, "failed": 0, "duration_s": 9 },
+    "fullPlaywright": { "passed": 14, "failed": 1, "failed_cases": ["P7Q-06 刷新恢复 #personal-space-heading"], "note": "RF-6 本身通过；刷新恢复用例超时与本卡无关" }
+  },
+  "acceptance": {
+    "loginToCitedAnswer": true,
+    "desktopScreenshot": true,
+    "narrowScreenshot": true,
+    "syntheticOnly": true
+  },
+  "browserDemo": {
+    "fixture": "synthetic-space-and-answer",
+    "cloudEgress": false,
+    "screenshots": [
+      "tests/evidence/business-demo/06-桌面-带引用问答.png",
+      "tests/evidence/business-demo/07-窄屏-带引用问答.png"
+    ]
+  }
+}

@@ -53,7 +53,7 @@ const job = (status: string): object => ({
 const citation = (): object => ({
   evidenceId: SYNTHETIC.evidenceId, claimId: "0190f5c2-7c1e-7abc-8def-1234567890bf", spaceId: SYNTHETIC.spaceId, correlationId: SYNTHETIC.correlationId, runId: SYNTHETIC.runId,
   evidenceBundleId: "0190f5c2-7c1e-7abc-8def-1234567890c0", evidenceBundleVersion: 1, evidenceBundleHash: SYNTHETIC.textHash, indexVersionId: SYNTHETIC.indexId, retrievalProfileId: SYNTHETIC.profileId, retrievalProfileVersion: 1, documentRevisionId: SYNTHETIC.revisionId, parentChunkId: "0190f5c2-7c1e-7abc-8def-1234567890c1", childChunkId: "0190f5c2-7c1e-7abc-8def-1234567890c2", contentRef: "synthetic-space/revision/chunk", textHash: SYNTHETIC.textHash,
-  anchor: { headingPath: ["Synthetic heading"], pageNumber: null, sheet: null, slideNumber: null, lineStart: 1, lineEnd: 2, tableCell: null }, answerCharStart: 0, answerCharEnd: 24, citationAllowed: true,
+  anchor: { headingPath: ["Synthetic heading"], tokenStart: 0, tokenEnd: 4, charStart: 0, charEnd: 24, pageNumber: null, sheet: null, slideNumber: null, lineStart: 1, lineEnd: 2, tableCell: null }, answerCharStart: 0, answerCharEnd: 24, citationAllowed: true,
 });
 const answer = (status = "COMPLETED"): object => ({
   schemaVersion: "v1", answerId: SYNTHETIC.answerId, spaceId: SYNTHETIC.spaceId, correlationId: SYNTHETIC.correlationId, runId: SYNTHETIC.runId, idempotencyKey: "synthetic-idempotency-key", status, answerText: status === "COMPLETED" ? "synthetic answer" : null, claims: [], citations: status === "COMPLETED" ? [citation()] : [], abstention: null, toolCallIds: [],
@@ -135,10 +135,27 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
     if (role === "VIEWER" && request.method() !== "GET" && path.includes("/sources")) return fulfill(route, 403, problem(403, "SPACE_ACCESS_DENIED", "viewer cannot mutate synthetic space", path));
     if (path === "/api/v1/spaces" && request.method() === "GET") return fulfill(route, 200, { items: hasSpace ? [space(role)] : [], nextCursor: null });
     if (path === "/api/v1/spaces" && request.method() === "POST") { hasSpace = true; return fulfill(route, 201, space(role)); }
+    if (path.endsWith("/answer-readiness") && request.method() === "GET") {
+      return fulfill(route, 200, { spaceId: SYNTHETIC.spaceId, ready: true, gaps: [] });
+    }
     if (path.endsWith("/events") && request.method() === "GET") {
       const status = cancelled ? "CANCELLED" : "COMPLETED";
-      const makeEvent = (eventType: string, sequence: number, payload: object): string => "id: " + SYNTHETIC.correlationId + "-" + sequence + "\\ndata: " + JSON.stringify({ schema_version: "v1", event_id: SYNTHETIC.correlationId + "-" + sequence, event_type: eventType, sequence, idempotency_key: "synthetic-idempotency-key", space_id: SYNTHETIC.spaceId, correlation_id: SYNTHETIC.correlationId, run_id: SYNTHETIC.runId, occurred_at: now, payload }) + "\\n\\n";
-      const stream = status === "COMPLETED" ? makeEvent("answer.delta", 1, { delta: "synthetic answer" }) + makeEvent("answer.citation", 2, { citation: citation() }) + makeEvent("answer.done", 3, { answerId: SYNTHETIC.answerId, status }) : makeEvent("answer.done", 1, { answerId: SYNTHETIC.answerId, status });
+      const makeEvent = (eventType: string, sequence: number, payload: object): string =>
+        `id: ${SYNTHETIC.correlationId}-${sequence}\ndata: ${JSON.stringify({
+          schema_version: "v1",
+          event_id: `${SYNTHETIC.correlationId}-${sequence}`,
+          event_type: eventType,
+          sequence,
+          idempotency_key: "synthetic-idempotency-key",
+          space_id: SYNTHETIC.spaceId,
+          correlation_id: SYNTHETIC.correlationId,
+          run_id: SYNTHETIC.runId,
+          occurred_at: now,
+          payload,
+        })}\n\n`;
+      const stream = status === "COMPLETED"
+        ? makeEvent("answer.delta", 1, { delta: "synthetic answer" }) + makeEvent("answer.citation", 2, { citation: citation() }) + makeEvent("answer.done", 3, { answerId: SYNTHETIC.answerId, status })
+        : makeEvent("answer.done", 1, { answerId: SYNTHETIC.answerId, status });
       return fulfill(route, 200, stream, "text/event-stream");
     }
     if (path.endsWith("/provider-connections")) return fulfill(route, 200, { items: [{ providerConnectionId: SYNTHETIC.providerId, providerType: "OPENAI_COMPATIBLE", endpoint: "https://synthetic.example.invalid", status: "ACTIVE", egressClass: "CLOUD", version: 1 }] });

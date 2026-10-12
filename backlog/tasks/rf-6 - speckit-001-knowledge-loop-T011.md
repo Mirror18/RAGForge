@@ -1,7 +1,7 @@
 ---
 id: RF-6
 title: 在浏览器走登录到带引用回答；记录桌面与窄屏结果
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-12 16:19'
 updated_date: '2026-10-12 16:19'
@@ -30,5 +30,5 @@ token_limit: 8000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 T011 按规格完成，并在 `specs/001-knowledge-loop/tasks.md` 勾选一致
+- [x] #1 T011 按规格完成，并在 `specs/001-knowledge-loop/tasks.md` 勾选一致
 <!-- AC:END -->
