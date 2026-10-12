@@ -59,13 +59,13 @@ ragforge:
     # Empty by default: web ingestion is fail-closed until an operator configures public hosts.
     allowed-hosts: \${RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS:}
   object-storage:
-    # Explicit opt-in: without this flag the Phase 5 answer graph stays fail-closed.
+    # Explicit opt-in: without this flag the answer graph stays fail-closed.
     enabled: ${RAGFORGE_OBJECT_STORAGE_ENABLED:false}
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
     access-key: ${S3_ACCESS_KEY:}
     secret-key: ${S3_SECRET_KEY:}
     bucket: ${S3_BUCKET:ragforge}
-    prefix: ${S3_PREFIX:phase3}
+    prefix: ${S3_PREFIX:ragforge}
     max-artifact-bytes: ${S3_MAX_ARTIFACT_BYTES:50000000}
   qdrant:
     url: ${QDRANT_URL:http://localhost:6333}
@@ -81,8 +81,7 @@ ragforge:
     fanout:
       enabled: ${RAGFORGE_RUN_EVENT_FANOUT_ENABLED:true}
       channel: ${RAGFORGE_RUN_EVENT_FANOUT_CHANNEL:ragforge:run-events:live}
-  phase6:
-    operations:
-      enabled: ${RAGFORGE_PHASE6_OPERATIONS_ENABLED:false}
-      cleanup:
-        fixed-delay-ms: ${RAGFORGE_PHASE6_CLEANUP_DELAY_MS:3600000}
+  operations:
+    enabled: ${RAGFORGE_OPERATIONS_ENABLED:${RAGFORGE_PHASE6_OPERATIONS_ENABLED:false}}
+    cleanup:
+      fixed-delay-ms: ${RAGFORGE_OPERATIONS_CLEANUP_DELAY_MS:${RAGFORGE_PHASE6_CLEANUP_DELAY_MS:3600000}}

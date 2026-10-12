@@ -46,7 +46,7 @@ public class BusinessIngestionService {
                                     SpaceAuthorization authorization, ObjectProvider<MinioClient> minio,
                                     IdempotencyRepository idempotency,
                                     @org.springframework.beans.factory.annotation.Value("${ragforge.object-storage.bucket:ragforge}") String bucket,
-                                    @org.springframework.beans.factory.annotation.Value("${ragforge.object-storage.prefix:phase3}") String prefix) {
+                                    @org.springframework.beans.factory.annotation.Value("${ragforge.object-storage.prefix:ragforge}") String prefix) {
         this.ingestion = ingestion;
         this.jdbc = jdbc;
         this.outbox = outbox;

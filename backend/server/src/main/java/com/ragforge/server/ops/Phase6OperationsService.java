@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 @Service
 @EnableScheduling
-@ConditionalOnProperty(name = "ragforge.phase6.operations.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "ragforge.operations.enabled", havingValue = "true")
 public class Phase6OperationsService {
     private final JdbcAnswerPersistence answers;
     private final JdbcRunEventStore runEvents;
@@ -46,7 +46,7 @@ public class Phase6OperationsService {
     }
 
     /** Purges expired answer aggregates and durable SSE events in one operator tick. */
-    @Scheduled(fixedDelayString = "${ragforge.phase6.operations.cleanup.fixed-delay-ms:3600000}")
+    @Scheduled(fixedDelayString = "${ragforge.operations.cleanup.fixed-delay-ms:3600000}")
     public CleanupResult purgeExpiredData() {
         Instant now = Instant.now(clock);
         int answersPurged = 0;

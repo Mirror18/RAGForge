@@ -104,7 +104,7 @@ class Phase6OperationsServiceTest {
     void springCanConstructTheEnabledServiceWithProductionDependencies() {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
             context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("phase6-test",
-                    Map.of("ragforge.phase6.operations.enabled", "true")));
+                    Map.of("ragforge.operations.enabled", "true")));
             context.registerBean(JdbcAnswerPersistence.class, () -> mock(JdbcAnswerPersistence.class));
             context.registerBean(JdbcRunEventStore.class, () -> mock(JdbcRunEventStore.class));
             context.registerBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class));

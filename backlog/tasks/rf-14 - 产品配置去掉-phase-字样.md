@@ -1,7 +1,7 @@
 ---
 id: RF-14
 title: 产品配置去掉 phase 字样
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-12 16:20'
 updated_date: '2026-10-12 16:50'
@@ -23,9 +23,9 @@ token_limit: 5000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 默认对象前缀不再是 `phase3`，旧 `S3_PREFIX` 仍可覆盖
-- [ ] #2 README、启动脚本和页面不再把 phase3/5/6 写成使用者步骤
-- [ ] #3 已有对象键不被迁移脚本改写
+- [x] #1 默认对象前缀不再是 `phase3`，旧 `S3_PREFIX` 仍可覆盖
+- [x] #2 README、启动脚本和页面不再把 phase3/5/6 写成使用者步骤
+- [x] #3 已有对象键不被迁移脚本改写
 <!-- AC:END -->
 
 ## Implementation Plan

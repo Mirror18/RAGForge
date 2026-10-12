@@ -23,7 +23,7 @@ mvn -f backend/pom.xml -q -pl server -DskipTests compile
 
 数据库迁移只由此进程的 Flyway 序列统一管理；Worker 不执行迁移。真实密码、Provider key、bootstrap token 等只通过环境变量或仓库根目录的 `.env.local` 注入。
 
-## Phase 3 persistence boundary
+## Ingestion persistence boundary
 
 `V8__phase3_versioned_ingestion.sql` adds space-scoped source, revision,
 artifact, parse-report, pipeline, job, attempt, step and checkpoint tables.

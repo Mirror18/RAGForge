@@ -170,11 +170,12 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-ragforge}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-minio-secret}
       S3_BUCKET: ${S3_BUCKET:-ragforge}
-      S3_PREFIX: ${S3_PREFIX:-phase3}
+      S3_PREFIX: ${S3_PREFIX:-ragforge}
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ${QDRANT_API_KEY:-change-me}
       RAGFORGE_OUTBOX_RELAY_ENABLED: "true"
       RAGFORGE_RUN_EVENT_FANOUT_ENABLED: "true"
+      RAGFORGE_OPERATIONS_ENABLED: "true"
       RAGFORGE_PHASE6_OPERATIONS_ENABLED: "true"
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
     ports:
@@ -224,7 +225,7 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-ragforge}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-minio-secret}
       S3_BUCKET: ${S3_BUCKET:-ragforge}
-      S3_PREFIX: ${S3_PREFIX:-phase3}
+      S3_PREFIX: ${S3_PREFIX:-ragforge}
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ${QDRANT_API_KEY:-change-me}
       RAGFORGE_EMBEDDING_ENDPOINT: ${RAGFORGE_EMBEDDING_ENDPOINT:-}

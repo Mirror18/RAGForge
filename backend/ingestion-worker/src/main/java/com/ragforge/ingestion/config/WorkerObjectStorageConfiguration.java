@@ -26,7 +26,7 @@ public class WorkerObjectStorageConfiguration {
     ContentAddressedObjectStore workerObjectStore(
             MinioClient client,
             @Value("${ragforge.object-storage.bucket:ragforge}") String bucket,
-            @Value("${ragforge.object-storage.prefix:phase3}") String prefix) {
+            @Value("${ragforge.object-storage.prefix:ragforge}") String prefix) {
         return new S3ObjectStore(client, bucket, prefix, ObjectStoreLimits.defaults());
     }
 }
