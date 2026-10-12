@@ -5,7 +5,7 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 # RAGForge Development
 
-把 RAGForge 作为“模块化单体 + 独立 ingestion worker”的商业级 RAG 工程维护。仓库级硬约束以根目录 `AGENTS.md` 为准；本 Skill 只补充任务路由和上下文选择，不能扩大授权。
+把 RAGForge 作为 space / knowledge / answer / gateway 四个业务服务维护（ADR-0014）。仓库级硬约束以根目录 `AGENTS.md` 为准；本 Skill 只补充任务路由和上下文选择，不能扩大授权。M5 任务源是 `specs/` 与 `backlog/`。
 
 ## 开始前
 
@@ -15,12 +15,15 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 ## 按领域路由
 
-- `backend/server/`：同步 API、业务规则、空间权限、检索与回答编排。
-- `backend/ingestion-worker/`：异步来源同步、解析、分块、向量和候选索引；不绕过 Server 直接成为第二业务后端。
-- `frontend/ragforge-web/`：角色感知 SPA；用户路径必须从空间、来源、索引、问答和管理闭环验证。
-- `backend/ai-runtime/`：仅 OCR、rerank 等窄职责运行时能力。
+- `backend/space/`：账号、会话、成员、出境策略、云端模型绑定。
+- `backend/knowledge/`：来源、解析、分块、embedding、索引发布与候选检索；job 角色可以是同一套代码的第二进程。
+- `backend/answer/`：检索编排、生成、结构化引用、run。
+- `backend/gateway/`：浏览器唯一 HTTP 入口。
+- `frontend/ragforge-web/`：角色感知 SPA；用户路径必须从空间、模型、资料、索引、问答和管理闭环验证。
 - `contracts/`：OpenAPI、事件和跨语言 schema 的唯一契约源；先契约后 producer/consumer。
+- `specs/`、`backlog/`：M5 任务源；不要把同一张卡抄进 `docs/09`。
 - `deploy/`、`scripts/`、`tests/`：部署入口、自动化门禁和跨应用证据；生成物与真实凭据不得入仓。
+- Maven 模块拆分完成前，现有 `backend/server` 与 `backend/ingestion-worker` 仍是可运行进程。
 
 ## 不变量
 

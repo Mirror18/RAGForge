@@ -6,9 +6,9 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 
 ## Non-negotiable rules
 
-- Keep the system a modular monolith plus a separately deployable ingestion worker until an ADR proves a split is necessary.
+- Keep the system as four business services: `space`, `knowledge`, `answer`, and `gateway` (ADR-0014). Knowledge may run a second process of the same code for batch jobs. Do not split parser, OCR, or rerank into their own services.
 - Treat knowledge-space isolation as a security boundary. Every query and mutation touching tenant content must include and enforce `space_id`.
-- Cloud data egress is opt-in per space. Never silently fail over from a local route to a cloud route.
+- Cloud data egress is opt-in per space. Chat and embedding use only space-authorized OpenAI-compatible cloud APIs. Never silently fail over from a local route to a cloud route; unauthorized spaces fail closed.
 - Answers must retain document/chunk provenance. Do not implement citation as generated free text.
 - Never commit secrets, personal Obsidian content, model credentials, production data, or raw customer prompts.
 - Do not copy third-party source before its license is accepted and the reuse register is updated.
@@ -158,13 +158,16 @@ An agent halts and reports to the human if and only if any of the following appl
 
 ## Directory ownership
 
-- `backend/server`: synchronous API and application orchestration.
-- `backend/ingestion-worker`: asynchronous source synchronization and indexing jobs.
+- `backend/space`: identity, session, membership, egress policy, and model binding.
+- `backend/knowledge`: sources, parsing, chunking, embedding, index publish, and candidate retrieval. A job role may be a second process of the same code.
+- `backend/answer`: retrieval orchestration, generation, structured citations, and run.
+- `backend/gateway`: the only browser-facing HTTP entry.
 - `frontend/ragforge-web`: Vue SPA.
-- `backend/ai-runtime`: OCR and rerank runtime only; it is not a second business backend.
 - `contracts`: source of truth for public API and event contracts.
+- `specs/` and `backlog/`: M5 task source (speckit specs and the backlog.md board). Do not duplicate M5 cards into `docs/09`.
 - `tests`: cross-application and acceptance tests; unit tests stay with their modules.
 - `docs/08–13`: flat current project records for state, tasks, audit, risks, traceability, and Agent memory; historical phase plans, implementation details, evidence summaries, and retrospectives are retrieved from Git history; Worker YAML contracts live under `.agents/tickets/`.
+- Until Maven module split lands, existing `backend/server` and `backend/ingestion-worker` remain the runnable processes; map new work to the four-service directories above.
 
 ## Quality gates
 

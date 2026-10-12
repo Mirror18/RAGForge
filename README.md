@@ -4,11 +4,11 @@ RAGForge 是面向企业内部、多用户知识空间的商业级 RAG 学习工
 
 ## 先看这里
 
-不知道下一步做什么时，打开 [`docs/README.md`](./docs/README.md)，然后按顺序阅读 00–07 主文档和术语字典。要执行任务时只走：
+不知道下一步做什么时，打开 [`docs/README.md`](./docs/README.md)，然后按顺序阅读 00–07 主文档和术语字典。M5 起执行任务只走：
 
 1. [项目状态卡](./docs/08-项目状态卡.md)
-2. [项目任务总台账](./docs/09-项目任务总台账.md)
-3. 对应 [Worker Ticket](./.agents/tickets/)
+2. [specs](./specs/README.md) 与 [backlog](./backlog/)（M5 业务边界）
+3. 既有阶段任务仍可看 [项目任务总台账](./docs/09-项目任务总台账.md)
 4. 独立 worktree、验证、中文 Conventional Commit
 
 当前主线和阻塞以状态卡为准；任务目标与达到的效果以任务板为准；实际改动、测试、风险和回滚以 Git commit body 为准。
@@ -16,15 +16,16 @@ RAGForge 是面向企业内部、多用户知识空间的商业级 RAG 学习工
 ## 代码与启动
 
 ```text
-frontend/ragforge-web/    # Vue SPA
-backend/server/            # 模块化单体 API 和业务编排
-backend/ingestion-worker/  # 独立异步摄取 Worker
-backend/ai-runtime/        # OCR/rerank 窄职责运行时
-contracts/ tests/ fixtures/ scripts/ # 跨应用共享边界
-config/ deploy/ libs/      # 配置、运行资产和受约束复用库
+frontend/ragforge-web/     # Vue SPA，产品验收面
+backend/                   # 目标：space / knowledge / answer / gateway
+backend/server/            # 当前仍在运行的同步 API
+backend/ingestion-worker/  # 当前摄取进程，将并入 knowledge
+specs/ backlog/            # speckit 规格与执行看板
+contracts/ tests/ fixtures/ scripts/
+config/ deploy/ libs/
 ```
 
-前置条件：Docker Desktop、Java 21、Maven、Node.js、Python；真实本地模型验收另需 Ollama。
+前置条件：Docker Desktop、Java 21、Maven、Node.js、Python。真实生成需要已授权的云端 API 凭据。
 
 ```powershell
 .\scripts\dev\start-local.bat

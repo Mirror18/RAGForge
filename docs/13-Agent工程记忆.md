@@ -38,6 +38,13 @@
 
 > 按日期倒序。条目尽量短，能一句话说完就别写一段。
 
+### 2026-10-12 · M5 用 speckit + backlog，不要再抄一份任务板
+
+- 规格写在 `specs/`，执行看 `backlog/`；`docs/09` 只给 M5 留指针。把同一张卡写进两份清单会立刻漂。
+- ADR-0014 在人类 Accepted 之前不要改 `AGENTS.md` 的运行约束，也不要拆 Compose 进程。
+- 按业务收拢（space/knowledge/answer/gateway），不要按 OCR/rerank 再拆服务。
+- 页面去掉 Ollama 入口后，合成 fixture 必须改成 CLOUD，否则向导会一直提示未配置模型。
+
 ### 2026-09-06 · Windows 本地启动与 bootstrap 边界
 
 - Maven 全局 profile 与 `target/classes` 可能让 Spring Boot 看似启动但请求阶段缺类；本地脚本应先以 Java 21 完整编译并 repackage，再直接运行可执行 JAR，Worker 还要等待真实 JVM 启动日志与存活状态。
