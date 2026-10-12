@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,28 +48,23 @@ class BusinessIngestionSideEffectHandlerTest {
     }
 
     @Test
-    void splitsLongMarkdownAtSafeBoundariesWithoutGapsOrOverlaps() {
-        String text = "# Linux\n" + "a".repeat(2_300) + "\n\n" + "df -h\n" + "b".repeat(2_300);
+    void chunksMarkdownWithP4DefaultStrategyVersion() {
+        UUID spaceId = UUID.fromString("0190f5c2-7c1e-7abc-8def-1234567890ab");
+        UUID revisionId = UUID.fromString("0190f5c2-7c1e-7abc-8def-1234567890b6");
+        String text = """
+                # 合成运维手册
 
-        List<BusinessIngestionSideEffectHandler.ChunkRange> ranges =
-                BusinessIngestionSideEffectHandler.chunkRanges(text);
+                这是一段用于对照分块引擎的合成中文说明。重复若干句以超过旧的两千字符切分。
+                """.repeat(8);
 
-        assertThat(ranges).isNotEmpty();
-        assertThat(ranges.get(0).start()).isZero();
-        assertThat(ranges.get(ranges.size() - 1).end()).isEqualTo(text.length());
-        assertThat(ranges).allSatisfy(range -> {
-            assertThat(range.end()).isGreaterThan(range.start());
-            assertThat(range.end() - range.start()).isLessThanOrEqualTo(2_000);
+        var result = BusinessIngestionSideEffectHandler.chunkDocument(spaceId, revisionId, text);
+
+        assertThat(BusinessIngestionSideEffectHandler.strategyVersion()).isEqualTo("p4-default-v1");
+        assertThat(result.children()).isNotEmpty();
+        assertThat(result.children()).allSatisfy(child -> {
+            assertThat(child.contentRef()).contains("p4-default-v1");
+            assertThat(child.charEnd()).isGreaterThan(child.charStart());
         });
-        for (int index = 1; index < ranges.size(); index++) {
-            assertThat(ranges.get(index).start()).isEqualTo(ranges.get(index - 1).end());
-        }
-    }
-
-    @Test
-    void keepsShortMarkdownAsOneChunk() {
-        assertThat(BusinessIngestionSideEffectHandler.chunkRanges("Linux\ndf -h\nfree -h"))
-                .containsExactly(new BusinessIngestionSideEffectHandler.ChunkRange(0, 19));
     }
 
     @Test

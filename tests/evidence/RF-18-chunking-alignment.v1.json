@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "RF-18",
+  "status": "PASS",
+  "capturedAt": "2026-10-12T17:50:00+08:00",
+  "summary": {
+    "workerTest": "BusinessIngestionSideEffectHandlerTest",
+    "serverTest": "ChunkingEngineTest.workerAndServerShareP4DefaultChildBoundariesOnSyntheticMarkdown",
+    "samples": 1,
+    "corpus": "synthetic-ops-manual-zh",
+    "containsSourceText": false
+  },
+  "configurations": {
+    "legacyWorker": {
+      "version": "markdown-simple-v1",
+      "rule": "MAX_CHILD_CHARS=2000 newline-aware character windows"
+    },
+    "aligned": {
+      "version": "p4-default-v1",
+      "parentTargetTokens": 1200,
+      "childTargetTokens": 400,
+      "overlapTokens": 40,
+      "boundaryAware": true
+    }
+  },
+  "delta": {
+    "indexChunkingStrategyVersion": "new index_versions rows write p4-default-v1; existing rows are not rewritten",
+    "engine": "worker persistChunks now calls ChunkingEngine with p4DefaultV1; child content_ref includes p4-default-v1"
+  }
+}

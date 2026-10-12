@@ -69,7 +69,7 @@ public final class SpaceCandidateIndexBuilder {
         jdbc.update("""
                 INSERT INTO index_versions (id, space_id, version_no, index_state, candidate_collection,
                     embedding_profile_version, chunking_strategy_version, document_revision_count, child_chunk_count, created_at)
-                VALUES (?, ?, ?, 'BUILDING', ?, ?, 'markdown-simple-v1', ?, ?, ?)
+                VALUES (?, ?, ?, 'BUILDING', ?, ?, 'p4-default-v1', ?, ?, ?)
                 """, indexId, spaceId, versionNo, collection, embeddingProfileVersion, documentCount,
                 points.size(), Timestamp.from(now));
 

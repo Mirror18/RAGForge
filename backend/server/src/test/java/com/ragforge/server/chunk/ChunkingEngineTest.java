@@ -23,6 +23,32 @@ class ChunkingEngineTest {
     }
 
     @Test
+    void workerAndServerShareP4DefaultChildBoundariesOnSyntheticMarkdown() {
+        UUID spaceId = UUID.fromString("0190f5c2-7c1e-7abc-8def-1234567890ab");
+        UUID revisionId = UUID.fromString("0190f5c2-7c1e-7abc-8def-1234567890b6");
+        String text = """
+                # 合成运维手册
+
+                这是一段用于对照分块引擎的合成中文说明。重复若干句以超过旧的两千字符切分。
+                """.repeat(8);
+        String prefix = "spaces/" + spaceId + "/revisions/" + revisionId + "/chunks/" + STRATEGY.strategyVersion();
+        ChunkingEngine.ChunkingResult result = new ChunkingEngine(STRATEGY)
+                .chunk(new ChunkingRequest(spaceId, revisionId, 1, prefix, text));
+        assertThat(STRATEGY.strategyVersion()).isEqualTo("p4-default-v1");
+        assertThat(result.children()).isNotEmpty();
+        assertThat(result.children()).allSatisfy(child -> {
+            assertThat(child.contentRef()).contains("p4-default-v1");
+            assertThat(child.spaceId()).isEqualTo(spaceId);
+        });
+        List<Integer> starts = result.children().stream().map(ChunkCandidate::charStart).toList();
+        List<Integer> ends = result.children().stream().map(ChunkCandidate::charEnd).toList();
+        ChunkingEngine.ChunkingResult again = new ChunkingEngine(STRATEGY)
+                .chunk(new ChunkingRequest(spaceId, revisionId, 1, prefix, text));
+        assertThat(again.children().stream().map(ChunkCandidate::charStart).toList()).isEqualTo(starts);
+        assertThat(again.children().stream().map(ChunkCandidate::charEnd).toList()).isEqualTo(ends);
+    }
+
+    @Test
     void emptyInputProducesNoChunks() {
         ChunkingEngine.ChunkingResult result = chunk("");
         assertThat(result.parents()).isEmpty();

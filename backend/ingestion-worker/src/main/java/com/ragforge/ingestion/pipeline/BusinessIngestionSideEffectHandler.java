@@ -1,6 +1,10 @@
 package com.ragforge.ingestion.pipeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ragforge.ingestion.chunk.ChunkCandidate;
+import com.ragforge.ingestion.chunk.ChunkingEngine;
+import com.ragforge.ingestion.chunk.ChunkingRequest;
+import com.ragforge.ingestion.chunk.ChunkingStrategy;
 import com.ragforge.ingestion.common.UuidV7;
 import com.ragforge.ingestion.messaging.IngestionEventEnvelope;
 import com.ragforge.ingestion.messaging.IngestionJobRequestedPayload;
@@ -31,7 +35,7 @@ import java.util.UUID;
 public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHandler {
     private static final String PARSER_VERSION = "1.0.0";
     private static final String LOCATION_MAPPING_VERSION = "object-key.v1";
-    private static final int MAX_CHILD_CHARS = 2000;
+    private static final ChunkingStrategy CHUNKING = ChunkingStrategy.p4DefaultV1();
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private final ContentAddressedObjectStore store;
@@ -242,56 +246,37 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     }
 
     private List<Chunk> persistChunks(UUID spaceId, UUID revisionId, UUID textArtifactId, String text, Instant now) {
-        UUID parentId = UuidV7.random();
-        String headings = headingJson(text);
-        int tokens = Math.max(1, text.strip().split("\\s+").length);
-        String parentRef = "spaces/" + spaceId + "/revisions/" + revisionId + "/chunks/parent/" + parentId;
-        jdbc.update("""
-                INSERT INTO parent_chunks (id, space_id, document_revision_id, chunk_index, version_no, heading_path,
-                    token_start, token_end, char_start, char_end, content_ref, immutable, created_at)
-                VALUES (?, ?, ?, 0, 1, CAST(? AS jsonb), 0, ?, 0, ?, ?, TRUE, ?)
-                """, parentId, spaceId, revisionId, headings, tokens, text.length(), parentRef, Timestamp.from(now));
+        ChunkingEngine.ChunkingResult result = chunkDocument(spaceId, revisionId, text);
+        for (ChunkCandidate parent : result.parents()) {
+            jdbc.update("""
+                    INSERT INTO parent_chunks (id, space_id, document_revision_id, chunk_index, version_no, heading_path,
+                        token_start, token_end, char_start, char_end, content_ref, immutable, created_at)
+                    VALUES (?, ?, ?, ?, 1, CAST(? AS jsonb), ?, ?, ?, ?, ?, TRUE, ?)
+                    """, parent.id(), spaceId, revisionId, parent.chunkIndex(), headingJson(parent.headingPath()),
+                    parent.tokenStart(), parent.tokenEnd(), parent.charStart(), parent.charEnd(),
+                    parent.contentRef(), Timestamp.from(now));
+        }
         List<Chunk> chunks = new ArrayList<>();
-        int tokenStart = 0;
-        int lineStart = 1;
-        int chunkIndex = 0;
-        for (ChunkRange range : chunkRanges(text)) {
-            String slice = text.substring(range.start(), range.end());
-            UUID childId = UuidV7.random();
-            String ref = "spaces/" + spaceId + "/revisions/" + revisionId + "/chunks/child/" + childId;
-            String hash = sha256(slice.getBytes(StandardCharsets.UTF_8));
-            int sliceTokens = Math.max(1, slice.strip().split("\\s+").length);
-            int lineEnd = lineStart + countLines(slice) - 1;
+        for (ChunkCandidate child : result.children()) {
             jdbc.update("""
                     INSERT INTO child_chunks (id, space_id, parent_chunk_id, document_revision_id, chunk_index, version_no,
                         heading_path, token_start, token_end, char_start, char_end, line_start, line_end, content_ref, text_hash, immutable, created_at)
                     VALUES (?, ?, ?, ?, ?, 1, CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
-                    """, childId, spaceId, parentId, revisionId, chunkIndex++, headingJson(slice), tokenStart,
-                    tokenStart + sliceTokens, range.start(), range.end(), lineStart, lineEnd, ref, hash, Timestamp.from(now));
-            chunks.add(new Chunk(parentId, childId, ref, hash, slice));
-            tokenStart += sliceTokens;
-            lineStart = lineEnd + 1;
+                    """, child.id(), spaceId, child.parentId(), revisionId, child.chunkIndex(), headingJson(child.headingPath()),
+                    child.tokenStart(), child.tokenEnd(), child.charStart(), child.charEnd(),
+                    child.startLine(), child.endLine(), child.contentRef(), child.textHash(), Timestamp.from(now));
+            chunks.add(new Chunk(child.parentId(), child.id(), child.contentRef(), child.textHash(), child.text()));
         }
         return List.copyOf(chunks);
     }
 
-    static List<ChunkRange> chunkRanges(String text) {
-        if (text == null || text.isEmpty()) return List.of(new ChunkRange(0, 0));
-        List<ChunkRange> ranges = new ArrayList<>();
-        int start = 0;
-        while (start < text.length()) {
-            int preferredEnd = Math.min(text.length(), start + MAX_CHILD_CHARS);
-            int end = preferredEnd;
-            if (preferredEnd < text.length()) {
-                int newline = text.lastIndexOf('\n', preferredEnd - 1);
-                if (newline >= start + MAX_CHILD_CHARS / 4) end = newline + 1;
-            }
-            if (end <= start) end = preferredEnd;
-            if (end < text.length() && Character.isLowSurrogate(text.charAt(end))) end--;
-            ranges.add(new ChunkRange(start, end));
-            start = end;
-        }
-        return List.copyOf(ranges);
+    static ChunkingEngine.ChunkingResult chunkDocument(UUID spaceId, UUID revisionId, String text) {
+        String prefix = "spaces/" + spaceId + "/revisions/" + revisionId + "/chunks/" + CHUNKING.strategyVersion();
+        return new ChunkingEngine(CHUNKING).chunk(new ChunkingRequest(spaceId, revisionId, 1, prefix, text));
+    }
+
+    static String strategyVersion() {
+        return CHUNKING.strategyVersion();
     }
 
     private void ensureRetrievalProfile(UUID spaceId, Instant now) {
@@ -323,8 +308,13 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
 
     private String json(Object value) { try { return mapper.writeValueAsString(value); } catch (Exception e) { throw new IllegalStateException("diagnostic serialization failed", e); } }
     private int next(String sql, Object... args) { return jdbc.queryForObject(sql, Integer.class, args); }
-    private static int countLines(String value) { return (int) value.chars().filter(c -> c == '\n').count() + 1; }
-    private static String headingJson(String text) { String first = text.lines().filter(line -> line.startsWith("#")).findFirst().orElse(""); String heading = first.replaceFirst("^#+\\s*", "").replace("\"", ""); return heading.isBlank() ? "[]" : "[\"" + heading + "\"]"; }
+    private String headingJson(List<String> headingPath) {
+        try {
+            return mapper.writeValueAsString(headingPath == null ? List.of() : headingPath);
+        } catch (Exception e) {
+            throw new IllegalStateException("heading path serialization failed", e);
+        }
+    }
     private static String sha256(byte[] value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); } catch (Exception e) { throw new IllegalStateException(e); } }
 
     private record DocumentContext(UUID sourceDocumentId, UUID pipelineVersionId, String path, int revisionNo,
@@ -332,6 +322,5 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     record ManifestWrite(UUID id, UUID spaceId, UUID documentRevisionId, UUID pipelineVersionId,
                          UUID parentArtifactId, UUID objectArtifactId, String contentHash, String objectRef,
                          String parserName, String parserVersion, String locationMappingVersion, Instant createdAt) { }
-    record ChunkRange(int start, int end) { }
     private record Chunk(UUID parentId, UUID childId, String contentRef, String textHash, String text) { }
 }
