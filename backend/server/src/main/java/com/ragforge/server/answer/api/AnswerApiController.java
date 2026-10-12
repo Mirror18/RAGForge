@@ -66,6 +66,7 @@ public class AnswerApiController {
     private final AnswerSseEventAdapter sseAdapter;
     private final AnswerAuthorizationContextFactory authorizationContexts;
     private final HistoryMaterialAccess historyMaterialAccess;
+    private final SpaceAnswerBindingResolver bindingResolver;
     private final ConcurrentMap<RunScope, ActiveGeneration> activeGenerations = new ConcurrentHashMap<>();
 
     public AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
@@ -77,15 +78,23 @@ public class AnswerApiController {
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerPersistencePort persistence,
                         AnswerAuthorizationContextFactory authorizationContexts,
-                        RunRepository runs, Optional<JdbcRevisionArtifactMaterialService> materials) {
+                        RunRepository runs, Optional<JdbcRevisionArtifactMaterialService> materials,
+                        SpaceAnswerBindingResolver bindingResolver) {
         this(answers, events, authorization, objectMapper, new AnswerApiProjectionStore(persistence),
                 authorizationContexts, runs, materials == null ? null : materials
-                        .map(service -> (HistoryMaterialAccess) service::isCurrentReadable).orElse(null));
+                        .map(service -> (HistoryMaterialAccess) service::isCurrentReadable).orElse(null),
+                bindingResolver);
     }
 
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
                         ObjectMapper objectMapper, AnswerApiProjectionStore projections) {
-        this(answers, events, authorization, objectMapper, projections, null);
+        this(answers, events, authorization, objectMapper, projections, (SpaceAnswerBindingResolver) null);
+    }
+
+    AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
+                        ObjectMapper objectMapper, AnswerApiProjectionStore projections,
+                        SpaceAnswerBindingResolver bindingResolver) {
+        this(answers, events, authorization, objectMapper, projections, null, null, null, bindingResolver);
     }
 
     AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
@@ -104,6 +113,14 @@ public class AnswerApiController {
                         ObjectMapper objectMapper, AnswerApiProjectionStore projections,
                         AnswerAuthorizationContextFactory authorizationContexts, RunRepository runs,
                         HistoryMaterialAccess historyMaterialAccess) {
+        this(answers, events, authorization, objectMapper, projections, authorizationContexts, runs,
+                historyMaterialAccess, null);
+    }
+
+    AnswerApiController(RAGAnswerService answers, RunEventService events, SpaceAuthorization authorization,
+                        ObjectMapper objectMapper, AnswerApiProjectionStore projections,
+                        AnswerAuthorizationContextFactory authorizationContexts, RunRepository runs,
+                        HistoryMaterialAccess historyMaterialAccess, SpaceAnswerBindingResolver bindingResolver) {
         this.answers = answers;
         this.events = events;
         this.authorization = authorization;
@@ -113,6 +130,7 @@ public class AnswerApiController {
         this.sseAdapter = new AnswerSseEventAdapter(objectMapper);
         this.authorizationContexts = authorizationContexts;
         this.historyMaterialAccess = historyMaterialAccess;
+        this.bindingResolver = bindingResolver;
     }
 
     @PostMapping(value = "/answers", consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -133,7 +151,8 @@ public class AnswerApiController {
         UUID correlationId = correlationId(servletRequest);
         RunScope scope = new RunScope(spaceId, request.runId());
         ActiveGeneration active = new ActiveGeneration(UuidV7.random(), new CancellationToken());
-        AnswerRequest answerRequest = request.toDomain(spaceId, correlationId, idempotencyKey,
+        CreateAnswerRequest bound = bindingResolver == null ? request : request.filled(bindingResolver.resolve(spaceId, request));
+        AnswerRequest answerRequest = bound.toDomain(spaceId, correlationId, idempotencyKey,
                 active.cancellationToken, active.answerId);
         if (activeGenerations.putIfAbsent(scope, active) != null) {
             throw new ApiException(HttpStatus.CONFLICT, "answer_already_running", "Answer conflict",
@@ -327,14 +346,20 @@ public class AnswerApiController {
     }
 
     public record CreateAnswerRequest(@NotNull UUID runId, @NotBlank @Size(max = 32_000) String query,
-                                      @NotNull UUID promptVersionId, @NotNull UUID modelRouteVersionId,
-                                      @NotNull UUID modelProfileVersionId, @NotBlank @Size(max = 200) String model,
-                                      @Min(1) @Max(200_000) int maxContextTokens,
+                                      UUID promptVersionId, UUID modelRouteVersionId,
+                                      UUID modelProfileVersionId, @Size(max = 200) String model,
+                                      @Min(1) @Max(200_000) Integer maxContextTokens,
                                       @Min(1) @Max(120) Integer timeoutSeconds,
                                       @Size(max = 8_000) String toolSchemaVersionsJson,
-                                      @NotBlank @Size(min = 64, max = 64) String datasetHash,
-                                      @NotBlank @Size(min = 64, max = 64) String configHash,
+                                      @Size(min = 64, max = 64) String datasetHash,
+                                      @Size(min = 64, max = 64) String configHash,
                                       Boolean allowCloudEgress) {
+        CreateAnswerRequest filled(SpaceAnswerBindingResolver.ResolvedAnswerBindings bindings) {
+            return new CreateAnswerRequest(runId, query, bindings.promptVersionId(), bindings.modelRouteVersionId(),
+                    bindings.modelProfileVersionId(), bindings.model(), bindings.maxContextTokens(), timeoutSeconds,
+                    toolSchemaVersionsJson, bindings.datasetHash(), bindings.configHash(),
+                    bindings.allowCloudEgress());
+        }
         AnswerRequest toDomain(UUID spaceId, UUID correlationId, String idempotencyKey) {
             return toDomain(spaceId, correlationId, idempotencyKey, new CancellationToken());
         }
@@ -349,7 +374,8 @@ public class AnswerApiController {
             return new AnswerRequest(spaceId, runId, correlationId, idempotencyKey, query, promptVersionId,
                     modelRouteVersionId, modelProfileVersionId, model,
                     Boolean.TRUE.equals(allowCloudEgress) ? EgressDecision.CLOUD_ALLOWED : EgressDecision.LOCAL_ONLY,
-                    maxContextTokens, Duration.ofSeconds(timeoutSeconds == null ? 30 : timeoutSeconds),
+                    maxContextTokens == null ? 1000 : maxContextTokens,
+                    Duration.ofSeconds(timeoutSeconds == null ? 30 : timeoutSeconds),
                     toolSchemaVersionsJson, datasetHash, configHash, runId, cancellationToken, answerId);
         }
     }

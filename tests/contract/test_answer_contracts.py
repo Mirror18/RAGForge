@@ -326,6 +326,15 @@ class Phase5ContractTest(unittest.TestCase):
         self.assertIn("IdempotencyKey", json.dumps(paths["/api/v1/spaces/{spaceId}/answers"]))
         self.assertIn("LastEventId", json.dumps(paths["/api/v1/spaces/{spaceId}/answers/{runId}/events"]))
 
+    def test_create_answer_request_allows_omitted_technical_ids(self) -> None:
+        schema = self.openapi["components"]["schemas"]["AnswerRequest"]
+        self.assertEqual(schema["required"], ["runId", "query"])
+        for field in ("promptVersionId", "modelRouteVersionId", "modelProfileVersionId", "model", "datasetHash", "configHash"):
+            self.assertIn(field, schema["properties"])
+            self.assertNotIn(field, schema["required"])
+        omitted = {"runId": self.ids["run"], "query": "What is verified?"}
+        validate(omitted, schema, OPENAPI, self.openapi)
+
     def test_phase5_openapi_answer_components_deny_raw_content_and_external_urls(self) -> None:
         schemas = self.openapi["components"]["schemas"]
         self.assertEqual(schemas["AnswerSseEvent"]["properties"]["event_type"]["enum"], [

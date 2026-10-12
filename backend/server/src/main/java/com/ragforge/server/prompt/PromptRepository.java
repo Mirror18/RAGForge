@@ -119,6 +119,29 @@ public class PromptRepository {
         }
     }
 
+    public Optional<PromptVersion> findLatestPublished(UUID spaceId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                            SELECT id, space_id, prompt_key, version_no, template, template_hash,
+                                   variables_schema, output_contract, change_note, created_by_user_id, status,
+                                   created_at, updated_at, correlation_id
+                            FROM prompt_versions
+                            WHERE space_id = ? AND status = 'PUBLISHED'
+                            ORDER BY version_no DESC, updated_at DESC, id DESC
+                            LIMIT 1
+                            """, (rs, rowNum) -> new PromptVersion(
+                    rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
+                    rs.getString("prompt_key"), rs.getInt("version_no"), rs.getString("template"),
+                    rs.getString("template_hash"), rs.getString("variables_schema"),
+                    rs.getString("output_contract"), rs.getString("change_note"),
+                    rs.getObject("created_by_user_id", UUID.class), PromptStatus.valueOf(rs.getString("status")),
+                    instant(rs, "created_at"), instant(rs, "updated_at"),
+                    rs.getObject("correlation_id", UUID.class)), spaceId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     /**
      * Resolves a published template by its immutable content hash and space.
      * The opaque ref remains an audit identity; the hash is the binding to the

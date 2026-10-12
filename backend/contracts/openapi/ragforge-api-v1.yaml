@@ -663,7 +663,7 @@
         "tags": ["answers"],
         "operationId": "createAnswer",
         "summary": "Create a verified answer projection",
-        "description": "Runs retrieval and generation only through the explicitly configured space route. While this request is in flight, a client that already opened the run SSE endpoint receives provider-native answer_text deltas. The terminal response contains validated structured claims/citations or a refusal; provider frames, URLs, filenames, quotes and bodies are never citation fields.",
+        "description": "Runs retrieval and generation through the space-authorized Chat route. Technical IDs may be omitted when the space already has an active index, active retrieval profile, published prompt and authorized Chat route; the server binds those identities by space_id and records them in provenance. Explicit IDs still override defaults and must belong to the same space. Missing bindings return no_active_index, no_active_profile, no_published_prompt, no_authorized_chat_route or cloud_egress_required. While this request is in flight, a client that already opened the run SSE endpoint receives provider-native answer_text deltas. The terminal response contains validated structured claims/citations or a refusal; provider frames, URLs, filenames, quotes and bodies are never citation fields.",
         "security": [{"cookieAuth": []}, {"serviceToken": []}],
         "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/CsrfToken"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerRequest"}}}},
@@ -1969,13 +1969,13 @@
       },
       "AnswerRequest": {
         "type": "object", "additionalProperties": false,
-        "required": ["runId", "query", "promptVersionId", "modelRouteVersionId", "modelProfileVersionId", "model", "maxContextTokens", "datasetHash", "configHash"],
+        "required": ["runId", "query"],
         "properties": {
           "runId": {"$ref": "#/components/schemas/UuidV7"}, "query": {"type": "string", "minLength": 1, "maxLength": 32000},
           "promptVersionId": {"$ref": "#/components/schemas/UuidV7"}, "modelRouteVersionId": {"$ref": "#/components/schemas/UuidV7"}, "modelProfileVersionId": {"$ref": "#/components/schemas/UuidV7"}, "model": {"type": "string", "minLength": 1, "maxLength": 200},
           "maxContextTokens": {"type": "integer", "minimum": 1, "maximum": 200000}, "timeoutSeconds": {"type": "integer", "minimum": 1, "maximum": 120}, "toolSchemaVersionsJson": {"type": "string", "maxLength": 8000}, "datasetHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "configHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "allowCloudEgress": {"type": "boolean", "default": false}
         },
-        "description": "The path space is authoritative; the body cannot override it. Cloud egress is opt-in and must pass the space binding policy."
+        "description": "The path space is authoritative; the body cannot override it. promptVersionId, modelRouteVersionId, modelProfileVersionId, model, datasetHash and configHash may be omitted when the space already has those active bindings. Explicit values override defaults and must belong to the same space. Cloud egress is opt-in and must pass the space binding policy."
       },
       "AnswerResponse": {
         "type": "object", "additionalProperties": false,

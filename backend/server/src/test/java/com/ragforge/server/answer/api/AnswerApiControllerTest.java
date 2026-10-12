@@ -116,6 +116,52 @@ class AnswerApiControllerTest {
     }
 
     @Test
+    void omittedTechnicalIdsAreBoundBySpaceAndWrittenToTheAnswerRequest() throws Exception {
+        RAGAnswerService answerService = mock(RAGAnswerService.class);
+        RunEventService eventService = mock(RunEventService.class);
+        SpaceAuthorization authorization = mock(SpaceAuthorization.class);
+        SpaceAnswerBindingResolver bindingResolver = mock(SpaceAnswerBindingResolver.class);
+        doNothing().when(authorization).requireWrite(eq(spaceId), any());
+        RunEventStore.Subscription streamSubscription = mock(RunEventStore.Subscription.class);
+        when(eventService.subscribe(eq(spaceId), eq(runId), any())).thenReturn(streamSubscription);
+        when(eventService.replay(spaceId, runId, null)).thenReturn(new RunEventStore.ReplayResult(
+                List.of(), RunEventStore.CursorStatus.NO_CURSOR, null, 0, 0));
+        UUID promptVersionId = UuidV7.random();
+        UUID routeVersionId = UuidV7.random();
+        UUID profileVersionId = UuidV7.random();
+        when(bindingResolver.resolve(eq(spaceId), any())).thenReturn(new SpaceAnswerBindingResolver.ResolvedAnswerBindings(
+                promptVersionId, routeVersionId, profileVersionId, "cloud-chat", 800, "a".repeat(64), "b".repeat(64),
+                true));
+        ArgumentCaptor<AnswerRequest> captor = ArgumentCaptor.forClass(AnswerRequest.class);
+        when(answerService.answer(captor.capture(), isNull(), any(GenerationStreamObserver.class)))
+                .thenReturn(completedAnswer());
+        AnswerApiController controller = new AnswerApiController(answerService, eventService, authorization,
+                objectMapper, new AnswerApiProjectionStore(), bindingResolver);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
+        String body = """
+                {"runId":"%s","query":"What is verified?"}
+                """.formatted(runId);
+
+        mvc.perform(post("/api/v1/spaces/{spaceId}/answers", spaceId)
+                        .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .header("X-Correlation-Id", correlationId)
+                        .principal(authentication()).content(body))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.spaceId").value(spaceId.toString()))
+                .andExpect(jsonPath("$.citations[0].evidenceId").value(evidenceId.toString()));
+
+        AnswerRequest bound = captor.getValue();
+        assertThat(bound.promptVersionId()).isEqualTo(promptVersionId);
+        assertThat(bound.modelRouteVersionId()).isEqualTo(routeVersionId);
+        assertThat(bound.modelProfileVersionId()).isEqualTo(profileVersionId);
+        assertThat(bound.model()).isEqualTo("cloud-chat");
+        assertThat(bound.datasetHash()).isEqualTo("a".repeat(64));
+        assertThat(bound.configHash()).isEqualTo("b".repeat(64));
+        assertThat(bound.egressDecision()).isEqualTo(com.ragforge.server.provider.adapter.EgressDecision.CLOUD_ALLOWED);
+    }
+
+    @Test
     void citationPreviewIsExactStoredProvenanceAndNeverReturnsBody() throws Exception {
         RAGAnswerService answerService = mock(RAGAnswerService.class);
         RunEventService eventService = mock(RunEventService.class);
@@ -201,7 +247,8 @@ class AnswerApiControllerTest {
     void optionalMaterialServiceAllowsTheDefaultObjectStorageDisabledGraphToConstruct() {
         assertThatCode(() -> new AnswerApiController(mock(RAGAnswerService.class), mock(RunEventService.class),
                 mock(SpaceAuthorization.class), objectMapper, mock(AnswerPersistencePort.class),
-                mock(AnswerAuthorizationContextFactory.class), mock(RunRepository.class), Optional.empty()))
+                mock(AnswerAuthorizationContextFactory.class), mock(RunRepository.class), Optional.empty(),
+                mock(SpaceAnswerBindingResolver.class)))
                 .doesNotThrowAnyException();
     }
 
