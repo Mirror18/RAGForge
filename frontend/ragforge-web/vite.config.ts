@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [vue()],
+    cacheDir: "../../tmp/local-run/vite",
     server: {
       proxy: {
         "/api": serverTarget,

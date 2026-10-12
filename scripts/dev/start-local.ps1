@@ -153,6 +153,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Compose core 健康检查失败。" }
 
     New-Item -ItemType Directory -Force -Path $runtimeDirectory | Out-Null
+    $javaTmpDirectory = Join-Path $runtimeDirectory "jvm-tmp"
+    New-Item -ItemType Directory -Force -Path $javaTmpDirectory | Out-Null
+    $env:LOGGING_FILE_PATH = $runtimeDirectory
+    $env:JAVA_TOOL_OPTIONS = "-Djava.io.tmpdir=$javaTmpDirectory"
     $env:SERVER_PORT = "$ServerPort"
     $env:JDBC_DATABASE_URL = "jdbc:postgresql://127.0.0.1:$($ports.POSTGRES_PORT)/ragforge"
     $env:JDBC_DATABASE_USERNAME = "ragforge"
@@ -191,7 +195,7 @@ try {
     Invoke-MavenPackage "server" $serverJar (Join-Path $runtimeDirectory "server-compile.log")
     # Run the immutable repackaged JAR so IDE/Maven output refreshes cannot
     # replace classes after the build has completed.
-    $server = Start-Process -FilePath $java -ArgumentList "-jar `"$serverJar`"" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
+    $server = Start-Process -FilePath $java -ArgumentList "-Djava.io.tmpdir=`"$javaTmpDirectory`"", "-jar", "`"$serverJar`"" -WorkingDirectory $runtimeDirectory -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $server.Id
     try {
         Wait-ForHttp "http://127.0.0.1:$ServerPort/actuator/health" 180 $server
@@ -211,7 +215,7 @@ try {
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
     Invoke-MavenPackage "ingestion-worker" $workerJar (Join-Path $runtimeDirectory "worker-compile.log")
-    $worker = Start-Process -FilePath $java -ArgumentList "-jar `"$workerJar`" --ragforge.ingestion.enabled=true" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
+    $worker = Start-Process -FilePath $java -ArgumentList "-Djava.io.tmpdir=`"$javaTmpDirectory`"", "-jar", "`"$workerJar`"", "--ragforge.ingestion.enabled=true" -WorkingDirectory $runtimeDirectory -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
     try {
         Wait-ForLog (Join-Path $runtimeDirectory "worker.log") "Started IngestionWorkerApplication in " 90 $worker
@@ -231,7 +235,7 @@ try {
             if ($LASTEXITCODE -ne 0) { throw "Web 依赖安装失败。" }
         }
         $env:VITE_SERVER_TARGET = "http://127.0.0.1:$ServerPort"
-        $web = Start-Process -FilePath $npm -ArgumentList "--prefix", "frontend/ragforge-web", "run", "dev", "--", "--host", "127.0.0.1", "--port", "$WebPort" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "web.log") -RedirectStandardError (Join-Path $runtimeDirectory "web.err.log") -PassThru
+        $web = Start-Process -FilePath $npm -ArgumentList "--prefix", "frontend/ragforge-web", "run", "dev", "--", "--host", "127.0.0.1", "--port", "$WebPort", "--cacheDir", (Join-Path $runtimeDirectory "vite") -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "web.log") -RedirectStandardError (Join-Path $runtimeDirectory "web.err.log") -PassThru
         Set-Content -Path (Join-Path $runtimeDirectory "web.pid") -Value $web.Id
         try {
             Wait-ForHttp "http://127.0.0.1:$WebPort/" 90 $web
