@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 
-FROM maven:3.9-eclipse-temurin-21@sha256:8f6ac126f7810bb5549c4cd122d2bf0e9cda5bdeb0838aa928f09e779fd8bef8 AS java-build
+FROM maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 AS java-build
 WORKDIR /workspace
 
 COPY backend/pom.xml backend/pom.xml
@@ -16,7 +16,7 @@ RUN mkdir -p /tmp/healthcheck-classes \
     && javac --release 21 -d /tmp/healthcheck-classes /tmp/HttpHealthcheck.java \
     && jar --create --file /tmp/ragforge-healthcheck.jar -C /tmp/healthcheck-classes HttpHealthcheck.class
 
-FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS web-build
+FROM node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS web-build
 WORKDIR /workspace/frontend/ragforge-web
 COPY frontend/ragforge-web/package.json frontend/ragforge-web/package-lock.json ./
 RUN npm ci
@@ -40,12 +40,12 @@ COPY --from=java-build /tmp/ragforge-healthcheck.jar /opt/ragforge-healthcheck.j
 USER 10001:10001
 ENTRYPOINT ["java", "-jar", "/app/ragforge-ingestion-worker.jar"]
 
-FROM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce AS web-healthcheck-build
+FROM alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8 AS web-healthcheck-build
 COPY deploy/docker/http-healthcheck.c /tmp/http-healthcheck.c
 RUN apk add --no-cache build-base \
     && cc -static -O2 -s -o /tmp/http-healthcheck /tmp/http-healthcheck.c
 
-FROM cgr.dev/chainguard/nginx:latest@sha256:f801aa4ac908f6c3847efe81b577e4f34e1f237b5556dfbe698127ad464db269 AS web
+FROM cgr.dev/chainguard/nginx:latest@sha256:d74ba9e5cf9f6b049807e27a5a14a8cd2550ac428143b7d15ea3dbad282f4ed1 AS web
 COPY --from=web-build /workspace/frontend/ragforge-web/dist /usr/share/nginx/html
 COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY deploy/docker/nginx-main.conf /etc/nginx/nginx.conf
