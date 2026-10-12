@@ -91,7 +91,8 @@ You **MUST** consider the user input before proceeding (if not empty).
      - Automatically proceed to step 3
 
 3. Load and analyze the implementation context:
-   - **REQUIRED**: Read tasks.md for the complete task list and execution plan
+   - **REQUIRED (RAGForge)**: Treat `backlog/tasks` cards with matching `source_spec` as the execution queue. If `tasks.md` has `Tnnn` rows that are not yet on the board, run `python scripts/dev/import_speckit_tasks.py --feature-dir <FEATURE_DIR>` first.
+   - **REQUIRED**: Read tasks.md for the complete task list and execution plan (design context only; status of work is the backlog card)
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
    - **IF EXISTS**: Read data-model.md for entities and relationships
    - **IF EXISTS**: Read contracts/ for API specifications and test requirements
@@ -170,6 +171,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Provide clear error messages with context for debugging
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
+   - **RAGForge**: After each completed `Tnnn`, set the matching backlog card to `Done`, then create a Chinese Conventional Commit for that card only. Do not start the next card with uncommitted work.
 
 9. Completion validation:
    - Verify all required tasks are completed
@@ -220,7 +222,8 @@ Report final status with summary of completed work.
 
 ## Done When
 
-- [ ] All tasks in tasks.md completed and marked `[X]`
+- [ ] All tasks in tasks.md completed and marked `[X]`, and matching `backlog/tasks` cards are `Done`
+- [ ] Each completed card was committed on its own with a Chinese Conventional Commit before the next card started
 - [ ] Implementation validated against specification, plan, and test coverage
 - [ ] Extension hooks dispatched or skipped according to the rules in Mandatory Post-Execution Hooks above
 - [ ] Completion reported to user with summary of completed work

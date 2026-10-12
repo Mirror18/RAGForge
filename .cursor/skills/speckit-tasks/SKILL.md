@@ -212,4 +212,5 @@ Every task MUST strictly follow this format:
 
 - [ ] tasks.md generated with all phases, task IDs, and file paths
 - [ ] Extension hooks dispatched or skipped according to the rules in Mandatory Post-Execution Hooks above
-- [ ] Completion reported to user with task count, story breakdown, and MVP scope
+- [ ] RAGForge: ran `python scripts/dev/import_speckit_tasks.py --feature-dir <FEATURE_DIR>` so every `Tnnn` exists on `backlog/tasks` (idempotent). Do not tell the user the work is ready to implement until the board cards exist.
+- [ ] Completion reported to user with task count, story breakdown, MVP scope, and the imported backlog IDs

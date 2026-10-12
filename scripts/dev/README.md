@@ -1,6 +1,14 @@
 # Development Scripts
 
-统一入口是 `scripts/dev/core.py`，使用 Python 标准库和 Docker Compose CLI，Windows、WSL/Linux 和 CI 使用同一组命令：
+统一入口是 `scripts/dev/core.py`，使用 Python 标准库和 Docker Compose CLI，Windows、WSL/Linux 和 CI 使用同一组命令。
+
+把 speckit `tasks.md` 导入任务板：
+
+```text
+python scripts/dev/import_speckit_tasks.py --feature-dir specs/001-knowledge-loop
+```
+
+默认只为未勾选的 `Tnnn` 建卡；已在板上的 `source_spec` + `source_task` 会同步状态。
 
 ```text
 python scripts/dev/core.py config

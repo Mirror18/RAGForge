@@ -8,4 +8,4 @@
 | [002-cloud-only-models](./002-cloud-only-models/) | 模型只走已授权的云端 API | Draft |
 | [003-business-services](./003-business-services/) | 四个业务进程可独立注册到 Nacos | Draft |
 
-实施任务以仓库根目录 `backlog/` 为准。现行代码说明在 `backlog/docs/`。
+实施任务以仓库根目录 `backlog/` 为准。`/speckit-tasks` 写完 `tasks.md` 后必须运行 `python scripts/dev/import_speckit_tasks.py --feature-dir specs/<id>`。现行代码说明在 `backlog/docs/`。

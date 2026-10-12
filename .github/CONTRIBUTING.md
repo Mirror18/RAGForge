@@ -4,5 +4,5 @@
 
 - 先读根目录 [`AGENTS.md`](../AGENTS.md)。
 - 再读 [`当前代码`](<../backlog/docs/architecture/doc-1 - 当前代码.md>)。
-- 日常执行看 `backlog/tasks`。
-- 每张任务卡独立 worktree、独立提交；任务执行细节回到 Git history。
+- 日常执行看 `backlog/tasks`。speckit 任务先导入再做。
+- 每张任务卡验收后立即提交；并行 worker 才使用独立 worktree。任务执行细节回到 Git history。

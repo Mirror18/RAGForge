@@ -32,13 +32,14 @@ A user must complete the product loop in the Web UI: sign in, space, cloud model
 ## Delivery Workflow
 
 1. Specify behavior in `specs/` before changing architecture or public contracts.
-2. Track committed work in `backlog/`. Do not copy the same task into a second board.
-3. Architecture changes require an ADR. ADR-0014 stays Proposed until a human accepts it. Until then, `AGENTS.md` still names the modular monolith plus ingestion worker as the running constraint.
-4. Retrieval, prompt, chunking, parser, embedding, or rerank changes require an offline evaluation with a recorded configuration version.
-5. High-risk actions need explicit human approval: accepting an ADR, accepting a third-party license, enabling cloud egress for a space, applying a production migration, and cutting a release.
+2. Track committed work in `backlog/`. Speckit `tasks.md` is a draft; import it with `python scripts/dev/import_speckit_tasks.py` before implementation. Do not copy the same task into a second board.
+3. After each card meets acceptance, commit it immediately. Do not batch unrelated cards.
+4. Architecture changes require an ADR. ADR-0014 is Accepted; the running processes remain `backend/server`, `backend/ingestion-worker`, `frontend/ragforge-web`, and `backend/ai-runtime` until the Maven split cards land.
+5. Retrieval, prompt, chunking, parser, embedding, or rerank changes require an offline evaluation with a recorded configuration version.
+6. High-risk actions need explicit human approval: accepting an ADR, accepting a third-party license, enabling cloud egress for a space, applying a production migration, and cutting a release.
 
 ## Governance
 
 This constitution is the speckit evaluation baseline. The running tree is described in `backlog/docs/architecture/doc-1 - 当前代码.md`. `backlog/` is the execution board. Amendments require a dated constitution change and, if they alter architecture, a new or superseding ADR.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-12
+**Version**: 1.1.0 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-12

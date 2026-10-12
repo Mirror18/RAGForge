@@ -8,9 +8,11 @@ RAGForge 是面向企业内部、多用户知识空间的商业级 RAG 学习工
 
 1. [当前代码](<./backlog/docs/architecture/doc-1 - 当前代码.md>)
 2. [运行与安全](<./backlog/docs/operations/doc-2 - 运行与安全.md>)
-3. [specs](./specs/README.md) 与 [backlog 任务](./backlog/)
+3. [任务与文档工作流](<./backlog/docs/operations/doc-3 - 任务与文档工作流.md>)
+4. [业务闭环优化方向](<./backlog/docs/architecture/doc-4 - 业务闭环优化方向.md>)
+5. [specs](./specs/README.md) 与 [backlog 任务](./backlog/)
 
-任务目标以任务板为准；实际改动、测试、风险和回滚以 Git commit body 为准。
+任务目标以任务板为准；speckit 的 `tasks.md` 导入 backlog 后才能开工。每张卡验收后单独提交。实际改动、测试、风险和回滚以 Git commit body 为准。
 
 ## 代码与启动
 

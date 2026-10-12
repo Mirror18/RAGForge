@@ -16,6 +16,8 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+**RAGForge:** The execution board is `backlog/tasks`, not GitHub Issues. Run `python scripts/dev/import_speckit_tasks.py --feature-dir <FEATURE_DIR>` first. Only continue creating GitHub issues if the user explicitly asked for GitHub tracking.
+
 ## Pre-Execution Checks
 
 **Check for extension hooks (before tasks-to-issues conversion)**:

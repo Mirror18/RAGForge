@@ -9,9 +9,11 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 ## 开始前
 
-1. 日常任务先读 [`当前代码`](<../../../backlog/docs/architecture/doc-1 - 当前代码.md>) 和 `backlog/tasks`。历史阶段记录在 Git history。
-2. 执行 `git status --short --branch`，保留用户已有改动；按任务板的卡片、Ticket、ownership 和预算工作。
-3. Worker 只读 Ticket 的 allow-list，不通过全仓搜索补上下文。
+1. 日常任务先读 [`当前代码`](<../../../backlog/docs/architecture/doc-1 - 当前代码.md>)、[`任务与文档工作流`](<../../../backlog/docs/operations/doc-3 - 任务与文档工作流.md>) 和 `backlog/tasks`。历史阶段记录在 Git history。
+2. 执行 `git status --short --branch`，保留用户已有改动；只实现 backlog 卡片，不把 `specs/*/tasks.md` 当执行队列。
+3. speckit 生成或更新 `tasks.md` 后，运行 `python scripts/dev/import_speckit_tasks.py --feature-dir specs/<id>` 再开工。
+4. 一张卡验收通过后立即用中文 Conventional Commit 提交，再开始下一张。
+5. Worker 只读 Ticket 的 allow-list，不通过全仓搜索补上下文。
 
 ## 按领域路由
 
@@ -40,3 +42,5 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 - 当前代码：[`doc-1`](<../../../backlog/docs/architecture/doc-1 - 当前代码.md>)
 - 运行与安全：[`doc-2`](<../../../backlog/docs/operations/doc-2 - 运行与安全.md>)
+- 任务工作流：[`doc-3`](<../../../backlog/docs/operations/doc-3 - 任务与文档工作流.md>)
+- 优化方向：[`doc-4`](<../../../backlog/docs/architecture/doc-4 - 业务闭环优化方向.md>)
