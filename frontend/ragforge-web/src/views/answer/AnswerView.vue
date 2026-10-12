@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ApiError, ANSWER_READINESS_LABELS, apiFetch, getAnswerReadiness, listAllCursorPages, type AnswerDefaults, type AnswerReadiness, type ModelProfile, type ModelRoute, type ProvenanceContext, type SpaceBinding } from "../../api";
 import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, deleteAnswerConversation, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, renameAnswerConversation, submitAnswerFeedback, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "../../answer";
+import { recoveryFromAbstention, recoveryFromAnswerError, recoveryFromProblemCode, recoveryFromUnknown, type RecoveryAction } from "../../answer-recovery";
 import { type RunProjection } from "../../answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null; initialConversationId?: string; initialRunId?: string }>();
@@ -72,6 +73,7 @@ const lastEventId = ref<string | null>(null);
 const lastSequence = ref(0);
 const notice = ref("");
 const formError = ref("");
+const formRecovery = ref<RecoveryAction | null>(null);
 const cancelError = ref("");
 const previewNotice = ref("");
 const previewResult = ref<CitationPreviewResult | null>(null);
@@ -130,6 +132,11 @@ const statusLabel = computed(() => {
 });
 const contextLabel = computed(() => runContext.value ? `space ${runContext.value.spaceId} · run ${runContext.value.runId} · correlation ${runContext.value.correlationId}` : "尚未创建 run");
 const hasRuntimeDefaults = computed(() => Boolean(routeVersionId.value && profileVersionId.value && providerConnectionId.value && promptVersionId.value && model.value && datasetHash.value && configHash.value));
+const displayedRecovery = computed(() => {
+  if (errorState.value) return recoveryFromAnswerError(errorState.value.code);
+  if (abstention.value) return recoveryFromAbstention(abstention.value.reasonCode);
+  return formRecovery.value;
+});
 
 function createKey(prefix: string): string {
   return `${prefix}-${crypto.randomUUID().replaceAll("-", "")}`;
@@ -141,8 +148,31 @@ function safeApiError(error: unknown, fallback: string): string {
   if (error.status === 403) return "当前空间不允许此操作；权限由服务端最终裁决。";
   if (error.status === 404) return "请求的空间或运行不存在，请确认当前空间和版本配置。";
   if (error.status === 409) return "请求状态已变化，请重新开始一次回答。";
-  if (error.status === 422) return "回答配置未通过契约校验，请检查版本 ID。";
+  if (error.problem?.code) {
+    const action = recoveryFromProblemCode(error.problem.code);
+    return `${action.title}。${action.nextStep}`;
+  }
+  if (error.status === 422) return "回答配置未通过契约校验。请检查后重试。";
   return fallback;
+}
+
+function applyStartFailure(error: unknown): void {
+  status.value = "failed";
+  if (error instanceof ApiError) {
+    formRecovery.value = recoveryFromProblemCode(error.problem?.code);
+    formError.value = `${formRecovery.value.title}。${formRecovery.value.nextStep}`;
+    return;
+  }
+  formRecovery.value = recoveryFromUnknown();
+  formError.value = `${formRecovery.value.title}。${formRecovery.value.nextStep}`;
+}
+
+function followRecovery(action: RecoveryAction): void {
+  if (action.path) {
+    emit("follow-gap", action.path);
+    return;
+  }
+  void startAnswer();
 }
 
 function contextOf(event: AnswerEvent): RunContext {
@@ -267,6 +297,7 @@ function resetAnswer(): void {
   lastSequence.value = 0;
   notice.value = "";
   formError.value = "";
+  formRecovery.value = null;
   cancelError.value = "";
   previewNotice.value = "";
   previewResult.value = null;
@@ -412,6 +443,7 @@ function runIdentifier(projection: RunProjection): string | null {
 
 async function startAnswer(): Promise<void> {
   formError.value = "";
+  formRecovery.value = null;
   cancelError.value = "";
   notice.value = "";
   if (isActive.value) return;
@@ -462,7 +494,7 @@ async function startAnswer(): Promise<void> {
     abortController?.abort();
     if (abortController?.signal.aborted && isTerminal()) return;
     status.value = "failed";
-    formError.value = safeApiError(error, "回答启动失败；未显示服务端原始响应。请检查配置后重试。");
+    applyStartFailure(error);
   }
 }
 
@@ -621,11 +653,11 @@ onBeforeUnmount(() => abortController?.abort());
       </div>
       <div class="form-actions"><button type="submit" :disabled="!canSubmit">{{ selectedConversationArchived ? "归档会话仅可查看" : isActive ? "回答进行中…" : spaceReady ? "开始回答" : "空间未就绪" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }}</span></div>
     </form>
-    <p v-if="formError" class="alert error" role="alert">{{ formError }}</p><p v-if="cancelError" class="alert error" role="alert">{{ cancelError }}</p><p v-if="notice" class="alert" :class="status === 'failed' || status === 'timeout' ? 'error' : 'success'" role="status">{{ notice }}</p>
+    <p v-if="formError" class="alert error" role="alert">{{ formError }} <button v-if="formRecovery" type="button" class="quiet-button" @click="followRecovery(formRecovery)">{{ formRecovery.path ? formRecovery.nextStep : "重试" }}</button></p><p v-if="cancelError" class="alert error" role="alert">{{ cancelError }}</p><p v-if="notice" class="alert" :class="status === 'failed' || status === 'timeout' ? 'error' : 'success'" role="status">{{ notice }}</p>
 
     <div v-if="runContext" class="answer-context card" aria-live="polite"><span class="card-label">本次运行上下文</span><code>{{ contextLabel }}</code><span class="muted">最后序号 {{ lastSequence }} · 最后事件 {{ lastEventId ?? "—" }}</span></div>
     <article v-if="answerText || status === 'completed'" class="card answer-result" aria-live="polite"><div class="card-title"><h3>回答</h3><span class="state-pill" :class="status">{{ statusLabel }}</span></div><p class="answer-text">{{ answerText || "服务端未返回可安全展示的回答正文。" }}</p></article>
-    <article v-if="status === 'abstained' || abstention" class="abstention answer-state"><strong>{{ abstentionTitle(abstention?.reasonCode ?? "") }}</strong><span>{{ safeAbstentionLabel(abstention?.reasonCode ?? "") }}</span><small>{{ safeAbstentionDetail(abstention?.reasonCode ?? "") }}</small></article>
+    <article v-if="status === 'abstained' || abstention" class="abstention answer-state"><strong>{{ abstentionTitle(abstention?.reasonCode ?? "") }}</strong><span>{{ safeAbstentionLabel(abstention?.reasonCode ?? "") }}</span><small>{{ safeAbstentionDetail(abstention?.reasonCode ?? "") }}</small><button v-if="displayedRecovery" type="button" class="quiet-button" @click="followRecovery(displayedRecovery)">{{ displayedRecovery.path ? displayedRecovery.nextStep : "重试" }}</button></article>
     <article v-if="status === 'timeout'" class="answer-state warning-state"><strong>请求超时</strong><span>回答连接超过客户端等待窗口，未自动切换到云端或其他空间。</span></article>
     <article v-if="status === 'degraded' || status === 'reconnecting'" class="answer-state warning-state"><strong>服务降级</strong><span>{{ notice || "事件连接正在恢复；已有事件将按 sequence 与 event_id 去重。" }}</span></article>
     <article v-if="status === 'cancelled'" class="answer-state"><strong>回答已取消</strong><span>服务端已确认取消；取消后的 answer delta 会被丢弃。</span></article>
@@ -633,7 +665,7 @@ onBeforeUnmount(() => abortController?.abort());
     <div v-if="citations.length" class="citation-section"><div class="card-title"><h3>可核验引用</h3><span class="muted">{{ citations.length }} 条 · 仅服务端 引用投影</span></div><div class="citation-grid"><article v-for="citation in citations" :key="citation.evidenceId" class="card citation-card"><div class="citation-title"><strong>{{ citation.evidenceId }}</strong><span><button type="button" class="secondary-button citation-open" :disabled="previewingEvidenceId === citation.evidenceId" @click="openCitation(citation)">{{ previewingEvidenceId === citation.evidenceId ? "鉴权中…" : "请求引用预览" }}</button><button type="button" class="quiet-button" :disabled="previewingEvidenceId === citation.evidenceId" @click="openCitationInStudio(citation)">在内容证据中打开</button></span></div><dl class="citation-details"><dt>修订版本</dt><dd><code>{{ citation.documentRevisionId }}</code></dd><dt>父分块 / 子分块</dt><dd><code>{{ citation.parentChunkId }}</code><code>{{ citation.childChunkId }}</code></dd><dt>内容引用</dt><dd><code>{{ citation.contentRef }}</code></dd><dt>正文摘要</dt><dd><code>{{ citation.textHash }}</code></dd><dt>位置锚点</dt><dd>{{ anchorLabel(citation.anchor) }}</dd></dl><div class="feedback-actions"><span>这条证据是否有帮助？</span><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'HELPFUL')">有帮助</button><button type="button" class="secondary-button" :disabled="feedbackBusy === citation.evidenceId" @click="submitFeedback(citation, 'NOT_HELPFUL')">需改进</button></div></article></div></div>
     <p v-if="previewNotice" class="alert" :class="previewResult ? 'success' : 'error'" role="status">{{ previewNotice }}</p><article v-if="previewResult" class="card citation-preview" aria-live="polite"><div class="card-title"><h3>结构化引用预览</h3><span class="state-pill">允许展示： {{ previewResult.citationAllowed ? "true" : "false" }}</span></div><dl class="citation-details"><dt>证据 / 运行</dt><dd><code>{{ previewResult.evidenceId }} · {{ previewResult.runId }}</code></dd><dt>修订版本</dt><dd><code>{{ previewResult.documentRevisionId }}</code></dd><dt>内容引用</dt><dd><code>{{ previewResult.contentRef }}</code></dd><dt>正文摘要</dt><dd><code>{{ previewResult.textHash }}</code></dd><dt>位置锚点</dt><dd>{{ anchorLabel(previewResult.anchor) }}</dd></dl></article><p v-if="feedbackNotice" class="alert success" role="status">{{ feedbackNotice }}</p>
 
-    <div v-if="tools.length || usage || errorState || eventLog.length" class="answer-observability two-column"><article class="card"><div class="card-title"><h3>事件状态</h3><span class="muted">按序号展示，重复事件自动去重</span></div><div class="event-list"><div v-for="event in eventLog" :key="event.eventId" class="event-row"><span class="state-pill">{{ eventLabel(event.eventType) }}</span><span>#{{ event.sequence }}</span><code>{{ event.eventId }}</code></div></div></article><article class="card"><div class="card-title"><h3>工具与用量</h3><span class="muted">服务端结构化记录</span></div><div v-for="tool in tools" :key="tool.payload.toolCallId" class="tool-row"><span>{{ tool.payload.toolName }}</span><strong>{{ tool.payload.status }}</strong></div><dl v-if="usage" class="details usage-details"><dt>令牌数</dt><dd>{{ usage.payload.inputTokens }} 输入 · {{ usage.payload.outputTokens }} 输出 · {{ usage.payload.totalTokens }} 合计</dd><dt>工具调用</dt><dd>{{ usage.payload.toolCallCount }}</dd><dt>服务端已上报</dt><dd>{{ usage.payload.providerReported ? "是" : "否" }}</dd></dl><p v-if="errorState" class="permission-hint">{{ safeErrorLabel(errorState.code) }} · {{ errorState.retryable ? "可以重试" : "请检查配置或权限" }}</p><p v-if="!tools.length && !usage && !errorState" class="muted">尚无工具或用量事件。</p></article></div>
+    <div v-if="tools.length || usage || errorState || eventLog.length" class="answer-observability two-column"><article class="card"><div class="card-title"><h3>事件状态</h3><span class="muted">按序号展示，重复事件自动去重</span></div><div class="event-list"><div v-for="event in eventLog" :key="event.eventId" class="event-row"><span class="state-pill">{{ eventLabel(event.eventType) }}</span><span>#{{ event.sequence }}</span><code>{{ event.eventId }}</code></div></div></article><article class="card"><div class="card-title"><h3>工具与用量</h3><span class="muted">服务端结构化记录</span></div><div v-for="tool in tools" :key="tool.payload.toolCallId" class="tool-row"><span>{{ tool.payload.toolName }}</span><strong>{{ tool.payload.status }}</strong></div><dl v-if="usage" class="details usage-details"><dt>令牌数</dt><dd>{{ usage.payload.inputTokens }} 输入 · {{ usage.payload.outputTokens }} 输出 · {{ usage.payload.totalTokens }} 合计</dd><dt>工具调用</dt><dd>{{ usage.payload.toolCallCount }}</dd><dt>服务端已上报</dt><dd>{{ usage.payload.providerReported ? "是" : "否" }}</dd></dl><p v-if="errorState" class="permission-hint">{{ safeErrorLabel(errorState.code) }} · {{ displayedRecovery?.nextStep ?? (errorState.retryable ? "可以重试" : "请检查配置或权限") }} <button v-if="displayedRecovery" type="button" class="quiet-button" @click="followRecovery(displayedRecovery)">{{ displayedRecovery.path ? displayedRecovery.nextStep : "重试" }}</button></p><p v-if="!tools.length && !usage && !errorState" class="muted">尚无工具或用量事件。</p></article></div>
 
     <div v-if="status === 'empty'" class="empty-state card"><strong>尚未开始回答</strong><span>在右侧输入问题后开始；历史会话保留在左侧列表中。</span></div>
   </section>
