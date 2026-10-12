@@ -3,7 +3,7 @@ id: doc-1
 title: 当前代码
 type: guide
 created_date: '2026-10-12 03:09'
-updated_date: '2026-10-12 16:20'
+updated_date: '2026-10-12 21:30'
 ---
 # 当前代码
 
@@ -13,7 +13,7 @@ updated_date: '2026-10-12 16:20'
 
 | 目录 | 现在做什么 |
 |---|---|
-| `frontend/ragforge-web` | Vue 产品面。页面在 `src/views/{access,space,knowledge,answer,admin}`，样式只有 `src/styles/app.css` |
+| `frontend/ragforge-web` | Vue 产品面。页面在 `src/views/{access,space,knowledge,answer,admin}`。配置是知识空间与云端模型（`ModelSetupView`）；观测是运行观测（`ObservabilityView`：概览/追踪/审计）。样式只有 `src/styles/app.css` |
 | `backend/server` | 同步 API、Flyway、身份、空间、云端模型、资料、分块、索引、检索、生成、引用、run |
 | `backend/ingestion-worker` | 异步摄取：连接器、解析、对象存储、消息、流水线 |
 | `backend/ai-runtime` | Python rerank。`scripts/ci/architecture_check.py` 仍要求这个目录存在 |

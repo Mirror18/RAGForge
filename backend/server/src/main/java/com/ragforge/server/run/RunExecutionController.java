@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.Authentication;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -125,6 +126,20 @@ public class RunExecutionController {
                 request.timeoutSeconds() == null ? 30 : request.timeoutSeconds());
         return RunResponse.from(service.createRun(spaceId, conversationId, principal(authentication),
                 runRequest, correlationId), jdbc);
+    }
+
+    @GetMapping("/runs")
+    public RunPageResponse listSpaceRuns(@PathVariable UUID spaceId,
+                                         @RequestParam(required = false) RunRepository.RunStatus status,
+                                         @RequestParam(required = false) Instant from,
+                                         @RequestParam(required = false) Instant to,
+                                         @RequestParam(required = false) String cursor,
+                                         @RequestParam(required = false) Integer limit,
+                                         Authentication authentication) {
+        CursorPage<RunRepository.RunRecord> page = service.listSpaceRuns(
+                spaceId, principal(authentication), status, from, to, cursor, limit);
+        return new RunPageResponse(page.items().stream().map(run -> RunResponse.from(run, jdbc)).toList(),
+                page.nextCursor());
     }
 
     @GetMapping("/runs/{runId}")

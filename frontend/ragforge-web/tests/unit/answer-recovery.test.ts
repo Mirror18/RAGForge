@@ -15,7 +15,7 @@ describe("answer recovery mapping", () => {
       nextStep: "去模型页完成云端路线配置",
     });
     expect(recoveryFromProblemCode("cloud_egress_required")).toMatchObject({
-      path: "?view=control&section=spaces",
+      path: "?view=profile",
       nextStep: "去空间设置检查出境授权",
     });
     expect(recoveryFromProblemCode("NO_ACTIVE_INDEX").path).toBe("?view=flow");

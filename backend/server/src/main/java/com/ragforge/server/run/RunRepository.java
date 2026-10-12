@@ -85,6 +85,48 @@ public class RunRepository {
         return new CursorPage<>(rows, nextCursor);
     }
 
+    public CursorPage<RunRecord> findSpaceRuns(UUID spaceId, RunStatus status, Instant from, Instant to,
+                                               String cursor, Integer limit) {
+        int pageSize = pageSize(limit);
+        CursorCodec.Position position = cursor == null ? null : CursorCodec.decode(cursor);
+        StringBuilder sql = new StringBuilder("""
+                        SELECT id, space_id, conversation_id, actor_user_id, correlation_id, request_kind, status,
+                               model_route_version_id, prompt_version_id, input_hash, output_hash,
+                               error_class, error_code, started_at, completed_at, created_at, updated_at, version
+                        FROM runs
+                        WHERE space_id = ?
+                        """);
+        List<Object> args = new ArrayList<>(List.of(spaceId));
+        if (status != null) {
+            sql.append(" AND status = ?");
+            args.add(status.name());
+        }
+        if (from != null) {
+            sql.append(" AND created_at >= ?");
+            args.add(Timestamp.from(from));
+        }
+        if (to != null) {
+            sql.append(" AND created_at < ?");
+            args.add(Timestamp.from(to));
+        }
+        if (position != null) {
+            sql.append(" AND (created_at, id) < (?, ?)");
+            args.add(Timestamp.from(position.sortTime()));
+            args.add(position.id());
+        }
+        sql.append(" ORDER BY created_at DESC, id DESC LIMIT ?");
+        args.add(pageSize + 1);
+        List<RunRecord> rows = jdbc.query(sql.toString(), (rs, rowNum) -> mapRun(rs), args.toArray());
+        boolean hasMore = rows.size() > pageSize;
+        if (hasMore) {
+            rows = rows.subList(0, pageSize);
+        }
+        String nextCursor = hasMore
+                ? CursorCodec.encode(new CursorCodec.Position(rows.getLast().createdAt(), rows.getLast().id()))
+                : null;
+        return new CursorPage<>(rows, nextCursor);
+    }
+
     @Transactional
     public RunRecord transitionRun(UUID spaceId, UUID runId, RunStatus nextStatus, ErrorClass errorClass,
                                    String errorCode, Instant now, long expectedVersion) {

@@ -18,6 +18,10 @@ describe("synthetic fixture contract", () => {
     const search = routeSearch({ view: "studio", spaceId: SYNTHETIC.spaceId, controlSection: "providers", conversationId: "conversation", runId: "run", provenance: { target: "studio", spaceId: SYNTHETIC.spaceId, childChunkId: "chunk", profileVersion: 2 } });
     expect(readRoute(search)).toMatchObject({ view: "studio", spaceId: SYNTHETIC.spaceId, provenance: { childChunkId: "chunk", profileVersion: 2 } });
     expect(readRoute("?view=control&section=audit&spaceId=space")).toMatchObject({ view: "control", controlSection: "audit", spaceId: "space" });
+    expect(readRoute("?view=control&section=health")).toMatchObject({ view: "control", controlSection: "overview" });
+    expect(readRoute("?view=control&section=runs")).toMatchObject({ view: "control", controlSection: "traces" });
+    expect(readRoute("?view=control&section=models")).toMatchObject({ view: "control", controlSection: "providers" });
+    expect(readRoute("?view=control&section=spaces&spaceId=space")).toMatchObject({ view: "profile", spaceId: "space" });
   });
 
   it("requires pagination-sized synthetic collections", () => {

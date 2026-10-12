@@ -179,6 +179,7 @@ class Phase2OpenApiContractTest(unittest.TestCase):
             "/api/v1/spaces/{spaceId}/prompt-templates/{promptTemplateId}/versions/{promptVersion}/publish",
             "/api/v1/spaces/{spaceId}/prompt-bindings",
             "/api/v1/spaces/{spaceId}/conversations/{conversationId}/runs",
+            "/api/v1/spaces/{spaceId}/runs",
             "/api/v1/spaces/{spaceId}/runs/{runId}",
             "/api/v1/spaces/{spaceId}/runs/{runId}/events",
             "/api/v1/spaces/{spaceId}/runs/{runId}/cancel",

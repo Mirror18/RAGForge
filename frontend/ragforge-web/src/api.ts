@@ -101,6 +101,7 @@ export interface ProviderConnection {
   providerConnectionId: string;
   spaceId: string;
   version: number;
+  displayName?: string;
   providerType: "OLLAMA" | "OPENAI_COMPATIBLE" | "MIMO" | "AI_RUNTIME";
   egressClass: "LOCAL" | "CLOUD";
   endpoint: string;
@@ -211,7 +212,7 @@ export interface AnswerReadiness {
 }
 
 export const ANSWER_READINESS_LABELS: Record<AnswerReadinessCode, string> = {
-  object_storage_disabled: "先在运行管理中启用对象存储",
+  object_storage_disabled: "先启用对象存储",
   no_documents: "先导入资料",
   no_active_index: "发布当前索引",
   no_active_profile: "在检索实验中确认活跃检索档",
@@ -336,22 +337,26 @@ export interface IndexView {
 
 export interface ActiveIndexView { pointer: { activeIndexVersionId: string }; index: IndexView | null; datasetHash: string | null }
 
-export interface RunSnapshot {
+export interface SpaceRunItem {
   runId: string;
   spaceId: string;
   conversationId: string;
   version: number;
   status: string;
+  correlationId?: string | null;
   modelRouteId: string;
   promptVersionId: string;
   usageLedgerId: string | null;
-  cancelRequested: boolean;
+  cancelRequested?: boolean;
   error: { errorClass: string; retryable: boolean; message: string; correlationId: string; retryAfterSeconds: number | null } | null;
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
+}
+
+export interface RunSnapshot extends SpaceRunItem {
   lastSequence: number;
-  steps: Array<{ stepId: string; type: string; status: string; sequence: number; attempt: number; createdAt: string; finishedAt: string | null; error: RunSnapshot["error"] }>;
+  steps: Array<{ stepId: string; type: string; status: string; sequence: number; attempt: number; createdAt: string; finishedAt: string | null; error: SpaceRunItem["error"] }>;
 }
 
 export interface ManagementHealth {
@@ -861,6 +866,24 @@ function managementWindow(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
   return { from: from.toISOString(), to: to.toISOString() };
+}
+
+export function listSpaceRuns(spaceId: string, options: {
+  cursor?: string | null;
+  limit?: number;
+  status?: string;
+  from?: string;
+  to?: string;
+} = {}): Promise<CursorPage<SpaceRunItem>> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/runs${queryString(options)}`);
+}
+
+export function getRunSnapshot(spaceId: string, runId: string): Promise<RunSnapshot> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/runs/${encodeURIComponent(runId)}`);
+}
+
+export function retryRun(spaceId: string, runId: string): Promise<SpaceRunItem> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/runs/${encodeURIComponent(runId)}/retry`, { method: "POST" });
 }
 
 export function getManagementHealth(spaceId: string, window = managementWindow()): Promise<ManagementHealth> {

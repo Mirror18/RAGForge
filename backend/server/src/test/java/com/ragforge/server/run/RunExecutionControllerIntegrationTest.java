@@ -208,6 +208,43 @@ class RunExecutionControllerIntegrationTest {
     }
 
     @Test
+    void spaceRunListIsSpaceScopedFilterableAndDoesNotLeakForeignSpaces() throws Exception {
+        UUID conversation = createConversation(space, "Trace list");
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody("hello"))))
+                .andExpect(status().isAccepted());
+        withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
+                        space, conversation).with(auth()).contentType(MediaType.APPLICATION_JSON)
+                        .content(runBody("__fake_error__"))))
+                .andExpect(status().isAccepted());
+
+        MvcResult first = withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs", space)
+                        .with(auth()).param("limit", "1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].spaceId").value(space.toString()))
+                .andExpect(jsonPath("$.items[0].message").doesNotExist())
+                .andExpect(jsonPath("$.nextCursor").isString())
+                .andReturn();
+        String cursor = objectMapper.readTree(first.getResponse().getContentAsString()).get("nextCursor").asText();
+        withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs", space)
+                        .with(auth()).param("limit", "1").param("cursor", cursor)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1));
+
+        withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs", space)
+                        .with(auth()).param("status", "FAILED")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].status").value("FAILED"))
+                .andExpect(jsonPath("$.items[0].error.errorClass").exists());
+
+        withPrincipal(() -> mvc.perform(get("/api/v1/spaces/{space}/runs", otherSpace).with(auth())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void unboundSpaceRejectsRunBeforeProviderInvocation() throws Exception {
         jdbc.update("DELETE FROM space_binding_versions WHERE space_id = ?", space);
         UUID conversation = createConversation(space, "Unbound chat");

@@ -1,9 +1,23 @@
 import type { ProvenanceContext } from "./api";
 
 export type View = "home" | "flow" | "studio" | "playground" | "answer" | "control" | "profile";
-export type ControlSection = "spaces" | "health" | "cost" | "feedback" | "audit" | "providers" | "models" | "prompts" | "runs";
+export type ControlSection = "providers" | "prompts" | "overview" | "traces" | "audit";
+
 const views = new Set<View>(["home", "flow", "studio", "playground", "answer", "control", "profile"]);
-const sections = new Set<ControlSection>(["spaces", "health", "cost", "feedback", "audit", "providers", "models", "prompts", "runs"]);
+const sections = new Set<ControlSection>(["providers", "prompts", "overview", "traces", "audit"]);
+const sectionAliases: Record<string, ControlSection | "profile"> = {
+  providers: "providers",
+  prompts: "prompts",
+  overview: "overview",
+  traces: "traces",
+  audit: "audit",
+  health: "overview",
+  cost: "overview",
+  runs: "traces",
+  feedback: "audit",
+  models: "providers",
+  spaces: "profile",
+};
 const contextKeys = ["childChunkId", "documentRevisionId", "contentRef", "textHash", "indexVersionId", "profileId"] as const;
 
 export interface RouteState {
@@ -18,9 +32,10 @@ export interface RouteState {
 export function readRoute(search = typeof window === "undefined" ? "" : window.location.search): RouteState {
   const params = new URLSearchParams(search);
   const rawView = params.get("view") ?? params.get("tool") ?? "flow";
-  const view = views.has(rawView as View) ? rawView as View : "flow";
-  const rawSection = params.get("section") ?? "providers";
-  const controlSection = sections.has(rawSection as ControlSection) ? rawSection as ControlSection : "providers";
+  let view = views.has(rawView as View) ? rawView as View : "flow";
+  const mapped = sectionAliases[params.get("section") ?? "providers"] ?? "providers";
+  if (mapped === "profile") view = "profile";
+  const controlSection = mapped === "profile" ? "overview" : mapped;
   const spaceId = params.get("spaceId") ?? params.get("space_id") ?? "";
   const profileVersion = Number(params.get("profileVersion"));
   const provenance = (view === "studio" || view === "playground") && spaceId ? {
@@ -36,7 +51,7 @@ export function routeSearch(state: RouteState): string {
   const params = new URLSearchParams();
   params.set("view", state.view);
   if (state.spaceId) params.set("spaceId", state.spaceId);
-  if (state.view === "control") params.set("section", state.controlSection);
+  if (state.view === "control" && sections.has(state.controlSection)) params.set("section", state.controlSection);
   if (state.conversationId) params.set("conversationId", state.conversationId);
   if (state.runId) params.set("runId", state.runId);
   if (state.provenance?.target === state.view) {

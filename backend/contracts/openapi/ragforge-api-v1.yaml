@@ -606,6 +606,15 @@
         "responses": {"200": {"description": "Conversation runs", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RunPage"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
     },
+    "/api/v1/spaces/{spaceId}/runs": {
+      "x-ragforge-implementation-status": "phase2-contract",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["runs"], "operationId": "listSpaceRuns", "summary": "List runs in the authorized space", "description": "Space-scoped run index for observability. Items reuse the Run schema and never include prompt, answer, evidence or provider payloads.", "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}, {"$ref": "#/components/parameters/Cursor"}, {"$ref": "#/components/parameters/Limit"}, {"$ref": "#/components/parameters/RunListStatus"}, {"$ref": "#/components/parameters/RunListFrom"}, {"$ref": "#/components/parameters/RunListTo"}],
+        "responses": {"200": {"description": "Space runs", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RunPage"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}}
+      }
+    },
     "/api/v1/spaces/{spaceId}/runs/{runId}": {
       "x-ragforge-implementation-status": "phase2-contract",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}, {"$ref": "#/components/parameters/RunId"}],
@@ -1367,6 +1376,27 @@
         "in": "query",
         "required": true,
         "description": "Exclusive UTC time-window end.",
+        "schema": {"type": "string", "format": "date-time"}
+      },
+      "RunListStatus": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Optional run status filter. Results remain space-scoped.",
+        "schema": {"$ref": "#/components/schemas/RunStatus"}
+      },
+      "RunListFrom": {
+        "name": "from",
+        "in": "query",
+        "required": false,
+        "description": "Optional inclusive UTC created_at start.",
+        "schema": {"type": "string", "format": "date-time"}
+      },
+      "RunListTo": {
+        "name": "to",
+        "in": "query",
+        "required": false,
+        "description": "Optional exclusive UTC created_at end.",
         "schema": {"type": "string", "format": "date-time"}
       }
     },

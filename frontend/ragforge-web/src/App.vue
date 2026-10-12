@@ -4,7 +4,8 @@ import { ApiError, listAllCursorPages, type AnswerDefaults, type CurrentSession,
 import AnswerView from "./views/answer/AnswerView.vue";
 import ChunkStudioView from "./views/knowledge/ChunkStudioView.vue";
 import RetrievalPlaygroundView from "./views/knowledge/RetrievalPlaygroundView.vue";
-import ControlCenterView from "./views/admin/ControlCenterView.vue";
+import ModelSetupView from "./views/admin/ModelSetupView.vue";
+import ObservabilityView from "./views/admin/ObservabilityView.vue";
 import AuthView from "./views/access/AuthView.vue";
 import PersonalSpaceView from "./views/space/PersonalSpaceView.vue";
 import BusinessFlowView from "./views/knowledge/BusinessFlowView.vue";
@@ -47,7 +48,7 @@ const currentRoleLabel = computed(() => roleLabel(currentRole.value));
 const isViewer = computed(() => selectedSpace.value?.role === "VIEWER");
 const canEdit = computed(() => !isViewer.value && Boolean(selectedSpaceId.value));
 const statusText = computed(() => apiStatus.value === "ready" ? "会话与 API 可用" : apiStatus.value === "unauthenticated" ? "请登录后继续" : apiStatus.value === "unavailable" ? "API 不可用" : "正在检查会话");
-const modelSections = ["providers", "models", "prompts"] as const;
+const modelSections = ["providers", "prompts"] as const;
 const isModelControl = computed(() => modelSections.includes(controlSection.value as typeof modelSections[number]));
 const pageMeta = computed(() => {
   if (view.value === "profile") return { kicker: "空间", title: "知识空间", description: "空间是隔离边界。先选定空间，再配置成员、模型和资料。" };
@@ -56,7 +57,7 @@ const pageMeta = computed(() => {
   if (view.value === "answer") return { kicker: "问答", title: "带引用问答", description: "基于已发布索引提问，引用必须来自结构化证据。" };
   if (view.value === "studio") return { kicker: "证据", title: "内容证据", description: "从来源、引用或检索命中打开记录，不手填内部编号。" };
   if (view.value === "playground") return { kicker: "检索", title: "检索实验", description: "只读比较检索候选，不会改变正在使用的索引版本。" };
-  if (view.value === "control") return { kicker: "运行", title: "运行与管理", description: "查看健康、成本、审计和一次回答的运行记录。" };
+  if (view.value === "control") return { kicker: "观测", title: "运行观测", description: "查看健康、用量、追踪和脱敏审计。" };
   return { kicker: "工作台", title: "知识闭环", description: "在当前空间内完成资料、索引和可核验回答。" };
 });
 function persistRoute(): void {
@@ -74,9 +75,10 @@ function describeError(error: unknown, fallback: string): string {
   const correlation = error.correlationId ? ` correlationId: ${error.correlationId}` : "";
   return `${problem?.code ? `${problem.code}：` : ""}${problem?.detail ?? error.message} ${permission}${correlation}`;
 }
-function openControl(section: ControlSection): void {
-  controlSection.value = section;
-  openView("control");
+function openControl(section: string): void {
+  const next = readRoute(`?view=control&section=${encodeURIComponent(section)}`);
+  controlSection.value = next.controlSection;
+  openView(next.view);
 }
 
 async function checkApiHealth(): Promise<void> {
@@ -163,7 +165,7 @@ function openPersonalAction(action: "home" | "providers" | "models" | "prompts" 
   openControl(action);
 }
 
-watch([view, selectedSpaceId, routeContext], persistRoute, { deep: true });
+watch([view, selectedSpaceId, controlSection, routeContext], persistRoute, { deep: true });
 watch(selectedSpaceId, (next, previous) => {
   if (next !== previous) { conversationId.value = ""; lastRunId.value = ""; if (routeContext.value && routeContext.value.spaceId !== next) routeContext.value = null; }
 });
@@ -197,7 +199,7 @@ onMounted(checkApiHealth);
           <button id="control-model-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' && isModelControl }" @click="openControl('providers')"><span class="nav-icon">模</span><span><strong>云端模型</strong><small>授权后才能调用</small></span></button>
         </div>
         <div class="sidebar-section"><span class="sidebar-label">治理</span>
-          <button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' && !isModelControl }" @click="openControl('runs')"><span class="nav-icon">运</span><span><strong>运行与管理</strong><small>健康、成本、审计</small></span></button>
+          <button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' && !isModelControl }" @click="openControl('overview')"><span class="nav-icon">运</span><span><strong>运行观测</strong><small>健康、追踪、审计</small></span></button>
         </div>
         <div class="sidebar-footer"><div class="sidebar-user"><span class="user-avatar">{{ session.user.displayName.slice(0, 1).toUpperCase() }}</span><span><strong>{{ session.user.displayName }}</strong><small>{{ currentRoleLabel }}</small></span></div><button type="button" class="sidebar-logout" @click="logout">退出登录</button></div>
       </aside>
@@ -211,7 +213,8 @@ onMounted(checkApiHealth);
 
         <ChunkStudioView v-else-if="view === 'studio'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :initial-context="routeContext" />
         <RetrievalPlaygroundView v-else-if="view === 'playground'" :selected-space-id="selectedSpaceId" :initial-context="routeContext" @open-context="openProvenanceContext" />
-        <ControlCenterView v-else-if="view === 'control'" role="tabpanel" aria-labelledby="control-center-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :initial-section="controlSection" :initial-run-id="lastRunId" />
+        <ModelSetupView v-else-if="view === 'control' && isModelControl" role="tabpanel" aria-labelledby="control-model-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :initial-section="controlSection" @select-section="controlSection = $event" />
+        <ObservabilityView v-else-if="view === 'control'" role="tabpanel" aria-labelledby="control-center-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :initial-section="controlSection" :initial-run-id="lastRunId" @select-section="controlSection = $event" />
         <AnswerView v-else-if="view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" :defaults="answerDefaults" :initial-conversation-id="conversationId" :initial-run-id="lastRunId" @conversation-created="conversationId = $event" @run-created="lastRunId = $event" @open-context="openProvenanceContext" @follow-gap="(path) => { const next = readRoute(path); view = next.view; if (next.view === 'control') controlSection = next.controlSection; }" />
       </section>
     </div>
