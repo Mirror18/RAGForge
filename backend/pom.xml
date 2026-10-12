@@ -20,21 +20,21 @@
         <java.version>21</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>3.5.0</spring-boot.version>
+        <spring-boot.version>3.5.16</spring-boot.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
         <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
         <flyway.version>11.7.2</flyway.version>
         <postgresql.version>42.7.12</postgresql.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
-        <jackson-bom.version>2.21.4</jackson-bom.version>
+        <jackson-bom.version>2.22.3</jackson-bom.version>
         <log4j2.version>2.25.5</log4j2.version>
         <micrometer.version>1.15.12</micrometer.version>
-        <netty.version>4.1.136.Final</netty.version>
-        <rabbit-amqp-client.version>5.33.1</rabbit-amqp-client.version>
+        <netty.version>4.1.139.Final</netty.version>
+        <rabbit-amqp-client.version>5.37.0</rabbit-amqp-client.version>
         <spring-data-bom.version>2025.0.12</spring-data-bom.version>
         <spring-framework.version>6.2.19</spring-framework.version>
         <spring-retry.version>2.0.13</spring-retry.version>
-        <tomcat.version>10.1.55</tomcat.version>
+        <tomcat.version>10.1.61</tomcat.version>
     </properties>
 
     <dependencyManagement>
@@ -63,7 +63,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.84</version>
+                <version>1.86</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -73,22 +73,22 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-core</artifactId>
-                <version>2.21.4</version>
+                <version>2.22.3</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>2.21.4</version>
+                <version>2.22.3</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>2.21</version>
+                <version>2.22</version>
             </dependency>
             <dependency>
                 <groupId>com.rabbitmq</groupId>
                 <artifactId>amqp-client</artifactId>
-                <version>5.33.1</version>
+                <version>5.37.0</version>
             </dependency>
             <dependency>
                 <groupId>io.micrometer</groupId>
@@ -98,12 +98,12 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-codec</artifactId>
-                <version>4.1.136.Final</version>
+                <version>4.1.139.Final</version>
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-handler</artifactId>
-                <version>4.1.136.Final</version>
+                <version>4.1.139.Final</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
@@ -138,7 +138,7 @@
             <dependency>
                 <groupId>org.apache.tomcat.embed</groupId>
                 <artifactId>tomcat-embed-core</artifactId>
-                <version>10.1.55</version>
+                <version>10.1.61</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

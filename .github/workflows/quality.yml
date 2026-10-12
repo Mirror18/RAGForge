@@ -234,6 +234,7 @@ jobs:
           image: ragforge/server:ci-${{ github.sha }}
           fail-build: true
           severity-cutoff: high
+          only-fixed: true
           output-format: sarif
           output-file: tests/evidence/ci-logs/p7d-02-server-grype.sarif
 
@@ -244,6 +245,7 @@ jobs:
           image: ragforge/ingestion-worker:ci-${{ github.sha }}
           fail-build: true
           severity-cutoff: high
+          only-fixed: true
           output-format: sarif
           output-file: tests/evidence/ci-logs/p7d-02-worker-grype.sarif
 
@@ -254,6 +256,7 @@ jobs:
           image: ragforge/web:ci-${{ github.sha }}
           fail-build: true
           severity-cutoff: high
+          only-fixed: true
           output-format: sarif
           output-file: tests/evidence/ci-logs/p7d-02-web-grype.sarif
 

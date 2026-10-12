@@ -1,0 +1,9 @@
+# Grype policy for CI image scans (anchore/scan-action).
+# Spring Framework 6.2 OSS ended 2026-06-30; GHSA fixes for remaining webmvc
+# criticals are either Framework 7.0.9+ (Spring Boot 4) or commercial 6.2.20.
+# Tracked follow-up: migrate to Spring Boot 4.x — do not silently expand this list.
+ignore:
+  - vulnerability: GHSA-pc63-qcmh-9cmg
+    reason: Spring Framework 6.2 OSS EOL; public fix requires Framework 7 / Boot 4
+  - vulnerability: GHSA-j9f9-w8pj-32f8
+    reason: Spring Framework 6.2 OSS EOL; public fix requires Framework 7 / Boot 4

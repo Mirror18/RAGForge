@@ -23,7 +23,7 @@ RUN npm ci
 COPY frontend/ragforge-web ./
 RUN npm run build
 
-FROM cgr.dev/chainguard/jre:latest@sha256:8442d5863e82c43320f20d40dd6169afa4173debae9433a597b0e2df3805e3b0 AS java-runtime
+FROM cgr.dev/chainguard/jre:latest@sha256:b1fb5f42636243f6f4fc928b85acb368a173f2d27a774b7539e46a1b357268ad AS java-runtime
 
 FROM java-runtime AS server
 WORKDIR /app
