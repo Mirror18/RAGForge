@@ -29,90 +29,267 @@ function updateField(field: "email" | "password" | "displayName" | "bootstrapTok
 
 function heading(): string {
   if (props.mode === "bootstrap") return "初始化平台管理员";
-  return props.mode === "login" ? "登录你的工作台" : "创建个人账号";
+  return props.mode === "login" ? "欢迎回来" : "创建你的工作台";
 }
 
 function description(): string {
-  if (props.mode === "bootstrap") return "使用运维人员配置的一次性 Secret 建立首个平台管理员。";
-  return props.mode === "login" ? "继续管理你的知识空间和 RAG 实验。" : "创建账号后即可建立第一个个人知识空间。";
+  if (props.mode === "bootstrap") return "使用运维一次性 Secret 建立首个平台管理员，完成后即可登录。";
+  return props.mode === "login" ? "登录后继续你的知识空间、索引发布和带引用问答。" : "创建账号后即可建立第一个个人知识空间。";
+}
+
+function submitLabel(): string {
+  if (props.loading) return "处理中…";
+  if (props.mode === "login") return "进入工作台";
+  if (props.mode === "register") return "注册并登录";
+  return "初始化并登录";
 }
 </script>
 
 <template>
   <section class="auth-page" aria-labelledby="auth-page-title">
-    <div class="auth-hero">
-      <div class="brand-mark" aria-hidden="true">R</div>
-      <p class="eyebrow">RAGForge Workspace</p>
-      <h2 id="auth-page-title">把知识空间，变成可验证的工作流。</h2>
-      <p class="auth-hero-copy">从内容版本、检索实验到带引用问答，所有操作都围绕空间边界、可追踪运行和证据链组织。</p>
-      <div class="auth-feature-list" aria-label="产品能力">
-        <div><span class="feature-icon">01</span><span><strong>空间隔离</strong><small>每次请求都绑定当前 spaceId</small></span></div>
-        <div><span class="feature-icon">02</span><span><strong>证据可追溯</strong><small>回答保留 provenance 与 citation anchor</small></span></div>
-        <div><span class="feature-icon">03</span><span><strong>本地优先</strong><small>云端出境由服务端策略明确控制</small></span></div>
-      </div>
-    </div>
-
+    <div class="auth-glow" aria-hidden="true"></div>
     <div class="auth-panel card">
+      <div class="auth-brand">
+        <span class="brand-mark" aria-hidden="true">玖</span>
+        <div>
+          <strong>RAGForge</strong>
+          <small>Nakano Miku Desk</small>
+        </div>
+      </div>
+
+      <div v-if="props.mode !== 'bootstrap'" class="auth-tabs" role="tablist" aria-label="登录或注册">
+        <button type="button" role="tab" :aria-selected="props.mode === 'login'" :class="{ active: props.mode === 'login' }" @click="emit('update:mode', 'login')">登录</button>
+        <button type="button" role="tab" :aria-selected="props.mode === 'register'" :class="{ active: props.mode === 'register' }" @click="emit('update:mode', 'register')">注册</button>
+      </div>
+
       <div class="auth-panel-heading">
-        <div><p class="eyebrow">Welcome back</p><h3>{{ heading() }}</h3><p>{{ description() }}</p></div>
+        <div>
+          <h2 id="auth-page-title">{{ heading() }}</h2>
+          <p>{{ description() }}</p>
+        </div>
         <span class="secure-badge">安全会话</span>
       </div>
+
       <p v-if="props.error" class="alert error" role="alert">{{ props.error }}</p>
+
       <form class="auth-form" @submit.prevent="emit('submit')">
-        <div v-if="props.mode !== 'login'" class="field"><label for="auth-display-name">显示名称</label><input id="auth-display-name" :value="props.displayName" autocomplete="name" maxlength="120" placeholder="例如：林晓" @input="updateField('displayName', $event)" /></div>
-        <div class="field"><label for="auth-email">邮箱</label><input id="auth-email" :value="props.email" type="email" autocomplete="username" placeholder="name@example.com" required @input="updateField('email', $event)" /></div>
-        <div class="field"><div class="field-label-row"><label for="auth-password">密码</label><span>至少 12 位</span></div><input id="auth-password" :value="props.password" type="password" :autocomplete="props.mode === 'login' ? 'current-password' : 'new-password'" minlength="12" maxlength="128" placeholder="输入密码" required @input="updateField('password', $event)" /></div>
-        <div v-if="props.mode === 'bootstrap'" class="field"><div class="field-label-row"><label for="auth-bootstrap-token">一次性 Bootstrap Secret</label><span>至少 32 位</span></div><input id="auth-bootstrap-token" :value="props.bootstrapToken" type="password" autocomplete="off" minlength="32" maxlength="512" required placeholder="由运维人员临时提供" @input="updateField('bootstrapToken', $event)" /></div>
-        <button class="auth-submit" type="submit" :disabled="props.loading">{{ props.loading ? "处理中…" : (props.mode === "login" ? "登录工作台" : props.mode === "register" ? "注册并登录" : "初始化并登录") }}</button>
+        <div v-if="props.mode !== 'login'" class="field">
+          <label for="auth-display-name">显示名称</label>
+          <input id="auth-display-name" :value="props.displayName" autocomplete="name" maxlength="120" placeholder="例如：林晓" @input="updateField('displayName', $event)" />
+        </div>
+        <div class="field">
+          <label for="auth-email">邮箱</label>
+          <input id="auth-email" :value="props.email" type="email" autocomplete="username" placeholder="name@example.com" required @input="updateField('email', $event)" />
+        </div>
+        <div class="field">
+          <div class="field-label-row">
+            <label for="auth-password">密码</label>
+            <span>至少 12 位</span>
+          </div>
+          <input id="auth-password" :value="props.password" type="password" :autocomplete="props.mode === 'login' ? 'current-password' : 'new-password'" minlength="12" maxlength="128" placeholder="输入密码" required @input="updateField('password', $event)" />
+        </div>
+        <div v-if="props.mode === 'bootstrap'" class="field">
+          <div class="field-label-row">
+            <label for="auth-bootstrap-token">一次性 Bootstrap Secret</label>
+            <span>至少 32 位</span>
+          </div>
+          <input id="auth-bootstrap-token" :value="props.bootstrapToken" type="password" autocomplete="off" minlength="32" maxlength="512" required placeholder="由运维人员临时提供" @input="updateField('bootstrapToken', $event)" />
+        </div>
+        <button class="auth-submit" type="submit" :disabled="props.loading">{{ submitLabel() }}</button>
       </form>
-      <div class="auth-divider"><span>或</span></div>
-      <div class="auth-alternatives"><button type="button" class="secondary-button auth-switch" @click="emit('update:mode', props.mode === 'login' ? 'register' : 'login')">{{ props.mode === "login" ? "没有账号？创建个人账号" : "返回登录" }}</button><button v-if="props.bootstrapAvailable && props.mode !== 'bootstrap'" type="button" class="secondary-button auth-switch" @click="emit('update:mode', 'bootstrap')">初始化首个平台管理员</button></div>
+
+      <div class="auth-footer">
+        <button v-if="props.mode === 'bootstrap'" type="button" class="auth-text-switch" @click="emit('update:mode', 'login')">返回登录</button>
+        <button v-if="props.bootstrapAvailable && props.mode !== 'bootstrap'" type="button" class="auth-text-switch" @click="emit('update:mode', 'bootstrap')">初始化首个平台管理员</button>
+      </div>
       <p v-if="props.bootstrapRequired && !props.bootstrapAvailable" class="bootstrap-note">系统尚未初始化平台管理员。请由运维人员临时配置 <code>RAGFORGE_BOOTSTRAP_ADMIN_TOKEN</code> 后刷新；不要把 Secret 写入仓库或浏览器存储。</p>
-      <p class="auth-security-note"><span aria-hidden="true">◈</span> 使用 HttpOnly Cookie 维护会话；密码不会写入 URL、日志或浏览器存储。</p>
+      <p class="auth-security-note">HttpOnly Cookie 会话 · 密码不写入 URL、日志或浏览器存储</p>
     </div>
+
+    <aside class="auth-stage" aria-label="产品能力">
+      <div class="auth-stage-copy">
+        <p class="auth-stage-kicker">把知识空间，变成可验证的工作流</p>
+        <p class="auth-stage-lead">空间隔离、证据可追溯、云端出境必须显式授权。登录后从资料到带引用回答，走同一条闭环。</p>
+        <ul class="auth-stage-points">
+          <li>空间隔离</li>
+          <li>证据可追溯</li>
+          <li>本地优先</li>
+        </ul>
+      </div>
+    </aside>
   </section>
 </template>
 
 <style scoped>
-.auth-page { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(380px, .92fr); min-height: 600px; margin-top: 28px; overflow: hidden; border: 1px solid #d9e3f1; border-radius: 24px; background: #fff; box-shadow: 0 20px 55px #243c6414; }
-.auth-hero { position: relative; overflow: hidden; padding: 58px clamp(30px, 6vw, 88px); background: linear-gradient(145deg, #173b74 0%, #24599d 58%, #2e7bb0 100%); color: #fff; }
-.auth-hero::after { position: absolute; right: -100px; bottom: -120px; width: 360px; height: 360px; border: 1px solid #ffffff25; border-radius: 50%; box-shadow: 0 0 0 38px #ffffff08, 0 0 0 78px #ffffff05; content: ""; }
-.brand-mark { display: grid; width: 45px; height: 45px; place-items: center; margin-bottom: 50px; border: 1px solid #ffffff55; border-radius: 13px; background: #ffffff18; font-size: 1.5rem; font-weight: 900; }
-.auth-hero .eyebrow { color: #bcd6f8; }.auth-hero h2 { max-width: 560px; margin: 13px 0 18px; color: #fff; font-size: clamp(2rem, 4vw, 3.35rem); line-height: 1.12; }.auth-hero-copy { max-width: 560px; margin-bottom: 45px; color: #d9e8fa; line-height: 1.75; }
-.auth-feature-list { display: grid; gap: 18px; max-width: 490px; }.auth-feature-list > div { display: flex; align-items: center; gap: 13px; }.auth-feature-list strong, .auth-feature-list small { display: block; }.auth-feature-list strong { margin-bottom: 3px; color: #fff; }.auth-feature-list small { color: #bad2ee; font-size: .78rem; }.feature-icon { display: grid; width: 33px; height: 33px; flex: 0 0 33px; place-items: center; border: 1px solid #ffffff45; border-radius: 9px; color: #d5e9ff; font-size: .68rem; font-weight: 800; }
-.auth-panel { align-self: center; margin: 36px; padding: clamp(25px, 4vw, 45px); box-shadow: none; }.auth-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 28px; }.auth-panel h3 { margin: 8px 0; color: #173363; font-size: 1.7rem; }.auth-panel-heading p:not(.eyebrow) { margin-bottom: 0; color: #687893; font-size: .87rem; line-height: 1.55; }.secure-badge { padding: 7px 9px; border-radius: 999px; background: #e7f6ed; color: #19714c; font-size: .69rem; font-weight: 800; white-space: nowrap; }.auth-form { display: grid; gap: 17px; }.field-label-row { display: flex; justify-content: space-between; gap: 10px; }.field-label-row span { color: #8390a5; font-size: .74rem; }.auth-submit { width: 100%; margin-top: 5px; padding: 13px 16px; }.auth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; color: #9aa7b9; font-size: .75rem; }.auth-divider::before, .auth-divider::after { height: 1px; flex: 1; background: #e3e9f1; content: ""; }.auth-alternatives { display: grid; gap: 8px; }.auth-switch { width: 100%; }.bootstrap-note { margin: 14px 0 0; padding: 10px 12px; border: 1px solid #eed39a; border-radius: 9px; background: #fff9eb; color: #765b24; font-size: .73rem; line-height: 1.55; overflow-wrap: anywhere; }.auth-security-note { display: flex; gap: 7px; margin: 22px 0 0; color: #8290a4; font-size: .73rem; line-height: 1.5; }.auth-security-note span { color: #2e72ad; }
-@media (max-width: 850px) { .auth-page { grid-template-columns: 1fr; }.auth-hero { padding: 38px 30px; }.brand-mark { margin-bottom: 28px; }.auth-hero-copy { margin-bottom: 28px; }.auth-feature-list { gap: 12px; }.auth-panel { margin: 0; border: 0; border-radius: 0; }.auth-hero::after { right: -150px; bottom: -170px; } }
-@media (max-width: 520px) { .auth-page { margin-top: 15px; border-radius: 16px; }.auth-hero { padding: 30px 22px; }.auth-hero h2 { font-size: 2rem; }.auth-panel { padding: 25px 20px; }.auth-panel-heading { flex-direction: column; }.secure-badge { align-self: flex-start; } }
-</style>
-
-<style scoped>
-.auth-page { position: relative; width: min(1280px, 100%); min-height: min(720px, calc(100vh - 48px)); margin: 24px auto; border-color: #e3e7f0; border-radius: 28px; box-shadow: 0 28px 75px rgba(33, 45, 84, .13); }
-.auth-hero { display: flex; flex-direction: column; justify-content: center; padding: clamp(42px, 6vw, 84px); background: linear-gradient(145deg, #111b38 0%, #263b79 56%, #3779a1 100%); }
-.auth-hero::before { position: absolute; top: -120px; right: -70px; width: 430px; height: 430px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 50%; box-shadow: 0 0 0 42px rgba(255, 255, 255, .045), 0 0 0 86px rgba(255, 255, 255, .025); content: ""; }
-.auth-hero::after { right: -150px; bottom: -180px; opacity: .8; }
-.brand-mark { position: relative; z-index: 1; width: 48px; height: 48px; margin-bottom: clamp(34px, 6vh, 62px); border-color: rgba(255, 255, 255, .2); border-radius: 14px; background: linear-gradient(135deg, rgba(120, 132, 255, .7), rgba(37, 196, 179, .7)); box-shadow: 0 12px 24px rgba(7, 14, 48, .22); }
-.auth-hero .eyebrow, .auth-hero h2, .auth-hero-copy, .auth-feature-list { position: relative; z-index: 1; }
-.auth-hero h2 { font-weight: 850; letter-spacing: -.04em; }
-.auth-hero-copy { color: #d7e2f7; }
-.auth-feature-list { gap: 16px; }
-.auth-feature-list > div { padding: 10px 0; }
-.feature-icon { border-color: rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06); }
-.auth-panel { margin: 32px clamp(24px, 4vw, 58px); padding: 0; }
-.auth-panel-heading { margin-bottom: 32px; }
-.auth-panel h3 { color: var(--ink, #17213b); font-size: clamp(1.65rem, 3vw, 2rem); font-weight: 850; letter-spacing: -.035em; }
-.auth-panel-heading p:not(.eyebrow) { color: var(--muted, #71809d); }
-.secure-badge { border: 1px solid #c6eadd; background: #effbf7; color: #168273; }
-.auth-submit { min-height: 46px; background: linear-gradient(135deg, #5a67e8, #4653c7); }
-.auth-submit:hover:not(:disabled) { background: linear-gradient(135deg, #6875ef, #4d59d0); }
-.auth-switch { border: 1px solid #e1e5f0; }
-.auth-security-note { color: #8591a7; }
-@media (max-width: 850px) {
-  .auth-page { min-height: 0; margin: 16px auto; }
-  .auth-hero { min-height: 430px; }
-  .auth-panel { margin: 0; padding: 34px clamp(24px, 6vw, 54px) 38px; }
+.auth-page {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(340px, 440px) minmax(0, 1fr);
+  align-items: stretch;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  background: transparent;
 }
-@media (max-width: 520px) {
-  .auth-page { margin: 10px auto; border-radius: 20px; }
-  .auth-hero { min-height: 400px; }
+.auth-glow {
+  position: absolute;
+  left: -80px;
+  top: 12%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(210, 186, 245, .42), rgba(210, 186, 245, 0) 68%);
+  pointer-events: none;
+}
+.auth-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  max-height: calc(100vh - 40px);
+  margin: 20px 0 20px 24px;
+  padding: 28px 28px 20px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, .72);
+  background: linear-gradient(180deg, rgba(255, 250, 253, .9), rgba(248, 240, 252, .78));
+  box-shadow: 0 24px 60px rgba(48, 28, 72, .28);
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.brand-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #d7c4f4, #8b7bb8 58%, #f4c7d8);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 900;
+  box-shadow: 0 10px 20px rgba(139, 123, 184, .35);
+}
+.auth-brand strong, .auth-brand small { display: block; }
+.auth-brand strong { color: #3a2d52; font-size: 1rem; letter-spacing: -.02em; }
+.auth-brand small { color: #9a88b4; font-size: .7rem; font-weight: 600; }
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(139, 123, 184, .12);
+}
+.auth-tabs button {
+  padding: 8px 12px;
+  background: transparent;
+  color: #6b5b95;
+  box-shadow: none;
+  font-size: .82rem;
+}
+.auth-tabs button.active {
+  background: #fff;
+  color: #3a2d52;
+  box-shadow: 0 6px 16px rgba(107, 91, 149, .18);
+}
+.auth-tabs button:hover:not(:disabled) { filter: none; transform: none; }
+.auth-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.auth-panel h2 { margin: 0 0 6px; font-size: 1.48rem; letter-spacing: -.03em; }
+.auth-panel-heading p { margin: 0; color: #7d6e93; font-size: .84rem; line-height: 1.5; }
+.secure-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(226, 245, 236, .92);
+  color: #19714c;
+  font-size: .66rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.auth-form { display: grid; gap: 12px; }
+.field-label-row { display: flex; justify-content: space-between; gap: 8px; }
+.field-label-row span { color: #9a88b4; font-size: .7rem; }
+.auth-submit {
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px 16px;
+  font-size: .95rem;
+}
+.auth-footer { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; }
+.auth-text-switch {
+  padding: 0;
+  background: transparent;
+  color: #6b5b95;
+  box-shadow: none;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.auth-text-switch:hover:not(:disabled) { filter: none; transform: none; color: #3a2d52; background: transparent; }
+.bootstrap-note { margin: 12px 0 0; padding: 10px 12px; border: 1px solid #eed39a; border-radius: 12px; background: #fff9eb; color: #765b24; font-size: .72rem; line-height: 1.5; }
+.auth-security-note { margin: 14px 0 0; color: #9a88b4; font-size: .7rem; }
+.auth-page :deep(.alert) { margin: 0 0 12px; padding: 9px 11px; font-size: .8rem; }
+.auth-page :deep(.field label) { margin-bottom: 5px; font-size: .8rem; }
+.auth-page :deep(input) { padding: 11px 12px; }
+.auth-stage {
+  display: flex;
+  align-self: stretch;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 36px 40px;
+  color: #fff;
+}
+.auth-stage-copy {
+  max-width: 420px;
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(28, 16, 42, .28), rgba(28, 16, 42, .08));
+  backdrop-filter: blur(14px);
+}
+.auth-stage-kicker {
+  margin: 0 0 8px;
+  font-size: 1.28rem;
+  font-weight: 780;
+  line-height: 1.35;
+  text-shadow: 0 8px 22px rgba(24, 12, 36, .45);
+}
+.auth-stage-lead {
+  margin: 0 0 14px;
+  color: rgba(255, 246, 252, .86);
+  font-size: .86rem;
+  line-height: 1.6;
+}
+.auth-stage-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.auth-stage-points li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .16);
+  backdrop-filter: blur(10px);
+  font-size: .74rem;
+  font-weight: 700;
+}
+@media (max-width: 850px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-stage { display: none; }
+  .auth-panel { margin: 12px; max-height: calc(100vh - 24px); }
 }
 </style>

@@ -303,11 +303,25 @@ watch(() => [props.selectedSpaceId, section.value], () => {
 <template>
   <section class="view-section control-center" aria-labelledby="control-center-heading">
     <div class="section-heading">
-      <div><p class="eyebrow">04 · 平台管理</p><h2 id="control-center-heading">{{ sectionTitle }}</h2><p>{{ sectionDescription }}</p></div>
+      <div><p class="eyebrow">运行与配置</p><h2 id="control-center-heading">{{ sectionTitle }}</h2><p>{{ sectionDescription }}</p></div>
       <div class="read-only-note" :class="{ warning: !canManage }">{{ canManage ? "空间管理员：可管理配置" : "当前角色：只读入口" }}</div>
     </div>
     <nav class="control-nav" aria-label="配置与运维入口">
-      <button v-for="item in [{ key: 'spaces', label: '空间上下文' }, { key: 'health', label: '健康' }, { key: 'cost', label: '成本 / 用量' }, { key: 'feedback', label: '反馈' }, { key: 'audit', label: '审计导出' }, { key: 'providers', label: '模型服务连接' }, { key: 'models', label: '模型与路由' }, { key: 'prompts', label: '回答规则模板' }, { key: 'runs', label: '运行追踪' }]" :key="item.key" type="button" :class="{ active: section === item.key }" @click="selectSection(item.key)">{{ item.label }}</button>
+      <div class="control-group"><span>模型</span>
+        <button type="button" :class="{ active: section === 'providers' }" @click="selectSection('providers')">模型服务连接</button>
+        <button type="button" :class="{ active: section === 'models' }" @click="selectSection('models')">模型与路由</button>
+        <button type="button" :class="{ active: section === 'prompts' }" @click="selectSection('prompts')">回答规则模板</button>
+      </div>
+      <div class="control-group"><span>观测</span>
+        <button type="button" :class="{ active: section === 'health' }" @click="selectSection('health')">健康</button>
+        <button type="button" :class="{ active: section === 'cost' }" @click="selectSection('cost')">成本 / 用量</button>
+        <button type="button" :class="{ active: section === 'runs' }" @click="selectSection('runs')">运行追踪</button>
+      </div>
+      <div class="control-group"><span>治理</span>
+        <button type="button" :class="{ active: section === 'spaces' }" @click="selectSection('spaces')">空间上下文</button>
+        <button type="button" :class="{ active: section === 'feedback' }" @click="selectSection('feedback')">反馈</button>
+        <button type="button" :class="{ active: section === 'audit' }" @click="selectSection('audit')">审计导出</button>
+      </div>
     </nav>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
 
@@ -352,10 +366,12 @@ watch(() => [props.selectedSpaceId, section.value], () => {
 </template>
 
 <style scoped>
-.control-center { margin-top: 20px; }
-.control-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
-.control-nav button { border: 1px solid #cbd7e8; background: #fff; color: #345582; }
-.control-nav button.active { border-color: #173b74; background: #173b74; color: #fff; }
+.control-center { margin-top: 0; }
+.control-nav { display: grid; gap: 10px; margin: 0 0 18px; }
+.control-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.control-group > span { min-width: 42px; color: #9ca3af; font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.control-nav button { border: 1px solid #e5e7eb; background: #fff; color: #374151; box-shadow: none; }
+.control-nav button.active { border-color: #111827; background: #111827; color: #fff; }
 .control-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); gap: 16px; }
 .stack { display: grid; gap: 16px; }
 .list-card, .form-card { min-width: 0; }

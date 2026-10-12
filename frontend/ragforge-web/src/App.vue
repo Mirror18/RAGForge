@@ -176,7 +176,7 @@ onMounted(checkApiHealth);
 
     <div v-else class="app-frame">
       <aside class="app-sidebar" aria-label="产品导航">
-        <button type="button" class="brand-lockup" aria-label="返回带引用问答" @click="openView('answer')"><span class="brand-symbol">R</span><span><strong>RAGForge</strong><small>可核验知识工作台</small></span></button>
+        <button type="button" class="brand-lockup" aria-label="返回带引用问答" @click="openView('answer')"><span class="brand-symbol">玖</span><span><strong>RAGForge</strong><small>三玖色知识工作台</small></span></button>
         <div class="sidebar-space">
           <label class="sidebar-label" for="sidebar-space-select">当前空间</label>
           <select id="sidebar-space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0">
