@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +25,8 @@ import com.ragforge.server.index.CandidateIndexService;
 /**
  * Qdrant-backed BM25 store. Qdrant points are the durable lexical facts: the
  * worker writes the validated, internal searchable text beside the versioned
- * candidate payload and this adapter rebuilds BM25 statistics on every search.
+ * candidate payload. Search scores a per-(space,index) lexical cache; scroll
+ * runs only when the index is refreshed after publish, rollback or retire.
  */
 @Component
 public final class DurableBm25CandidateStore implements Bm25CandidateStore {
@@ -35,6 +37,7 @@ public final class DurableBm25CandidateStore implements Bm25CandidateStore {
     private final String apiKey;
     private final ObjectMapper objectMapper;
     private final HttpClient http;
+    private final ConcurrentHashMap<String, List<Document>> lexicalByVersion = new ConcurrentHashMap<>();
 
     @Autowired
     public DurableBm25CandidateStore(
@@ -71,6 +74,12 @@ public final class DurableBm25CandidateStore implements Bm25CandidateStore {
                 "text", document.text());
         request("POST", "/collections/" + collection + "/points/payload?wait=true",
                 Map.of("points", List.of(document.childChunkId().toString()), "payload", payload));
+        lexicalByVersion.compute(cacheKey(document.spaceId(), document.indexVersionId()), (ignored, current) -> {
+            List<Document> next = new ArrayList<>(current == null ? List.of() : current);
+            next.removeIf(item -> item.childChunkId().equals(document.childChunkId()));
+            next.add(document);
+            return List.copyOf(next);
+        });
     }
 
     @Override
@@ -79,7 +88,7 @@ public final class DurableBm25CandidateStore implements Bm25CandidateStore {
         if (query == null || query.isBlank() || limit <= 0 || limit > 100) {
             throw new IllegalArgumentException("BM25 query and limit are invalid");
         }
-        List<Document> documents = scroll(spaceId, indexVersionId);
+        List<Document> documents = lexicalByVersion.getOrDefault(cacheKey(spaceId, indexVersionId), List.of());
         List<String> queryTerms = terms(query);
         if (queryTerms.isEmpty() || documents.isEmpty()) {
             return List.of();
@@ -151,6 +160,22 @@ public final class DurableBm25CandidateStore implements Bm25CandidateStore {
             offset = next;
         }
         return List.copyOf(documents);
+    }
+
+    @Override
+    public void refreshLexicalIndex(UUID spaceId, UUID indexVersionId) {
+        requireScope(spaceId, indexVersionId);
+        lexicalByVersion.put(cacheKey(spaceId, indexVersionId), scroll(spaceId, indexVersionId));
+    }
+
+    @Override
+    public void dropLexicalIndex(UUID spaceId, UUID indexVersionId) {
+        requireScope(spaceId, indexVersionId);
+        lexicalByVersion.remove(cacheKey(spaceId, indexVersionId));
+    }
+
+    private static String cacheKey(UUID spaceId, UUID indexVersionId) {
+        return spaceId + ":" + indexVersionId;
     }
 
     private java.util.Optional<Document> parseDocument(JsonNode point, UUID spaceId, UUID indexVersionId) {

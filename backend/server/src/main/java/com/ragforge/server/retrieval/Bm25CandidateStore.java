@@ -24,4 +24,10 @@ public interface Bm25CandidateStore {
     void upsert(Document document);
 
     List<RetrievalCandidate> search(UUID spaceId, UUID indexVersionId, String query, int limit);
+
+    default void refreshLexicalIndex(UUID spaceId, UUID indexVersionId) {
+    }
+
+    default void dropLexicalIndex(UUID spaceId, UUID indexVersionId) {
+    }
 }

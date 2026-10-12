@@ -28,11 +28,14 @@ class DurableBm25CandidateStoreTest {
 
     private HttpServer server;
     private String lastScrollBody;
+    private int scrollCalls;
 
     @BeforeEach
     void setUp() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", this::respond);
+        scrollCalls = 0;
+        lastScrollBody = null;
         server.start();
     }
 
@@ -44,14 +47,20 @@ class DurableBm25CandidateStoreTest {
     @Test
     void restartRebuildsBm25FromDurableVersionedPayload() {
         DurableBm25CandidateStore first = newStore();
+        first.refreshLexicalIndex(SPACE, INDEX);
         List<RetrievalCandidate> beforeRestart = first.search(SPACE, INDEX, "durable lexical", 10);
 
         DurableBm25CandidateStore afterRestart = newStore();
+        afterRestart.refreshLexicalIndex(SPACE, INDEX);
+        int scrollsAfterWarm = scrollCalls;
         List<RetrievalCandidate> afterRebuild = afterRestart.search(SPACE, INDEX, "durable lexical", 10);
+        List<RetrievalCandidate> foreign = afterRestart.search(FOREIGN_SPACE, INDEX, "durable lexical", 10);
 
         assertThat(beforeRestart).extracting(RetrievalCandidate::childChunkId).containsExactly(CHILD);
         assertThat(afterRebuild).extracting(RetrievalCandidate::childChunkId).containsExactly(CHILD);
         assertThat(afterRebuild.get(0).searchableText()).contains("durable lexical");
+        assertThat(foreign).isEmpty();
+        assertThat(scrollCalls).isEqualTo(scrollsAfterWarm);
         assertThat(lastScrollBody).contains(SPACE.toString(), INDEX.toString())
                 .doesNotContain(FOREIGN_SPACE.toString());
     }
@@ -65,6 +74,7 @@ class DurableBm25CandidateStoreTest {
     private void respond(HttpExchange exchange) throws IOException {
         String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         if (exchange.getRequestURI().getPath().endsWith("/points/scroll")) {
+            scrollCalls += 1;
             lastScrollBody = body;
             write(exchange, """
                     {"result":{"points":[{"id":"%s","payload":{"space_id":"%s","index_version_id":"%s",

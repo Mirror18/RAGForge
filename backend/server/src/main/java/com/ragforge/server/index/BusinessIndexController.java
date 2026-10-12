@@ -5,6 +5,7 @@ import com.ragforge.server.ingestion.CursorCodec;
 import com.ragforge.server.ingestion.CursorPage;
 import com.ragforge.server.ingestion.SourceTaskCenterService;
 import com.ragforge.server.provider.SpaceAuthorization;
+import com.ragforge.server.retrieval.Bm25CandidateStore;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +29,7 @@ import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -38,14 +40,17 @@ public class BusinessIndexController {
     private final CandidateIndexService candidateIndexes;
     private final SpaceAuthorization authorization;
     private final SourceTaskCenterService taskCenter;
+    private final Bm25CandidateStore bm25;
 
     public BusinessIndexController(JdbcTemplate jdbc, IndexRepository indexes, CandidateIndexService candidateIndexes,
-                                   SpaceAuthorization authorization, SourceTaskCenterService taskCenter) {
+                                   SpaceAuthorization authorization, SourceTaskCenterService taskCenter,
+                                   Bm25CandidateStore bm25) {
         this.jdbc = jdbc;
         this.indexes = indexes;
         this.candidateIndexes = candidateIndexes;
         this.authorization = authorization;
         this.taskCenter = taskCenter;
+        this.bm25 = Objects.requireNonNull(bm25, "bm25");
     }
 
     @GetMapping
@@ -97,7 +102,9 @@ public class BusinessIndexController {
     public IndexRepository.ActiveIndexPointer publish(@PathVariable UUID spaceId, @PathVariable UUID indexVersionId,
                                                       @AuthenticationPrincipal SessionPrincipal principal) {
         authorization.requireWrite(spaceId, principal);
-        return candidateIndexes.publish(spaceId, indexVersionId, Instant.now());
+        IndexRepository.ActiveIndexPointer pointer = candidateIndexes.publish(spaceId, indexVersionId, Instant.now());
+        bm25.refreshLexicalIndex(spaceId, indexVersionId);
+        return pointer;
     }
 
     @PostMapping("/{indexVersionId}/rollback")
@@ -107,7 +114,9 @@ public class BusinessIndexController {
                                                        @AuthenticationPrincipal SessionPrincipal principal) {
         authorization.requireWrite(spaceId, principal);
         requireIdempotencyKey(key);
-        return indexes.rollback(spaceId, indexVersionId, pointerVersion(ifMatch), Instant.now());
+        IndexRepository.ActiveIndexPointer pointer = indexes.rollback(spaceId, indexVersionId, pointerVersion(ifMatch), Instant.now());
+        bm25.refreshLexicalIndex(spaceId, indexVersionId);
+        return pointer;
     }
 
     @PostMapping("/{indexVersionId}/retire")
@@ -117,7 +126,9 @@ public class BusinessIndexController {
                             @AuthenticationPrincipal SessionPrincipal principal) {
         authorization.requireWrite(spaceId, principal);
         requireIdempotencyKey(key);
-        return map(indexes.retire(spaceId, indexVersionId, pointerVersion(ifMatch), Instant.now()));
+        IndexRepository.IndexVersion retired = indexes.retire(spaceId, indexVersionId, pointerVersion(ifMatch), Instant.now());
+        bm25.dropLexicalIndex(spaceId, indexVersionId);
+        return map(retired);
     }
 
     @PostMapping("/{indexVersionId}/archive")

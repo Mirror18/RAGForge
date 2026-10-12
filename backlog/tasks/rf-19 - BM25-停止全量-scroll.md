@@ -1,7 +1,7 @@
 ---
 id: RF-19
 title: BM25 停止全量 scroll
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-12 16:50'
 updated_date: '2026-10-12 16:50'
@@ -25,9 +25,9 @@ token_limit: 8000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 单次 search 不再对集合调用 points/scroll
-- [ ] #2 候选与 space、index version 隔离；其他空间文档不可命中
-- [ ] #3 评估摘要记录配置版本和候选差异
+- [x] #1 单次 search 不再对集合调用 points/scroll
+- [x] #2 候选与 space、index version 隔离；其他空间文档不可命中
+- [x] #3 评估摘要记录配置版本和候选差异
 <!-- AC:END -->
 
 ## Implementation Plan

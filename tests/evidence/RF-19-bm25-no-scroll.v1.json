@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "RF-19",
+  "status": "PASS",
+  "capturedAt": "2026-10-12T18:00:00+08:00",
+  "summary": {
+    "test": "DurableBm25CandidateStoreTest.restartRebuildsBm25FromDurableVersionedPayload",
+    "passed": true
+  },
+  "configurations": {
+    "lexicalCacheKey": "space_id + index_version_id",
+    "searchPath": "in-memory BM25 over cached documents",
+    "scrollPath": "refreshLexicalIndex on publish/rollback; dropLexicalIndex on retire"
+  },
+  "delta": {
+    "searchScrollCalls": 0,
+    "foreignSpaceHits": 0,
+    "candidateSet": "same child as pre-restart refresh for the in-space document"
+  }
+}
