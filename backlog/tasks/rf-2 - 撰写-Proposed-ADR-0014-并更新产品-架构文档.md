@@ -1,10 +1,10 @@
 ---
 id: RF-2
 title: 撰写 Proposed ADR-0014 并更新产品/架构文档
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-12 02:06'
-updated_date: '2026-10-12 02:13'
+updated_date: '2026-10-12 02:51'
 labels:
   - architecture docs
 milestone: m-0
@@ -22,5 +22,17 @@ ordinal: 2000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 ADR-0014 状态为 Proposed,docs/01-03 与风险追溯已同步,AGENTS.md 未擅自改为 Accepted
+- [x] #1 ADR-0014 状态为 Proposed,docs/01-03 与风险追溯已同步,AGENTS.md 未擅自改为 Accepted
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+ADR-0014 Accepted 2026-10-12；ADR-0001 进程划分 superseded；Boot 3.5.0 + SCA 2025.0.0.0；ADR-0005 仅云端 OpenAI-compatible。
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+ADR-0014 已由项目所有者接受并写入 docs/07。产品路径改为 space/knowledge/answer/gateway 与云端-only 模型。
+<!-- SECTION:FINAL_SUMMARY:END -->
