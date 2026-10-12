@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ApiError, type AnswerDefaults, type ProvenanceContext } from "../../api";
+import { ApiError, ANSWER_READINESS_LABELS, apiFetch, getAnswerReadiness, listAllCursorPages, type AnswerDefaults, type AnswerReadiness, type ModelProfile, type ModelRoute, type ProvenanceContext, type SpaceBinding } from "../../api";
 import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, deleteAnswerConversation, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, renameAnswerConversation, submitAnswerFeedback, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "../../answer";
 import { type RunProjection } from "../../answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null; initialConversationId?: string; initialRunId?: string }>();
-const emit = defineEmits<{ "run-created": [runId: string]; "conversation-created": [conversationId: string]; "open-context": [context: ProvenanceContext] }>();
+const emit = defineEmits<{ "run-created": [runId: string]; "conversation-created": [conversationId: string]; "open-context": [context: ProvenanceContext]; "follow-gap": [path: string] }>();
 
 type UiStatus = "empty" | "loading" | "reconnecting" | "completed" | "abstained" | "failed" | "cancelled" | "degraded" | "timeout" | "cancelling";
 
@@ -46,6 +46,9 @@ interface ToolState {
 }
 
 const question = ref("");
+const expertOpen = ref(false);
+const readiness = ref<AnswerReadiness | null>(null);
+const readinessError = ref("");
 const conversationId = ref(props.initialConversationId ?? "");
 const routeVersionId = ref("");
 const profileVersionId = ref("");
@@ -118,6 +121,9 @@ let cancelIdempotencyKey = "";
 const seenEventIds = new Set<string>();
 
 const isActive = computed(() => status.value === "loading" || status.value === "reconnecting" || status.value === "degraded" || status.value === "cancelling");
+const nextGap = computed(() => readiness.value?.gaps[0] ?? null);
+const spaceReady = computed(() => Boolean(readiness.value?.ready));
+const canSubmit = computed(() => Boolean(props.selectedSpaceId && spaceReady.value && !isActive.value && !selectedConversationArchived.value));
 const statusLabel = computed(() => {
   if (status.value === "abstained") return abstentionTitle(abstention.value?.reasonCode ?? "");
   return ({ empty: "等待提问", loading: "回答生成中", reconnecting: "连接恢复中", completed: "已完成", abstained: "无法安全回答", failed: "回答失败", cancelled: "已取消", degraded: "服务降级", timeout: "请求超时", cancelling: "正在取消" })[status.value];
@@ -352,10 +358,48 @@ function validateStart(): string | null {
   if (!props.selectedSpaceId) return "请先在页面顶部选择当前空间。";
   if (selectedConversationArchived.value) return "当前会话已归档，只能查看历史回答；请点击“新会话”后继续提问。";
   if (!question.value.trim()) return "请输入问题。";
-  if (!routeVersionId.value.trim() || !profileVersionId.value.trim() || !providerConnectionId.value.trim() || !promptVersionId.value.trim() || !model.value.trim()) return "需要填写 route、profile、provider connection、prompt 和 model。";
-  if (!/^[0-9a-f]{64}$/i.test(datasetHash.value) || !/^[0-9a-f]{64}$/i.test(configHash.value)) return "业务闭环尚未返回有效的 dataset/config hash，请回到业务闭环刷新真实状态。";
+  if (!spaceReady.value) return nextGap.value ? ANSWER_READINESS_LABELS[nextGap.value.code] : "当前空间还不能提问。";
+  if (expertOpen.value) {
+    if (!routeVersionId.value.trim() || !profileVersionId.value.trim() || !providerConnectionId.value.trim() || !promptVersionId.value.trim() || !model.value.trim()) {
+      return "专家设置开启后需要填写 route、profile、provider connection、prompt 和 model。";
+    }
+  }
   if (!Number.isInteger(timeoutSeconds.value) || timeoutSeconds.value < 1 || timeoutSeconds.value > 120) return "timeoutSeconds 必须是 1–120 的整数。";
   return null;
+}
+
+async function loadReadiness(): Promise<void> {
+  if (!props.selectedSpaceId) {
+    readiness.value = null;
+    return;
+  }
+  readinessError.value = "";
+  try {
+    readiness.value = await getAnswerReadiness(props.selectedSpaceId);
+    if (readiness.value.ready) await bindSilentDefaults(props.selectedSpaceId);
+  } catch (error) {
+    readiness.value = null;
+    readinessError.value = safeApiError(error, "无法读取回答就绪状态。");
+  }
+}
+
+async function bindSilentDefaults(spaceId: string): Promise<void> {
+  const binding = await apiFetch<SpaceBinding>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/space-bindings`);
+  if (!routeVersionId.value) routeVersionId.value = binding.chatRouteId;
+  if (!promptVersionId.value) promptVersionId.value = binding.promptVersionId;
+  allowCloudEgress.value = binding.cloudEgressEnabled;
+  const [routes, profiles] = await Promise.all([
+    listAllCursorPages<ModelRoute>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/model-routes`, { limit: 10 }),
+    listAllCursorPages<ModelProfile>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/model-profiles`, { limit: 10 }),
+  ]);
+  const route = routes.find((item) => item.modelRouteId === binding.chatRouteId);
+  const candidate = route?.candidates[0];
+  if (candidate && !profileVersionId.value) profileVersionId.value = candidate.modelProfileId;
+  const profile = profiles.find((item) => item.modelProfileId === profileVersionId.value);
+  if (profile) {
+    if (!providerConnectionId.value) providerConnectionId.value = profile.providerConnectionId;
+    if (!model.value) model.value = profile.modelName;
+  }
 }
 
 function conversationIdentifier(projection: { conversationId?: string; id?: string }): string | null {
@@ -387,8 +431,20 @@ async function startAnswer(): Promise<void> {
     conversationId.value = activeConversationId;
     emit("conversation-created", activeConversationId);
     if (props.selectedSpaceId !== spaceIdAtStart) throw new Error("space changed during answer start");
-    const request = { routeVersionId: routeVersionId.value.trim(), profileVersionId: profileVersionId.value.trim(), providerConnectionId: providerConnectionId.value.trim(), promptVersionId: promptVersionId.value.trim(), model: model.value.trim(), message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, datasetHash: datasetHash.value.trim(), configHash: configHash.value.trim(), maxContextTokens: 4000, allowCloudEgress: allowCloudEgress.value };
-    const run = await createAnswerRun(spaceIdAtStart, activeConversationId, request, runIdempotencyKey);
+    const runRequest = {
+      routeVersionId: routeVersionId.value.trim(),
+      profileVersionId: profileVersionId.value.trim(),
+      providerConnectionId: providerConnectionId.value.trim(),
+      promptVersionId: promptVersionId.value.trim(),
+      model: model.value.trim(),
+      message: question.value.trim(),
+      timeoutSeconds: timeoutSeconds.value,
+      allowCloudEgress: allowCloudEgress.value,
+    };
+    const answerRequest = expertOpen.value
+      ? { ...runRequest, maxContextTokens: 4000 }
+      : { message: question.value.trim(), timeoutSeconds: timeoutSeconds.value, allowCloudEgress: allowCloudEgress.value };
+    const run = await createAnswerRun(spaceIdAtStart, activeConversationId, runRequest, runIdempotencyKey);
     const runId = runIdentifier(run);
     if (!runId || run.spaceId !== spaceIdAtStart || props.selectedSpaceId !== spaceIdAtStart || !run.correlationId) throw new Error("run context unavailable");
     emit("run-created", runId);
@@ -399,7 +455,7 @@ async function startAnswer(): Promise<void> {
     // first preserves those events for the live subscriber and avoids a
     // late-stream snapshot hiding the completed result.
     const stream = streamRun(runContext.value, timeoutSeconds.value);
-    await createAnswer(spaceIdAtStart, { ...request, runId, correlationId: run.correlationId }, createKey(`answer-create-${runId}`));
+    await createAnswer(spaceIdAtStart, { ...answerRequest, runId, correlationId: run.correlationId }, createKey(`answer-create-${runId}`));
     await stream;
     await loadHistory();
   } catch (error) {
@@ -533,12 +589,12 @@ async function restoreInitialRun(): Promise<void> {
 }
 
 watch(() => props.selectedSpaceId, (next, previous) => {
-  if (next !== previous) { resetAnswer(); conversationId.value = ""; historyRuns.value = []; historyPage.value = 1; historyRunsPage.value = 1; void loadHistory(); }
+  if (next !== previous) { resetAnswer(); conversationId.value = ""; historyRuns.value = []; historyPage.value = 1; historyRunsPage.value = 1; void loadHistory(); void loadReadiness(); }
 });
 watch(historySearch, () => { historyPage.value = 1; });
 watch(includeArchived, () => { historyPage.value = 1; historyRunsPage.value = 1; void loadHistory(); });
 watch(() => props.initialRunId, (next) => { if (next && props.selectedSpaceId) void loadHistoricalAnswer(next, conversationId.value || undefined); });
-onMounted(() => { void restoreInitialRun(); });
+onMounted(() => { void restoreInitialRun(); void loadReadiness(); });
 onBeforeUnmount(() => abortController?.abort());
 </script>
 
@@ -549,8 +605,21 @@ onBeforeUnmount(() => abortController?.abort());
     <div class="section-heading"><div><p class="eyebrow">问答</p><h2 id="answer-heading">带引用问答</h2><p>回答与引用只来自当前空间的结构化证据，不会把模型生成的文件名或网址当作引用。</p></div><div class="read-only-note" :class="{ warning: status === 'degraded' || status === 'timeout' }">{{ statusLabel }}</div></div>
     <form class="card answer-form" @submit.prevent="startAnswer">
       <div class="field wide"><label for="answer-question">问题</label><textarea id="answer-question" v-model="question" rows="4" maxlength="32000" placeholder="输入问题；不会写入 URL 或浏览器存储"></textarea></div>
-      <details class="answer-config"><summary>查看本次运行的技术详情</summary><p class="field-hint">回答配置已由业务向导从当前空间自动带入；普通用户无需填写内部标识或哈希。云端出境只有在明确选择 MiMo 并经空间授权后才会启用，不会自动切换。</p><div v-if="hasRuntimeDefaults" class="runtime-summary"><div><span>模型路线</span><code>{{ routeVersionId }}</code></div><div><span>模型档案</span><code>{{ profileVersionId }}</code></div><div><span>模型服务连接</span><code>{{ providerConnectionId }}</code></div><div><span>回答规则版本</span><code>{{ promptVersionId }}</code></div><div><span>模型名称</span><code>{{ model }}</code></div><div><span>数据 / 配置哈希</span><code>{{ datasetHash }} / {{ configHash }}</code></div></div><p v-else class="field-hint">请返回业务向导完成模型、回答规则和当前索引发布。</p><div class="field timeout-field"><label for="answer-timeout">最长等待（秒）</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div></details>
-      <div class="form-actions"><button type="submit" :disabled="isActive || !selectedSpaceId || selectedConversationArchived">{{ selectedConversationArchived ? "归档会话仅可查看" : isActive ? "回答进行中…" : "开始回答" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }} · {{ allowCloudEgress ? "MiMo 云端回答（已显式授权）" : "本地回答（仅本地）" }}</span></div>
+      <p v-if="readinessError" class="alert error">{{ readinessError }}</p>
+      <p v-else-if="nextGap" class="alert error">下一步：{{ ANSWER_READINESS_LABELS[nextGap.code] }} <button type="button" class="quiet-button" @click="emit('follow-gap', nextGap.path)">去处理</button></p>
+      <label class="history-toggle"><input v-model="expertOpen" type="checkbox" />专家设置</label>
+      <div v-if="expertOpen" class="answer-config">
+        <p class="field-hint">覆盖当前空间的默认绑定。普通提问不需要填写这些字段，也不会提交 hash。</p>
+        <div class="form-grid">
+          <div class="field"><label for="answer-route">模型路线</label><input id="answer-route" v-model="routeVersionId" autocomplete="off" /></div>
+          <div class="field"><label for="answer-profile">模型档案</label><input id="answer-profile" v-model="profileVersionId" autocomplete="off" /></div>
+          <div class="field"><label for="answer-provider">模型连接</label><input id="answer-provider" v-model="providerConnectionId" autocomplete="off" /></div>
+          <div class="field"><label for="answer-prompt">回答规则</label><input id="answer-prompt" v-model="promptVersionId" autocomplete="off" /></div>
+          <div class="field"><label for="answer-model">模型名称</label><input id="answer-model" v-model="model" autocomplete="off" /></div>
+          <div class="field timeout-field"><label for="answer-timeout">最长等待（秒）</label><input id="answer-timeout" v-model.number="timeoutSeconds" type="number" min="1" max="120" step="1" /></div>
+        </div>
+      </div>
+      <div class="form-actions"><button type="submit" :disabled="!canSubmit">{{ selectedConversationArchived ? "归档会话仅可查看" : isActive ? "回答进行中…" : spaceReady ? "开始回答" : "空间未就绪" }}</button><button v-if="isActive" type="button" class="danger-button" :disabled="status === 'cancelling'" @click="cancelAnswer">{{ status === "cancelling" ? "取消确认中…" : "取消回答" }}</button><span class="muted">当前空间：{{ selectedSpaceId || "未选择" }}</span></div>
     </form>
     <p v-if="formError" class="alert error" role="alert">{{ formError }}</p><p v-if="cancelError" class="alert error" role="alert">{{ cancelError }}</p><p v-if="notice" class="alert" :class="status === 'failed' || status === 'timeout' ? 'error' : 'success'" role="status">{{ notice }}</p>
 

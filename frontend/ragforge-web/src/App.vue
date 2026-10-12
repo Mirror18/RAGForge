@@ -212,7 +212,7 @@ onMounted(checkApiHealth);
         <ChunkStudioView v-else-if="view === 'studio'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :initial-context="routeContext" />
         <RetrievalPlaygroundView v-else-if="view === 'playground'" :selected-space-id="selectedSpaceId" :initial-context="routeContext" @open-context="openProvenanceContext" />
         <ControlCenterView v-else-if="view === 'control'" role="tabpanel" aria-labelledby="control-center-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :initial-section="controlSection" :initial-run-id="lastRunId" />
-        <AnswerView v-else-if="view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" :defaults="answerDefaults" :initial-conversation-id="conversationId" :initial-run-id="lastRunId" @conversation-created="conversationId = $event" @run-created="lastRunId = $event" @open-context="openProvenanceContext" />
+        <AnswerView v-else-if="view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" :defaults="answerDefaults" :initial-conversation-id="conversationId" :initial-run-id="lastRunId" @conversation-created="conversationId = $event" @run-created="lastRunId = $event" @open-context="openProvenanceContext" @follow-gap="(path) => { const next = readRoute(path); view = next.view; if (next.view === 'control') controlSection = next.controlSection; }" />
       </section>
     </div>
   </main>

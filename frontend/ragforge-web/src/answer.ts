@@ -166,18 +166,32 @@ export interface RunProjection {
 }
 
 export interface StartAnswerRequest {
-  routeVersionId: string;
-  profileVersionId: string;
-  providerConnectionId: string;
-  promptVersionId: string;
-  model: string;
+  routeVersionId?: string;
+  profileVersionId?: string;
+  providerConnectionId?: string;
+  promptVersionId?: string;
+  model?: string;
   message: string;
   timeoutSeconds: number;
-  datasetHash: string;
-  configHash: string;
-  maxContextTokens: number;
-  allowCloudEgress: boolean;
+  datasetHash?: string;
+  configHash?: string;
+  maxContextTokens?: number;
+  allowCloudEgress?: boolean;
   correlationId?: string;
+}
+
+export function buildCreateAnswerBody(request: StartAnswerRequest & { runId: string }): Record<string, unknown> {
+  const body: Record<string, unknown> = { runId: request.runId, query: request.message };
+  if (request.promptVersionId) body.promptVersionId = request.promptVersionId;
+  if (request.routeVersionId) body.modelRouteVersionId = request.routeVersionId;
+  if (request.profileVersionId) body.modelProfileVersionId = request.profileVersionId;
+  if (request.model) body.model = request.model;
+  if (request.maxContextTokens) body.maxContextTokens = request.maxContextTokens;
+  if (request.timeoutSeconds) body.timeoutSeconds = request.timeoutSeconds;
+  if (request.datasetHash) body.datasetHash = request.datasetHash;
+  if (request.configHash) body.configHash = request.configHash;
+  if (request.allowCloudEgress !== undefined) body.allowCloudEgress = request.allowCloudEgress;
+  return body;
 }
 
 export interface CitationPreviewResult extends AnswerCitation {
@@ -399,19 +413,7 @@ export async function createAnswerRun(spaceId: string, conversationId: string, r
 export async function createAnswer(spaceId: string, request: StartAnswerRequest & { runId: string }, idempotencyKey: string): Promise<unknown> {
   return apiFetch<unknown>(`/api/v1/spaces/${encodeURIComponent(spaceId)}/answers`, {
     method: "POST",
-    body: {
-      runId: request.runId,
-      query: request.message,
-      promptVersionId: request.promptVersionId,
-      modelRouteVersionId: request.routeVersionId,
-      modelProfileVersionId: request.profileVersionId,
-      model: request.model,
-      maxContextTokens: request.maxContextTokens,
-      timeoutSeconds: request.timeoutSeconds,
-      datasetHash: request.datasetHash,
-      configHash: request.configHash,
-      allowCloudEgress: request.allowCloudEgress,
-    },
+    body: buildCreateAnswerBody(request),
     idempotencyKey,
     correlationId: request.correlationId,
   });
