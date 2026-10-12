@@ -91,6 +91,9 @@ public class RetrievalPlaygroundService {
             AbstentionPair abstention, boolean activeProfileUnchanged) {
     }
 
+    public record PlaygroundDefaults(UUID indexVersionId, UUID profileId, int profileVersion) {
+    }
+
     private final SpaceAuthorization authorization;
     private final RetrievalProfileRepository profiles;
     private final IndexRepository indexes;
@@ -119,6 +122,18 @@ public class RetrievalPlaygroundService {
         this.indexes = indexes;
         this.retrievalPort = Objects.requireNonNull(retrievalPort, "retrievalPort");
         this.audit = audit;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<PlaygroundDefaults> defaults(UUID spaceId, SessionPrincipal principal) {
+        authorization.requireMember(spaceId, principal);
+        return indexes.findActivePointer(spaceId)
+                .filter(pointer -> spaceId.equals(pointer.spaceId()))
+                .flatMap(pointer -> profiles.findActivePointer(spaceId)
+                        .filter(active -> spaceId.equals(active.spaceId()))
+                        .flatMap(active -> profiles.findVersionByRowId(spaceId, active.activeProfileVersionId()))
+                        .map(profile -> new PlaygroundDefaults(pointer.activeIndexVersionId(),
+                                profile.profileId(), profile.versionNo())));
     }
 
     @Transactional

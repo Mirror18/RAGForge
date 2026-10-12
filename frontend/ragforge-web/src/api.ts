@@ -215,14 +215,24 @@ export const ANSWER_READINESS_LABELS: Record<AnswerReadinessCode, string> = {
   object_storage_disabled: "先启用对象存储",
   no_documents: "先导入资料",
   no_active_index: "发布当前索引",
-  no_active_profile: "在检索实验中确认活跃检索档",
+  no_active_profile: "先发布索引，再确认检索档",
   no_published_prompt: "发布并绑定回答规则",
   no_authorized_chat_route: "配置已授权的云端回答路线",
-  cloud_egress_required: "为当前空间授权云端出境",
+  cloud_egress_required: "在云端模型页启用本空间问答",
 };
 
 export function getAnswerReadiness(spaceId: string): Promise<AnswerReadiness> {
   return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/answer-readiness`);
+}
+
+export interface PlaygroundDefaults {
+  indexVersionId: string;
+  profileId: string;
+  profileVersion: number;
+}
+
+export function getPlaygroundDefaults(spaceId: string): Promise<PlaygroundDefaults | null> {
+  return apiFetch(`/api/v1/spaces/${encodeURIComponent(spaceId)}/retrieval-playground/defaults`);
 }
 
 export interface SpaceBinding {
@@ -585,6 +595,10 @@ function uuidV7(): string {
   bytes[8] = bytes[8] & 0x3f | 0x80;
   const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+export function createUuidV7(): string {
+  return uuidV7();
 }
 
 function idempotencyKey(): string {

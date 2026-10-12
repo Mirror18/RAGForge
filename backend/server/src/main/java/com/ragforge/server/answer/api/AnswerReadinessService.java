@@ -28,7 +28,7 @@ public class AnswerReadinessService {
             new GapDefinition("no_active_profile", "?view=playground"),
             new GapDefinition("no_published_prompt", "?view=control&section=prompts"),
             new GapDefinition("no_authorized_chat_route", "?view=control&section=providers"),
-            new GapDefinition("cloud_egress_required", "?view=control&section=spaces")
+            new GapDefinition("cloud_egress_required", "?view=control&section=providers")
     );
 
     private final boolean objectStorageEnabled;

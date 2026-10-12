@@ -1020,6 +1020,24 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/retrieval-playground/defaults": {
+      "x-ragforge-implementation-status": "phase-business-loop",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["retrieval-playground"],
+        "operationId": "getRetrievalPlaygroundDefaults",
+        "summary": "Return the space active index and retrieval profile for playground prefill",
+        "description": "Read-only identities the UI uses to run an experiment without asking the operator to paste UUIDs. Missing active pointers return 204. This does not mutate the active profile pointer.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {
+          "200": {"description": "Active index and retrieval profile identities", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RetrievalPlaygroundDefaults"}}}},
+          "204": {"description": "No active index or retrieval profile is bound for this space"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"}
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/retrieval-playground/experiments": {
       "x-ragforge-implementation-status": "phase4-contract",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
@@ -1879,6 +1897,16 @@
           "override": {"$ref": "#/components/schemas/ChunkOverrideRecord"}
         },
         "description": "Explicit space/revision/child identity plus content reference/hash and server audit fields; no content body is returned."
+      },
+      "RetrievalPlaygroundDefaults": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["indexVersionId", "profileId", "profileVersion"],
+        "properties": {
+          "indexVersionId": {"$ref": "#/components/schemas/UuidV7"},
+          "profileId": {"$ref": "#/components/schemas/UuidV7"},
+          "profileVersion": {"type": "integer", "minimum": 1}
+        }
       },
       "RetrievalProfileVersionRef": {
         "type": "object",

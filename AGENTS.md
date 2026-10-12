@@ -174,6 +174,10 @@ An agent halts and reports to the human if and only if any of the following appl
 
 Before merging a change, run the relevant formatting, unit, architecture, contract, integration, security, and evaluation tests. Changes to retrieval, prompts, chunking, parsers, embedding, or reranking must include an offline evaluation comparison and record the tested configuration version.
 
+## Local run refresh
+
+After a completed change that affects the running stack, replace the local artifacts and restart the backend. Local Server and Worker run the isolated JARs under `backend/server/target-ragforge/` and `backend/ingestion-worker/target-ragforge/`, not IDE `target/classes`. From the repository root run [`scripts/dev/restart-local.bat`](scripts/dev/restart-local.bat): stop the PIDs in `tmp/local-run/`, rebuild with Java 21 and `-Pragforge-isolated-output`, then start Server on `25082` and Worker. Wait until `http://127.0.0.1:25082/actuator/health` returns 200. Leave Docker Compose project `ragforge-p1` running. Frontend-only edits do not require a Java restart when Vite is already serving `http://127.0.0.1:25174`. Clear `JAVA_TOOL_OPTIONS` during Maven so PowerShell `$ErrorActionPreference = Stop` does not abort on stderr.
+
 ## Documentation rules
 
 - Use relative Markdown links for repository files and direct HTTPS links for external sources.

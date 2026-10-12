@@ -163,6 +163,11 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
     if (path.endsWith("/model-routes")) return fulfill(route, 200, { items: [{ modelRouteId: SYNTHETIC.routeId, purpose: "CHAT", egressClass: "CLOUD", failoverPolicy: "NONE", status: "ACTIVE", version: 1, candidates: [{ modelProfileId: SYNTHETIC.profileId, priority: 1, egressClass: "CLOUD" }] }] });
     if (path.endsWith("/prompt-templates")) return fulfill(route, 200, { items: [{ promptTemplateId: SYNTHETIC.promptTemplateId, name: "Synthetic template", purpose: "CHAT", currentVersion: 1 }] });
     if (path.includes("/prompt-templates/") && path.endsWith("/versions/1")) return fulfill(route, 200, { promptTemplateId: SYNTHETIC.promptTemplateId, promptVersionId: SYNTHETIC.promptVersionId, version: 1, state: "PUBLISHED", contentHash: SYNTHETIC.configHash, messages: [], variableSchema: {}, outputContract: {} });
+    if (path.endsWith("/retrieval-playground/defaults") && request.method() === "GET") {
+      return published
+        ? fulfill(route, 200, { indexVersionId: SYNTHETIC.indexId, profileId: SYNTHETIC.profileId, profileVersion: 1 })
+        : fulfill(route, 204, "");
+    }
     if (path.endsWith("/indexes/active")) return fulfill(route, 200, published ? { pointer: { activeIndexVersionId: SYNTHETIC.indexId }, index: { indexVersionId: SYNTHETIC.indexId, versionNo: 1, state: "ACTIVE", childChunkCount: 1, validationVectorDimension: 3 }, datasetHash: SYNTHETIC.datasetHash } : null);
     if (path.endsWith("/indexes") && request.method() === "GET") return fulfill(route, 200, page(options.largeCollections ? (uploaded ? largeIndexes : []) : (uploaded ? [{ indexVersionId: SYNTHETIC.indexId, versionNo: 1, state: published ? "ACTIVE" : "READY", childChunkCount: 1, validationVectorDimension: 3 }] : []), url));
     if (path.includes("/indexes/" + SYNTHETIC.indexId + "/publish") && request.method() === "POST") { published = true; return fulfill(route, 200, { activeIndexVersionId: SYNTHETIC.indexId }); }
@@ -176,7 +181,8 @@ export function createSyntheticApi(options: { role?: SyntheticRole; hasSpace?: b
     if (path.includes("/management/cost-usage")) return fulfill(route, 200, { spaceId: SYNTHETIC.spaceId, from: now, to: now, items: [] });
     if (path.includes("/management/feedback")) return fulfill(route, 200, page([], url));
     if (path.includes("/management/audit/export")) return fulfill(route, 200, page([], url));
-    if (path.endsWith("/space-bindings") && request.method() === "GET") return fulfill(route, 200, { version: 1, chatRouteId: SYNTHETIC.routeId, embeddingRouteId: null, rerankRouteId: null, promptVersionId: SYNTHETIC.promptVersionId, cloudEgressEnabled: false, cloudEgressAuthorization: null });
+    if (path.endsWith("/space-bindings") && request.method() === "GET") return fulfill(route, 200, { version: 1, chatRouteId: SYNTHETIC.routeId, embeddingRouteId: SYNTHETIC.profileId, rerankRouteId: SYNTHETIC.providerId, promptVersionId: SYNTHETIC.promptVersionId, cloudEgressEnabled: false, cloudEgressAuthorization: null });
+    if (path.endsWith("/space-bindings") && request.method() === "PUT") return fulfill(route, 200, { spaceBindingId: SYNTHETIC.routeId, spaceId: SYNTHETIC.spaceId, version: 2, chatRouteId: SYNTHETIC.routeId, embeddingRouteId: SYNTHETIC.profileId, rerankRouteId: SYNTHETIC.providerId, promptVersionId: SYNTHETIC.promptVersionId, cloudEgressEnabled: true, createdAt: now, updatedAt: now });
     if (path.endsWith("/conversations") && request.method() === "GET") return fulfill(route, 200, page(conversationStatus === "ARCHIVED" && url.searchParams.get("includeArchived") !== "true" ? [] : conversations.map((item) => ({ ...item, status: conversationStatus })), url));
     if (path.endsWith("/conversations") && request.method() === "POST") return fulfill(route, 201, { id: SYNTHETIC.conversationId, conversationId: SYNTHETIC.conversationId, title: "Synthetic conversation", status: "ACTIVE", version: 1, createdAt: now, updatedAt: now, spaceId: SYNTHETIC.spaceId });
     if (path.includes("/conversations/" + SYNTHETIC.conversationId + "/archive") && request.method() === "POST") { conversationStatus = "ARCHIVED"; return fulfill(route, 200, { id: SYNTHETIC.conversationId, status: "ARCHIVED" }); }

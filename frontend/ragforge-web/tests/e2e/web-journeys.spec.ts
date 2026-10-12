@@ -175,7 +175,7 @@ test("[P7C-16 索引列表分页] index lifecycle shows ten versions per page", 
 test("[P7Q-06 URL + 分页] restores route state and traverses all large synthetic collections", async ({ page }) => {
   const api = createSyntheticApi({ largeCollections: true });
   await login(page, api);
-  await page.getByRole("button", { name: "内容证据" }).click();
+  await page.locator("#chunk-studio-tab").click();
   await expect(page).toHaveURL(/view=studio/);
   await page.reload();
   await expect(page.locator("#chunk-studio-heading")).toBeVisible();

@@ -6,7 +6,7 @@
 |---|---|---|
 | `access/` | 登录、注册、平台管理员引导 | `/api/v1/auth/*`、bootstrap |
 | `space/` | 空间、成员、账号 | `/api/v1/spaces`、members、users |
-| `knowledge/` | 资料导入、来源、任务、索引、证据、检索实验 | sources、jobs、indexes、chunk-studio、retrieval playground |
+| `knowledge/` | 资料导入、来源、任务、索引、看来源、试检索 | sources、jobs、indexes、chunk-studio、retrieval playground |
 | `answer/` | 带引用问答与历史 | conversations、runs、answers、citations |
 | `admin/` | 云端模型与运行管理 | provider-connections、model-profiles、health、audit、runs |
 

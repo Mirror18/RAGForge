@@ -70,7 +70,7 @@ class AnswerReadinessServiceTest {
         assertThat(readiness.gaps()).extracting(AnswerReadinessService.Gap::code)
                 .containsExactly("cloud_egress_required");
         assertThat(readiness.gaps()).extracting(AnswerReadinessService.Gap::path)
-                .containsExactly("?view=control&section=spaces");
+                .containsExactly("?view=control&section=providers");
     }
 
     @Test

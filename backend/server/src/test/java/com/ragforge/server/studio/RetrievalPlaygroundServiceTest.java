@@ -52,6 +52,20 @@ class RetrievalPlaygroundServiceTest {
             "User", "csrf", "USER", Instant.MAX);
 
     @Test
+    void defaultsPrefillActiveIndexAndProfileWithoutExposingRowIdsToTheCallerContract() {
+        UUID versionRow = UUID.randomUUID();
+        when(indexes.findActivePointer(SPACE)).thenReturn(java.util.Optional.of(
+                new IndexRepository.ActiveIndexPointer(UUID.randomUUID(), SPACE, INDEX, null, 1, NOW)));
+        when(profiles.findActivePointer(SPACE)).thenReturn(java.util.Optional.of(
+                new RetrievalProfileRepository.ActiveProfilePointer(UUID.randomUUID(), SPACE, versionRow, 2, NOW)));
+        when(profiles.findVersionByRowId(SPACE, versionRow)).thenReturn(java.util.Optional.of(profile(PROFILE_A, 2)));
+
+        java.util.Optional<RetrievalPlaygroundService.PlaygroundDefaults> defaults = service().defaults(SPACE, principal);
+
+        assertThat(defaults).hasValue(new RetrievalPlaygroundService.PlaygroundDefaults(INDEX, PROFILE_A, 2));
+    }
+
+    @Test
     void missingOrInvalidQueryVectorFailsClosedBeforeAnyRetrievalAccess() {
         RetrievalPlaygroundService service = service();
         RetrievalPlaygroundService.ExperimentRequest request = request(null);

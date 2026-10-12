@@ -52,11 +52,11 @@ const modelSections = ["providers", "prompts"] as const;
 const isModelControl = computed(() => modelSections.includes(controlSection.value as typeof modelSections[number]));
 const pageMeta = computed(() => {
   if (view.value === "profile") return { kicker: "空间", title: "知识空间", description: "空间是隔离边界。先选定空间，再配置成员、模型和资料。" };
-  if (view.value === "control" && isModelControl.value) return { kicker: "模型", title: "云端模型", description: "只登记已授权的 OpenAI 兼容云端连接；未授权不得把内容送出。" };
-  if (view.value === "flow") return { kicker: "知识库", title: "资料与索引", description: "导入资料、跟踪任务，验证通过后发布当前索引。" };
-  if (view.value === "answer") return { kicker: "问答", title: "带引用问答", description: "基于已发布索引提问，引用必须来自结构化证据。" };
-  if (view.value === "studio") return { kicker: "证据", title: "内容证据", description: "从来源、引用或检索命中打开记录，不手填内部编号。" };
-  if (view.value === "playground") return { kicker: "检索", title: "检索实验", description: "只读比较检索候选，不会改变正在使用的索引版本。" };
+  if (view.value === "control" && isModelControl.value) return { kicker: "模型", title: "云端模型", description: "登记连接、绑定对话/向量/重排，再一键启用本空间问答。" };
+  if (view.value === "flow") return { kicker: "知识库", title: "资料与索引", description: "导入资料，等处理完成后发布当前索引，再去提问。" };
+  if (view.value === "answer") return { kicker: "问答", title: "带引用问答", description: "只问问题。引用点开后可看来源位置，不必填写内部编号。" };
+  if (view.value === "studio") return { kicker: "证据", title: "看来源", description: "从回答里的引用进入，核对来源位置和是否已入索引。" };
+  if (view.value === "playground") return { kicker: "检索", title: "试检索", description: "用当前空间正在使用的索引试搜，不会改生产配置。" };
   if (view.value === "control") return { kicker: "观测", title: "运行观测", description: "查看健康、用量、追踪和脱敏审计。" };
   return { kicker: "工作台", title: "知识闭环", description: "在当前空间内完成资料、索引和可核验回答。" };
 });
@@ -191,8 +191,8 @@ onMounted(checkApiHealth);
           <button id="flow-tab" type="button" class="side-nav-item" :class="{ active: view === 'flow' }" :aria-current="view === 'flow' ? 'page' : undefined" @click="openView('flow')"><span class="nav-icon">库</span><span><strong>资料与索引</strong><small>导入、任务、发布</small></span></button>
         </div>
         <div class="sidebar-section"><span class="sidebar-label">知识工程</span>
-          <button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="openView('studio')"><span class="nav-icon">证</span><span><strong>内容证据</strong><small>来源与修订</small></span></button>
-          <button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="openView('playground')"><span class="nav-icon">检</span><span><strong>检索实验</strong><small>只读比较</small></span></button>
+          <button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="openView('studio')"><span class="nav-icon">证</span><span><strong>看来源</strong><small>从引用打开</small></span></button>
+          <button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="openView('playground')"><span class="nav-icon">检</span><span><strong>试检索</strong><small>不改当前配置</small></span></button>
         </div>
         <div class="sidebar-section"><span class="sidebar-label">配置</span>
           <button id="personal-space-tab" type="button" class="side-nav-item" :class="{ active: view === 'profile' }" :aria-current="view === 'profile' ? 'page' : undefined" @click="openView('profile')"><span class="nav-icon">空</span><span><strong>知识空间</strong><small>成员与隔离边界</small></span></button>
@@ -206,14 +206,14 @@ onMounted(checkApiHealth);
 
       <section class="app-main">
         <header class="topbar"><div class="page-heading"><span class="eyebrow">{{ pageMeta.kicker }}</span><h1>{{ pageMeta.title }}</h1><p>{{ pageMeta.description }}</p></div><div class="topbar-actions"><div class="status-chip" :class="apiStatus" aria-live="polite"><span class="status-dot" aria-hidden="true"></span>{{ statusText }}</div><button type="button" class="icon-button" :disabled="apiStatus === 'checking'" aria-label="刷新工作区状态" title="刷新工作区状态" @click="checkApiHealth">↻</button></div></header>
-        <section class="workspace-context" aria-label="当前工作空间上下文"><div class="space-switcher"><span class="context-label">当前空间</span><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }}</option></select><small class="timezone-note">时间显示：{{ currentTimeZone() }}</small></div><div class="context-stat"><span class="context-label">当前角色</span><strong>{{ currentRoleLabel }}</strong></div><div class="context-stat"><span class="context-label">空间版本</span><strong>v{{ selectedSpace?.version ?? "—" }}</strong></div><div class="context-id"><span class="context-label">空间标识</span><code>{{ selectedSpaceId || "尚未创建空间" }}</code></div><button type="button" class="secondary-button context-profile" @click="openView('profile')">管理空间</button></section>
+        <section class="workspace-context" aria-label="当前工作空间上下文"><div class="space-switcher"><span class="context-label">当前空间</span><select id="space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0"><option value="">请选择空间</option><option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }}</option></select><small class="timezone-note">时间显示：{{ currentTimeZone() }}</small></div><div class="context-stat"><span class="context-label">当前角色</span><strong>{{ currentRoleLabel }}</strong></div><button type="button" class="secondary-button context-profile" @click="openView('profile')">管理空间</button></section>
         <p v-if="workspaceError" class="alert error" role="alert">{{ workspaceError }}</p>
         <PersonalSpaceView v-if="spaces.length === 0 || view === 'profile'" :session="session" :spaces="spaces" :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-creating="spaceCreating" @select-space="(spaceId) => { selectedSpaceId = spaceId; openView('flow'); }" @create-space="createSpace" @open-action="openPersonalAction" @logout="logout" @refresh="checkApiHealth" />
         <BusinessFlowView v-else-if="view === 'flow'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :current-user-id="session.user.userId" @start-answer="(config) => { answerDefaults = config; openView('answer'); }" @open-control="openControl" @follow-gap="(path) => { const next = readRoute(path); view = next.view; if (next.view === 'control') controlSection = next.controlSection; }" />
 
         <ChunkStudioView v-else-if="view === 'studio'" :selected-space-id="selectedSpaceId" :current-role="currentRole" :initial-context="routeContext" />
         <RetrievalPlaygroundView v-else-if="view === 'playground'" :selected-space-id="selectedSpaceId" :initial-context="routeContext" @open-context="openProvenanceContext" />
-        <ModelSetupView v-else-if="view === 'control' && isModelControl" role="tabpanel" aria-labelledby="control-model-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :initial-section="controlSection" @select-section="controlSection = $event" />
+        <ModelSetupView v-else-if="view === 'control' && isModelControl" role="tabpanel" aria-labelledby="control-model-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :current-user-id="session.user.userId" :initial-section="controlSection" @select-section="controlSection = $event" />
         <ObservabilityView v-else-if="view === 'control'" role="tabpanel" aria-labelledby="control-center-tab" :selected-space-id="selectedSpaceId" :current-role="currentRole" :platform-role="session.user.platformRole" :initial-section="controlSection" :initial-run-id="lastRunId" @select-section="controlSection = $event" />
         <AnswerView v-else-if="view === 'answer'" role="tabpanel" aria-labelledby="answer-tab" :selected-space-id="selectedSpaceId" :defaults="answerDefaults" :initial-conversation-id="conversationId" :initial-run-id="lastRunId" @conversation-created="conversationId = $event" @run-created="lastRunId = $event" @open-context="openProvenanceContext" @follow-gap="(path) => { const next = readRoute(path); view = next.view; if (next.view === 'control') controlSection = next.controlSection; }" />
       </section>
