@@ -28,6 +28,8 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 .\scripts\dev\start-local.bat -SkipWeb
 # 启动完成后打开浏览器
 .\scripts\dev\start-local.bat -OpenBrowser
+# 停掉旧 JAR/Web 后按同一套流程重新构建并拉起
+.\scripts\dev\restart-local.bat
 ```
 
 默认本地项目名为 `ragforge-p1`，Server/Web 端口为 `25082` 和 `25174`；可通过 `-ProjectName`、`-ServerPort`、`-WebPort` 调整。Chat 与 Embedding 只走空间已授权的 OpenAI 兼容云端 API，未授权则 fail-closed，不会静默切云。

@@ -7,6 +7,7 @@ import com.ragforge.server.prompt.PromptRepository;
 import com.ragforge.server.provider.ProviderRepository;
 import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class AnswerReadinessService {
             new GapDefinition("no_active_profile", "?view=playground"),
             new GapDefinition("no_published_prompt", "?view=control&section=prompts"),
             new GapDefinition("no_authorized_chat_route", "?view=control&section=providers"),
-            new GapDefinition("cloud_egress_required", "?view=control&section=spaces")
+            new GapDefinition("cloud_egress_required", "?view=control&section=providers")
     );
 
     private final boolean objectStorageEnabled;
@@ -39,6 +40,7 @@ public class AnswerReadinessService {
     private final SpaceBindingRepository bindings;
     private final ProviderRepository providers;
 
+    @Autowired
     public AnswerReadinessService(
             @Value("${ragforge.object-storage.enabled:false}") boolean objectStorageEnabled,
             IngestionRepository ingestion, IndexRepository indexes, RetrievalProfileRepository profiles,

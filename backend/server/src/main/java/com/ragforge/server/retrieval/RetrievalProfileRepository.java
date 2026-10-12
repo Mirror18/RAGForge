@@ -59,6 +59,20 @@ public class RetrievalProfileRepository {
         return findVersion(input.spaceId(), input.profileId(), input.versionNo()).orElseThrow();
     }
 
+    public Optional<RetrievalProfileVersion> findVersionByRowId(UUID spaceId, UUID versionRowId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject("""
+                    SELECT id, space_id, profile_id, version_no, dense_top_k, bm25_top_k, rrf_k,
+                           rrf_dense_weight, rrf_bm25_weight, rerank_top_k, max_context_children,
+                           expansion_mode, max_parents_per_child, max_neighbors_per_parent,
+                           max_context_tokens, created_at
+                    FROM retrieval_profiles WHERE space_id = ? AND id = ?
+                    """, (rs, row) -> mapProfile(rs), spaceId, versionRowId));
+        } catch (EmptyResultDataAccessException ignored) {
+            return Optional.empty();
+        }
+    }
+
     public Optional<RetrievalProfileVersion> findVersion(UUID spaceId, UUID profileId, int versionNo) {
         try {
             return Optional.ofNullable(jdbc.queryForObject("""

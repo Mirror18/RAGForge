@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, getActiveIndex, getAnswerReadiness, getIngestionJob, getParseReport, ingestWebSource, listAllCursorPages, publishIndex, rollbackIndex, retireIndex, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type AnswerReadiness, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "../../api";
+import { ApiError, getActiveIndex, getAnswerReadiness, getIngestionJob, getParseReport, ingestWebSource, listAllCursorPages, publishIndex, rollbackIndex, retireIndex, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type AnswerReadiness, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceRole, apiFetch } from "../../api";
 import SourceLibraryView from "./SourceLibraryView.vue";
 import TaskCenterView from "./TaskCenterView.vue";
 import IndexLifecycleView from "./IndexLifecycleView.vue";
@@ -52,9 +52,8 @@ const selectedRoute = computed(() => modelRoutes.value.find((item) => item.model
 const selectedProfile = computed(() => modelProfiles.value.find((item) => item.modelProfileId === selectedProfileId.value) ?? null);
 const selectedProvider = computed(() => providerConnections.value.find((item) => item.providerConnectionId === selectedProfile.value?.providerConnectionId) ?? null);
 const selectedTemplate = computed(() => promptTemplates.value.find((item) => item.promptTemplateId === selectedPromptTemplateId.value) ?? null);
-const chatRoutes = computed(() => modelRoutes.value.filter((item) => item.purpose === "CHAT" && item.status === "ACTIVE" && item.egressClass === "CLOUD"));
 const selectedRouteCandidate = computed(() => selectedRoute.value?.candidates.find((candidate) => candidate.modelProfileId === selectedProfileId.value) ?? null);
-const publishedChatRoutes = computed(() => chatRoutes.value);
+const publishedChatRoutes = computed(() => modelRoutes.value.filter((item) => item.purpose === "CHAT" && item.status === "ACTIVE" && item.egressClass === "CLOUD"));
 const publishedPromptTemplates = computed(() => promptTemplates.value.filter((item) => item.purpose === "CHAT" && item.currentVersion !== null));
 const needsBindingChoice = computed(() => publishedBindingChoiceNeeded(publishedChatRoutes.value.length, publishedPromptTemplates.value.length));
 const hasPublishedModel = computed(() => selectedRoute.value?.purpose === "CHAT"
@@ -87,69 +86,11 @@ const nextAction = computed(() => {
   return nextStep.value.label;
 });
 
-function apiPath(suffix: string): string {
-  return `/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}${suffix}`;
-}
-
-async function applyChatBinding(route: ModelRoute): Promise<void> {
-  if (route.egressClass !== "CLOUD") {
-    throw new Error("当前产品只允许已授权的云端模型。");
-  }
-  const binding = await apiFetch<SpaceBinding>(apiPath("/space-bindings"));
-  const approvedAt = new Date();
-  const expiresAt = new Date(approvedAt.getTime() + 24 * 60 * 60 * 1000);
-  await apiFetch<SpaceBinding>(apiPath("/space-bindings"), {
-    method: "PUT",
-    headers: { "If-Match": `"${binding.version}"` },
-    body: {
-      version: binding.version,
-      chatRouteId: route.modelRouteId,
-      embeddingRouteId: binding.embeddingRouteId,
-      rerankRouteId: binding.rerankRouteId,
-      promptVersionId: binding.promptVersionId,
-      cloudEgressEnabled: true,
-      cloudEgressAuthorization: {
-        approvalId: crypto.randomUUID(),
-        approvedBy: props.currentUserId,
-        approvedAt: approvedAt.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        scope: "CHAT",
-      },
-    },
-  });
-  notice.value = "已绑定云端 Chat：本次授权后才能把空间内容送给模型。";
-}
-
-async function bindPublishedCloudRoute(): Promise<void> {
-  const route = chatRoutes.value[0];
-  if (!route) {
-    error.value = "当前空间还没有已发布的云端回答路线，请先在「云端模型」中完成配置。";
-    return;
-  }
-  selectedRouteId.value = route.modelRouteId;
-  const profile = modelProfiles.value.find((candidate) => candidate.modelProfileId === route.candidates[0]?.modelProfileId);
-  selectedProfileId.value = profile?.modelProfileId ?? "";
-  model.value = profile?.modelName ?? model.value;
-  try {
-    await loadPromptVersion(selectedTemplate.value);
-    await applyChatBinding(route);
-  } catch (value) {
-    error.value = describeError(value);
-  }
-}
-
 function describeError(value: unknown): string {
   if (!(value instanceof ApiError)) return "业务闭环配置加载失败，请稍后重试。";
   if (value.status === 403) return "当前角色无权读取或操作此空间配置。";
   if (value.status === 404) return "配置资源不存在，或不属于当前空间。";
   return value.problem?.detail ?? value.message;
-}
-
-function selectRoute(): void {
-  const candidate = selectedRoute.value?.candidates[0];
-  selectedProfileId.value = candidate?.modelProfileId ?? "";
-  const profile = modelProfiles.value.find((item) => item.modelProfileId === selectedProfileId.value);
-  if (profile) model.value = profile.modelName;
 }
 
 async function readWithTimeout<T>(label: string, task: Promise<T>, fallback: T, failures: string[]): Promise<T> {
@@ -227,8 +168,8 @@ async function uploadFile(): Promise<void> {
     }
     postImportGuide.value = true;
     notice.value = submitted.length === 1
-      ? `已提交 ${submitted[0].jobId}。可在任务中心跟踪摄取，完成后即可提问。`
-      : `已提交 ${submitted.length} 个文档。可在任务中心跟踪摄取，完成后即可提问。`;
+      ? "资料已提交，后台正在处理。完成后请发布索引，再去提问。"
+      : `已提交 ${submitted.length} 个文档。完成后请发布索引，再去提问。`;
     selectedFiles.value = [];
     await loadFlow();
     if (submitted.length === 1) await waitForIngestion(submitted[0].jobId);
@@ -246,7 +187,7 @@ async function ingestWeb(): Promise<void> {
     const submitted = await ingestWebSource(props.selectedSpaceId, webUrl.value.trim(), true);
     webUrl.value = ""; webEgressApproved.value = false;
     postImportGuide.value = true;
-    notice.value = "网页已提交 " + submitted.jobId + "。可在任务中心跟踪摄取，完成后即可提问。";
+    notice.value = "网页已提交。后台处理完成后请发布索引，再去提问。";
     await loadFlow();
     await waitForIngestion(submitted.jobId);
   } catch (value) { error.value = describeError(value); }
@@ -263,8 +204,8 @@ async function waitForIngestion(jobId: string): Promise<void> {
       if (["SUCCEEDED", "FAILED", "DEAD_LETTER", "CANCELLED"].includes(current.job.status)) {
         if (current.job.documentRevisionId) await showParseReport(current.job.documentRevisionId);
         notice.value = current.job.status === "SUCCEEDED"
-          ? "摄取已完成。请到任务中心确认结果，或发布索引后去提问。"
-          : `摄取结束，状态为 ${current.job.status}；请查看任务中心中的错误。`;
+          ? "处理完成。请把待发布索引设为当前版本，然后去提问。"
+          : `处理结束（${stateLabel(current.job.status)}）。可在任务列表查看原因。`;
         await loadFlow();
         return;
       }
@@ -274,14 +215,14 @@ async function waitForIngestion(jobId: string): Promise<void> {
     const current = jobs.value.find((item) => item.job.id === jobId);
     if (current && ["SUCCEEDED", "FAILED", "DEAD_LETTER", "CANCELLED"].includes(current.job.status)) {
       if (current.job.documentRevisionId) await showParseReport(current.job.documentRevisionId);
-      notice.value = current.job.status === "SUCCEEDED"
-        ? "摄取已完成。请到任务中心确认结果，或发布索引后去提问。"
-        : `摄取结束，状态为 ${current.job.status}；请查看任务中心中的错误。`;
+        notice.value = current.job.status === "SUCCEEDED"
+          ? "处理完成。请把待发布索引设为当前版本，然后去提问。"
+          : `处理结束（${stateLabel(current.job.status)}）。可在任务列表查看原因。`;
       return;
     }
     await new Promise<void>((resolve) => window.setTimeout(resolve, 2000));
   }
-  notice.value = "摄取仍在后台执行；页面只轮询服务端状态，不会伪造进度。可稍后刷新继续查看。";
+  notice.value = "仍在后台处理。页面只显示服务端状态，可稍后刷新。";
 }
 
 async function showParseReport(revisionId: string | null): Promise<void> {
@@ -300,7 +241,7 @@ async function publishCandidate(index: IndexView): Promise<void> {
   notice.value = "正在通过服务端原子发布候选索引…";
   try {
     await publishIndex(props.selectedSpaceId, index.indexVersionId);
-    notice.value = `索引 v${index.versionNo} 已发布为当前空间 active index。`;
+    notice.value = `索引第 ${index.versionNo} 版已发布，可以去提问。`;
     await loadFlow();
   } catch (value) {
     error.value = describeError(value);
@@ -316,7 +257,7 @@ async function rollbackPrevious(indexVersionId: string): Promise<void> {
   error.value = "";
   try {
     await rollbackIndex(props.selectedSpaceId, indexVersionId, pointerVersion);
-    notice.value = "已回滚上一版索引，current/previous pointer 已更新。";
+    notice.value = "已回滚到上一版索引。";
     await loadFlow();
   } catch (value) {
     error.value = describeError(value);
@@ -332,7 +273,7 @@ async function retireVersion(index: IndexView): Promise<void> {
   error.value = "";
   try {
     await retireIndex(props.selectedSpaceId, index.indexVersionId, pointerVersion);
-    notice.value = `索引 v${index.versionNo} 已退役，仍保留在生命周期记录中。`;
+    notice.value = `索引第 ${index.versionNo} 版已退役。`;
     await loadFlow();
   } catch (value) {
     error.value = describeError(value);
@@ -432,7 +373,7 @@ watch(() => props.selectedSpaceId, () => {
 
 <template>
   <section class="view-section business-flow" aria-labelledby="business-flow-heading">
-    <div class="section-heading"><div><p class="eyebrow">知识库</p><h2 id="business-flow-heading">资料与索引</h2><p>导入资料、跟踪摄取、发布索引。来源和任务从工作台标签进入，不再藏在折叠层里。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "已准备好提问" : nextAction }} <button v-if="!canStart && selectedSpaceId && nextStep.kind !== 'import'" type="button" class="quiet-button" @click="followNextGap">去处理</button></div></div>
+    <div class="section-heading"><div><p class="eyebrow">知识库</p><h2 id="business-flow-heading">资料与索引</h2><p>导入资料 → 等待处理 → 发布当前索引 → 去提问。模型和出境在云端模型页一次启用。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "已准备好提问" : nextAction }} <button v-if="!canStart && selectedSpaceId && nextStep.kind !== 'import'" type="button" class="quiet-button" @click="followNextGap">去处理</button></div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
     <div v-if="postImportGuide" class="button-row import-guide"><button type="button" class="secondary-button" @click="flowTab = 'tasks'">查看任务</button><button type="button" :disabled="!canStart" @click="startAnswer">去提问</button></div>
     <ol class="flow-progress" aria-label="资料到问答进度">
@@ -442,14 +383,14 @@ watch(() => props.selectedSpaceId, () => {
       <li :class="{ done: canStart, current: activeStep === 4 }"><strong>问答</strong><span>{{ canStart ? "可提问" : "未解锁" }}</span></li>
     </ol>
     <section v-if="needsRuntimeSetup" class="card setup-card" aria-labelledby="setup-heading">
-      <div><span class="card-label">管理员一次性配置</span><h3 id="setup-heading">当前空间还没有可用的回答配置</h3><p class="muted">先验证模型服务并发布回答规则。完成后导入资料即可提问，不必手填内部编号。</p></div>
-      <div class="setup-actions"><button type="button" :disabled="!canManage" @click="followNextGap">打开模型配置</button></div>
+      <div><span class="card-label">还差一步</span><h3 id="setup-heading">先启用本空间的云端问答</h3><p class="muted">到云端模型页完成连接、三种模型和启用。启用后回到这里导入资料即可提问。</p></div>
+      <div class="setup-actions"><button type="button" :disabled="!canManage" @click="followNextGap">去启用云端问答</button></div>
       <small v-if="!canManage" class="permission-hint">当前角色没有配置权限，请让空间管理员完成这一步。</small>
     </section>
     <nav class="work-tabs" aria-label="资料工作台">
-      <button type="button" :class="{ active: flowTab === 'library' }" @click="flowTab = 'library'">导入与索引</button>
-      <button type="button" :class="{ active: flowTab === 'sources' }" @click="flowTab = 'sources'">来源库</button>
-      <button type="button" :class="{ active: flowTab === 'tasks' }" @click="flowTab = 'tasks'">任务中心</button>
+      <button type="button" :class="{ active: flowTab === 'library' }" @click="flowTab = 'library'">导入与发布</button>
+      <button type="button" :class="{ active: flowTab === 'sources' }" @click="flowTab = 'sources'">来源</button>
+      <button type="button" :class="{ active: flowTab === 'tasks' }" @click="flowTab = 'tasks'">后台任务</button>
     </nav>
 
     <div v-show="flowTab === 'library'" class="flow-layout">
@@ -466,12 +407,12 @@ watch(() => props.selectedSpaceId, () => {
             <div class="web-source-form"><div class="field"><label for="web-source-url">网页链接</label><input id="web-source-url" v-model="webUrl" type="url" placeholder="https://example.com/knowledge" /></div><label class="check-row"><input v-model="webEgressApproved" type="checkbox" />我确认本次加载允许访问已配置白名单的公开网页</label><button type="button" class="secondary-button" :disabled="uploadBusy || !webUrl.trim() || !webEgressApproved" @click="ingestWeb">{{ uploadBusy ? "加载中…" : "加载网页到知识库" }}</button></div>
           </div>
         </details>
-        <div v-if="jobs.length" class="data-list-section"><div class="data-list-heading"><div><span class="card-label">导入任务</span><p class="muted">每页 10 条，按服务端更新时间排列。</p></div><span class="data-list-count">共 {{ jobs.length }} 条</span></div><div class="data-table-wrap"><table class="data-table" aria-label="导入任务列表"><thead><tr><th scope="col">任务</th><th scope="col">状态</th><th scope="col">处理步骤</th><th scope="col">更新时间</th><th scope="col">操作</th></tr></thead><tbody><tr v-for="item in visibleJobs" :key="item.job.id"><td><strong>摄取任务</strong><small>{{ item.job.id }}</small></td><td><span class="state-pill" :class="item.job.status.toLowerCase()">{{ stateLabel(item.job.status) }}</span></td><td><span class="step-summary">{{ item.steps.map((step) => `${step.stepName}:${stateLabel(step.status)}`).join(" · ") || "等待后台处理" }}</span></td><td>{{ new Date(item.job.updatedAt).toLocaleString() }}</td><td><button v-if="item.job.documentRevisionId" type="button" class="quiet-button" @click="showParseReport(item.job.documentRevisionId)">查看解析结果</button><span v-else class="muted">—</span></td></tr></tbody></table></div><div class="pagination-bar" data-pagination="ingestion-jobs"><span>第 {{ jobPage }} / {{ jobPageCount }} 页 · 共 {{ jobs.length }} 条</span><div><button type="button" class="quiet-button" :disabled="jobPage <= 1" aria-label="上一页" @click="setJobPage(jobPage - 1)">上一页</button><button type="button" class="quiet-button" :disabled="jobPage >= jobPageCount" aria-label="下一页" @click="setJobPage(jobPage + 1)">下一页</button></div></div></div>
+        <div v-if="jobs.length" class="data-list-section"><div class="data-list-heading"><div><span class="card-label">处理进度</span><p class="muted">导入后会自动解析、切分并写入索引。</p></div><span class="data-list-count">共 {{ jobs.length }} 条</span></div><div class="data-table-wrap"><table class="data-table" aria-label="导入任务列表"><thead><tr><th scope="col">资料</th><th scope="col">状态</th><th scope="col">处理步骤</th><th scope="col">更新时间</th><th scope="col">操作</th></tr></thead><tbody><tr v-for="item in visibleJobs" :key="item.job.id"><td><strong>文档导入</strong></td><td><span class="state-pill" :class="item.job.status.toLowerCase()">{{ stateLabel(item.job.status) }}</span></td><td><span class="step-summary">{{ item.steps.map((step) => `${stateLabel(step.stepName)}：${stateLabel(step.status)}`).join(" · ") || "等待后台处理" }}</span></td><td>{{ new Date(item.job.updatedAt).toLocaleString() }}</td><td><button v-if="item.job.documentRevisionId" type="button" class="quiet-button" @click="showParseReport(item.job.documentRevisionId)">查看解析结果</button><span v-else class="muted">—</span></td></tr></tbody></table></div><div class="pagination-bar" data-pagination="ingestion-jobs"><span>第 {{ jobPage }} / {{ jobPageCount }} 页 · 共 {{ jobs.length }} 条</span><div><button type="button" class="quiet-button" :disabled="jobPage <= 1" aria-label="上一页" @click="setJobPage(jobPage - 1)">上一页</button><button type="button" class="quiet-button" :disabled="jobPage >= jobPageCount" aria-label="下一页" @click="setJobPage(jobPage + 1)">下一页</button></div></div></div>
         <p v-else class="empty-state data-list-empty">还没有导入任务；选择资料后会出现在这个列表中。</p>
         <div v-if="parseReport" class="parse-report"><strong>解析结果：{{ stateLabel(parseReport.status) }}</strong><span>{{ parseReport.parserName }} {{ parseReport.parserVersion }} · {{ parseReport.characterCount }} 字符 · {{ parseReport.tokenCount }} 个词元</span><small>{{ parseReport.errors || "没有错误" }}</small></div>
         <details v-if="needsBindingChoice" class="advanced-config"><summary>选择已发布的回答绑定</summary><p class="field-hint">当前空间有多套已发布绑定，提问前请选择一套。</p><div class="form-grid"><div class="field wide"><label for="flow-route">模型路线</label><select id="flow-route" v-model="selectedRouteId" @change="selectedProfileId = selectedRoute?.candidates[0]?.modelProfileId ?? ''"><option value="">自动选择已发布路线</option><option v-for="item in modelRoutes" :key="item.modelRouteId" :value="item.modelRouteId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-profile">模型能力档案</label><select id="flow-profile" v-model="selectedProfileId"><option value="">自动选择已发布档案</option><option v-for="item in modelProfiles.filter((candidate) => candidate.status === 'PUBLISHED')" :key="item.modelProfileId" :value="item.modelProfileId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-model">模型名称</label><input id="flow-model" v-model="model" placeholder="例如 mimo-v2.5" /></div><div class="field wide"><label for="flow-prompt">回答规则模板</label><select id="flow-prompt" v-model="selectedPromptTemplateId" @change="refreshPromptVersion"><option value="">自动选择已发布模板</option><option v-for="item in promptTemplates" :key="item.promptTemplateId" :value="item.promptTemplateId">{{ item.name }} · {{ item.currentVersion ? `第 ${item.currentVersion} 版` : "未发布" }}</option></select></div><div v-if="promptVersion" class="prompt-version-summary field wide"><label>当前回答规则</label><output>第 {{ promptVersion.version }} 版 · {{ stateLabel(promptVersion.state) }}</output><small>内部版本哈希：{{ promptVersion.contentHash }}</small></div></div></details>
         <div class="flow-boundary-note" :class="{ warning: !hasIndexIdentity }"><strong>{{ hasIndexIdentity ? "可以提问" : indexes.some((item) => item.state === 'READY') ? "还差一步" : "正在处理" }}：</strong><span>{{ hasIndexIdentity ? "当前索引已发布，可以进入问答。" : indexes.some((item) => item.state === 'READY') ? "点击“发布为当前版本”后才能用于回答。" : "等待后台完成解析、切分、向量化和索引验证。" }}</span></div>
-        <div class="button-row"><button type="button" :disabled="!canStart" @click="startAnswer">去提问</button><button type="button" class="secondary-button" @click="emit('open-control', 'providers')">管理员高级设置</button></div>
+        <div class="button-row"><button type="button" :disabled="!canStart" @click="startAnswer">去提问</button><button type="button" class="secondary-button" @click="emit('open-control', 'providers')">云端模型</button></div>
         <IndexLifecycleView
           v-if="props.selectedSpaceId"
           :indexes="indexes"
@@ -484,9 +425,7 @@ watch(() => props.selectedSpaceId, () => {
         />
       </div>
       <aside class="flow-side">
-        <div class="card"><span class="card-label">当前权限</span><h3>{{ stateLabel(currentRole) }}</h3><p>写入权限由服务端裁决。本页只展示当前空间可执行的步骤。</p></div>
-        <div class="card runtime-choice"><span class="card-label">回答方式</span><h3>仅云端 API</h3><p>{{ chatRoutes.length ? "将使用已授权的 OpenAI 兼容云端模型；未授权请求会被拒绝。" : "还没有已发布的云端回答路线。" }}</p><button v-if="chatRoutes.length" type="button" class="secondary-button" @click="bindPublishedCloudRoute">确认并授权本次云端调用</button></div>
-        <div class="card"><span class="card-label">空间资产</span><ul class="flow-resource-list"><li>{{ providerConnections.length }} 个模型服务连接</li><li>{{ modelProfiles.length }} 个模型能力档案</li><li>{{ promptTemplates.length }} 个回答规则模板</li><li>{{ jobs.length }} 个导入任务</li><li>{{ indexes.length }} 个索引版本</li></ul></div>
+        <div class="card"><span class="card-label">下一步</span><h3>{{ canStart ? "可以提问" : nextAction }}</h3><p>资料页只负责导入和发布索引。模型、出境和回答规则在云端模型页完成。</p></div>
       </aside>
     </div>
     <div v-show="flowTab === 'sources'" class="flow-panel"><SourceLibraryView :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-ready="canStart" @open-tasks="flowTab = 'tasks'" @start-answer="startAnswer" /></div>

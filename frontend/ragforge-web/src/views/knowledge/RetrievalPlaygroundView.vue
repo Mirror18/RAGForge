@@ -1,33 +1,117 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
-import { ApiError, type Anchor, type ProvenanceContext, type RetrievalExperiment, apiFetch } from "../../api";
+import { computed, onMounted, ref, watch } from "vue";
+import { ApiError, getPlaygroundDefaults, type Anchor, type PlaygroundDefaults, type ProvenanceContext, type RetrievalExperiment, apiFetch } from "../../api";
 
 const props = defineProps<{ selectedSpaceId: string; initialContext?: ProvenanceContext | null }>();
 const emit = defineEmits<{ "open-context": [context: ProvenanceContext] }>();
-const query = ref(""); const indexVersionId = ref(""); const profileAId = ref(""); const profileAVersion = ref(1); const compareProfileB = ref(false); const profileBId = ref(""); const profileBVersion = ref(1);
-const loading = ref(false); const error = ref(""); const experiment = ref<RetrievalExperiment | null>(null);
-const traceStages = [{ key: "dense" as const, title: "Dense" }, { key: "bm25" as const, title: "BM25" }, { key: "rrf" as const, title: "RRF" }, { key: "rerank" as const, title: "Rerank" }];
+const query = ref("");
+const defaults = ref<PlaygroundDefaults | null>(null);
+const loading = ref(false);
+const error = ref("");
+const experiment = ref<RetrievalExperiment | null>(null);
+const traceStages = [{ key: "dense" as const, title: "向量召回" }, { key: "bm25" as const, title: "关键词召回" }, { key: "rrf" as const, title: "融合" }, { key: "rerank" as const, title: "重排" }];
+const usingActive = computed(() => Boolean(defaults.value?.indexVersionId && defaults.value.profileId));
+
 function path(value: string): string { return encodeURIComponent(value.trim()); }
-function formatAnchor(anchor: Anchor): string { const parts = [anchor.headingPath.join(" / ")]; if (anchor.pageNumber) parts.push(`第 ${anchor.pageNumber} 页`); if (anchor.sheet) parts.push(`工作表 ${anchor.sheet}`); if (anchor.slideNumber) parts.push(`第 ${anchor.slideNumber} 张幻灯片`); if (anchor.lineRange) parts.push(`行 ${anchor.lineRange.startLine}–${anchor.lineRange.endLine}`); if (anchor.tableCell) parts.push(`单元格 ${anchor.tableCell}`); return parts.filter(Boolean).join(" · ") || "未提供锚点"; }
-function explain(value: unknown): string { if (!(value instanceof ApiError)) return "Retrieval Playground 实验失败。"; return value.status === 403 ? "当前空间权限不允许此操作。" : value.status === 404 ? "检索版本或 provenance context 不属于当前空间。" : value.problem?.detail ?? value.message; }
-function loadContext(context: ProvenanceContext | null | undefined): void { if (!context || context.target !== "playground") return; if (context.indexVersionId) indexVersionId.value = context.indexVersionId; if (context.profileId) profileAId.value = context.profileId; if (context.profileVersion) profileAVersion.value = context.profileVersion; }
-async function runExperiment(): Promise<void> {
-  error.value = ""; experiment.value = null; const valid = (value: number) => Number.isInteger(value) && value >= 1;
-  if (!props.selectedSpaceId || !query.value.trim() || !indexVersionId.value.trim() || !profileAId.value.trim() || !valid(profileAVersion.value)) { error.value = "需要填写当前空间、query、indexVersionId、profile A ID 和有效版本号。"; return; }
-  if (compareProfileB.value && (!profileBId.value.trim() || !valid(profileBVersion.value))) { error.value = "启用 profile B 后，需要填写 profile B ID 和有效版本号。"; return; }
-  loading.value = true;
-  try { experiment.value = await apiFetch<RetrievalExperiment>(`/api/v1/spaces/${path(props.selectedSpaceId)}/retrieval-playground/experiments`, { method: "POST", body: { query: query.value.trim(), indexVersionId: indexVersionId.value.trim(), profileA: { profileId: profileAId.value.trim(), version: profileAVersion.value, candidateOnly: true }, profileB: compareProfileB.value ? { profileId: profileBId.value.trim(), version: profileBVersion.value, candidateOnly: true } : null } }); }
-  catch (value) { error.value = explain(value); } finally { loading.value = false; }
+function formatAnchor(anchor: Anchor): string {
+  const parts = [anchor.headingPath.join(" / ")];
+  if (anchor.pageNumber) parts.push(`第 ${anchor.pageNumber} 页`);
+  if (anchor.sheet) parts.push(`工作表 ${anchor.sheet}`);
+  if (anchor.slideNumber) parts.push(`第 ${anchor.slideNumber} 张幻灯片`);
+  if (anchor.lineRange) parts.push(`行 ${anchor.lineRange.startLine}–${anchor.lineRange.endLine}`);
+  if (anchor.tableCell) parts.push(`单元格 ${anchor.tableCell}`);
+  return parts.filter(Boolean).join(" · ") || "未提供位置";
 }
-function openHit(hit: { childChunkId: string; documentRevisionId: string; contentRef: string; textHash: string }): void { emit("open-context", { target: "studio", spaceId: props.selectedSpaceId, childChunkId: hit.childChunkId, documentRevisionId: hit.documentRevisionId, contentRef: hit.contentRef, textHash: hit.textHash }); }
-watch(() => props.initialContext, loadContext, { immediate: true });
-onMounted(() => loadContext(props.initialContext));
+function explain(value: unknown): string {
+  if (!(value instanceof ApiError)) return "试检索失败。";
+  return value.status === 403 ? "当前空间权限不允许此操作。" : value.status === 404 ? "当前索引或检索档不属于这个空间。" : value.problem?.detail ?? value.message;
+}
+
+async function loadDefaults(): Promise<void> {
+  if (!props.selectedSpaceId) return;
+  try {
+    const active = await getPlaygroundDefaults(props.selectedSpaceId);
+    const context = props.initialContext;
+    defaults.value = context?.target === "playground" && context.indexVersionId && context.profileId
+      ? { indexVersionId: context.indexVersionId, profileId: context.profileId, profileVersion: context.profileVersion ?? active?.profileVersion ?? 1 }
+      : active;
+  } catch (value) {
+    defaults.value = null;
+    error.value = explain(value);
+  }
+}
+
+async function runExperiment(): Promise<void> {
+  error.value = ""; experiment.value = null;
+  if (!props.selectedSpaceId || !query.value.trim()) { error.value = "请输入要试检索的问题。"; return; }
+  if (!defaults.value) { error.value = "当前空间还没有已发布索引或检索档。请先到资料页导入并发布。"; return; }
+  loading.value = true;
+  try {
+    experiment.value = await apiFetch<RetrievalExperiment>(`/api/v1/spaces/${path(props.selectedSpaceId)}/retrieval-playground/experiments`, {
+      method: "POST",
+      body: {
+        query: query.value.trim(),
+        indexVersionId: defaults.value.indexVersionId,
+        profileA: { profileId: defaults.value.profileId, version: defaults.value.profileVersion, candidateOnly: true },
+        profileB: null,
+      },
+    });
+  } catch (value) { error.value = explain(value); } finally { loading.value = false; }
+}
+
+function openHit(hit: { childChunkId: string; documentRevisionId: string; contentRef: string; textHash: string }): void {
+  emit("open-context", { target: "studio", spaceId: props.selectedSpaceId, childChunkId: hit.childChunkId, documentRevisionId: hit.documentRevisionId, contentRef: hit.contentRef, textHash: hit.textHash });
+}
+
+watch(() => [props.selectedSpaceId, props.initialContext], () => { void loadDefaults(); }, { immediate: true });
+onMounted(() => { void loadDefaults(); });
 </script>
 
 <template>
-  <section class="view-section" role="tabpanel" aria-labelledby="retrieval-playground-heading"><div class="section-heading"><div><p class="eyebrow">检索</p><h2 id="retrieval-playground-heading">检索实验</h2><p>比较候选版本 A/B 的结构化检索轨迹；实验不会改变当前能力档案。</p></div><div class="read-only-note">A/B 均为候选版本，只读</div></div>
-    <form class="card experiment-form" @submit.prevent="runExperiment"><div class="field wide"><label for="query">问题</label><textarea id="query" v-model="query" rows="3" maxlength="10000" placeholder="输入实验问题；不会写入 URL 或浏览器存储"></textarea></div><div class="form-grid"><div class="field"><label for="index-version">indexVersionId</label><input id="index-version" v-model="indexVersionId" autocomplete="off" placeholder="UUIDv7" /></div><div class="field"><label for="profile-a-id">能力档案 A 标识</label><input id="profile-a-id" v-model="profileAId" autocomplete="off" placeholder="UUIDv7" /></div><div class="field"><label for="profile-a-version">能力档案 A 版本</label><input id="profile-a-version" v-model.number="profileAVersion" type="number" min="1" step="1" /></div></div><label class="check-row"><input v-model="compareProfileB" type="checkbox" />比较能力档案 B 候选版本</label><div v-if="compareProfileB" class="form-grid nested-fields"><div class="field"><label for="profile-b-id">能力档案 B 标识</label><input id="profile-b-id" v-model="profileBId" autocomplete="off" placeholder="UUIDv7" /></div><div class="field"><label for="profile-b-version">能力档案 B 版本</label><input id="profile-b-version" v-model.number="profileBVersion" type="number" min="1" step="1" /></div></div><div class="form-actions"><button type="submit" :disabled="loading || !selectedSpaceId">{{ loading ? "实验运行中…" : "提交只读实验" }}</button><span class="muted">空间标识由当前空间路径提供。</span></div></form>
+  <section class="view-section" role="tabpanel" aria-labelledby="retrieval-playground-heading">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">检索</p>
+        <h2 id="retrieval-playground-heading">试检索</h2>
+        <p>用当前空间正在使用的索引试搜。结果可点开看来源，不会改变问答正在用的配置。</p>
+      </div>
+      <div class="read-only-note">{{ usingActive ? "已使用当前索引" : "还没有可试检索的索引" }}</div>
+    </div>
+    <form class="card experiment-form" @submit.prevent="runExperiment">
+      <div class="field wide"><label for="query">问题</label><textarea id="query" v-model="query" rows="3" maxlength="10000" placeholder="输入一句话，看看知识库会命中什么"></textarea></div>
+      <p class="muted">{{ usingActive ? "将使用本空间当前索引和检索档。" : "请先在资料页导入文档并发布索引。" }}</p>
+      <div class="form-actions"><button type="submit" :disabled="loading || !selectedSpaceId || !usingActive">{{ loading ? "检索中…" : "试检索" }}</button></div>
+    </form>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p>
-    <div v-if="experiment" class="results" aria-live="polite"><div class="result-summary card"><div><span class="card-label">实验完成</span><code>{{ experiment.experimentId }}</code><p>问题：{{ experiment.query }}</p><p class="muted">规范化问题：{{ experiment.normalizedQuery }}</p></div><div class="safe-result"><span>activeProfileUnchanged</span><strong>{{ experiment.activeProfileUnchanged ? "true · 未改变" : "false" }}</strong></div></div><div class="side-grid"><template v-for="(side, sideName) in { A: experiment.profileA, B: experiment.profileB }" :key="sideName"><article v-if="side" class="side-panel"><div class="side-header"><h3>能力档案 {{ sideName }} 候选版本</h3><span>{{ side.profile.profileId }} · v{{ side.profile.version }}</span></div><div v-for="stage in traceStages" :key="stage.key" class="trace-block"><div class="trace-title"><h4>{{ stage.title }}</h4><span>{{ side.trace[stage.key].metrics.candidateCount }} 个候选 · {{ side.trace[stage.key].metrics.latencyMs }} ms</span></div><div v-for="hit in side.trace[stage.key].items" :key="`${stage.key}-${hit.childChunkId}-${hit.rank}`" class="hit-row"><span class="rank">#{{ hit.rank }}</span><div><code>{{ hit.childChunkId }}</code><small>score {{ hit.score }} · {{ hit.contentRef }} · hash {{ hit.textHash }}</small></div><button type="button" class="quiet-button" @click="openHit(hit)">在内容证据中打开</button></div></div><div class="trace-block context-block"><div class="trace-title"><h4>上下文</h4><span>{{ side.trace.context.totalTokens }} / {{ side.trace.context.maxContextTokens }} 词元</span></div><p>子分块: {{ side.trace.context.childChunkIds.join("、") || "—" }}</p><p>{{ side.trace.context.truncated ? "上下文已截断" : "上下文未截断" }}</p></div><div class="trace-block evidence-block"><div class="trace-title"><h4>证据</h4><span>允许列表 {{ side.trace.evidence.allowListVersion }}</span></div><div v-for="item in side.trace.evidence.items" :key="item.evidenceId" class="evidence-row"><strong>{{ item.evidenceId }}</strong><code>{{ item.contentRef }} · {{ item.textHash }}</code><span>子分块 {{ item.childChunkId }} · anchor {{ formatAnchor(item.anchor) }}</span><button type="button" class="quiet-button" @click="openHit(item)">在内容证据中打开</button></div></div></article></template></div></div><div v-else class="empty-state card"><strong>尚未运行实验</strong><span>从检索配置或结构化命中进入，或填写候选版本后提交。</span></div>
+    <div v-if="experiment" class="results" aria-live="polite">
+      <div class="result-summary card">
+        <div>
+          <span class="card-label">检索完成</span>
+          <p>问题：{{ experiment.query }}</p>
+        </div>
+        <div class="safe-result"><span>当前配置</span><strong>{{ experiment.activeProfileUnchanged ? "未改动" : "异常" }}</strong></div>
+      </div>
+      <div class="side-grid">
+        <article v-if="experiment.profileA" class="side-panel">
+          <div class="side-header"><h3>命中结果</h3><span>只读实验</span></div>
+          <div v-for="stage in traceStages" :key="stage.key" class="trace-block">
+            <div class="trace-title"><h4>{{ stage.title }}</h4><span>{{ experiment.profileA.trace[stage.key].metrics.candidateCount }} 条 · {{ experiment.profileA.trace[stage.key].metrics.latencyMs }} ms</span></div>
+            <div v-for="hit in experiment.profileA.trace[stage.key].items" :key="`${stage.key}-${hit.childChunkId}-${hit.rank}`" class="hit-row">
+              <span class="rank">#{{ hit.rank }}</span>
+              <div><strong>命中 {{ hit.rank }}</strong><small>相关分 {{ hit.score }}</small></div>
+              <button type="button" class="quiet-button" @click="openHit(hit)">看来源</button>
+            </div>
+          </div>
+          <div class="trace-block evidence-block">
+            <div class="trace-title"><h4>可引用证据</h4></div>
+            <div v-for="item in experiment.profileA.trace.evidence.items" :key="item.evidenceId" class="evidence-row">
+              <span>{{ formatAnchor(item.anchor) }}</span>
+              <button type="button" class="quiet-button" @click="openHit(item)">看来源</button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+    <div v-else class="empty-state card"><strong>输入问题后试检索</strong><span>适合在提问前确认知识库能不能召回相关片段。</span></div>
   </section>
 </template>

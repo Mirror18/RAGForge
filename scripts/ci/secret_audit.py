@@ -28,6 +28,7 @@ SYNTHETIC_VALUES = {
     "p7d02-local-rabbitmq-password",
     "p7d02-local-valkey-password",
     "p7d02-local-s3-secret",
+    "p7d02-local-embedding-api-key",
 }
 SYNTHETIC_ENV = {
     "POSTGRES_PASSWORD": "p7d02-local-postgres-password",
@@ -35,6 +36,8 @@ SYNTHETIC_ENV = {
     "RABBITMQ_DEFAULT_PASS": "p7d02-local-rabbitmq-password",
     "VALKEY_PASSWORD": "p7d02-local-valkey-password",
     "S3_SECRET_KEY": "p7d02-local-s3-secret",
+    # Optional cloud embedding key — compose defaults to empty; audit injects a synthetic value.
+    "RAGFORGE_EMBEDDING_API_KEY": "p7d02-local-embedding-api-key",
 }
 
 

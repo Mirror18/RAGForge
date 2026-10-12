@@ -11,6 +11,7 @@ import com.ragforge.server.provider.ProviderRepository;
 import com.ragforge.server.provider.SpaceBindingRepository;
 import com.ragforge.server.provider.adapter.EgressDecision;
 import com.ragforge.server.retrieval.RetrievalProfileRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,7 @@ public class SpaceAnswerBindingResolver {
     private final SpaceBindingRepository bindings;
     private final ProviderRepository providers;
 
+    @Autowired
     public SpaceAnswerBindingResolver(IndexRepository indexes, RetrievalProfileRepository profiles,
                                       JdbcTemplate jdbc, PromptRepository prompts,
                                       SpaceBindingRepository bindings, ProviderRepository providers) {

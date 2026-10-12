@@ -112,7 +112,19 @@ function Wait-ForApplicationPid([string]$LogPath, [string]$ApplicationName, [int
 
 function Invoke-MavenPackage([string]$Module, [string]$JarPath, [string]$LogPath) {
     Write-Host "构建 $Module 可执行 JAR（Java 21，完整主编译）..."
-    & $maven -f (Join-Path $repoRoot "backend\pom.xml") @mavenJava21Arguments "-pl" $Module "clean" "compile" "jar:jar" "spring-boot:repackage" *> $LogPath
+    # JAVA_TOOL_OPTIONS prints to stderr; with ErrorActionPreference=Stop that aborts before Maven finishes.
+    $previousToolOptions = $env:JAVA_TOOL_OPTIONS
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        Remove-Item Env:\JAVA_TOOL_OPTIONS -ErrorAction SilentlyContinue
+        $ErrorActionPreference = "Continue"
+        & $maven -f (Join-Path $repoRoot "backend\pom.xml") @mavenJava21Arguments "-pl" $Module "clean" "compile" "jar:jar" "spring-boot:repackage" *> $LogPath
+    } finally {
+        $ErrorActionPreference = $previousErrorAction
+        if ($null -ne $previousToolOptions -and $previousToolOptions -ne "") {
+            $env:JAVA_TOOL_OPTIONS = $previousToolOptions
+        }
+    }
     if ($LASTEXITCODE -ne 0) {
         Write-Host "$Module 构建失败，最近日志：" -ForegroundColor Yellow
         Get-Content -LiteralPath $LogPath -Tail 60 -ErrorAction SilentlyContinue
@@ -176,6 +188,7 @@ try {
     $env:QDRANT_URL = "http://127.0.0.1:$($ports.QDRANT_PORT)"
     $env:RAGFORGE_OUTBOX_RELAY_ENABLED = "true"
     $env:RAGFORGE_RUN_EVENT_FANOUT_ENABLED = "true"
+    $env:RAGFORGE_OPERATIONS_ENABLED = "true"
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
     $mavenJava21Arguments = @(
         "-Pragforge-isolated-output",

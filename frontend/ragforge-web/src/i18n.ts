@@ -10,6 +10,7 @@ const labels: Record<string, string> = {
   DEAD_LETTER: "死信",
   IN_PROGRESS: "处理中",
   NEEDS_REVIEW: "待复核",
+  QUEUED: "排队中",
   PUBLISHED: "已发布",
   READY: "待发布",
   RETIRED: "已退役",

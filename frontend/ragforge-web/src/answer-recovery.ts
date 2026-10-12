@@ -17,14 +17,14 @@ const BY_PROBLEM: Record<string, RecoveryAction> = {
   no_documents: { title: "当前空间还没有资料", nextStep: "去资料页导入文档", path: "?view=flow" },
   no_authorized_chat_route: { title: "当前空间没有已授权的回答路线", nextStep: "去模型页完成云端路线配置", path: "?view=control&section=providers" },
   no_published_prompt: { title: "当前空间没有已发布的回答规则", nextStep: "去模型页发布回答规则", path: "?view=control&section=prompts" },
-  no_active_profile: { title: "当前空间没有活跃检索档", nextStep: "去检索实验确认活跃检索档", path: "?view=playground" },
-  cloud_egress_required: { title: "当前空间尚未授权云端出境", nextStep: "去空间设置检查出境授权", path: "?view=control&section=spaces" },
+  no_active_profile: { title: "当前空间没有活跃检索档", nextStep: "先发布索引，再在试检索中确认", path: "?view=playground" },
+  cloud_egress_required: { title: "当前空间尚未启用云端问答", nextStep: "去云端模型页启用本空间问答", path: "?view=control&section=providers" },
 };
 
 const BY_ANSWER_ERROR: Record<AnswerErrorCode, RecoveryAction> = {
   PROVIDER_UNAVAILABLE: { title: "回答服务暂不可用", nextStep: "请稍后重试，客户端不会静默切换云端", path: null },
   TIMEOUT: { title: "模型调用超时", nextStep: "请稍后重试", path: null },
-  SPACE_EGRESS_DENIED: { title: "空间出境策略拒绝本次调用", nextStep: "去空间设置检查出境授权", path: "?view=control&section=spaces" },
+  SPACE_EGRESS_DENIED: { title: "空间出境策略拒绝本次调用", nextStep: "去云端模型页检查出境授权", path: "?view=control&section=providers" },
   EVIDENCE_INVALID: { title: "引用未通过校验", nextStep: "请重新提问，不要使用未校验的引用", path: null },
   TOOL_FAILURE: { title: "只读工具未能提供可靠结果", nextStep: "请稍后重试", path: null },
   CANCELLED: { title: "回答已取消", nextStep: "如需继续请重新提问", path: null },

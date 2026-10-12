@@ -6,15 +6,15 @@
 
 ## 面向业务用户的使用顺序
 
-默认导航按业务闭环排列：空间 → 云端模型 → 资料与索引 → 带引用问答。内容证据和检索实验从引用或索引进入；运行与管理承担健康、成本和审计。视图文件在 `src/views/`。
+默认导航按业务闭环排列：空间 → 云端模型（启用本空间问答）→ 资料与索引 → 带引用问答。看来源和试检索从引用进入，不手填内部编号。云端模型页一次写入三种用途、已发布回答规则和空间出境授权；运行观测提供概览、追踪列表和审计。视图文件在 `src/views/`。
 
 问答页的历史会话使用表格集中展示，每页 10 条；点击会话会载入最近一次回答，点击运行记录可切换到具体回答，运行记录也按每页 10 条收拢；归档会话可以查看但不能继续提问。业务向导中的导入任务同样按每页 10 条展示。页面布局见 [`当前代码`](<../../backlog/docs/architecture/doc-1 - 当前代码.md>)。既有截图在 `tests/evidence/business-demo/`。
 
 - 业务闭环：注册/登录、创建/切换空间、空间编辑/归档、成员增删改查、Provider/Model Profile/Route/Prompt 发布、云端 MiMo Chat 初始化、Markdown 文件选择与摄取轮询、Parse Report、candidate index 验证/active 发布、带引用回答、citation preview、Run/Step/usage 和增量同步入口。
 - 常用本地知识库：可显式选择本地 `notes` 文件夹，仅提交 Markdown 相对路径；`.obsidian`、附件和非 Markdown 文件在浏览器入口过滤，服务端继续做路径与空间校验。不会自动读取本机目录。
 
-- Chunk Studio：按当前 `spaceId` 读取 child projection，展示 provenance、parent-child、anchor、vector/index status 和 override 审计摘要；支持编辑外部已存储内容的 opaque replacement `contentRef` 与 SHA-256 `textHash`、创建 override 以及 `ACTIVE -> NEEDS_REVIEW -> ACTIVE/DISCARDED` 流转。
-- Retrieval Playground：提交 query、index version 与 profile A/B candidate，展示 dense、BM25、RRF、rerank、context、evidence 和 abstention 的结构化 trace。
+- 看来源：从引用打开当前空间的来源位置、索引状态；人工修订仍走不透明 contentRef 与 SHA-256。
+- 试检索：自动使用当前索引和检索档，提交问题即可；命中可点看来源，不改生产配置。
 - 带引用问答：创建版本化 Run 与 Answer，消费 SSE，并展示由服务端 provenance 生成的 citation、失败和拒答状态。
 - 索引生命周期：以数据列表展示构建、验证、发布、回滚和退役版本，每页 10 条；当前版本与上一版本指针保留在列表上方。
 

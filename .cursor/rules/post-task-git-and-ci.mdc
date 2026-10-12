@@ -1,0 +1,61 @@
+---
+description: 任务提交后清理多余分支；推送 GitHub 后维护并修复 Actions
+alwaysApply: true
+---
+
+# 任务收尾：Git 分支清理与 GitHub Actions
+
+用户要求：每次任务执行完成并提交后，清理多余 Git 分支；推送到 GitHub 时同步维护 GitHub Actions，遇到问题立即排查修复。
+
+## 何时执行
+
+在以下任一条件满足后执行本规则（用户未禁止提交/推送时）：
+
+1. 一张 backlog 卡片验收通过并已按中文 Conventional Commit 提交
+2. Worker / 特性分支已合并进 `main`（或目标集成分支）
+3. 用户明确要求 push 到 GitHub
+
+未获用户允许时：**可以提交前不 push**；但一旦 push，必须跟进 CI。
+
+## A. 提交后的分支与 worktree 清理
+
+目标：主工作树与远程保持干净，不堆积已完成的 `codex/*` 临时分支。
+
+允许清理（全部满足才可删）：
+
+- 分支内容已合并进目标分支（可用 `git branch --merged` / PR merged 确认）
+- 对应 worktree 工作区干净、无未提交改动
+- 不是当前检出分支，也不是其他活跃 agent 正在使用的分支/worktree
+- 不是 `main` / 受保护的发布分支
+
+推荐顺序：
+
+1. 确认当前在 `main`（或已回到主工作树）
+2. `git fetch --prune` 同步远程删除
+3. 删除已合并的本地分支：`git branch -d <branch>`（优先 `-d`，避免误删未合并历史）
+4. 若远程仍留有已合并分支且用户允许删除远程：`git push origin --delete <branch>`
+5. 已集成且干净的 worktree：先 `git worktree remove <path>`，再删本地分支
+6. 汇报清理了哪些分支/worktree；跳过的写明原因
+
+禁止：
+
+- `git push --force` / `git reset --hard` / 删除其他 agent 未完成的分支或含未提交改动的 worktree
+- 为“清理干净”而丢弃未合并的有用提交
+
+## B. 推送后的 GitHub Actions 维护
+
+推送（或打开/更新 PR）之后必须跟进 CI，不能只 push 就结束。
+
+1. 用 `gh run list` / `gh run watch` / `gh pr checks` 查看最新 workflow 状态
+2. 失败时定位失败 job 与日志根因（优先修仓库内 workflow、脚本、测试或依赖，而不是绕过门禁）
+3. 修复后重新提交并 push；再次确认 Actions 变绿
+4. 若失败来自密钥、外部服务、人工审批或环境缺失：停止并向用户报告阻塞，不伪造通过
+5. 发现 workflow 本身过时或脆弱（缓存、runner、权限、路径）时，在本轮一并修好并验证
+
+主 workflow 入口：`.github/workflows/quality.yml` 与 `.github/workflows/README.md`。
+
+## C. 与现有 AGENTS 规则的关系
+
+- 提交时机、中文 Conventional Commit、卡片验收标准仍以 `AGENTS.md` 为准
+- 用户规则若要求“仅在用户要求时提交/推送”，以用户当次指令为准；本规则在获准提交/推送后强制执行清理与 CI 跟进
+- 不把当前 phase / 下一任务状态写进临时记忆文件；板面状态仍以 `backlog/tasks` 与 Git 为准

@@ -134,6 +134,17 @@ public class RunExecutionService {
         return runs.findRuns(spaceId, conversationId, cursor, limit);
     }
 
+    public CursorPage<RunRepository.RunRecord> listSpaceRuns(UUID spaceId, SessionPrincipal principal,
+                                                             RunRepository.RunStatus status, Instant from, Instant to,
+                                                             String cursor, Integer limit) {
+        requireRole(spaceId, principal, false);
+        if (from != null && to != null && !from.isBefore(to)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_time_window", "Invalid time window",
+                    "from must be before to");
+        }
+        return runs.findSpaceRuns(spaceId, status, from, to, cursor, limit);
+    }
+
     @Transactional
     public ConversationRepository.ConversationRecord archiveConversation(UUID spaceId, UUID conversationId,
                                                                           SessionPrincipal principal) {

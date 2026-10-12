@@ -68,15 +68,15 @@ watch(() => props.indexes.length, () => setPage(currentPage.value));
         <p class="muted">索引先构建并验证，只有“待发布”版本可以成为当前版本；旧版本可回滚或退役。</p>
       </div>
       <div class="pointer-summary">
-        <span>当前版本指针</span>
-        <strong>{{ activeIndex?.pointer.activeIndexVersionId || "—" }}</strong>
-        <small>指针版本 v{{ activeIndex?.pointer.versionNo ?? "—" }}</small>
+        <span>当前索引</span>
+        <strong>{{ current ? `第 ${indexes.find((item) => item.indexVersionId === current)?.versionNo ?? "?"} 版` : "尚未发布" }}</strong>
+        <small>{{ current ? "正在用于问答" : "处理完成后点发布" }}</small>
       </div>
     </div>
 
     <div class="pointer-grid">
-      <div><span>当前版本</span><strong>{{ current ? `v${indexes.find((item) => item.indexVersionId === current)?.versionNo ?? "?"}` : "—" }}</strong><small>{{ current || "尚未发布" }}</small></div>
-      <div><span>上一版本指针</span><strong>{{ previous ? `v${previousIndex?.versionNo ?? "?"}` : "—" }}</strong><small>{{ previous || "没有上一版" }}</small></div>
+      <div><span>当前版本</span><strong>{{ current ? `第 ${indexes.find((item) => item.indexVersionId === current)?.versionNo ?? "?"} 版` : "—" }}</strong><small>{{ current ? "用于问答" : "尚未发布" }}</small></div>
+      <div><span>上一版本</span><strong>{{ previous ? `第 ${previousIndex?.versionNo ?? "?"} 版` : "—" }}</strong><small>{{ previous ? "可回滚" : "没有上一版" }}</small></div>
       <button v-if="previous && canManage" type="button" class="quiet-button" :disabled="busyIndexId === previous" @click="emit('rollback', previous)">
         {{ busyIndexId === previous ? "回滚中…" : "回滚上一版" }}
       </button>
@@ -89,7 +89,7 @@ watch(() => props.indexes.length, () => setPage(currentPage.value));
           <thead><tr><th scope="col">版本</th><th scope="col">状态</th><th scope="col">构建依据</th><th scope="col">验证依据</th><th scope="col">配置</th><th scope="col">操作</th></tr></thead>
           <tbody>
             <tr v-for="item in visibleIndexes" :key="item.indexVersionId" class="lifecycle-row" :class="{ current: isCurrent(item), previous: isPrevious(item) }">
-              <td class="lifecycle-version"><div><strong>v{{ item.versionNo }}</strong><span v-if="isCurrent(item)" class="pointer-pill">当前版本</span><span v-if="isPrevious(item)" class="pointer-pill previous-pill">上一版本</span></div><small>{{ item.indexVersionId }}</small></td>
+              <td class="lifecycle-version"><div><strong>第 {{ item.versionNo }} 版</strong><span v-if="isCurrent(item)" class="pointer-pill">当前版本</span><span v-if="isPrevious(item)" class="pointer-pill previous-pill">上一版本</span></div></td>
               <td><span class="state-pill" :class="item.state.toLowerCase()">{{ stateLabel(item.state) }}</span></td>
               <td>{{ item.documentRevisionCount ?? "—" }} 个修订 · {{ item.childChunkCount ?? "—" }} 个子分块</td>
               <td>{{ item.validationVectorDimension ?? "—" }} 维 · 抽样检索 {{ validationLabel(item.sampleRetrievalPassed) }} · 空间过滤 {{ validationLabel(item.spaceFilterPassed) }}</td>
