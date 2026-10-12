@@ -9,8 +9,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-config/private/*
-!config/private/README.md
 secrets/
 *.secret
 *.secret.*

@@ -9,4 +9,4 @@
 - `performance/`：load/soak/capacity scripts。
 - `security/`：RBAC/SSRF/upload/prompt-injection/secret probes。
 
-测试数据遵守 [TEST_DATA_POLICY.md](../docs/04-交付路线与质量门禁.md)。
+测试数据使用 `tests/fixtures/` 里的合成数据，不提交个人笔记、生产数据或 raw prompt。

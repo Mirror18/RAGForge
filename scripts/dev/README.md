@@ -7,7 +7,6 @@ python scripts/dev/core.py config
 python scripts/dev/core.py up
 python scripts/dev/core.py health
 python scripts/dev/core.py ps
-python scripts/dev/core.py backup-smoke --dry-run
 python scripts/dev/core.py down
 python scripts/dev/core.py --profile app build
 python scripts/dev/core.py --profile app up --build
@@ -25,7 +24,7 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 
 默认本地项目名为 `ragforge-p1`，Server/Web 端口为 `25082` 和 `25174`；可通过 `-ProjectName`、`-ServerPort`、`-WebPort` 调整。Chat 与 Embedding 只走空间已授权的 OpenAI 兼容云端 API，未授权则 fail-closed，不会静默切云。
 
-脚本启动 Server 和 Worker 时会先在前台清理并完成 Maven `clean compile`、`jar:jar` 与 `spring-boot:repackage`，固定使用 Java 21，并启用 `ragforge-isolated-output` profile，把 Maven 产物写入各模块的 `target-ragforge/`；随后直接运行构建出的、运行期间不会被 IDE 增量编译覆盖的 JAR。应用运行阶段不触发测试编译，IDE 增量编译也不会影响运行产物，避免机器级 Maven profile、切换分支或源码移动造成 `target/classes` 不完整，进而出现 `NoClassDefFoundError`。测试编译仍由独立回归命令执行；完整根工程回归命令使用 `mvn -Pragforge-isolated-output clean test`。脚本会等待 Worker 的 Spring Boot 启动日志，并把应用 JVM PID 写入 `tmp/local-run/worker.pid`（不是 Maven 包装进程）；Worker 编译或启动失败时会返回非零并打印最近日志，不会继续报告“已就绪”。
+脚本启动 Server 和 Worker 时会先在前台清理并完成 Maven `clean compile`、`jar:jar` 与 `spring-boot:repackage`，固定使用 Java 21，并启用 `ragforge-isolated-output` profile，把 Maven 产物写入各模块的 `target-ragforge/`；随后直接运行构建出的、运行期间不会被 IDE 增量编译覆盖的 JAR。应用运行阶段不触发测试编译，IDE 增量编译也不会影响运行产物，避免机器级 Maven profile、切换分支或源码移动造成 `target/classes` 不完整，进而出现 `NoClassDefFoundError`。测试编译仍由独立回归命令执行；完整后端回归命令使用 `mvn -f backend/pom.xml -Pragforge-isolated-output clean test`。脚本会等待 Worker 的 Spring Boot 启动日志，并把应用 JVM PID 写入 `tmp/local-run/worker.pid`（不是 Maven 包装进程）；Worker 编译或启动失败时会返回非零并打印最近日志，不会继续报告“已就绪”。
 
 启动前会检查当前项目生成的 Server/Worker JAR 是否已有 Java 进程运行；发现旧实例时会直接失败并报告 PID，需先停止旧实例，避免重复消费和构建产物竞态。
 
@@ -39,7 +38,7 @@ Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、
 | Valkey | Session、缓存和 run-event fanout | `26379` |
 | MinIO | 原始文件与解析产物 | `29000`、控制台 `29001` |
 
-Server 和 Web 默认仍从宿主机源码启动；需要完整容器化运行时可启用 `app` profile。应用镜像统一由 `deploy/docker/Dockerfile` 的 `server`、`worker`、`web` targets 生成。没有 Ollama 产品路径。`observability.yaml` 中的 OTel Collector、Prometheus、Grafana、Loki 和 Tempo 是可选运维观测面，不是应用功能依赖。
+Server 和 Web 默认仍从宿主机源码启动；需要完整容器化运行时可启用 `app` profile。应用镜像统一由 `deploy/docker/Dockerfile` 的 `server`、`worker`、`web` targets 生成。没有 Ollama 产品路径。
 
 来源库与任务中心使用空间内服务端 cursor 分页，页面默认每页 10 条；搜索词通过 `q` 参数传给接口，不会先把全部数据加载到浏览器再过滤。
 

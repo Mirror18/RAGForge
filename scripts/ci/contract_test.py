@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CONTRACT_ROOT = REPO_ROOT / "contracts"
+CONTRACT_ROOT = REPO_ROOT / "backend" / "contracts"
 
 
 def main() -> int:

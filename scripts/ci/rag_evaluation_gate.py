@@ -15,7 +15,7 @@ from typing import Any, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[2]
-RUNNER = ROOT / "scripts" / "phase6" / "evaluation_runner.py"
+RUNNER = ROOT / "tests" / "evaluation" / "evaluation_runner.py"
 DATASET = ROOT / "tests" / "evaluation" / "phase6-evaluation-dataset.v1.json"
 CONFIG = ROOT / "tests" / "evaluation" / "phase6-evaluation-config.v1.json"
 DEFAULT_OUTPUT = ROOT / "tests" / "evidence" / "phase7-evaluation-gate.v1.json"

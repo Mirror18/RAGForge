@@ -9,7 +9,7 @@ Server 是 RAGForge 的模块化单体和业务真相进程，负责 `/api/v1`�
 ```powershell
 python scripts/dev/core.py up
 python scripts/dev/core.py health
-mvn -pl backend/server spring-boot:run
+mvn -f backend/pom.xml -pl server spring-boot:run
 ```
 
 默认 HTTP 端口为 `8080`；一键本地闭环请使用 `scripts/dev/start-local.bat`，它会显式设置本地 PostgreSQL、RabbitMQ、Valkey、MinIO 和 Qdrant。Chat 与 Embedding 只走空间已授权的云端连接。健康检查：`http://127.0.0.1:8080/actuator/health`。
@@ -17,11 +17,11 @@ mvn -pl backend/server spring-boot:run
 常用验证：
 
 ```powershell
-mvn -q -pl backend/server -am test
-mvn -q -pl backend/server -DskipTests compile
+mvn -f backend/pom.xml -q -pl server -am test
+mvn -f backend/pom.xml -q -pl server -DskipTests compile
 ```
 
-数据库迁移只由此进程的 Flyway 序列统一管理；Worker 不执行迁移。真实密码、Provider key、bootstrap token 等只通过环境变量或 `config/private/` 注入。
+数据库迁移只由此进程的 Flyway 序列统一管理；Worker 不执行迁移。真实密码、Provider key、bootstrap token 等只通过环境变量或仓库根目录的 `.env.local` 注入。
 
 ## Phase 3 persistence boundary
 
@@ -32,7 +32,7 @@ bounded metadata; source bytes and full extracted text stay in object storage.
 Composite `(id, space_id)` foreign keys reject cross-space references.
 
 The migration is forward-only in normal deployments. Before applying V8 take
-the PostgreSQL backup required by [`BACKUP_RESTORE.md`](../../docs/05-部署运维与恢复.md).
+the PostgreSQL backup described in [`运行与安全`](<../../backlog/docs/operations/doc-2 - 运行与安全.md>).
 Rollback means restoring that backup and deploying the previous application,
 not editing an already-applied migration. `IngestionRepository` repeats
 `space_id` in read predicates and advances a checkpoint only after durable

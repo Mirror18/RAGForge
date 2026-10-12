@@ -33,10 +33,8 @@ INDEX_REQUIREMENTS = {
         "start-local.bat",
         "../deploy/docker/Dockerfile",
     ),
-    REPO_ROOT / "docs" / "05-部署运维与恢复.md": (
+    REPO_ROOT / "backlog" / "docs" / "operations" / "doc-2 - 运行与安全.md": (
         "deploy/compose/compose.yaml",
-        "deploy/docker/Dockerfile",
-        "scripts/dev/core.py",
         "scripts/dev/start-local.bat",
     ),
 }

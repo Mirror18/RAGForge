@@ -18,7 +18,7 @@ SPEC.loader.exec_module(coverage)
 
 class ContractCoverageTest(unittest.TestCase):
     def test_current_contract_and_controllers_are_bidirectionally_covered(self) -> None:
-        document = json.loads((REPO_ROOT / "contracts/openapi/ragforge-api-v1.yaml").read_text(encoding="utf-8"))
+        document = json.loads((REPO_ROOT / "backend/contracts/openapi/ragforge-api-v1.yaml").read_text(encoding="utf-8"))
         result = coverage.evaluate(document, coverage.load_controller_sources(REPO_ROOT))
         self.assertTrue(result["passed"], result)
         self.assertEqual([], result["contract"]["missing_controller"])

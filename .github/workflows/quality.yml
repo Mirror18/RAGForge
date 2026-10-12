@@ -83,7 +83,7 @@ jobs:
         run: python scripts/ci/secret_scan.py
 
       - name: Run deterministic Phase 0 tests
-        run: python -m unittest discover -s scripts/phase0 -p "test_*.py" -v
+        run: python -m unittest discover -s tests/assets -p "test_*.py" -v
 
       - name: Run contract test seam
         shell: bash
@@ -156,9 +156,9 @@ jobs:
           set -o pipefail
           mkdir -p tests/evidence/ci-logs
           {
-            python -m unittest discover -s tests/integration -p "test_phase2_cloud_*.py" -v
-            python -m unittest discover -s tests/performance -p "test_phase2_*.py" -v
-            python -m unittest discover -s tests/security -p "test_phase2_*.py" -v
+            python -m unittest tests/integration/test_cloud_protocol.py -v
+            python -m unittest tests/performance/test_cloud_concurrency.py -v
+            python -m unittest tests/security/test_egress_isolation.py -v
           } 2>&1 | tee tests/evidence/ci-logs/phase2-gates.log
 
       - name: Check dependency manifest and lockfile inventory
@@ -294,24 +294,24 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p tests/evidence/ci-logs
-          mvn --batch-mode --no-transfer-progress -DskipTests compile 2>&1 | tee tests/evidence/ci-logs/maven-compile.log
+          mvn -f backend/pom.xml --batch-mode --no-transfer-progress -DskipTests compile 2>&1 | tee tests/evidence/ci-logs/maven-compile.log
 
       - name: Full Maven unit and architecture regression on JDK 21
         shell: bash
         run: |
           set -o pipefail
           mkdir -p tests/evidence/ci-logs
-          mvn --batch-mode --no-transfer-progress test 2>&1 | tee tests/evidence/ci-logs/maven-test.log
+          mvn -f backend/pom.xml --batch-mode --no-transfer-progress test 2>&1 | tee tests/evidence/ci-logs/maven-test.log
 
       - name: Run Phase 5 generation evaluation
-        run: python scripts/phase5/generation_evaluation.py
+        run: python tests/evaluation/generation_evaluation.py
 
       - name: Generate Phase 5 performance evidence
-        run: python scripts/phase5/performance_evidence.py
+        run: python tests/evaluation/performance_evidence.py
 
       - name: Run Phase 5 security and egress gates when Maven exists
         if: ${{ hashFiles('**/pom.xml') != '' }}
-        run: python scripts/phase5/security_evaluation.py
+        run: python tests/security/security_evaluation.py
 
       - name: Upload Phase 5 evidence
         uses: actions/upload-artifact@v7
@@ -330,9 +330,9 @@ jobs:
           set -o pipefail
           mkdir -p tests/evidence/ci-logs
           {
-            python -m unittest discover -s tests/acceptance -p "test_phase3_*.py" -v
-            python -m unittest discover -s tests/security -p "test_phase3_fault_*.py" -v
-            python -m unittest discover -s tests/performance -p "test_phase3_*.py" -v
+            python -m unittest discover -s tests/acceptance -p "test_*.py" -v
+            python -m unittest tests/security/test_ingestion_faults.py -v
+            python -m unittest tests/performance/test_idempotency.py -v
           } 2>&1 | tee tests/evidence/ci-logs/phase3-gates.log
 
       - name: Run deterministic Phase 4 retrieval quality and reference-scale gates
@@ -341,8 +341,8 @@ jobs:
           set -o pipefail
           mkdir -p tests/evidence/ci-logs
           {
-            python -m unittest discover -s scripts/phase4 -p "test_*.py" -v
-            python scripts/phase4/retrieval_benchmark.py
+            python -m unittest discover -s tests/retrieval -p "test_*.py" -v
+            python tests/retrieval/retrieval_benchmark.py
           } 2>&1 | tee tests/evidence/ci-logs/phase4-retrieval.log
 
       - name: Upload Phase 4 retrieval evidence

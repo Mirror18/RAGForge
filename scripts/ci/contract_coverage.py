@@ -13,7 +13,7 @@ from typing import Iterable, Mapping
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OPENAPI_PATH = REPO_ROOT / "contracts" / "openapi" / "ragforge-api-v1.yaml"
+OPENAPI_PATH = REPO_ROOT / "backend" / "contracts" / "openapi" / "ragforge-api-v1.yaml"
 
 # This is the implementation surface for the current server contract. Keeping the
 # list explicit makes the gate deterministic and prevents unrelated source trees

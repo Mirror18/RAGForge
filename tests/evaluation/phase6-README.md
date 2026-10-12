@@ -9,9 +9,9 @@
 在仓库根目录运行：
 
 ```powershell
-python scripts/phase6/evaluation_runner.py --generate-dataset --validate-only
-python scripts/phase6/evaluation_runner.py
-python -m unittest scripts/phase6/evaluation_runner_test.py
+python tests/evaluation/evaluation_runner.py --generate-dataset --validate-only
+python tests/evaluation/evaluation_runner.py
+python -m unittest tests/evaluation/test_evaluation_runner.py
 ```
 
 默认 runner 生成 deterministic baseline/candidate fixture，并写入 `tests/evidence/phase6-evaluation-report.v1.json`。真实候选结果可通过 `--candidate` 和 `--baseline` 传入同一 result schema；runner 会拒绝缺失/重复 case，记录 Evidence Bundle 外引用、跨空间泄漏、拒答准确率、Recall@10、MRR@10、citation precision、claim faithfulness、切片和不确定性区间。

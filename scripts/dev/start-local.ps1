@@ -112,7 +112,7 @@ function Wait-ForApplicationPid([string]$LogPath, [string]$ApplicationName, [int
 
 function Invoke-MavenPackage([string]$Module, [string]$JarPath, [string]$LogPath) {
     Write-Host "构建 $Module 可执行 JAR（Java 21，完整主编译）..."
-    & $maven @mavenJava21Arguments "-pl" $Module "clean" "compile" "jar:jar" "spring-boot:repackage" *> $LogPath
+    & $maven -f (Join-Path $repoRoot "backend\pom.xml") @mavenJava21Arguments "-pl" $Module "clean" "compile" "jar:jar" "spring-boot:repackage" *> $LogPath
     if ($LASTEXITCODE -ne 0) {
         Write-Host "$Module 构建失败，最近日志：" -ForegroundColor Yellow
         Get-Content -LiteralPath $LogPath -Tail 60 -ErrorAction SilentlyContinue
@@ -188,7 +188,7 @@ try {
     Assert-NoRunningJarProcess $workerJar "Worker"
 
     Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
-    Invoke-MavenPackage "backend/server" $serverJar (Join-Path $runtimeDirectory "server-compile.log")
+    Invoke-MavenPackage "server" $serverJar (Join-Path $runtimeDirectory "server-compile.log")
     # Run the immutable repackaged JAR so IDE/Maven output refreshes cannot
     # replace classes after the build has completed.
     $server = Start-Process -FilePath $java -ArgumentList "-jar `"$serverJar`"" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "server.log") -RedirectStandardError (Join-Path $runtimeDirectory "server.err.log") -PassThru
@@ -210,7 +210,7 @@ try {
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
     $env:RAGFORGE_RABBITMQ_USER = "ragforge"
     $env:RAGFORGE_RABBITMQ_PASSWORD = "change-me"
-    Invoke-MavenPackage "backend/ingestion-worker" $workerJar (Join-Path $runtimeDirectory "worker-compile.log")
+    Invoke-MavenPackage "ingestion-worker" $workerJar (Join-Path $runtimeDirectory "worker-compile.log")
     $worker = Start-Process -FilePath $java -ArgumentList "-jar `"$workerJar`" --ragforge.ingestion.enabled=true" -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "worker.log") -RedirectStandardError (Join-Path $runtimeDirectory "worker.err.log") -PassThru
     Set-Content -Path (Join-Path $runtimeDirectory "worker.pid") -Value $worker.Id
     try {

@@ -5,25 +5,23 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 # RAGForge Development
 
-把 RAGForge 作为 space / knowledge / answer / gateway 四个业务服务维护（ADR-0014）。仓库级硬约束以根目录 `AGENTS.md` 为准；本 Skill 只补充任务路由和上下文选择，不能扩大授权。M5 任务源是 `specs/` 与 `backlog/`。
+仓库级硬约束以根目录 `AGENTS.md` 为准。现行代码在 `backend/server`、`backend/ingestion-worker`、`backend/ai-runtime` 和 `frontend/ragforge-web`。ADR-0014 的四个进程还没有独立目录。任务源是 `specs/` 与 `backlog/`。
 
 ## 开始前
 
-1. 日常任务先读 [`docs/08-项目状态卡.md`](../../../docs/08-项目状态卡.md) 和 [`docs/09-项目任务总台账.md`](../../../docs/09-项目任务总台账.md)。只有审计、阶段闭环或状态冲突时才读取 [`docs/10-项目状态审计记录.md`](../../../docs/10-项目状态审计记录.md)、交付主文档的相关章节和对应阶段记录。
+1. 日常任务先读 [`当前代码`](<../../../backlog/docs/architecture/doc-1 - 当前代码.md>) 和 `backlog/tasks`。历史阶段记录在 Git history。
 2. 执行 `git status --short --branch`，保留用户已有改动；按任务板的卡片、Ticket、ownership 和预算工作。
-3. Worker 只读 Ticket 的 allow-list，不通过全仓搜索补上下文；Orchestrator 负责分派、合并、状态卡和阶段闭环。
+3. Worker 只读 Ticket 的 allow-list，不通过全仓搜索补上下文。
 
 ## 按领域路由
 
-- `backend/space/`：账号、会话、成员、出境策略、云端模型绑定。
-- `backend/knowledge/`：来源、解析、分块、embedding、索引发布与候选检索；job 角色可以是同一套代码的第二进程。
-- `backend/answer/`：检索编排、生成、结构化引用、run。
-- `backend/gateway/`：浏览器唯一 HTTP 入口。
-- `frontend/ragforge-web/`：角色感知 SPA；用户路径必须从空间、模型、资料、索引、问答和管理闭环验证。
-- `contracts/`：OpenAPI、事件和跨语言 schema 的唯一契约源；先契约后 producer/consumer。
-- `specs/`、`backlog/`：M5 任务源；不要把同一张卡抄进 `docs/09`。
-- `deploy/`、`scripts/`、`tests/`：部署入口、自动化门禁和跨应用证据；生成物与真实凭据不得入仓。
-- Maven 模块拆分完成前，现有 `backend/server` 与 `backend/ingestion-worker` 仍是可运行进程。
+- `backend/server/`：同步 API。身份、空间、云端模型、摄取入口、分块、索引、检索、回答和 run 都在这里的 Java 包。
+- `backend/ingestion-worker/`：异步摄取。
+- `backend/ai-runtime/`：Python rerank。
+- `frontend/ragforge-web/`：页面在 `src/views/{access,space,knowledge,answer,admin}`。
+- `backend/contracts/`：OpenAPI 和 JSON schema，描述 HTTP 与事件的字段。不是独立进程。
+- `specs/`、`backlog/`：规格、任务板，以及 `backlog/docs/` 里按代码写的说明。
+- `deploy/`、`scripts/`、`tests/`：部署入口、自动化门禁和跨应用证据。
 
 ## 不变量
 
@@ -40,8 +38,5 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 ## 参考入口
 
-- 人类入口：[`docs/00-需求处理与最终效果.md`](../../../docs/00-需求处理与最终效果.md)
-- 技术栈与运行：[`docs/01-技术栈与工程运行.md`](../../../docs/01-技术栈与工程运行.md)
-- Agent 循环：[`docs/04-交付路线与质量门禁.md`](../../../docs/04-交付路线与质量门禁.md)
-- 架构基线：[`docs/02-项目架构与领域模型.md`](../../../docs/02-项目架构与领域模型.md)
-- 交付路线：[`docs/04-交付路线与质量门禁.md`](../../../docs/04-交付路线与质量门禁.md)
+- 当前代码：[`doc-1`](<../../../backlog/docs/architecture/doc-1 - 当前代码.md>)
+- 运行与安全：[`doc-2`](<../../../backlog/docs/operations/doc-2 - 运行与安全.md>)

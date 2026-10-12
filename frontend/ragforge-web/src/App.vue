@@ -47,15 +47,17 @@ const currentRoleLabel = computed(() => roleLabel(currentRole.value));
 const isViewer = computed(() => selectedSpace.value?.role === "VIEWER");
 const canEdit = computed(() => !isViewer.value && Boolean(selectedSpaceId.value));
 const statusText = computed(() => apiStatus.value === "ready" ? "会话与 API 可用" : apiStatus.value === "unauthenticated" ? "请登录后继续" : apiStatus.value === "unavailable" ? "API 不可用" : "正在检查会话");
+const modelSections = ["providers", "models", "prompts"] as const;
+const isModelControl = computed(() => modelSections.includes(controlSection.value as typeof modelSections[number]));
 const pageMeta = computed(() => {
-  if (view.value === "profile") return { kicker: "01 · 空间", title: "知识空间", description: "先确定当前工作的空间边界，再配置模型和导入资料。" };
-  if (view.value === "control" && (controlSection.value === "providers" || controlSection.value === "models" || controlSection.value === "prompts")) return { kicker: "02 · 模型", title: "云端模型", description: "只登记已授权的 OpenAI 兼容云端连接；未授权不得把内容送出。" };
-  if (view.value === "flow") return { kicker: "03 · 资料", title: "导入并发布", description: "把资料放进当前空间，等待摄取完成后发布索引。" };
-  if (view.value === "answer") return { kicker: "04 · 问答", title: "带引用问答", description: "基于已发布索引提问，引用必须来自结构化证据。" };
-  if (view.value === "studio") return { kicker: "证据", title: "内容证据", description: "从问答或索引打开来源记录，不手填内部编号。" };
+  if (view.value === "profile") return { kicker: "空间", title: "知识空间", description: "空间是隔离边界。先选定空间，再配置成员、模型和资料。" };
+  if (view.value === "control" && isModelControl.value) return { kicker: "模型", title: "云端模型", description: "只登记已授权的 OpenAI 兼容云端连接；未授权不得把内容送出。" };
+  if (view.value === "flow") return { kicker: "知识库", title: "资料与索引", description: "导入资料、跟踪任务，验证通过后发布当前索引。" };
+  if (view.value === "answer") return { kicker: "问答", title: "带引用问答", description: "基于已发布索引提问，引用必须来自结构化证据。" };
+  if (view.value === "studio") return { kicker: "证据", title: "内容证据", description: "从来源、引用或检索命中打开记录，不手填内部编号。" };
   if (view.value === "playground") return { kicker: "检索", title: "检索实验", description: "只读比较检索候选，不会改变正在使用的索引版本。" };
-  if (view.value === "control") return { kicker: "管理", title: "运行与管理", description: "查看健康、成本、审计和一次回答的运行记录。" };
-  return { kicker: "工作台", title: "知识闭环", description: "按空间、云端模型、资料、索引、问答的顺序完成一次可核验回答。" };
+  if (view.value === "control") return { kicker: "运行", title: "运行与管理", description: "查看健康、成本、审计和一次回答的运行记录。" };
+  return { kicker: "工作台", title: "知识闭环", description: "在当前空间内完成资料、索引和可核验回答。" };
 });
 function persistRoute(): void {
   if (typeof window === "undefined") return;
@@ -174,19 +176,28 @@ onMounted(checkApiHealth);
 
     <div v-else class="app-frame">
       <aside class="app-sidebar" aria-label="产品导航">
-        <button type="button" class="brand-lockup" aria-label="返回资料导入" @click="openView('flow')"><span class="brand-symbol">R</span><span><strong>RAGForge</strong><small>知识闭环</small></span></button>
-        <div class="sidebar-section"><span class="sidebar-label">闭环</span>
-          <button id="personal-space-tab" type="button" class="side-nav-item" :class="{ active: view === 'profile' }" :aria-current="view === 'profile' ? 'page' : undefined" @click="openView('profile')"><span class="nav-icon">01</span><span><strong>空间</strong><small>成员与隔离边界</small></span></button>
-          <button id="control-model-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' && ['providers','models','prompts'].includes(controlSection) }" @click="openControl('providers')"><span class="nav-icon">02</span><span><strong>云端模型</strong><small>授权后才能调用</small></span></button>
-          <button id="flow-tab" type="button" class="side-nav-item" :class="{ active: view === 'flow' }" :aria-current="view === 'flow' ? 'page' : undefined" @click="openView('flow')"><span class="nav-icon">03</span><span><strong>资料与索引</strong><small>导入、任务、发布</small></span></button>
-          <button id="answer-tab" type="button" class="side-nav-item" :class="{ active: view === 'answer' }" :aria-current="view === 'answer' ? 'page' : undefined" @click="openView('answer')"><span class="nav-icon">04</span><span><strong>带引用问答</strong><small>提问并核验来源</small></span></button>
+        <button type="button" class="brand-lockup" aria-label="返回带引用问答" @click="openView('answer')"><span class="brand-symbol">R</span><span><strong>RAGForge</strong><small>可核验知识工作台</small></span></button>
+        <div class="sidebar-space">
+          <label class="sidebar-label" for="sidebar-space-select">当前空间</label>
+          <select id="sidebar-space-select" v-model="selectedSpaceId" :disabled="apiStatus !== 'ready' || spaces.length === 0">
+            <option value="">请选择空间</option>
+            <option v-for="space in spaces" :key="space.spaceId" :value="space.spaceId">{{ space.name }}</option>
+          </select>
         </div>
-        <div class="sidebar-section"><span class="sidebar-label">从引用进入</span>
-          <button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="openView('studio')"><span class="nav-icon">▦</span><span><strong>内容证据</strong><small>来源与修订</small></span></button>
-          <button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="openView('playground')"><span class="nav-icon">⌁</span><span><strong>检索实验</strong><small>只读比较</small></span></button>
+        <div class="sidebar-section"><span class="sidebar-label">工作</span>
+          <button id="answer-tab" type="button" class="side-nav-item" :class="{ active: view === 'answer' }" :aria-current="view === 'answer' ? 'page' : undefined" @click="openView('answer')"><span class="nav-icon">问</span><span><strong>带引用问答</strong><small>提问并核验来源</small></span></button>
+          <button id="flow-tab" type="button" class="side-nav-item" :class="{ active: view === 'flow' }" :aria-current="view === 'flow' ? 'page' : undefined" @click="openView('flow')"><span class="nav-icon">库</span><span><strong>资料与索引</strong><small>导入、任务、发布</small></span></button>
         </div>
-        <div class="sidebar-section"><span class="sidebar-label">管理</span>
-          <button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' && !['providers','models','prompts'].includes(controlSection) }" @click="openControl('runs')"><span class="nav-icon">⚙</span><span><strong>运行与管理</strong><small>健康、成本、审计</small></span></button>
+        <div class="sidebar-section"><span class="sidebar-label">知识工程</span>
+          <button id="chunk-studio-tab" type="button" class="side-nav-item" :class="{ active: view === 'studio' }" :aria-current="view === 'studio' ? 'page' : undefined" @click="openView('studio')"><span class="nav-icon">证</span><span><strong>内容证据</strong><small>来源与修订</small></span></button>
+          <button id="retrieval-playground-tab" type="button" class="side-nav-item" :class="{ active: view === 'playground' }" :aria-current="view === 'playground' ? 'page' : undefined" @click="openView('playground')"><span class="nav-icon">检</span><span><strong>检索实验</strong><small>只读比较</small></span></button>
+        </div>
+        <div class="sidebar-section"><span class="sidebar-label">配置</span>
+          <button id="personal-space-tab" type="button" class="side-nav-item" :class="{ active: view === 'profile' }" :aria-current="view === 'profile' ? 'page' : undefined" @click="openView('profile')"><span class="nav-icon">空</span><span><strong>知识空间</strong><small>成员与隔离边界</small></span></button>
+          <button id="control-model-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' && isModelControl }" @click="openControl('providers')"><span class="nav-icon">模</span><span><strong>云端模型</strong><small>授权后才能调用</small></span></button>
+        </div>
+        <div class="sidebar-section"><span class="sidebar-label">治理</span>
+          <button id="control-center-tab" type="button" class="side-nav-item" :class="{ active: view === 'control' && !isModelControl }" @click="openControl('runs')"><span class="nav-icon">运</span><span><strong>运行与管理</strong><small>健康、成本、审计</small></span></button>
         </div>
         <div class="sidebar-footer"><div class="sidebar-user"><span class="user-avatar">{{ session.user.displayName.slice(0, 1).toUpperCase() }}</span><span><strong>{{ session.user.displayName }}</strong><small>{{ currentRoleLabel }}</small></span></div><button type="button" class="sidebar-logout" @click="logout">退出登录</button></div>
       </aside>

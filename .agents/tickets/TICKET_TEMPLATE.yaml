@@ -14,7 +14,7 @@
 #   scope.ownership      — Worker 可写入的目录/文件白名单
 #   scope.read_only      — Worker 允许 Read 的文件（精确到文件名，不得写）
 #   scope.forbidden      — 严格禁止读取或触碰的路径（高风险 / 共享资产 / 状态卡）
-#   acceptance.*         — 验收标准（逐条对应 docs/09-项目任务总台账.md）
+#   acceptance.*         — 验收标准（逐条对应 backlog/tasks 里的卡片）
 #   tests.must_run       — 验收前必须执行的命令，一条也不能跳过
 #   tests.evidence_file  — 大于 50 行的输出必须保存到该文件，回报只写摘要
 #   budget.token_limit   — Token 预算上限；消耗 > limit × 1.2 时必须停工汇报
@@ -42,15 +42,14 @@ scope:
     - backend/server/src/main/java/com/ragforge/server/index/
     - backend/server/src/test/java/com/ragforge/server/index/
     - backend/server/src/main/resources/db/migration/
-    - contracts/openapi/ragforge-api-v1.yaml
+    - backend/contracts/openapi/ragforge-api-v1.yaml
   read_only:
     # 契约（只需要这几个具体文件，不要读 contracts/ 下所有文件）
-    - contracts/ingestion/ingestion-domain.v1.schema.json
-    - contracts/ingestion/index-version.v1.schema.json
-    - contracts/openapi/ragforge-api-v1.yaml
-    # 只读取 DoD 的 §1、§2（若 Worker 能直接跳到行号则更省）
-    - docs/04-交付路线与质量门禁.md
-    - docs/02-项目架构与领域模型.md
+    - backend/contracts/ingestion/ingestion-domain.v1.schema.json
+    - backend/contracts/ingestion/index-version.v1.schema.json
+    - backend/contracts/openapi/ragforge-api-v1.yaml
+    - backlog/docs/architecture/doc-1 - 当前代码.md
+    - backlog/docs/operations/doc-2 - 运行与安全.md
     # 现有实现参考（精确到文件，不做目录级 Grep）
     - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionController.java
     - backend/server/src/main/java/com/ragforge/server/ingestion/BusinessIngestionService.java
@@ -58,18 +57,13 @@ scope:
     - backend/server/src/main/java/com/ragforge/server/index/IndexRepository.java
   forbidden:
     # 这些文件 / 目录 Worker 绝对不能写，也不要读取浪费 Token
-    - docs/08-项目状态卡.md
-    - docs/10-项目状态审计记录.md
-    - docs/11-风险登记表.md
-    - docs/12-需求追溯矩阵.md
     - AGENTS.md
-    - docs/04-交付路线与质量门禁.md
-    - docs/13-Agent工程记忆.md
-    - docs/09-项目任务总台账.md
+    - backlog/docs/
+    - backlog/tasks/
     - frontend/ragforge-web/
     - backend/ingestion-worker/
     - backend/ai-runtime/
-    - pom.xml                # 除非明确需要加依赖；否则不动
+    - backend/pom.xml        # 除非明确需要加依赖；否则不动
     - deploy/
     - .github/workflows/
 
@@ -96,10 +90,10 @@ tests:
       command: python scripts/ci/contract_test.py
       expected: "Phase 4 42/42 + Phase 5 10/10 = 52/52"
     - name: Server target compile
-      command: mvn -q -pl backend/server -am test-compile -DskipTests=false
+      command: mvn -f backend/pom.xml -q -pl server -am test-compile -DskipTests=false
       expected: BUILD SUCCESS
     - name: Server ingestion/index 定向测试
-      command: mvn -q -pl backend/server test -Dtest="ServerIntegrationTest,BusinessIngestionPathPolicyTest,Phase3IngestionPersistenceIntegrationTest"
+      command: mvn -f backend/pom.xml -q -pl server test -Dtest="ServerIntegrationTest,BusinessIngestionPathPolicyTest,Phase3IngestionPersistenceIntegrationTest"
       expected: "新增用例 > 5；全部绿"
     - name: Web typecheck
       command: npm --prefix frontend/ragforge-web run typecheck

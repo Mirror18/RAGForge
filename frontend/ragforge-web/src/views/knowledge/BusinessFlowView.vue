@@ -42,6 +42,7 @@ const webUrl = ref("");
 const webEgressApproved = ref(false);
 const pageSize = 10;
 const jobPage = ref(1);
+const flowTab = ref<"library" | "sources" | "tasks">("library");
 
 const selectedRoute = computed(() => modelRoutes.value.find((item) => item.modelRouteId === selectedRouteId.value) ?? null);
 const selectedProfile = computed(() => modelProfiles.value.find((item) => item.modelProfileId === selectedProfileId.value) ?? null);

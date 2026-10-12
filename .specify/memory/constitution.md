@@ -39,6 +39,6 @@ A user must complete the product loop in the Web UI: sign in, space, cloud model
 
 ## Governance
 
-This constitution is the speckit evaluation baseline. Product documents in `docs/00–07` describe the system; `docs/08` is the daily state snapshot; `backlog/` is the execution board for the M5 redesign. Amendments require a dated constitution change and, if they alter architecture, a new or superseding ADR.
+This constitution is the speckit evaluation baseline. The running tree is described in `backlog/docs/architecture/doc-1 - 当前代码.md`. `backlog/` is the execution board. Amendments require a dated constitution change and, if they alter architecture, a new or superseding ADR.
 
 **Version**: 1.0.0 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-12

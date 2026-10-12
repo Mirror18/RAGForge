@@ -8,4 +8,4 @@
 | [002-cloud-only-models](./002-cloud-only-models/) | 模型只走已授权的云端 API | Draft |
 | [003-business-services](./003-business-services/) | 四个业务进程可独立注册到 Nacos | Draft |
 
-实施任务以仓库根目录 `backlog/` 为准，不把同一张卡再抄进 `docs/09-项目任务总台账.md`。
+实施任务以仓库根目录 `backlog/` 为准。现行代码说明在 `backlog/docs/`。

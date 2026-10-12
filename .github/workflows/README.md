@@ -35,7 +35,7 @@ python scripts/ci/validate_compose.py
 python scripts/ci/architecture_check.py
 python scripts/ci/secret_scan.py
 python scripts/ci/contract_test.py
-mvn --batch-mode --no-transfer-progress test
+mvn -f backend/pom.xml --batch-mode --no-transfer-progress test
 ```
 
 失败排查时，先按 job step 名称定位命令，再下载 `ragforge-quality-logs-*` artifact；其中 `maven-compile.log`、`maven-test.log`、各 Phase/contract 日志和 surefire reports 用于复现。日志只记录工具输出与固定路径，不写入 secrets、原始 prompt 或生产数据。

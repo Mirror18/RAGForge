@@ -224,7 +224,7 @@ test("[P7Q-06 刷新恢复] restores five shareable workbench pages", async ({ p
 
 test("[P7C-14 演示截图] captures the complete synthetic business loop", async ({ page }) => {
   const api = createSyntheticApi({ largeCollections: true });
-  const asset = (name: string): string => resolve(process.cwd(), "../../docs/assets/business-demo", name);
+  const asset = (name: string): string => resolve(process.cwd(), "../../tests/evidence/business-demo", name);
   await login(page, api);
   await page.goto(`/?view=flow&spaceId=${SYNTHETIC.spaceId}`);
   await expect(page.locator("#business-flow-heading")).toBeVisible();

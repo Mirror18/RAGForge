@@ -31,11 +31,11 @@
     "fixture": "synthetic-space-and-answer",
     "cloudEgress": false,
     "screenshots": [
-      "docs/assets/business-demo/01-空间与向导.png",
-      "docs/assets/business-demo/02-资料导入.png",
-      "docs/assets/business-demo/03-索引发布.png",
-      "docs/assets/business-demo/04-带引用问答.png",
-      "docs/assets/business-demo/05-历史会话.png"
+      "tests/evidence/business-demo/01-空间与向导.png",
+      "tests/evidence/business-demo/02-资料导入.png",
+      "tests/evidence/business-demo/03-索引发布.png",
+      "tests/evidence/business-demo/04-带引用问答.png",
+      "tests/evidence/business-demo/05-历史会话.png"
     ],
     "journeys": ["J1", "J2", "J3", "J4", "J5", "J6", "J7", "J8", "J9", "P7C-15", "P7Q-06"]
   },

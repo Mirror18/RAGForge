@@ -10,13 +10,13 @@ Worker 是可独立部署的异步摄取进程，源码、测试和配置都集�
 python scripts/dev/core.py up
 python scripts/dev/core.py health
 $env:RAGFORGE_INGESTION_ENABLED = "true"
-mvn -pl backend/ingestion-worker spring-boot:run
+mvn -f backend/pom.xml -pl ingestion-worker spring-boot:run
 ```
 
 定向测试和完整测试：
 
 ```powershell
-mvn -q -pl backend/ingestion-worker -am test
+mvn -f backend/pom.xml -q -pl ingestion-worker -am test
 ```
 
 Worker 默认连接本地 PostgreSQL 和 RabbitMQ；队列名、数据库地址和凭据通过环境变量配置。生产或共享环境必须使用隔离的 exchange、queue、DLQ 和可变测试数据，不能复用其他运行实例。

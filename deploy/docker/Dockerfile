@@ -3,14 +3,14 @@
 FROM maven:3.9-eclipse-temurin-21@sha256:8f6ac126f7810bb5549c4cd122d2bf0e9cda5bdeb0838aa928f09e779fd8bef8 AS java-build
 WORKDIR /workspace
 
-COPY pom.xml .
+COPY backend/pom.xml backend/pom.xml
 COPY backend/server/pom.xml backend/server/pom.xml
 COPY backend/ingestion-worker/pom.xml backend/ingestion-worker/pom.xml
 
 COPY backend/server/src backend/server/src
 COPY backend/ingestion-worker/src backend/ingestion-worker/src
-RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
-RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests -pl backend/ingestion-worker package spring-boot:repackage
+RUN --mount=type=cache,target=/root/.m2 mvn -f backend/pom.xml -B -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -f backend/pom.xml -B -DskipTests -pl ingestion-worker package spring-boot:repackage
 COPY deploy/docker/HttpHealthcheck.java /tmp/HttpHealthcheck.java
 RUN mkdir -p /tmp/healthcheck-classes \
     && javac --release 21 -d /tmp/healthcheck-classes /tmp/HttpHealthcheck.java \

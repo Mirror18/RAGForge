@@ -32,7 +32,7 @@
   "browserDemo": {
     "fixture": "synthetic-space-and-indexes",
     "cloudEgress": false,
-    "screenshot": "docs/assets/business-demo/03-索引发布.png",
+    "screenshot": "tests/evidence/business-demo/03-索引发布.png",
     "journeys": ["J1", "J2", "J3", "J4", "J5", "J6", "J7", "J8", "J9", "P7C-15", "P7C-16", "P7Q-06", "P7C-14"]
   },
   "notes": [
