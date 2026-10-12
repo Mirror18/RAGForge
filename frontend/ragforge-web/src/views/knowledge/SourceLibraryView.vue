@@ -7,10 +7,13 @@ import { stateLabel } from "../../i18n";
 const props = defineProps<{
   selectedSpaceId: string;
   currentRole: SpaceRole | PlatformRole | string;
+  spaceReady?: boolean;
 }>();
 
 const emit = defineEmits<{
   "sources-loaded": [sources: GitSourceView[]];
+  "open-tasks": [];
+  "start-answer": [];
 }>();
 
 const sources = ref<GitSourceView[]>([]);
@@ -86,7 +89,7 @@ async function save(): Promise<void> {
   saving.value = true; error.value = ""; notice.value = "";
   try {
     await configureGitSource(props.selectedSpaceId, { displayName: displayName.value.trim(), remote: remote.value.trim(), branch: branch.value.trim() || "main", include: include.value.split(",").map((item) => item.trim()).filter(Boolean), exclude: [] });
-    displayName.value = ""; remote.value = ""; notice.value = "来源已提交，稍后可在任务中心查看同步进度。"; await load();
+    displayName.value = ""; remote.value = ""; notice.value = props.spaceReady ? "来源已提交。可查看任务进度，或直接去提问。" : "来源已提交。请到任务中心查看同步，完成后再提问。"; await load();
   } catch (value) { error.value = describeError(value); }
   finally { saving.value = false; }
 }
@@ -103,7 +106,14 @@ async function operate(item: GitSourceView, operation: TaskActionOperation): Pro
   finally { actionKey.value = ""; }
 }
 
-watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) { restoreState(); void load(); } });
+watch(() => props.selectedSpaceId, () => {
+  sources.value = [];
+  notice.value = "";
+  error.value = "";
+  displayName.value = "";
+  remote.value = "";
+  if (props.selectedSpaceId) { restoreState(); void load(); }
+});
 onMounted(() => { if (props.selectedSpaceId) { restoreState(); void load(); } });
 </script>
 
@@ -114,6 +124,7 @@ onMounted(() => { if (props.selectedSpaceId) { restoreState(); void load(); } })
     <p v-if="!canManage" class="permission-hint">当前角色只能查看来源；写操作由服务端权限最终裁决。</p>
     <div class="filter-row"><div class="field"><label for="source-connector-filter">连接器</label><select id="source-connector-filter" v-model="connectorType" @change="applyFilters"><option value="">全部连接器</option><option value="GIT">Git</option></select></div><div class="field"><label for="source-state-filter">状态</label><select id="source-state-filter" v-model="sourceState" @change="applyFilters"><option value="">全部状态</option><option value="ACTIVE">ACTIVE</option><option value="PAUSED">PAUSED</option></select></div><div class="field search-field"><label for="source-search">搜索来源</label><div class="search-control"><input id="source-search" v-model="searchQuery" maxlength="120" placeholder="名称、仓库、分支或 ID" @keyup.enter="applyFilters" /><button type="button" class="secondary-button" :disabled="loading" @click="applyFilters">搜索</button></div></div><div class="field reason-field"><label for="source-action-reason">操作说明（可选）</label><input id="source-action-reason" v-model="actionReason" maxlength="500" placeholder="记录本次操作原因" /></div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
+    <div v-if="notice" class="button-row"><button type="button" class="secondary-button" @click="emit('open-tasks')">查看任务</button><button type="button" :disabled="!spaceReady" @click="emit('start-answer')">去提问</button></div>
     <div v-if="sources.length" class="source-list"><article v-for="item in sources" :key="item.source.sourceId" class="source-row"><div class="source-main"><strong>{{ sourceLabel(item.source) }}</strong><span>{{ item.source.rootRef }} · {{ item.source.gitBranch || "默认分支" }}</span><small>状态 {{ sourceStateLabel(item.source) }} · 版本 {{ sourceVersion(item) }} · checkpoint {{ item.checkpoint?.cursor || "未同步" }}</small><small v-if="item.checkpoint">checkpoint 更新于 {{ formatDateTime(item.checkpoint.updatedAt) }}</small></div><div class="button-row"><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'RETRY')">重试</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'REPLAY')">重放</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'RESYNC')">重新同步</button><button type="button" class="quiet-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'ARCHIVE')">归档</button><button type="button" class="danger-button" :disabled="Boolean(actionKey) || !canManage" @click="operate(item, 'DELETE')">删除</button></div></article></div><div v-else-if="!loading" class="empty-state"><strong>{{ searchQuery.trim() ? "没有匹配的来源" : "暂无来源" }}</strong><span>{{ searchQuery.trim() ? "请换一个名称、仓库地址、分支或标识。" : "提交 Git 来源后，服务端会在当前空间创建来源记录。" }}</span></div>
     <div class="pagination"><button type="button" class="quiet-button" :disabled="loading || !cursor" @click="previousPage">上一页</button><span>{{ searchQuery.trim() ? "搜索结果（每页 10 条）" : `当前页（每页 10 条） ${cursor ? "（cursor）" : "（首页）"}` }} · {{ sources.length }} 条</span><button type="button" class="quiet-button" :disabled="loading || !nextCursor" @click="nextPage">下一页</button></div>
   </section>

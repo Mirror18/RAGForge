@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ApiError, getActiveIndex, getIngestionJob, getParseReport, ingestWebSource, listAllCursorPages, publishIndex, rollbackIndex, retireIndex, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "../../api";
+import { ApiError, getActiveIndex, getAnswerReadiness, getIngestionJob, getParseReport, ingestWebSource, listAllCursorPages, publishIndex, rollbackIndex, retireIndex, uploadMarkdown, type ActiveIndexView, type AnswerDefaults, type AnswerReadiness, type IndexView, type IngestionJobView, type ModelProfile, type ModelRoute, type ParseReportView, type PlatformRole, type PromptTemplate, type PromptVersion, type ProviderConnection, type SpaceBinding, type SpaceRole, apiFetch } from "../../api";
 import SourceLibraryView from "./SourceLibraryView.vue";
 import TaskCenterView from "./TaskCenterView.vue";
 import IndexLifecycleView from "./IndexLifecycleView.vue";
 import { purposeLabel, stateLabel } from "../../i18n";
+import { knowledgeNextStep, publishedBindingChoiceNeeded } from "../../knowledge-guide";
 
 const props = defineProps<{
   selectedSpaceId: string;
@@ -13,8 +14,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "start-answer": [config: AnswerDefaults];
+  "start-answer": [config: AnswerDefaults | null];
   "open-control": [section: "providers" | "models" | "prompts" | "runs"];
+  "follow-gap": [path: string];
 }>();
 
 const loading = ref(false);
@@ -43,6 +45,8 @@ const webEgressApproved = ref(false);
 const pageSize = 10;
 const jobPage = ref(1);
 const flowTab = ref<"library" | "sources" | "tasks">("library");
+const readiness = ref<AnswerReadiness | null>(null);
+const postImportGuide = ref(false);
 
 const selectedRoute = computed(() => modelRoutes.value.find((item) => item.modelRouteId === selectedRouteId.value) ?? null);
 const selectedProfile = computed(() => modelProfiles.value.find((item) => item.modelProfileId === selectedProfileId.value) ?? null);
@@ -50,6 +54,9 @@ const selectedProvider = computed(() => providerConnections.value.find((item) =>
 const selectedTemplate = computed(() => promptTemplates.value.find((item) => item.promptTemplateId === selectedPromptTemplateId.value) ?? null);
 const chatRoutes = computed(() => modelRoutes.value.filter((item) => item.purpose === "CHAT" && item.status === "ACTIVE" && item.egressClass === "CLOUD"));
 const selectedRouteCandidate = computed(() => selectedRoute.value?.candidates.find((candidate) => candidate.modelProfileId === selectedProfileId.value) ?? null);
+const publishedChatRoutes = computed(() => chatRoutes.value);
+const publishedPromptTemplates = computed(() => promptTemplates.value.filter((item) => item.purpose === "CHAT" && item.currentVersion !== null));
+const needsBindingChoice = computed(() => publishedBindingChoiceNeeded(publishedChatRoutes.value.length, publishedPromptTemplates.value.length));
 const hasPublishedModel = computed(() => selectedRoute.value?.purpose === "CHAT"
   && selectedRoute.value.status === "ACTIVE"
   && selectedRoute.value.egressClass === "CLOUD"
@@ -61,24 +68,23 @@ const hasPublishedPrompt = computed(() => Boolean(promptVersion.value?.promptVer
   && promptVersion.value.state === "PUBLISHED"));
 const hasIndexIdentity = computed(() => Boolean(activeIndex.value?.pointer.activeIndexVersionId
   && activeIndex.value.datasetHash && /^[0-9a-f]{64}$/i.test(activeIndex.value.datasetHash)));
-const canStart = computed(() => Boolean(props.selectedSpaceId && hasPublishedModel.value && hasPublishedPrompt.value && hasIndexIdentity.value));
+const canStart = computed(() => Boolean(props.selectedSpaceId && readiness.value?.ready));
 const canManage = computed(() => props.currentRole === "SPACE_ADMIN" || props.currentRole === "PLATFORM_ADMIN");
-const needsRuntimeSetup = computed(() => Boolean(props.selectedSpaceId && (!hasPublishedModel.value || !hasPublishedPrompt.value)));
+const nextStep = computed(() => knowledgeNextStep(readiness.value?.gaps ?? []));
+const needsRuntimeSetup = computed(() => nextStep.value.kind === "models");
 const hasImportedContent = computed(() => jobs.value.length > 0 || indexes.value.length > 0 || Boolean(activeIndex.value));
 const jobPageCount = computed(() => Math.max(1, Math.ceil(jobs.value.length / pageSize)));
 const visibleJobs = computed(() => jobs.value.slice((jobPage.value - 1) * pageSize, jobPage.value * pageSize));
 const activeStep = computed(() => {
   if (!props.selectedSpaceId) return 1;
-  if (!hasImportedContent.value) return 2;
-  if (!hasIndexIdentity.value) return 3;
+  const kind = nextStep.value.kind;
+  if (kind === "import" || !hasImportedContent.value) return 2;
+  if (kind === "publish" || !hasIndexIdentity.value) return 3;
   return 4;
 });
 const nextAction = computed(() => {
   if (!props.selectedSpaceId) return "先在顶部选择或创建一个知识空间";
-  if (!hasImportedContent.value) return "选择一份资料，导入到当前空间";
-  if (!hasIndexIdentity.value) return "等待摄取完成，然后发布待发布索引";
-  if (!hasPublishedModel.value || !hasPublishedPrompt.value) return "管理员只需完成一次回答配置";
-  return "输入问题，开始一次带引用问答";
+  return nextStep.value.label;
 });
 
 function apiPath(suffix: string): string {
@@ -174,7 +180,7 @@ async function loadFlow(): Promise<void> {
   loading.value = true; error.value = ""; notice.value = "";
   try {
     const failures: string[] = [];
-    const [providers, profiles, routes, prompts, active, currentJobs, indexPage] = await Promise.all([
+    const [providers, profiles, routes, prompts, active, currentJobs, indexPage, spaceReadiness] = await Promise.all([
       readWithTimeout("Provider connection", listAllCursorPages<ProviderConnection>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/provider-connections`, { limit: 10 }), [], failures),
       readWithTimeout("Model profile", listAllCursorPages<ModelProfile>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-profiles`, { limit: 10 }), [], failures),
       readWithTimeout("Model route", listAllCursorPages<ModelRoute>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/model-routes`, { limit: 10 }), [], failures),
@@ -182,6 +188,7 @@ async function loadFlow(): Promise<void> {
       readWithTimeout("Active index", getActiveIndex(props.selectedSpaceId), null, failures),
       readWithTimeout("Ingestion jobs", listAllCursorPages<IngestionJobView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/jobs`, { limit: 10 }), [], failures),
       readWithTimeout("Index versions", listAllCursorPages<IndexView>(`/api/v1/spaces/${encodeURIComponent(props.selectedSpaceId)}/indexes`, { limit: 10 }), [], failures),
+      readWithTimeout("Answer readiness", getAnswerReadiness(props.selectedSpaceId), null, failures),
     ]);
     providerConnections.value = providers;
     modelProfiles.value = profiles;
@@ -190,6 +197,7 @@ async function loadFlow(): Promise<void> {
     activeIndex.value = active;
     jobs.value = currentJobs;
     indexes.value = indexPage;
+    readiness.value = spaceReadiness;
     jobPage.value = Math.min(jobPage.value, jobPageCount.value);
     indexVersionId.value = active?.pointer.activeIndexVersionId ?? "";
     datasetHash.value = active?.datasetHash ?? "";
@@ -217,9 +225,10 @@ async function uploadFile(): Promise<void> {
     for (const file of selectedFiles.value) {
       submitted.push(await uploadMarkdown(props.selectedSpaceId, file, file.webkitRelativePath || file.name));
     }
+    postImportGuide.value = true;
     notice.value = submitted.length === 1
-      ? `已提交 ${submitted[0].jobId}，Worker 正在执行真实摄取。`
-      : `已提交 ${submitted.length} 个 notes 文档，Worker 正在后台执行真实摄取。`;
+      ? `已提交 ${submitted[0].jobId}。可在任务中心跟踪摄取，完成后即可提问。`
+      : `已提交 ${submitted.length} 个文档。可在任务中心跟踪摄取，完成后即可提问。`;
     selectedFiles.value = [];
     await loadFlow();
     if (submitted.length === 1) await waitForIngestion(submitted[0].jobId);
@@ -236,7 +245,8 @@ async function ingestWeb(): Promise<void> {
   try {
     const submitted = await ingestWebSource(props.selectedSpaceId, webUrl.value.trim(), true);
     webUrl.value = ""; webEgressApproved.value = false;
-    notice.value = "网页已提交 " + submitted.jobId + "，Worker 正在执行真实摄取。";
+    postImportGuide.value = true;
+    notice.value = "网页已提交 " + submitted.jobId + "。可在任务中心跟踪摄取，完成后即可提问。";
     await loadFlow();
     await waitForIngestion(submitted.jobId);
   } catch (value) { error.value = describeError(value); }
@@ -253,8 +263,8 @@ async function waitForIngestion(jobId: string): Promise<void> {
       if (["SUCCEEDED", "FAILED", "DEAD_LETTER", "CANCELLED"].includes(current.job.status)) {
         if (current.job.documentRevisionId) await showParseReport(current.job.documentRevisionId);
         notice.value = current.job.status === "SUCCEEDED"
-          ? "摄取已完成：Parse Report、chunk、embedding 和候选索引均已由服务端确认。"
-          : `摄取结束，状态为 ${current.job.status}；请查看 Run/任务详情中的错误。`;
+          ? "摄取已完成。请到任务中心确认结果，或发布索引后去提问。"
+          : `摄取结束，状态为 ${current.job.status}；请查看任务中心中的错误。`;
         await loadFlow();
         return;
       }
@@ -265,8 +275,8 @@ async function waitForIngestion(jobId: string): Promise<void> {
     if (current && ["SUCCEEDED", "FAILED", "DEAD_LETTER", "CANCELLED"].includes(current.job.status)) {
       if (current.job.documentRevisionId) await showParseReport(current.job.documentRevisionId);
       notice.value = current.job.status === "SUCCEEDED"
-        ? "摄取已完成：Parse Report、chunk、embedding 和 active index 均已由服务端确认。"
-        : `摄取结束，状态为 ${current.job.status}；请查看 Run/任务详情中的错误。`;
+        ? "摄取已完成。请到任务中心确认结果，或发布索引后去提问。"
+        : `摄取结束，状态为 ${current.job.status}；请查看任务中心中的错误。`;
       return;
     }
     await new Promise<void>((resolve) => window.setTimeout(resolve, 2000));
@@ -364,19 +374,67 @@ async function hashConfig(): Promise<string> {
 }
 
 async function startAnswer(): Promise<void> {
-  if (!canStart.value || !selectedProvider.value || !promptVersion.value) return;
-  const configHash = await hashConfig();
-  notice.value = "配置已校验，正在打开带引用问答。";
-  emit("start-answer", { routeVersionId: selectedRouteId.value, profileVersionId: selectedProfileId.value, providerConnectionId: selectedProvider.value.providerConnectionId, promptVersionId: promptVersion.value.promptVersionId, model: model.value.trim(), datasetHash: datasetHash.value.trim(), configHash, allowCloudEgress: selectedRoute.value?.egressClass === "CLOUD" });
+  if (!canStart.value) return;
+  if (needsBindingChoice.value && (!selectedProvider.value || !promptVersion.value)) {
+    error.value = "当前空间有多套已发布绑定，请先选择要使用的路线和回答规则。";
+    return;
+  }
+  notice.value = "正在打开带引用问答。";
+  if (needsBindingChoice.value && selectedProvider.value && promptVersion.value) {
+    const configHash = await hashConfig();
+    emit("start-answer", {
+      routeVersionId: selectedRouteId.value,
+      profileVersionId: selectedProfileId.value,
+      providerConnectionId: selectedProvider.value.providerConnectionId,
+      promptVersionId: promptVersion.value.promptVersionId,
+      model: model.value.trim(),
+      datasetHash: datasetHash.value.trim(),
+      configHash,
+      allowCloudEgress: selectedRoute.value?.egressClass === "CLOUD",
+    });
+    return;
+  }
+  emit("start-answer", null);
 }
 
-watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadFlow(); }, { immediate: true });
+function resetSpaceLocalState(): void {
+  selectedRouteId.value = "";
+  selectedProfileId.value = "";
+  selectedPromptTemplateId.value = "";
+  promptVersion.value = null;
+  readiness.value = null;
+  jobs.value = [];
+  indexes.value = [];
+  activeIndex.value = null;
+  parseReport.value = null;
+  postImportGuide.value = false;
+  notice.value = "";
+  error.value = "";
+}
+
+function followNextGap(): void {
+  if (nextStep.value.kind === "import") {
+    flowTab.value = "library";
+    return;
+  }
+  if (nextStep.value.kind === "publish") {
+    flowTab.value = "library";
+    return;
+  }
+  emit("follow-gap", nextStep.value.path);
+}
+
+watch(() => props.selectedSpaceId, () => {
+  resetSpaceLocalState();
+  if (props.selectedSpaceId) void loadFlow();
+}, { immediate: true });
 </script>
 
 <template>
   <section class="view-section business-flow" aria-labelledby="business-flow-heading">
-    <div class="section-heading"><div><p class="eyebrow">知识库</p><h2 id="business-flow-heading">资料与索引</h2><p>导入资料、跟踪摄取、发布索引。来源和任务从工作台标签进入，不再藏在折叠层里。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "已准备好提问" : nextAction }}</div></div>
+    <div class="section-heading"><div><p class="eyebrow">知识库</p><h2 id="business-flow-heading">资料与索引</h2><p>导入资料、跟踪摄取、发布索引。来源和任务从工作台标签进入，不再藏在折叠层里。</p></div><div class="read-only-note" :class="{ warning: !canStart }">{{ canStart ? "已准备好提问" : nextAction }} <button v-if="!canStart && selectedSpaceId && nextStep.kind !== 'import'" type="button" class="quiet-button" @click="followNextGap">去处理</button></div></div>
     <p v-if="error" class="alert error" role="alert">{{ error }}</p><p v-if="notice" class="alert success" role="status">{{ notice }}</p>
+    <div v-if="postImportGuide" class="button-row import-guide"><button type="button" class="secondary-button" @click="flowTab = 'tasks'">查看任务</button><button type="button" :disabled="!canStart" @click="startAnswer">去提问</button></div>
     <ol class="flow-progress" aria-label="资料到问答进度">
       <li :class="{ done: Boolean(selectedSpaceId), current: activeStep === 1 }"><strong>空间</strong><span>{{ selectedSpaceId ? "已选定" : "待选择" }}</span></li>
       <li :class="{ done: hasImportedContent, current: activeStep === 2 }"><strong>导入</strong><span>{{ hasImportedContent ? `${jobs.length} 个任务` : "待导入" }}</span></li>
@@ -385,7 +443,7 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
     </ol>
     <section v-if="needsRuntimeSetup" class="card setup-card" aria-labelledby="setup-heading">
       <div><span class="card-label">管理员一次性配置</span><h3 id="setup-heading">当前空间还没有可用的回答配置</h3><p class="muted">先验证模型服务并发布回答规则。完成后导入资料即可提问，不必手填内部编号。</p></div>
-      <div class="setup-actions"><button type="button" :disabled="!canManage" @click="emit('open-control', 'providers')">打开模型配置</button></div>
+      <div class="setup-actions"><button type="button" :disabled="!canManage" @click="followNextGap">打开模型配置</button></div>
       <small v-if="!canManage" class="permission-hint">当前角色没有配置权限，请让空间管理员完成这一步。</small>
     </section>
     <nav class="work-tabs" aria-label="资料工作台">
@@ -411,7 +469,7 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
         <div v-if="jobs.length" class="data-list-section"><div class="data-list-heading"><div><span class="card-label">导入任务</span><p class="muted">每页 10 条，按服务端更新时间排列。</p></div><span class="data-list-count">共 {{ jobs.length }} 条</span></div><div class="data-table-wrap"><table class="data-table" aria-label="导入任务列表"><thead><tr><th scope="col">任务</th><th scope="col">状态</th><th scope="col">处理步骤</th><th scope="col">更新时间</th><th scope="col">操作</th></tr></thead><tbody><tr v-for="item in visibleJobs" :key="item.job.id"><td><strong>摄取任务</strong><small>{{ item.job.id }}</small></td><td><span class="state-pill" :class="item.job.status.toLowerCase()">{{ stateLabel(item.job.status) }}</span></td><td><span class="step-summary">{{ item.steps.map((step) => `${step.stepName}:${stateLabel(step.status)}`).join(" · ") || "等待后台处理" }}</span></td><td>{{ new Date(item.job.updatedAt).toLocaleString() }}</td><td><button v-if="item.job.documentRevisionId" type="button" class="quiet-button" @click="showParseReport(item.job.documentRevisionId)">查看解析结果</button><span v-else class="muted">—</span></td></tr></tbody></table></div><div class="pagination-bar" data-pagination="ingestion-jobs"><span>第 {{ jobPage }} / {{ jobPageCount }} 页 · 共 {{ jobs.length }} 条</span><div><button type="button" class="quiet-button" :disabled="jobPage <= 1" aria-label="上一页" @click="setJobPage(jobPage - 1)">上一页</button><button type="button" class="quiet-button" :disabled="jobPage >= jobPageCount" aria-label="下一页" @click="setJobPage(jobPage + 1)">下一页</button></div></div></div>
         <p v-else class="empty-state data-list-empty">还没有导入任务；选择资料后会出现在这个列表中。</p>
         <div v-if="parseReport" class="parse-report"><strong>解析结果：{{ stateLabel(parseReport.status) }}</strong><span>{{ parseReport.parserName }} {{ parseReport.parserVersion }} · {{ parseReport.characterCount }} 字符 · {{ parseReport.tokenCount }} 个词元</span><small>{{ parseReport.errors || "没有错误" }}</small></div>
-        <details class="advanced-config"><summary>查看自动带入的回答配置</summary><p class="field-hint">普通用户不需要修改；管理员只在首次配置或切换模型时使用。</p><div class="form-grid"><div class="field wide"><label for="flow-route">模型路线</label><select id="flow-route" v-model="selectedRouteId" @change="selectedProfileId = selectedRoute?.candidates[0]?.modelProfileId ?? ''"><option value="">自动选择已发布路线</option><option v-for="item in modelRoutes" :key="item.modelRouteId" :value="item.modelRouteId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-profile">模型能力档案</label><select id="flow-profile" v-model="selectedProfileId"><option value="">自动选择已发布档案</option><option v-for="item in modelProfiles.filter((candidate) => candidate.status === 'PUBLISHED')" :key="item.modelProfileId" :value="item.modelProfileId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-model">模型名称</label><input id="flow-model" v-model="model" placeholder="例如 mimo-v2.5" /></div><div class="field wide"><label for="flow-prompt">回答规则模板</label><select id="flow-prompt" v-model="selectedPromptTemplateId" @change="refreshPromptVersion"><option value="">自动选择已发布模板</option><option v-for="item in promptTemplates" :key="item.promptTemplateId" :value="item.promptTemplateId">{{ item.name }} · {{ item.currentVersion ? `第 ${item.currentVersion} 版` : "未发布" }}</option></select></div><div v-if="promptVersion" class="prompt-version-summary field wide"><label>当前回答规则</label><output>第 {{ promptVersion.version }} 版 · {{ stateLabel(promptVersion.state) }}</output><small>内部版本哈希：{{ promptVersion.contentHash }}</small></div></div></details>
+        <details v-if="needsBindingChoice" class="advanced-config"><summary>选择已发布的回答绑定</summary><p class="field-hint">当前空间有多套已发布绑定，提问前请选择一套。</p><div class="form-grid"><div class="field wide"><label for="flow-route">模型路线</label><select id="flow-route" v-model="selectedRouteId" @change="selectedProfileId = selectedRoute?.candidates[0]?.modelProfileId ?? ''"><option value="">自动选择已发布路线</option><option v-for="item in modelRoutes" :key="item.modelRouteId" :value="item.modelRouteId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-profile">模型能力档案</label><select id="flow-profile" v-model="selectedProfileId"><option value="">自动选择已发布档案</option><option v-for="item in modelProfiles.filter((candidate) => candidate.status === 'PUBLISHED')" :key="item.modelProfileId" :value="item.modelProfileId">{{ purposeLabel(item.purpose) }} · {{ stateLabel(item.status) }}</option></select></div><div class="field"><label for="flow-model">模型名称</label><input id="flow-model" v-model="model" placeholder="例如 mimo-v2.5" /></div><div class="field wide"><label for="flow-prompt">回答规则模板</label><select id="flow-prompt" v-model="selectedPromptTemplateId" @change="refreshPromptVersion"><option value="">自动选择已发布模板</option><option v-for="item in promptTemplates" :key="item.promptTemplateId" :value="item.promptTemplateId">{{ item.name }} · {{ item.currentVersion ? `第 ${item.currentVersion} 版` : "未发布" }}</option></select></div><div v-if="promptVersion" class="prompt-version-summary field wide"><label>当前回答规则</label><output>第 {{ promptVersion.version }} 版 · {{ stateLabel(promptVersion.state) }}</output><small>内部版本哈希：{{ promptVersion.contentHash }}</small></div></div></details>
         <div class="flow-boundary-note" :class="{ warning: !hasIndexIdentity }"><strong>{{ hasIndexIdentity ? "可以提问" : indexes.some((item) => item.state === 'READY') ? "还差一步" : "正在处理" }}：</strong><span>{{ hasIndexIdentity ? "当前索引已发布，可以进入问答。" : indexes.some((item) => item.state === 'READY') ? "点击“发布为当前版本”后才能用于回答。" : "等待后台完成解析、切分、向量化和索引验证。" }}</span></div>
         <div class="button-row"><button type="button" :disabled="!canStart" @click="startAnswer">去提问</button><button type="button" class="secondary-button" @click="emit('open-control', 'providers')">管理员高级设置</button></div>
         <IndexLifecycleView
@@ -431,7 +489,7 @@ watch(() => props.selectedSpaceId, () => { if (props.selectedSpaceId) void loadF
         <div class="card"><span class="card-label">空间资产</span><ul class="flow-resource-list"><li>{{ providerConnections.length }} 个模型服务连接</li><li>{{ modelProfiles.length }} 个模型能力档案</li><li>{{ promptTemplates.length }} 个回答规则模板</li><li>{{ jobs.length }} 个导入任务</li><li>{{ indexes.length }} 个索引版本</li></ul></div>
       </aside>
     </div>
-    <div v-show="flowTab === 'sources'" class="flow-panel"><SourceLibraryView :selected-space-id="selectedSpaceId" :current-role="currentRole" /></div>
+    <div v-show="flowTab === 'sources'" class="flow-panel"><SourceLibraryView :selected-space-id="selectedSpaceId" :current-role="currentRole" :space-ready="canStart" @open-tasks="flowTab = 'tasks'" @start-answer="startAnswer" /></div>
     <div v-show="flowTab === 'tasks'" class="flow-panel"><TaskCenterView :selected-space-id="selectedSpaceId" :current-role="currentRole" /></div>
   </section>
 </template>
