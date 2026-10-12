@@ -43,7 +43,8 @@ class SupplyChainGateTests(unittest.TestCase):
     def test_compose_infrastructure_images_are_digest_pinned(self) -> None:
         image_lines = [line.strip() for line in COMPOSE.read_text(encoding="utf-8").splitlines() if line.strip().startswith("image:")]
         infrastructure = [line for line in image_lines if "RAGFORGE_" not in line]
-        self.assertEqual(len(infrastructure), 6)
+        # postgres / qdrant / rabbitmq / valkey / minio — app images use RAGFORGE_* vars
+        self.assertEqual(len(infrastructure), 5)
         for line in infrastructure:
             self.assertRegex(line, r"@sha256:[0-9a-f]{64}")
 
