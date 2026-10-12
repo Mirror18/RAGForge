@@ -12,7 +12,9 @@ source_spec: 001-knowledge-loop
 source_task: T011
 milestone: m-1
 dependencies:
-  - RF-11
+  - RF-12
+  - RF-16
+  - RF-17
 priority: high
 ordinal: 6000
 token_limit: 8000
