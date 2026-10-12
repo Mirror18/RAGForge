@@ -311,6 +311,7 @@ class Phase5ContractTest(unittest.TestCase):
     def test_phase5_openapi_paths_are_space_scoped_and_strictly_declared(self) -> None:
         paths = self.openapi["paths"]
         expected = {
+            "/api/v1/spaces/{spaceId}/answer-readiness",
             "/api/v1/spaces/{spaceId}/answers",
             "/api/v1/spaces/{spaceId}/answers/{runId}",
             "/api/v1/spaces/{spaceId}/answers/{runId}/events",
@@ -324,6 +325,10 @@ class Phase5ContractTest(unittest.TestCase):
         operations = [operation for path in expected for method, operation in paths[path].items() if method in {"get", "post"}]
         self.assertEqual(len(operations), len({operation["operationId"] for operation in operations}))
         self.assertIn("IdempotencyKey", json.dumps(paths["/api/v1/spaces/{spaceId}/answers"]))
+        readiness = self.openapi["components"]["schemas"]["AnswerReadiness"]
+        self.assertEqual(readiness["required"], ["spaceId", "ready", "gaps"])
+        self.assertFalse({"datasetHash", "configHash", "credentialRef"} & set(readiness["properties"]))
+        validate({"spaceId": self.ids["space"], "ready": True, "gaps": []}, readiness, OPENAPI, self.openapi)
         self.assertIn("LastEventId", json.dumps(paths["/api/v1/spaces/{spaceId}/answers/{runId}/events"]))
 
     def test_create_answer_request_allows_omitted_technical_ids(self) -> None:

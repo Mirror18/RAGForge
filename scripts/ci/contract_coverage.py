@@ -21,6 +21,7 @@ OPENAPI_PATH = REPO_ROOT / "backend" / "contracts" / "openapi" / "ragforge-api-v
 CONTROLLER_PATHS = (
     "backend/server/src/main/java/com/ragforge/server/answer/AnswerFeedbackController.java",
     "backend/server/src/main/java/com/ragforge/server/answer/api/AnswerApiController.java",
+    "backend/server/src/main/java/com/ragforge/server/answer/api/AnswerReadinessController.java",
     "backend/server/src/main/java/com/ragforge/server/identity/AuthController.java",
     "backend/server/src/main/java/com/ragforge/server/identity/PlatformAdminBootstrapController.java",
     "backend/server/src/main/java/com/ragforge/server/identity/UserAdminController.java",

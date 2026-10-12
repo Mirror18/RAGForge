@@ -656,6 +656,22 @@
         "responses": {"202": {"description": "Retry accepted", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Run"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}, "422": {"$ref": "#/components/responses/UnprocessableEntity"}, "429": {"$ref": "#/components/responses/TooManyRequests"}, "500": {"$ref": "#/components/responses/InternalError"}}
       }
     },
+    "/api/v1/spaces/{spaceId}/answer-readiness": {
+      "x-ragforge-implementation-status": "phase5-implemented",
+      "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
+      "get": {
+        "tags": ["answers"],
+        "operationId": "getAnswerReadiness",
+        "summary": "Read whether the space can create a cited answer",
+        "description": "Returns ready and an ordered list of remaining gaps. Each gap has a stable code and a product page path. The projection never includes credentials, hashes or identifiers from another space. The caller must be a member of the requested space.",
+        "security": [{"cookieAuth": []}, {"serviceToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/CorrelationId"}],
+        "responses": {
+          "200": {"description": "Answer readiness", "headers": {"X-Correlation-Id": {"$ref": "#/components/headers/CorrelationId"}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnswerReadiness"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/answers": {
       "x-ragforge-implementation-status": "phase5-implemented",
       "parameters": [{"$ref": "#/components/parameters/SpaceId"}],
@@ -1965,6 +1981,22 @@
         "properties": {
           "abstained": {"type": "boolean"},
           "reasonCode": {"type": ["string", "null"], "enum": ["NO_EVIDENCE", "LOW_CONFIDENCE", "POLICY_BLOCKED", null]}
+        }
+      },
+      "AnswerReadiness": {
+        "type": "object", "additionalProperties": false, "required": ["spaceId", "ready", "gaps"],
+        "properties": {
+          "spaceId": {"$ref": "#/components/schemas/UuidV7"},
+          "ready": {"type": "boolean"},
+          "gaps": {"type": "array", "maxItems": 20, "items": {"$ref": "#/components/schemas/AnswerReadinessGap"}}
+        },
+        "description": "Ordered remaining work for cited answers. Closed earlier gaps are omitted. Credentials, hashes and cross-space identifiers are never returned."
+      },
+      "AnswerReadinessGap": {
+        "type": "object", "additionalProperties": false, "required": ["code", "path"],
+        "properties": {
+          "code": {"type": "string", "enum": ["object_storage_disabled", "no_documents", "no_active_index", "no_active_profile", "no_published_prompt", "no_authorized_chat_route", "cloud_egress_required"]},
+          "path": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^\\?view=[a-z]+(?:&[A-Za-z0-9]+=[A-Za-z0-9_-]+)*$"}
         }
       },
       "AnswerRequest": {
