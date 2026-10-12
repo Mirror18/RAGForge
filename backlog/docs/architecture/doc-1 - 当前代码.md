@@ -3,7 +3,7 @@ id: doc-1
 title: 当前代码
 type: guide
 created_date: '2026-10-12 03:09'
-updated_date: '2026-10-12 03:09'
+updated_date: '2026-10-12 16:20'
 ---
 # 当前代码
 
@@ -30,7 +30,9 @@ updated_date: '2026-10-12 03:09'
 
 ## 仍在使用的根目录
 
-`backend`（含 `backend/contracts` 接口定义）、`frontend`、`deploy`、`scripts`、`specs`、`backlog`、`tests`（含 `tests/fixtures` 合成样本）。任务板在 `backlog/tasks`，规格在 `specs/`。演示截图在 `tests/evidence/business-demo/`。
+`backend`（含 `backend/contracts` 接口定义）、`frontend`、`deploy`、`scripts`、`specs`、`backlog`、`tests`（含 `tests/fixtures` 合成样本）。任务板在 `backlog/tasks`，规格在 `specs/`，说明在 `backlog/docs/`。speckit 任务用 `scripts/dev/import_speckit_tasks.py` 入板。演示截图在 `tests/evidence/business-demo/`。
+
+下一步不先拆四进程：见 [业务闭环优化方向](./doc-4%20-%20业务闭环优化方向.md)，执行卡在里程碑 `m-1`。
 
 ## 不变量
 
