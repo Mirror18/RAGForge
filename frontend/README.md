@@ -5,7 +5,9 @@
 ## 技术边界
 
 - Vue 3 + TypeScript + Vite。
+- 视图按闭环放在 `ragforge-web/src/views/{access,space,knowledge,answer,admin}`。
 - `src/api.ts` 集中处理 API、Cookie、CSRF、幂等键和结构化错误。
+- 仅支持已授权的云端模型；页面不提供 Ollama 入口。
 - 前端角色只控制导航和交互，权限边界由后端按 `space_id` 强制执行。
 - 不在浏览器存储正文、embedding、secret、raw prompt 或自由文本 citation。
 

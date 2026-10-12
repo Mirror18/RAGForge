@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { ApiError, configureGitSource, listSources, operateSourceTask, type GitSourceView, type PlatformRole, type SpaceRole, type SourceRecord, type TaskActionOperation } from "./api";
-import { formatDateTime } from "./format";
-import { stateLabel } from "./i18n";
+import { ApiError, configureGitSource, listSources, operateSourceTask, type GitSourceView, type PlatformRole, type SpaceRole, type SourceRecord, type TaskActionOperation } from "../../api";
+import { formatDateTime } from "../../format";
+import { stateLabel } from "../../i18n";
 
 const props = defineProps<{
   selectedSpaceId: string;

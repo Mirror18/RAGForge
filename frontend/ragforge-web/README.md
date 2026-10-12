@@ -6,7 +6,7 @@
 
 ## 面向业务用户的使用顺序
 
-首页“业务向导”将普通操作收敛为“选择空间 → 导入资料 → 发布索引 → 开始问答”四步。来源库和任务中心位于可展开的“来源与任务管理”区域；模型服务、模型能力、回答规则和运行追踪位于“高级设置”，仅在首次配置或排错时使用。
+默认导航按业务闭环排列：空间 → 云端模型 → 资料与索引 → 带引用问答。内容证据和检索实验从引用或索引进入；运行与管理承担健康、成本和审计。视图文件在 `src/views/`。
 
 问答页的历史会话使用表格集中展示，每页 10 条；点击会话会载入最近一次回答，点击运行记录可切换到具体回答，运行记录也按每页 10 条收拢；归档会话可以查看但不能继续提问。业务向导中的导入任务同样按每页 10 条展示。完整浏览器演示见 [`docs/15-业务操作演示.md`](../../docs/15-业务操作演示.md)。
 
@@ -20,7 +20,7 @@
 
 页面只渲染契约允许的引用、hash、位置和审计 metadata，不渲染正文、原文、embedding、vector、secret 或自由文本 citation。replacement 字段只指向外部已存储内容，正文不进入本客户端；contentRef 会拒绝空白、超长和敏感字段，textHash 必须为 64 位 SHA-256 十六进制值。A/B 实验不提供 active profile 操作。
 
-真实浏览器闭环证据保存在 [`tests/evidence/business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。Chat 大模型默认优先选择云端 MiMo；云端仍必须由空间显式授权和前端显式选择后使用，不会静默回退到其他云端。Embedding/Rerank 继续按既有 Provider 能力保持本地，避免把 Chat 出境误扩展为全链路出境。
+真实浏览器闭环证据保存在 [`tests/evidence/business-loop-e2e.v1.json`](../../tests/evidence/business-loop-e2e.v1.json)。Chat 与 Embedding 都只走空间已授权的 OpenAI 兼容云端 API；未授权则失败，没有本地 Ollama 可退。
 
 一个 SPA 仍覆盖：
 

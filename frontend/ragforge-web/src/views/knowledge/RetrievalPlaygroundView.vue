@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
-import { ApiError, type Anchor, type ProvenanceContext, type RetrievalExperiment, apiFetch } from "./api";
+import { ApiError, type Anchor, type ProvenanceContext, type RetrievalExperiment, apiFetch } from "../../api";
 
 const props = defineProps<{ selectedSpaceId: string; initialContext?: ProvenanceContext | null }>();
 const emit = defineEmits<{ "open-context": [context: ProvenanceContext] }>();

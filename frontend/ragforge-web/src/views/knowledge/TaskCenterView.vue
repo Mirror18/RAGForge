@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ApiError, getTaskJob, listAllCursorPages, listTaskJobs, operateSourceTask, type GitSourceView, type IngestionJobView, type PlatformRole, type SpaceRole, type TaskActionOperation } from "./api";
-import { formatDateTime } from "./format";
-import { stateLabel } from "./i18n";
+import { ApiError, getTaskJob, listAllCursorPages, listTaskJobs, operateSourceTask, type GitSourceView, type IngestionJobView, type PlatformRole, type SpaceRole, type TaskActionOperation } from "../../api";
+import { formatDateTime } from "../../format";
+import { stateLabel } from "../../i18n";
 
 const props = defineProps<{
   selectedSpaceId: string;

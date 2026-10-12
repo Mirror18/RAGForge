@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { formatDateTime } from "./format";
-import type { ActiveIndexView, IndexView } from "./api";
+import { formatDateTime } from "../../format";
+import type { ActiveIndexView, IndexView } from "../../api";
 
 const props = defineProps<{
   indexes: IndexView[];

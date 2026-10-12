@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { ApiError, addSpaceMember, archiveSpace, createManagedUser, disableManagedUser, listAllCursorPages, removeSpaceMember, updateManagedUser, updateSpace, updateSpaceMember, type CurrentSession, type ManagedUser, type PlatformRole, type Space, type SpaceMember, type SpaceRole } from "./api";
-import { currentTimeZone, formatDateTime } from "./format";
-import { roleLabel, stateLabel } from "./i18n";
+import { ApiError, addSpaceMember, archiveSpace, createManagedUser, disableManagedUser, listAllCursorPages, removeSpaceMember, updateManagedUser, updateSpace, updateSpaceMember, type CurrentSession, type ManagedUser, type PlatformRole, type Space, type SpaceMember, type SpaceRole } from "../../api";
+import { currentTimeZone, formatDateTime } from "../../format";
+import { roleLabel, stateLabel } from "../../i18n";
 
 type PersonalAction = "home" | "providers" | "models" | "prompts" | "runs";
 

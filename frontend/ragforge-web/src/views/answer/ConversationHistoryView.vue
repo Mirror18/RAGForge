@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ConversationHistoryItem, ConversationRunItem } from "./answer";
+import type { ConversationHistoryItem, ConversationRunItem } from "../../answer";
 
 defineProps<{
   items: ConversationHistoryItem[];

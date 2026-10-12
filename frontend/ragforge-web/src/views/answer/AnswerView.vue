@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ApiError, type AnswerDefaults, type ProvenanceContext } from "./api";
-import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, deleteAnswerConversation, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, renameAnswerConversation, submitAnswerFeedback, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "./answer";
-import { type RunProjection } from "./answer";
+import { ApiError, type AnswerDefaults, type ProvenanceContext } from "../../api";
+import { AnswerStreamError, archiveAnswerConversation, cancelAnswerRun, consumeAnswerStream, createAnswer, createAnswerConversation, createAnswerRun, deleteAnswerConversation, getAnswerProjection, listAnswerConversations, listConversationRuns, previewCitation, renameAnswerConversation, submitAnswerFeedback, type AnswerAbstentionReason, type AnswerCitation, type AnswerDonePayload, type AnswerErrorCode, type AnswerEvent, type AnswerToolPayload, type AnswerUsagePayload, type CitationPreviewResult, type ConversationHistoryItem, type ConversationRunItem } from "../../answer";
+import { type RunProjection } from "../../answer";
 
 const props = defineProps<{ selectedSpaceId: string; defaults?: AnswerDefaults | null; initialConversationId?: string; initialRunId?: string }>();
 const emit = defineEmits<{ "run-created": [runId: string]; "conversation-created": [conversationId: string]; "open-context": [context: ProvenanceContext] }>();

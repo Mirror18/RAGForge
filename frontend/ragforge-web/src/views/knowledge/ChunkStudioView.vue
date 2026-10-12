@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { ApiError, type Anchor, type ChunkOverrideResponse, type ChunkOverrideTargetState, type ChunkStudioProjection, type CreateChunkOverrideRequest, type ProvenanceContext, type TransitionChunkOverrideRequest, apiFetch, lookupChunkStudio } from "./api";
-import { formatDateTime } from "./format";
-import { roleLabel, stateLabel } from "./i18n";
+import { ApiError, type Anchor, type ChunkOverrideResponse, type ChunkOverrideTargetState, type ChunkStudioProjection, type CreateChunkOverrideRequest, type ProvenanceContext, type TransitionChunkOverrideRequest, apiFetch, lookupChunkStudio } from "../../api";
+import { formatDateTime } from "../../format";
+import { roleLabel, stateLabel } from "../../i18n";
 
 const props = defineProps<{ selectedSpaceId: string; currentRole: string; initialContext?: ProvenanceContext | null }>();
 const childChunkId = ref("");
