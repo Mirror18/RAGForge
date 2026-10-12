@@ -13,7 +13,7 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 - Never commit secrets, personal Obsidian content, model credentials, production data, or raw customer prompts.
 - Do not copy third-party source before its license is accepted and the reuse register is updated.
 - Prefer official dependencies over vendored source. When vendoring is necessary, pin the upstream commit SHA and preserve notices.
-- Architecture changes require an ADR. Product-scope changes require updates to the PRD, roadmap, risks, and traceability matrix.
+- Architecture changes require an ADR. Product-scope changes require updates to the living documents under `backlog/docs/` (code map, operations, risks when they exist). Do not recreate the removed `docs/00–15` novels.
 - High-risk actions require explicit human approval before execution: accepting an ADR as binding, accepting a third-party license, enabling cloud egress for a space, applying a production database migration, and creating a release.
 
 ## Multi-agent execution rules
@@ -21,8 +21,10 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 ### Orchestrator responsibility
 
 - One primary agent acts as orchestrator. It owns task decomposition, dependency ordering, worktree allocation, integration, full verification, project-status updates, and phase closure.
-- **Daily-entry rule (token efficiency):** The orchestrator first reads `backlog/docs/architecture/doc-1 - 当前代码.md` and the task files under `backlog/tasks`. Historical phase records stay in Git history. Do not recreate the removed `docs/00–15` novels.
-- Tasks are taken from the board card-by-card (never "do Phase 7" as one task). Each card has an explicit token budget recorded in the board and mirrored in the per-worker ticket.
+- **Daily-entry rule (token efficiency):** The orchestrator first reads `backlog/docs/architecture/doc-1 - 当前代码.md`, `backlog/docs/operations/doc-3 - 任务与文档工作流.md`, and the task files under `backlog/tasks`. Historical phase records stay in Git history. Do not recreate the removed `docs/00–15` novels.
+- **Board rule:** `backlog/tasks` is the only execution queue. Speckit output in `specs/<id>/tasks.md` is a draft until `python scripts/dev/import_speckit_tasks.py --feature-dir specs/<id>` writes or updates cards. Do not implement solely from `tasks.md`.
+- **Commit rule:** After a card meets its acceptance criteria, commit that card immediately (Chinese Conventional Commit). Do not start the next card with uncommitted work from the previous one.
+- Tasks are taken from the board card-by-card (never "do Phase 7" as one task). Each card has an explicit `token_limit` in its frontmatter and, when a worker ticket exists, the same limit in the ticket.
 - Only parallelize concrete tasks that can be completed and tested independently. Contracts, shared schemas, migrations, dependency/BOM files, and architecture decisions are coordination points and must have one explicit owner.
 - Keep at most one agent editing a given file or schema area. If ownership is unclear, serialize the work.
 - The orchestrator keeps the primary worktree on `main`. Worker agents never implement features directly in the primary worktree.
@@ -72,7 +74,7 @@ This section is a hard gate for all agents. The goal is to keep the per-card eff
 Do not mix these contexts inside one agent invocation:
 
 - **Orchestrator**: reads only the compressed state card, task board, and the tickets under creation. Never reads whole-module source code or long governance documents. Owns dispatch, merge order, state-card updates, and phase-closure governance commits.
-- **Audit Agent**: a one-shot high-context role. Invoked only (a) at phase entry, (b) at suspected state-card drift, or (c) at release preparation. It reads PROJECT_STATUS, checklists, execution plans, and wide code facts. Product: an updated state card + updated board + delta plan. After execution, its context is discarded; subsequent workers do not inherit its full-context prompt.
+- **Audit Agent**: a one-shot high-context role. Invoked only (a) at phase entry, (b) at suspected state-card drift, or (c) at release preparation. It reads `backlog/docs/architecture/doc-1 - 当前代码.md`, the open cards, checklists, and wide code facts. Product: an updated code-map document + updated board + delta plan. After execution, its context is discarded; subsequent workers do not inherit its full-context prompt.
 - **Worker Agent**: owns exactly one ticket. Reads exactly the files in `scope.read_only` of that ticket. Exactly one card per invocation. After pass/fail/blocked report, its worktree remains, but the worker session ends.
 
 When a user prompt says "keep working on Phase 7" (or similar scope), route as: **1 Orchestrator × (2–3 parallel Workers max)**. Never a single big agent doing everything inside one context window.
@@ -99,13 +101,13 @@ Any intermediate artifact longer than 50 lines goes into a file under `tests/evi
 
 - Every card has a `token_limit` recorded on its backlog task.
 - The same limit is mirrored into the worker ticket and consumed by `report_schema.budget.token_used` self-report.
-- Hard rule: if a worker reports `token_used > 1.2 × token_limit` and acceptance is still `status != PASS`, the orchestrator must stop, inspect why, and either (a) split the card into smaller tickets with their own budgets or (b) explicitly approve an overrun, recording it in state-card §6 `notes` and TASK_BOARD.md remarks.
-- Soft rule: if an orchestrator burns > `TASK_BOARD` total P0+P1+P2 × 1.2 in a single phase without finishing the phase checklists, it stops, requests a human audit, and a fresh Audit Agent reconciles the drift.
+- Hard rule: if a worker reports `token_used > 1.2 × token_limit` and acceptance is still `status != PASS`, the orchestrator must stop, inspect why, and either (a) split the card into smaller tickets with their own budgets or (b) explicitly approve an overrun, recording it on the card and in `backlog/docs/architecture/doc-1 - 当前代码.md` notes.
+- Soft rule: if an orchestrator burns more than 1.2 × the sum of open P0+P1+P2 `token_limit` values on the board without finishing those cards, it stops, requests a human audit, and a fresh Audit Agent reconciles the drift.
 
 ### E5. Single source of truth (no duplicated state)
 
 - **Project state**: `backlog/docs/architecture/doc-1 - 当前代码.md` describes the running tree. Git history holds older phase audits. If a document and the code disagree, the code wins and the backlog document is corrected in a dedicated integration commit.
-- **Task definition**: `backlog/tasks` is the board. Worker tickets under `.agents/tickets/` are the per-invocation contracts. Do not duplicate card acceptance criteria into ad-hoc chat messages; always reference the board + ticket.
+- **Task definition**: `backlog/tasks` is the board. Speckit `tasks.md` is imported, not copied by hand into a second board. Worker tickets under `.agents/tickets/` are the per-invocation contracts. Do not duplicate card acceptance criteria into ad-hoc chat messages; always reference the board + ticket.
 - **Memory / lessons learned**: do not store current phase, next task, or completed SHA outside the backlog task and Git commit. Historical notes that used to live in `docs/13` stay in Git history.
 
 ### E6. Stopping conditions (mandatory)
@@ -113,7 +115,7 @@ Any intermediate artifact longer than 50 lines goes into a file under `tests/evi
 An agent halts and reports to the human if and only if any of the following apply (otherwise, it keeps executing the board in order):
 
 1. A high-risk action listed in Non-negotiable rules needs explicit human approval.
-2. The state card vs. PROJECT_STATUS vs. code facts cannot be reconciled without guessing.
+2. `backlog/docs/architecture/doc-1 - 当前代码.md` vs. the open board vs. code facts cannot be reconciled without guessing.
 3. A worker needs to modify outside its ownership and the orchestrator is absent / unavailable.
 4. A card crosses its 1.2× token budget (see E4).
 5. An external credential, hardware, or environment (e.g. standalone Ubuntu, signed release key, authorized outbound API) is required to continue and is not available.
@@ -140,7 +142,7 @@ An agent halts and reports to the human if and only if any of the following appl
 - Integrate one branch at a time in dependency order. Prefer a non-fast-forward merge so worker commits remain traceable; the merge commit message must also be Chinese, for example `merge(p1): 合并 OpenAPI 契约任务`.
 - Do not resolve conflicts with blanket `ours`/`theirs`. Reconcile against the accepted contract and rerun all affected tests.
 - After each integration batch, run repository-level tests and check architecture, contracts, migrations, security boundaries, licenses, and documentation links as applicable.
-- After a phase meets every roadmap exit criterion, update `PROJECT_STATUS.md`, `RISK_REGISTER.md`, `TRACEABILITY_MATRIX.md`, and the phase retrospective, then create a Chinese phase-closure commit such as `docs(phase-1): 完成工程与领域骨架阶段验收`.
+- After a milestone meets its exit criteria, update the affected documents under `backlog/docs/`, mark the milestone cards Done, and create a Chinese closure commit such as `docs(m-1): 完成可引用回答产品闭环验收`.
 - Remove a worker worktree and delete its local branch only after the branch is integrated, the worktree is clean, and the integration is verified. Never remove a worktree containing uncommitted work.
 - Stop the execution loop only when the current requested phase is genuinely complete or a material decision/credential/external dependency requires user input. Running out of easy tasks is not completion.
 
