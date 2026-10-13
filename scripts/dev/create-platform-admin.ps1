@@ -42,25 +42,25 @@ function Find-Java21 {
         $ErrorActionPreference = $previousErrorActionPreference
         if ($candidateVersion -like "*21.*") { return $candidate }
     }
-    throw "未找到 Java 21。请设置 JAVA_HOME 为 JDK 21 安装目录。"
+    throw "Java 21 not found. Set JAVA_HOME to a JDK 21 install directory."
 }
 
 Import-LocalEnv (Join-Path $repoRoot ".env.local")
 if (-not $env:RAGFORGE_ADMIN_CLI_PASSWORD -or $env:RAGFORGE_ADMIN_CLI_PASSWORD.Length -lt 12) {
-    throw "请设置环境变量 RAGFORGE_ADMIN_CLI_PASSWORD（至少 12 位），不要在命令行参数中传递密码。"
+    throw "Set RAGFORGE_ADMIN_CLI_PASSWORD (at least 12 chars). Do not pass the password on the command line."
 }
 
 $javaHome = Find-Java21
 $java = Join-Path $javaHome "bin\java.exe"
 if (-not (Test-Path -LiteralPath $serverJar)) {
-    throw "未找到 Server JAR：$serverJar。请先运行 scripts/dev/restart-local.bat 或 mvn -f backend/pom.xml -pl server -Pragforge-isolated-output package。"
+    throw "Server JAR not found: $serverJar. Run scripts/dev/restart-local.bat or mvn -f backend/pom.xml -pl server -Pragforge-isolated-output package first."
 }
 
 if (-not $env:JDBC_DATABASE_URL) {
     $python = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $python) { throw "未设置 JDBC_DATABASE_URL，且未找到 python 以解析 Compose 端口。" }
+    if (-not $python) { throw "JDBC_DATABASE_URL is unset and python was not found to resolve Compose ports." }
     $portsJson = & python -c "import json,sys; sys.path.insert(0, sys.argv[1]); from compose_isolation import project_ports; print(json.dumps(project_ports(sys.argv[2])))" $scriptRoot $ProjectName
-    if ($LASTEXITCODE -ne 0) { throw "无法解析 Compose 端口映射。" }
+    if ($LASTEXITCODE -ne 0) { throw "Failed to resolve Compose port mapping." }
     $ports = $portsJson | ConvertFrom-Json
     $env:JDBC_DATABASE_URL = "jdbc:postgresql://127.0.0.1:$($ports.POSTGRES_PORT)/ragforge"
     $env:JDBC_DATABASE_USERNAME = "ragforge"
@@ -72,5 +72,5 @@ if (-not $env:JDBC_DATABASE_URL) {
     --ragforge-create-platform-admin `
     --ragforge-admin-email=$Email `
     --ragforge-admin-display-name=$DisplayName
-if ($LASTEXITCODE -ne 0) { throw "平台管理员 CLI 失败（退出码 $LASTEXITCODE）。" }
-Write-Host "平台管理员已创建：$Email"
+if ($LASTEXITCODE -ne 0) { throw "Platform admin CLI failed (exit code $LASTEXITCODE)." }
+Write-Host "Platform administrator created: $Email"
