@@ -30,9 +30,9 @@ class ObjectStoreTest {
     private static final UUID ARTIFACT = UUID.fromString("018f0f00-0000-7000-8000-000000000024");
     private static final ObjectStoreLimits LIMITS = new ObjectStoreLimits(1024, Set.of("text/plain", "application/pdf"));
 
-    // Digest matches deploy/compose/compose.yaml MINIO_IMAGE default (CI Docker Hub pulls are flaky by tag).
+    // Matches deploy/compose/compose.yaml MINIO_IMAGE (MinIO Hub/Quay images are no longer public).
     private static final String MINIO_IMAGE =
-            "minio/minio:RELEASE.2024-12-18T13-15-44Z@sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3";
+            "pgsty/silo:RELEASE.2026-09-16T00-00-00Z@sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46";
 
     @Container
     static final GenericContainer<?> MINIO = new GenericContainer<>(MINIO_IMAGE)
