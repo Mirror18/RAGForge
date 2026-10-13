@@ -1,8 +1,8 @@
 package com.ragforge.server.answer.api;
 
-import com.ragforge.server.common.ApiException;
-import com.ragforge.server.identity.SessionPrincipal;
-import com.ragforge.server.provider.SpaceAuthorization;
+import com.ragforge.server.shared.domain.ApiException;
+import com.ragforge.server.space.domain.SessionPrincipal;
+import com.ragforge.server.space.domain.SpaceAuthorization;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;

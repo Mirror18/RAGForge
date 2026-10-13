@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "RF-7",
+  "status": "PASS",
+  "summary": {
+    "layout": "com.ragforge.server.{space|knowledge|answer|shared}.{api|application|domain|infrastructure}",
+    "mainMoves": 224,
+    "unitTests": { "total": 231, "failed": 0, "skipped": 0 },
+    "mavenModulesSplit": false,
+    "note": "Maven module split remains RF-8 / T005"
+  }
+}

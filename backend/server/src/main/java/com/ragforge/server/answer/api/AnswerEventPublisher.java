@@ -2,17 +2,19 @@ package com.ragforge.server.answer.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.ragforge.server.answer.Abstention;
-import com.ragforge.server.answer.Answer;
-import com.ragforge.server.answer.AnswerPersistencePort;
-import com.ragforge.server.answer.AnswerStatus;
-import com.ragforge.server.answer.AnswerRequest;
-import com.ragforge.server.answer.Citation;
-import com.ragforge.server.run.RunEventService;
-import com.ragforge.server.run.RunRepository;
+import com.ragforge.server.answer.domain.Abstention;
+import com.ragforge.server.answer.domain.Answer;
+import com.ragforge.server.answer.application.AnswerPersistencePort;
+import com.ragforge.server.answer.domain.AnswerStatus;
+import com.ragforge.server.answer.domain.AnswerRequest;
+import com.ragforge.server.answer.domain.Citation;
+import com.ragforge.server.answer.application.RunEventService;
+import com.ragforge.server.answer.infrastructure.RunRepository;
 
 import java.util.Objects;
 import java.util.UUID;
+import com.ragforge.server.answer.domain.RunEvent;
+import com.ragforge.server.space.infrastructure.UsageSource;
 
 /** Publishes only server-projected answer fields to the run event stream. */
 public final class AnswerEventPublisher {
@@ -188,7 +190,7 @@ public final class AnswerEventPublisher {
     private void append(Answer answer, String type, ObjectNode payload) {
         try {
             String payloadJson = objectMapper.writeValueAsString(payload);
-            com.ragforge.server.run.RunEvent event = events.append(answer.spaceId(), answer.runId(),
+            com.ragforge.server.answer.domain.RunEvent event = events.append(answer.spaceId(), answer.runId(),
                     answer.correlationId(), type, 1, payloadJson);
             if (persistence != null) {
                 persistence.appendEvent(new AnswerPersistencePort.AnswerEvent(event.eventId(), answer.answerId(),

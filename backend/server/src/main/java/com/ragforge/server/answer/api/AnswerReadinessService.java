@@ -1,12 +1,12 @@
 package com.ragforge.server.answer.api;
 
-import com.ragforge.server.index.IndexRepository;
-import com.ragforge.server.index.IndexState;
-import com.ragforge.server.ingestion.IngestionRepository;
-import com.ragforge.server.prompt.PromptRepository;
-import com.ragforge.server.provider.ProviderRepository;
-import com.ragforge.server.provider.SpaceBindingRepository;
-import com.ragforge.server.retrieval.RetrievalProfileRepository;
+import com.ragforge.server.knowledge.infrastructure.IndexRepository;
+import com.ragforge.server.knowledge.domain.IndexState;
+import com.ragforge.server.knowledge.infrastructure.IngestionRepository;
+import com.ragforge.server.answer.infrastructure.PromptRepository;
+import com.ragforge.server.space.infrastructure.ProviderRepository;
+import com.ragforge.server.space.infrastructure.SpaceBindingRepository;
+import com.ragforge.server.knowledge.infrastructure.RetrievalProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,6 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import com.ragforge.server.answer.infrastructure.ActiveRetrievalExecutionResolver;
+import com.ragforge.server.space.infrastructure.EgressPolicy;
+import com.ragforge.server.answer.infrastructure.JdbcRetrievalProfileVersionLoader;
 
 /** Space-scoped, credential-free checklist for creating a cited answer. */
 @Service
@@ -35,7 +38,7 @@ public class AnswerReadinessService {
     private final IngestionRepository ingestion;
     private final IndexRepository indexes;
     private final RetrievalProfileRepository profiles;
-    private final com.ragforge.server.answer.integration.ActiveRetrievalExecutionResolver.ProfileVersionLoader profileVersions;
+    private final com.ragforge.server.answer.infrastructure.ActiveRetrievalExecutionResolver.ProfileVersionLoader profileVersions;
     private final PromptRepository prompts;
     private final SpaceBindingRepository bindings;
     private final ProviderRepository providers;
@@ -47,13 +50,13 @@ public class AnswerReadinessService {
             JdbcTemplate jdbc, PromptRepository prompts, SpaceBindingRepository bindings,
             ProviderRepository providers) {
         this(objectStorageEnabled, ingestion, indexes, profiles,
-                new com.ragforge.server.answer.integration.JdbcRetrievalProfileVersionLoader(jdbc),
+                new com.ragforge.server.answer.infrastructure.JdbcRetrievalProfileVersionLoader(jdbc),
                 prompts, bindings, providers);
     }
 
     AnswerReadinessService(boolean objectStorageEnabled, IngestionRepository ingestion, IndexRepository indexes,
                            RetrievalProfileRepository profiles,
-                           com.ragforge.server.answer.integration.ActiveRetrievalExecutionResolver.ProfileVersionLoader profileVersions,
+                           com.ragforge.server.answer.infrastructure.ActiveRetrievalExecutionResolver.ProfileVersionLoader profileVersions,
                            PromptRepository prompts, SpaceBindingRepository bindings, ProviderRepository providers) {
         this.objectStorageEnabled = objectStorageEnabled;
         this.ingestion = Objects.requireNonNull(ingestion, "ingestion");

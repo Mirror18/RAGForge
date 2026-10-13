@@ -3,10 +3,11 @@ package com.ragforge.server.answer.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.ragforge.server.run.RunEvent;
+import com.ragforge.server.answer.domain.RunEvent;
 
 import java.util.Set;
 import java.util.UUID;
+import com.ragforge.server.answer.domain.Answer;
 
 /** Converts internal run events into the strict, versioned answer SSE envelope. */
 public final class AnswerSseEventAdapter {

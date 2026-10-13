@@ -1,15 +1,15 @@
 package com.ragforge.server.answer.api;
 
-import com.ragforge.server.answer.integration.ActiveRetrievalExecutionResolver;
-import com.ragforge.server.common.UuidV7;
-import com.ragforge.server.index.IndexRepository;
-import com.ragforge.server.index.IndexState;
-import com.ragforge.server.ingestion.IngestionRepository;
-import com.ragforge.server.prompt.PromptRepository;
-import com.ragforge.server.provider.ProviderRepository;
-import com.ragforge.server.provider.SpaceBindingRepository;
-import com.ragforge.server.retrieval.ExpansionMode;
-import com.ragforge.server.retrieval.RetrievalProfileRepository;
+import com.ragforge.server.answer.infrastructure.ActiveRetrievalExecutionResolver;
+import com.ragforge.server.shared.domain.UuidV7;
+import com.ragforge.server.knowledge.infrastructure.IndexRepository;
+import com.ragforge.server.knowledge.domain.IndexState;
+import com.ragforge.server.knowledge.infrastructure.IngestionRepository;
+import com.ragforge.server.answer.infrastructure.PromptRepository;
+import com.ragforge.server.space.infrastructure.ProviderRepository;
+import com.ragforge.server.space.infrastructure.SpaceBindingRepository;
+import com.ragforge.server.knowledge.domain.ExpansionMode;
+import com.ragforge.server.knowledge.infrastructure.RetrievalProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +21,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import com.ragforge.server.space.infrastructure.EgressPolicy;
+import com.ragforge.server.space.infrastructure.RouteCandidate;
 
 class AnswerReadinessServiceTest {
     private final UUID spaceId = UuidV7.random();

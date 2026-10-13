@@ -1,6 +1,6 @@
 package com.ragforge.server;
 
-import com.ragforge.server.identity.PlatformAdminCreateCli;
+import com.ragforge.server.space.api.PlatformAdminCreateCli;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

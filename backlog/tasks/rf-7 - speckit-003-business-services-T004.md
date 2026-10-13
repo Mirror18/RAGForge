@@ -1,10 +1,10 @@
 ---
 id: RF-7
 title: ADR Accepted 后在 server 内按四层收包
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-12 16:19'
-updated_date: '2026-10-12 16:19'
+updated_date: '2026-10-13 16:40'
 labels:
   - speckit
 source: speckit
@@ -27,5 +27,5 @@ ADR Accepted 后在 server 内按四层收包
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 T004 按规格完成，并在 `specs/003-business-services/tasks.md` 勾选一致
+- [x] #1 T004 按规格完成，并在 `specs/003-business-services/tasks.md` 勾选一致
 <!-- AC:END -->
