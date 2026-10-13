@@ -30,8 +30,12 @@ class ObjectStoreTest {
     private static final UUID ARTIFACT = UUID.fromString("018f0f00-0000-7000-8000-000000000024");
     private static final ObjectStoreLimits LIMITS = new ObjectStoreLimits(1024, Set.of("text/plain", "application/pdf"));
 
+    // Digest matches deploy/compose/compose.yaml MINIO_IMAGE default (CI Docker Hub pulls are flaky by tag).
+    private static final String MINIO_IMAGE =
+            "minio/minio:RELEASE.2024-12-18T13-15-44Z@sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3";
+
     @Container
-    static final GenericContainer<?> MINIO = new GenericContainer<>("minio/minio:RELEASE.2024-12-18T13-15-44Z")
+    static final GenericContainer<?> MINIO = new GenericContainer<>(MINIO_IMAGE)
             .withEnv("MINIO_ROOT_USER", "ragforge")
             .withEnv("MINIO_ROOT_PASSWORD", "ragforge-secret")
             .withCommand("server /data")
