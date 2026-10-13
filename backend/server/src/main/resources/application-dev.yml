@@ -1,0 +1,8 @@
+ragforge:
+  bootstrap:
+    admin:
+      dev-seed:
+        enabled: true
+        email: dev-admin@ragforge.local
+        password: dev-admin-change-me
+        display-name: Dev Platform Admin

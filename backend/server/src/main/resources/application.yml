@@ -53,8 +53,9 @@ ragforge:
       interval-ms: ${RAGFORGE_GIT_SOURCE_SYNC_INTERVAL_MS:3600000}
   bootstrap:
     admin:
-      # Disabled by default. Configure a one-time Secret of at least 32 characters, bootstrap, then remove it.
+      # Optional break-glass token (32+ chars). When unset, the server issues a one-time startup code in logs.
       token: ${RAGFORGE_BOOTSTRAP_ADMIN_TOKEN:}
+      startup-issue-enabled: ${RAGFORGE_BOOTSTRAP_STARTUP_ISSUE_ENABLED:true}
   web-source:
     # Empty by default: web ingestion is fail-closed until an operator configures public hosts.
     allowed-hosts: \${RAGFORGE_WEB_SOURCE_ALLOWED_HOSTS:}

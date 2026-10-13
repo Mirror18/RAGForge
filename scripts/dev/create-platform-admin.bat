@@ -1,0 +1,5 @@
+@echo off
+setlocal
+set "SCRIPT_DIR=%~dp0"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('%SCRIPT_DIR%create-platform-admin.ps1', [Text.Encoding]::UTF8))) %*"
+exit /b %ERRORLEVEL%

@@ -88,7 +88,7 @@ class ServerIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.execute("TRUNCATE idempotency_records, outbox_events, audit_events, space_memberships, knowledge_spaces, sessions, users CASCADE");
+        jdbc.execute("TRUNCATE idempotency_records, outbox_events, audit_events, space_memberships, knowledge_spaces, sessions, users, platform_admin_startup_tokens CASCADE");
     }
 
     @Test
@@ -156,7 +156,7 @@ class ServerIntegrationTest {
                 SELECT payload::text FROM audit_events WHERE event_type = 'platform.admin.bootstrapped.v1'
                 """, String.class);
         org.assertj.core.api.Assertions.assertThat(auditPayload)
-                .contains("userId", "CREATED")
+                .contains("userId", "CREATED", "CONFIGURED_TOKEN")
                 .doesNotContain("first-admin@example.test", BOOTSTRAP_TOKEN, "password");
         org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM users WHERE platform_role = 'PLATFORM_ADMIN' AND status = 'ACTIVE'

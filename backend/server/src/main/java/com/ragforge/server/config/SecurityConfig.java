@@ -22,7 +22,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({SessionProperties.class, BootstrapAdminProperties.class})
+@EnableConfigurationProperties({SessionProperties.class, BootstrapAdminProperties.class,
+        DevPlatformAdminSeedProperties.class})
 public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {

@@ -20,7 +20,14 @@ python scripts/dev/core.py --profile app build
 python scripts/dev/core.py --profile app up --build
 ```
 
-Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、Worker 与 Web。`.bat` 是默认入口，内部调用 `start-local.ps1`；脚本要求 Docker Desktop、Java 21、Maven 和 Node.js。真实生成需要空间已授权的云端 API 凭据。启动日志写入已忽略的 `tmp/local-run/`：
+Windows 本地开发可使用 `start-local.bat` 一次性启动 core、Server、Worker 与 Web。`.bat` 是默认入口，内部调用 `start-local.ps1`；脚本要求 Docker Desktop、Java 21、Maven 和 Node.js。真实生成需要空间已授权的云端 API 凭据。启动日志写入已忽略的 `tmp/local-run/`。本地默认启用 `dev` profile，会自动 seed 平台管理员 `dev-admin@ragforge.local`（详见 [`doc-2` 平台管理员初始化](../../backlog/docs/operations/doc-2%20-%20运行与安全.md#platform-admin-bootstrap)）。非 dev 空库可用：
+
+```bat
+set RAGFORGE_ADMIN_CLI_PASSWORD=your-long-password
+.\scripts\dev\create-platform-admin.bat -Email you@example.com
+```
+
+常用启动：
 
 ```bat
 .\scripts\dev\start-local.bat

@@ -3,7 +3,7 @@ id: doc-2
 title: 运行与安全
 type: guide
 created_date: '2026-10-12 03:09'
-updated_date: '2026-10-12 16:20'
+updated_date: '2026-10-13 10:00'
 ---
 # 运行与安全
 
@@ -12,6 +12,22 @@ updated_date: '2026-10-12 16:20'
 本地启动：`scripts/dev/start-local.bat`。它会拉起 `deploy/compose/compose.yaml` 里的 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO，再在本机启动 Server、Worker 和 Web。凭据放在 gitignore 的 `.env.local`。
 
 第三方组件以 Maven、uv、npm lock 中的精确版本/Commit 为准。许可证用 SPDX 标识。未批准的第三方源码不进仓库。
+
+<a id="platform-admin-bootstrap"></a>
+
+## 平台管理员初始化
+
+库中尚无活跃 `PLATFORM_ADMIN` 时，必须先完成一次平台管理员初始化。推荐路径如下（任选其一即可；完成后启动码与 bootstrap 窗口关闭）。
+
+| 路径 | 适用场景 | 做法 |
+| --- | --- | --- |
+| 启动日志一次性码 | 自托管 / 空库首次安装 | Server 启动时在日志打印 `STARTUP_BOOTSTRAP_CODE`（仅哈希入库）。在登录页「初始化平台管理员」填入该码与邮箱/密码。重启会换码，直到 bootstrap 完成。 |
+| CLI | 运维、脚本、无浏览器 | 设置 `RAGFORGE_ADMIN_CLI_PASSWORD`（≥12 位），再执行 `scripts/dev/create-platform-admin.bat -Email you@example.com`。不走 HTTP。 |
+| dev seed | 仅本地开发 | `SPRING_PROFILES_ACTIVE=dev`（`start-local` / `restart-local` 已启用）自动 seed `dev-admin@ragforge.local` / `dev-admin-change-me`。**禁止用于生产。** |
+
+可选 break-glass：配置 `RAGFORGE_BOOTSTRAP_ADMIN_TOKEN`（≥32 字符）后，登录页可用同一 header/表单完成初始化；用完应移除。不要把启动码、CLI 密码或 bootstrap token 写入仓库、浏览器存储或公共日志聚合。
+
+审计事件：`platform.admin.bootstrapped.v1`（payload 含 `mode`、`credentialSource`，不含明文密码或 token）。迁移：`V26__platform_admin_startup_bootstrap.sql`。
 
 告警仍指向下面四个 Runbook。
 

@@ -190,6 +190,7 @@ try {
     $env:RAGFORGE_RUN_EVENT_FANOUT_ENABLED = "true"
     $env:RAGFORGE_OPERATIONS_ENABLED = "true"
     $env:RAGFORGE_PHASE6_OPERATIONS_ENABLED = "true"
+    $env:SPRING_PROFILES_ACTIVE = "dev"
     $mavenJava21Arguments = @(
         "-Pragforge-isolated-output",
         "-Dmaven.compiler.release=21",

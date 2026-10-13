@@ -22,33 +22,52 @@ public class PlatformAdminBootstrapService {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final BootstrapAdminProperties properties;
+    private final PlatformAdminStartupTokenRepository startupTokens;
     private final AuditOutboxService audit;
 
     public PlatformAdminBootstrapService(UserRepository users, PasswordEncoder passwordEncoder,
-                                         BootstrapAdminProperties properties, AuditOutboxService audit) {
+                                         BootstrapAdminProperties properties,
+                                         PlatformAdminStartupTokenRepository startupTokens,
+                                         AuditOutboxService audit) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.properties = properties;
+        this.startupTokens = startupTokens;
         this.audit = audit;
     }
 
     public BootstrapStatus status() {
         boolean required = !users.hasPlatformAdmin();
-        return new BootstrapStatus(required, required && properties.isConfigured());
+        return new BootstrapStatus(required, required && isBootstrapAvailable());
     }
 
     @Transactional
     public BootstrapResult bootstrap(String submittedToken, String email, String password, String displayName,
                                      HttpServletRequest request) {
-        if (!properties.isConfigured()) {
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "bootstrap_not_configured",
-                    "Bootstrap is not configured", "Platform administrator bootstrap is disabled");
-        }
-        if (!properties.matches(submittedToken)) {
+        String credentialSource = resolveCredentialSource(submittedToken);
+        if (credentialSource == null) {
+            if (!isBootstrapAvailable()) {
+                throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "bootstrap_not_configured",
+                        "Bootstrap is not configured", "Platform administrator bootstrap is disabled");
+            }
             throw new ApiException(HttpStatus.FORBIDDEN, "bootstrap_token_invalid", "Bootstrap denied",
                     "The bootstrap credential is invalid");
         }
+        return completeBootstrap(email, password, displayName, credentialSource, correlationId(request));
+    }
 
+    @Transactional
+    public BootstrapResult bootstrapFromCli(String email, String password, String displayName) {
+        return completeBootstrap(email, password, displayName, "CLI", null);
+    }
+
+    @Transactional
+    public BootstrapResult bootstrapFromDevSeed(String email, String password, String displayName) {
+        return completeBootstrap(email, password, displayName, "DEV_SEED", null);
+    }
+
+    private BootstrapResult completeBootstrap(String email, String password, String displayName,
+                                              String credentialSource, UUID correlationId) {
         users.lockPlatformAdminBootstrap();
         if (users.hasPlatformAdmin()) {
             throw new ApiException(HttpStatus.CONFLICT, "bootstrap_already_completed",
@@ -81,9 +100,25 @@ public class PlatformAdminBootstrapService {
                     "The bootstrap identity changed concurrently; retry with a new idempotency key");
         }
 
-        audit.record("platform.admin.bootstrapped.v1", null, null, administrator.id(), correlationId(request),
-                Map.of("userId", administrator.id(), "mode", mode));
+        startupTokens.clear();
+        audit.record("platform.admin.bootstrapped.v1", null, null, administrator.id(),
+                correlationId == null ? UuidV7.random() : correlationId,
+                Map.of("userId", administrator.id(), "mode", mode, "credentialSource", credentialSource));
         return new BootstrapResult(administrator, mode);
+    }
+
+    private boolean isBootstrapAvailable() {
+        return properties.isConfigured() || startupTokens.hasActiveToken();
+    }
+
+    private String resolveCredentialSource(String submittedToken) {
+        if (properties.matches(submittedToken)) {
+            return "CONFIGURED_TOKEN";
+        }
+        return startupTokens.findTokenHash()
+                .filter(hash -> BootstrapTokenSupport.matches(submittedToken, hash))
+                .map(ignored -> "STARTUP_TOKEN")
+                .orElse(null);
     }
 
     private UUID correlationId(HttpServletRequest request) {

@@ -8,6 +8,7 @@ import java.security.MessageDigest;
 @ConfigurationProperties(prefix = "ragforge.bootstrap.admin")
 public class BootstrapAdminProperties {
     private String token = "";
+    private boolean startupIssueEnabled = true;
 
     public void setToken(String token) {
         String value = token == null ? "" : token;
@@ -27,5 +28,13 @@ public class BootstrapAdminProperties {
         }
         return MessageDigest.isEqual(token.getBytes(StandardCharsets.UTF_8),
                 submitted.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public boolean isStartupIssueEnabled() {
+        return startupIssueEnabled;
+    }
+
+    public void setStartupIssueEnabled(boolean startupIssueEnabled) {
+        this.startupIssueEnabled = startupIssueEnabled;
     }
 }

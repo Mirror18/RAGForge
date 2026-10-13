@@ -21,7 +21,13 @@ mvn -f backend/pom.xml -q -pl server -am test
 mvn -f backend/pom.xml -q -pl server -DskipTests compile
 ```
 
-数据库迁移只由此进程的 Flyway 序列统一管理；Worker 不执行迁移。真实密码、Provider key、bootstrap token 等只通过环境变量或仓库根目录的 `.env.local` 注入。
+数据库迁移只由此进程的 Flyway 序列统一管理；Worker 不执行迁移。平台管理员三种入口（可并存，完成一次即可）：
+
+1. **启动日志一次性码**：未配置 `RAGFORGE_BOOTSTRAP_ADMIN_TOKEN` 且库中尚无 `PLATFORM_ADMIN` 时，Server 在日志中打印 `STARTUP_BOOTSTRAP_CODE`（仅哈希入库）。
+2. **CLI**：`RAGFORGE_ADMIN_CLI_PASSWORD` + `scripts/dev/create-platform-admin.bat --Email you@example.com`（无 HTTP）。
+3. **dev profile**：`SPRING_PROFILES_ACTIVE=dev` 时自动 seed `dev-admin@ragforge.local`（见 `application-dev.yml`，勿用于生产）。
+
+可选 break-glass：`RAGFORGE_BOOTSTRAP_ADMIN_TOKEN`（32+ 字符）。Provider key 等仍通过环境变量或 `.env.local` 注入。
 
 ## Ingestion persistence boundary
 

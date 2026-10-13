@@ -33,7 +33,7 @@ function heading(): string {
 }
 
 function description(): string {
-  if (props.mode === "bootstrap") return "使用运维一次性 Secret 建立首个平台管理员，完成后即可登录。";
+  if (props.mode === "bootstrap") return "使用 Server 启动日志中的一次性码（或运维 break-glass Secret）建立首个平台管理员，完成后即可登录。";
   return props.mode === "login" ? "登录后继续你的知识空间、索引发布和带引用问答。" : "创建账号后即可建立第一个个人知识空间。";
 }
 
@@ -90,10 +90,10 @@ function submitLabel(): string {
         </div>
         <div v-if="props.mode === 'bootstrap'" class="field">
           <div class="field-label-row">
-            <label for="auth-bootstrap-token">一次性 Bootstrap Secret</label>
+            <label for="auth-bootstrap-token">一次性 Bootstrap 码</label>
             <span>至少 32 位</span>
           </div>
-          <input id="auth-bootstrap-token" :value="props.bootstrapToken" type="password" autocomplete="off" minlength="32" maxlength="512" required placeholder="由运维人员临时提供" @input="updateField('bootstrapToken', $event)" />
+          <input id="auth-bootstrap-token" :value="props.bootstrapToken" type="password" autocomplete="off" minlength="32" maxlength="512" required placeholder="见 server.log 中 STARTUP_BOOTSTRAP_CODE" @input="updateField('bootstrapToken', $event)" />
         </div>
         <button class="auth-submit" type="submit" :disabled="props.loading">{{ submitLabel() }}</button>
       </form>
@@ -102,7 +102,7 @@ function submitLabel(): string {
         <button v-if="props.mode === 'bootstrap'" type="button" class="auth-text-switch" @click="emit('update:mode', 'login')">返回登录</button>
         <button v-if="props.bootstrapAvailable && props.mode !== 'bootstrap'" type="button" class="auth-text-switch" @click="emit('update:mode', 'bootstrap')">初始化首个平台管理员</button>
       </div>
-      <p v-if="props.bootstrapRequired && !props.bootstrapAvailable" class="bootstrap-note">系统尚未初始化平台管理员。请由运维人员临时配置 <code>RAGFORGE_BOOTSTRAP_ADMIN_TOKEN</code> 后刷新；不要把 Secret 写入仓库或浏览器存储。</p>
+      <p v-if="props.bootstrapRequired && !props.bootstrapAvailable" class="bootstrap-note">系统尚未初始化平台管理员。请查看 Server 启动日志中的 <code>STARTUP_BOOTSTRAP_CODE</code>，或使用 <code>scripts/dev/create-platform-admin.bat</code> / 运维 CLI；不要把 Bootstrap 码写入仓库或浏览器存储。</p>
       <p class="auth-security-note">HttpOnly Cookie 会话 · 密码不写入 URL、日志或浏览器存储</p>
     </div>
 
