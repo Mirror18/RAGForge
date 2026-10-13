@@ -34,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.ragforge.server.space.api.SessionAuthenticationFilter;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -387,7 +388,7 @@ class ServerIntegrationTest {
     void activeSessionAuthenticationSourceIsValkey() throws Exception {
         register("valkey@example.test", "correct horse battery", "Valkey");
         Login login = login("valkey@example.test", "correct horse battery", "/auth/login");
-        String key = "ragforge:session:" + com.ragforge.server.identity.SessionAuthenticationFilter
+        String key = "ragforge:session:" + com.ragforge.server.space.api.SessionAuthenticationFilter
                 .hash(login.cookie.getValue());
         org.assertj.core.api.Assertions.assertThat(redis.hasKey(key)).isTrue();
 

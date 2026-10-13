@@ -1,8 +1,8 @@
 package com.ragforge.server.answer.api;
 
-import com.ragforge.server.answer.Answer;
-import com.ragforge.server.answer.AnswerPersistencePort;
-import com.ragforge.server.answer.Citation;
+import com.ragforge.server.answer.domain.Answer;
+import com.ragforge.server.answer.application.AnswerPersistencePort;
+import com.ragforge.server.answer.domain.Citation;
 
 import java.util.Optional;
 import java.util.UUID;

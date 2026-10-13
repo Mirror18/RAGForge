@@ -1,16 +1,16 @@
 package com.ragforge.server.answer.api;
 
-import com.ragforge.server.answer.integration.ActiveRetrievalExecutionResolver;
-import com.ragforge.server.answer.integration.DeterministicRetrievalVersionIdentityProvider;
-import com.ragforge.server.answer.integration.JdbcRetrievalProfileVersionLoader;
-import com.ragforge.server.common.ApiException;
-import com.ragforge.server.index.IndexRepository;
-import com.ragforge.server.index.IndexState;
-import com.ragforge.server.prompt.PromptRepository;
-import com.ragforge.server.provider.ProviderRepository;
-import com.ragforge.server.provider.SpaceBindingRepository;
-import com.ragforge.server.provider.adapter.EgressDecision;
-import com.ragforge.server.retrieval.RetrievalProfileRepository;
+import com.ragforge.server.answer.infrastructure.ActiveRetrievalExecutionResolver;
+import com.ragforge.server.answer.infrastructure.DeterministicRetrievalVersionIdentityProvider;
+import com.ragforge.server.answer.infrastructure.JdbcRetrievalProfileVersionLoader;
+import com.ragforge.server.shared.domain.ApiException;
+import com.ragforge.server.knowledge.infrastructure.IndexRepository;
+import com.ragforge.server.knowledge.domain.IndexState;
+import com.ragforge.server.answer.infrastructure.PromptRepository;
+import com.ragforge.server.space.infrastructure.ProviderRepository;
+import com.ragforge.server.space.infrastructure.SpaceBindingRepository;
+import com.ragforge.server.space.infrastructure.EgressDecision;
+import com.ragforge.server.knowledge.infrastructure.RetrievalProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,6 +19,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import com.ragforge.server.answer.domain.Answer;
+import com.ragforge.server.space.infrastructure.EgressPolicy;
 
 /**
  * Binds omitted answer technical IDs to the current space's active index,

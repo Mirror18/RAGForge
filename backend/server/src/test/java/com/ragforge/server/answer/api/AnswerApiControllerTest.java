@@ -2,28 +2,28 @@ package com.ragforge.server.answer.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ragforge.server.answer.Abstention;
-import com.ragforge.server.answer.AbstentionReason;
-import com.ragforge.server.answer.Answer;
-import com.ragforge.server.answer.AnswerProvenance;
-import com.ragforge.server.answer.AnswerPersistencePort;
-import com.ragforge.server.answer.AnswerRequest;
-import com.ragforge.server.answer.AnswerStatus;
-import com.ragforge.server.answer.Citation;
-import com.ragforge.server.answer.Claim;
-import com.ragforge.server.answer.RAGAnswerService;
-import com.ragforge.server.answer.GenerationStreamObserver;
-import com.ragforge.server.common.ApiException;
-import com.ragforge.server.common.CorrelationIdFilter;
-import com.ragforge.server.common.UuidV7;
-import com.ragforge.server.identity.SessionPrincipal;
-import com.ragforge.server.provider.SpaceAuthorization;
-import com.ragforge.server.run.RunEvent;
-import com.ragforge.server.run.RunEventService;
-import com.ragforge.server.run.RunEventStore;
-import com.ragforge.server.run.RunRepository;
-import com.ragforge.server.retrieval.EvidenceBundle;
-import com.ragforge.server.space.SpaceRole;
+import com.ragforge.server.answer.domain.Abstention;
+import com.ragforge.server.answer.domain.AbstentionReason;
+import com.ragforge.server.answer.domain.Answer;
+import com.ragforge.server.answer.domain.AnswerProvenance;
+import com.ragforge.server.answer.application.AnswerPersistencePort;
+import com.ragforge.server.answer.domain.AnswerRequest;
+import com.ragforge.server.answer.domain.AnswerStatus;
+import com.ragforge.server.answer.domain.Citation;
+import com.ragforge.server.answer.domain.Claim;
+import com.ragforge.server.answer.application.RAGAnswerService;
+import com.ragforge.server.answer.application.GenerationStreamObserver;
+import com.ragforge.server.shared.domain.ApiException;
+import com.ragforge.server.shared.api.CorrelationIdFilter;
+import com.ragforge.server.shared.domain.UuidV7;
+import com.ragforge.server.space.domain.SessionPrincipal;
+import com.ragforge.server.space.domain.SpaceAuthorization;
+import com.ragforge.server.answer.domain.RunEvent;
+import com.ragforge.server.answer.application.RunEventService;
+import com.ragforge.server.answer.infrastructure.RunEventStore;
+import com.ragforge.server.answer.infrastructure.RunRepository;
+import com.ragforge.server.knowledge.domain.EvidenceBundle;
+import com.ragforge.server.space.domain.SpaceRole;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -61,6 +61,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.ragforge.server.space.infrastructure.CancellationToken;
+import com.ragforge.server.space.infrastructure.EgressDecision;
+import com.ragforge.server.space.infrastructure.UsageSource;
 
 class AnswerApiControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -158,7 +161,7 @@ class AnswerApiControllerTest {
         assertThat(bound.model()).isEqualTo("cloud-chat");
         assertThat(bound.datasetHash()).isEqualTo("a".repeat(64));
         assertThat(bound.configHash()).isEqualTo("b".repeat(64));
-        assertThat(bound.egressDecision()).isEqualTo(com.ragforge.server.provider.adapter.EgressDecision.CLOUD_ALLOWED);
+        assertThat(bound.egressDecision()).isEqualTo(com.ragforge.server.space.infrastructure.EgressDecision.CLOUD_ALLOWED);
     }
 
     @Test
@@ -468,9 +471,9 @@ class AnswerApiControllerTest {
         Answer answer = completedAnswer();
         AnswerRequest request = new AnswerRequest(spaceId, runId, correlationId, idempotencyKey,
                 "What is verified?", UuidV7.random(), UuidV7.random(), UuidV7.random(), "local-test",
-                com.ragforge.server.provider.adapter.EgressDecision.LOCAL_ONLY, 1000,
+                com.ragforge.server.space.infrastructure.EgressDecision.LOCAL_ONLY, 1000,
                 java.time.Duration.ofSeconds(30), "{}", "a".repeat(64), "b".repeat(64), runId,
-                new com.ragforge.server.provider.adapter.CancellationToken(), answer.answerId());
+                new com.ragforge.server.space.infrastructure.CancellationToken(), answer.answerId());
         AnswerEventPublisher publisher = new AnswerEventPublisher(eventService, objectMapper);
 
         publisher.publishDelta(request, answer.answerId(), "Verified ");

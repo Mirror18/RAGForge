@@ -3,7 +3,7 @@ id: doc-1
 title: 当前代码
 type: guide
 created_date: '2026-10-12 03:09'
-updated_date: '2026-10-12 21:30'
+updated_date: '2026-10-13 16:40'
 ---
 # 当前代码
 
@@ -18,7 +18,7 @@ updated_date: '2026-10-12 21:30'
 | `backend/ingestion-worker` | 异步摄取：连接器、解析、对象存储、消息、流水线 |
 | `backend/ai-runtime` | Python rerank。`scripts/ci/architecture_check.py` 仍要求这个目录存在 |
 
-`server` 的 Java 包：`agent`、`answer`、`audit`、`chunk`、`common`、`config`、`embedding`、`identity`、`index`、`ingestion`、`ops`、`prompt`、`provider`、`retrieval`、`run`、`space`、`studio`。解析在 worker，不单独成服务。
+`server` 的 Java 包已按 ADR-0014 收拢为四个业务根：`space`、`knowledge`、`answer`、`shared`；每个根仅含 `api` / `application` / `domain` / `infrastructure`。解析在 worker，不单独成服务。
 
 `ingestion-worker` 的包：`common`、`config`、`connector`、`messaging`、`objectstore`、`parser`、`pipeline`、`sync`。
 

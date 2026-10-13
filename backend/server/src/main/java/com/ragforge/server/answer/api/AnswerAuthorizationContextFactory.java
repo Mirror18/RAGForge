@@ -1,11 +1,11 @@
 package com.ragforge.server.answer.api;
 
-import com.ragforge.server.answer.AnswerAuthorizationContext;
-import com.ragforge.server.common.ApiException;
-import com.ragforge.server.identity.SessionPrincipal;
-import com.ragforge.server.provider.SpaceAuthorization;
-import com.ragforge.server.run.RunRepository;
-import com.ragforge.server.space.SpaceRole;
+import com.ragforge.server.answer.domain.AnswerAuthorizationContext;
+import com.ragforge.server.shared.domain.ApiException;
+import com.ragforge.server.space.domain.SessionPrincipal;
+import com.ragforge.server.space.domain.SpaceAuthorization;
+import com.ragforge.server.answer.infrastructure.RunRepository;
+import com.ragforge.server.space.domain.SpaceRole;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
