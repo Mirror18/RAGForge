@@ -36,6 +36,16 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
     private static final String PARSER_VERSION = "1.0.0";
     private static final String LOCATION_MAPPING_VERSION = "object-key.v1";
     private static final ChunkingStrategy CHUNKING = ChunkingStrategy.p4DefaultV1();
+    /** Seed identity for new-space retrieval defaults (RF-13 offline eval). Not a DB column. */
+    static final String DEFAULT_RETRIEVAL_PROFILE_VERSION = "m1-zh-default-v1";
+    static final int DEFAULT_DENSE_TOP_K = 8;
+    static final int DEFAULT_BM25_TOP_K = 8;
+    static final int DEFAULT_RRF_K = 60;
+    static final double DEFAULT_RRF_DENSE_WEIGHT = 0.8;
+    static final double DEFAULT_RRF_BM25_WEIGHT = 0.4;
+    static final int DEFAULT_RERANK_TOP_K = 6;
+    static final int DEFAULT_MAX_CONTEXT_CHILDREN = 6;
+    static final int DEFAULT_MAX_CONTEXT_TOKENS = 768;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private final ContentAddressedObjectStore store;
@@ -279,18 +289,28 @@ public class BusinessIngestionSideEffectHandler implements IngestionSideEffectHa
         return CHUNKING.strategyVersion();
     }
 
-    private void ensureRetrievalProfile(UUID spaceId, Instant now) {
-        if (jdbc.queryForObject("SELECT COUNT(*) FROM active_profile_pointers WHERE space_id = ?", Integer.class, spaceId) > 0) return;
+    void ensureRetrievalProfile(UUID spaceId, Instant now) {
+        // Existing spaces keep their active profile; only seed when the pointer is absent.
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM active_profile_pointers WHERE space_id = ?", Integer.class, spaceId) > 0) {
+            return;
+        }
         UUID profileId = UuidV7.random();
         UUID profileVersionId = UuidV7.random();
         jdbc.update("""
                 INSERT INTO retrieval_profiles (id, space_id, profile_id, version_no, dense_top_k, bm25_top_k, rrf_k,
                     rrf_dense_weight, rrf_bm25_weight, rerank_top_k, max_context_children, expansion_mode,
                     max_parents_per_child, max_neighbors_per_parent, max_context_tokens, immutable, created_at)
-                VALUES (?, ?, ?, 1, 5, 5, 60, 1.0, 0.2, 5, 5, 'PARENT', 1, 0, 512, TRUE, ?)
-                """, profileVersionId, spaceId, profileId, Timestamp.from(now));
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 'PARENT', 1, 0, ?, TRUE, ?)
+                """, profileVersionId, spaceId, profileId,
+                DEFAULT_DENSE_TOP_K, DEFAULT_BM25_TOP_K, DEFAULT_RRF_K,
+                DEFAULT_RRF_DENSE_WEIGHT, DEFAULT_RRF_BM25_WEIGHT, DEFAULT_RERANK_TOP_K,
+                DEFAULT_MAX_CONTEXT_CHILDREN, DEFAULT_MAX_CONTEXT_TOKENS, Timestamp.from(now));
         jdbc.update("INSERT INTO active_profile_pointers (id, space_id, active_profile_version_id, active_version_no, updated_at) VALUES (?, ?, ?, 1, ?)",
                 UuidV7.random(), spaceId, profileVersionId, Timestamp.from(now));
+    }
+
+    static String defaultRetrievalProfileVersion() {
+        return DEFAULT_RETRIEVAL_PROFILE_VERSION;
     }
 
     private void step(UUID spaceId, UUID jobId, UUID attemptId, String name, String status, UUID input,

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0",
+  "cardId": "RF-13",
+  "command": "mvn -f backend/pom.xml -pl ingestion-worker -am test -Dtest=BusinessIngestionSideEffectHandlerTest",
+  "java": "21",
+  "passed": true,
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failed_cases": []
+  }
+}
