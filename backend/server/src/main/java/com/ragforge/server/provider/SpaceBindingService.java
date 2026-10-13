@@ -153,11 +153,10 @@ public class SpaceBindingService {
 
         for (RouteInfo route : routeList) {
             boolean cloudRoute = route.egressPolicy() == ProviderRepository.EgressPolicy.CLOUD_ALLOWED;
-            if (cloudRoute && !request.cloudEgressEnabled()) {
-                throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "cloud_egress_disabled",
-                        "Cloud egress is disabled", "A cloud route cannot be bound while cloud egress is disabled");
-            }
-            if (cloudRoute && (cloudAuthorization == null
+            // Cloud routes may be bound with cloudEgressEnabled=false: the space is configured but
+            // outbound cloud calls stay fail-closed until an explicit authorization opt-in.
+            if (cloudRoute && request.cloudEgressEnabled()
+                    && (cloudAuthorization == null
                     || !scopeCovers(cloudAuthorization.scope(), route.purpose()))) {
                 throw cloudAuthorizationInvalid("Cloud authorization scope does not cover the selected route");
             }

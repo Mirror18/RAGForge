@@ -337,12 +337,13 @@ class SpaceBindingApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "purpose", purpose,
-                                "egressClass", "LOCAL",
+                                // Chat/embedding connections are CLOUD; candidate egress must match.
+                                "egressClass", "CLOUD",
                                 "failoverPolicy", "NONE",
                                 "candidates", List.of(Map.of(
                                         "modelProfileId", profileId,
                                         "priority", 1,
-                                        "egressClass", "LOCAL")),
+                                        "egressClass", "CLOUD")),
                                 "status", "ACTIVE"))))
                 .andExpect(status().isCreated())
                 .andReturn();

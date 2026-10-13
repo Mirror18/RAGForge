@@ -29,6 +29,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.UUID;
@@ -281,7 +282,23 @@ class RunExecutionControllerIntegrationTest {
 
     @Test
     void cloudRequestWithoutBindingAuthorizationIsRejectedBeforeProviderInvocation() throws Exception {
-        jdbc.update("UPDATE space_binding_versions SET cloud_egress_enabled = FALSE WHERE space_id = ?", space);
+        // space_binding_versions is append-only; replace the current version instead of UPDATE.
+        Map<String, Object> current = jdbc.queryForMap("""
+                SELECT chat_model_binding_id, embedding_model_binding_id, rerank_model_binding_id, prompt_binding_id
+                FROM space_binding_versions
+                WHERE space_id = ?
+                ORDER BY version_no DESC
+                LIMIT 1
+                """, space);
+        jdbc.update("DELETE FROM space_binding_versions WHERE space_id = ?", space);
+        Instant now = Instant.now();
+        bindings.create(new SpaceBindingRepository.NewSpaceBinding(
+                UUID.randomUUID(), space, 1,
+                (UUID) current.get("chat_model_binding_id"),
+                (UUID) current.get("embedding_model_binding_id"),
+                (UUID) current.get("rerank_model_binding_id"),
+                (UUID) current.get("prompt_binding_id"),
+                false, null, now, UUID.randomUUID()));
         UUID conversation = createConversation(space, "Unauthorized cloud chat");
 
         withPrincipal(() -> mvc.perform(post("/api/v1/spaces/{space}/conversations/{conversation}/runs",
