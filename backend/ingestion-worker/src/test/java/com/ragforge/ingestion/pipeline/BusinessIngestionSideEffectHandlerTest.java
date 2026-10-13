@@ -14,8 +14,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 class BusinessIngestionSideEffectHandlerTest {
     private final ObjectMapper mapper = JsonMapper.builder().addModule(new JavaTimeModule()).build();
@@ -45,6 +50,34 @@ class BusinessIngestionSideEffectHandlerTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("artifact reference identity validation failed");
         verifyNoInteractions(jdbc, store);
+    }
+
+    @Test
+    void newSpaceRetrievalSeedUsesM1ZhDefaultV1Numbers() {
+        assertThat(BusinessIngestionSideEffectHandler.defaultRetrievalProfileVersion())
+                .isEqualTo("m1-zh-default-v1");
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_DENSE_TOP_K).isEqualTo(8);
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_BM25_TOP_K).isEqualTo(8);
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_RRF_K).isEqualTo(60);
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_RRF_DENSE_WEIGHT).isEqualTo(0.8);
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_RRF_BM25_WEIGHT).isEqualTo(0.4);
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_RERANK_TOP_K).isEqualTo(6);
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_MAX_CONTEXT_CHILDREN).isEqualTo(6);
+        assertThat(BusinessIngestionSideEffectHandler.DEFAULT_MAX_CONTEXT_TOKENS).isEqualTo(768);
+    }
+
+    @Test
+    void ensureRetrievalProfileSkipsWhenActivePointerAlreadyExists() {
+        UUID spaceId = UUID.randomUUID();
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(spaceId))).thenReturn(1);
+        BusinessIngestionSideEffectHandler handler = new BusinessIngestionSideEffectHandler(
+                jdbc, mapper, mock(ContentAddressedObjectStore.class), mock(SpaceCandidateIndexBuilder.class));
+
+        handler.ensureRetrievalProfile(spaceId, Instant.now());
+
+        verify(jdbc).queryForObject(anyString(), eq(Integer.class), eq(spaceId));
+        verifyNoMoreInteractions(jdbc);
     }
 
     @Test

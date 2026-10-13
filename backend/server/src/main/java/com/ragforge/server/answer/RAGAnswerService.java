@@ -350,7 +350,7 @@ public final class RAGAnswerService {
         }
         rendered.append("</ragforge_evidence>\n")
                 .append("<ragforge_citation_token_allow_list>\n")
-                .append("Use only these exact UUIDv7 values in citation_tokens: ")
+                .append("Use only these exact UUIDv7 values in citation_tokens, or the equivalent single claim field evidence_id: ")
                 .append(snapshot.bundle().evidence().stream().map(EvidenceBundle.Evidence::evidenceId)
                         .map(UUID::toString).collect(java.util.stream.Collectors.joining(", ")))
                 .append("\n</ragforge_citation_token_allow_list>");

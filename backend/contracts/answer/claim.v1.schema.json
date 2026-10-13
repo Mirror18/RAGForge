@@ -15,7 +15,11 @@
     "claim_text": {"type": "string", "minLength": 1, "maxLength": 20000},
     "citation_tokens": {"type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/evidenceId"}, "description": "Only the exact EvidenceBundle.evidence_id is valid. Do not use [1], filenames, URLs, or prefixed/free-form tokens."}
   },
-  "x-ragforge-token-rule": "citation_tokens accepts evidence_id only; the server resolves each token against the current EvidenceBundle before persistence or emission.",
+  "x-ragforge-token-rule": "Public claim objects expose citation_tokens only. Provider generation JSON may emit either citation_tokens or the equivalent single-field evidence_id; the server normalizes both to EvidenceBundle.evidence_id before persistence or emission.",
+  "x-ragforge-generation-input-shapes": [
+    {"name": "citation_tokens", "example": {"claim_text": "...", "citation_tokens": ["0190f5c2-7c1e-7ad3-8def-1234567890ab"]}},
+    {"name": "evidence_id", "example": {"claim_text": "...", "evidence_id": "0190f5c2-7c1e-7ad3-8def-1234567890ab"}}
+  ],
   "$defs": {
     "uuidV7": {"type": "string", "format": "uuidv7", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"},
     "evidenceId": {"$ref": "#/$defs/uuidV7"}

@@ -64,6 +64,20 @@ class Phase5ProviderIntegrationTest {
     }
 
     @Test
+    void evidenceIdClaimShapeNormalizesToSameCitationTokens() {
+        RecordingAdapter adapter = new RecordingAdapter(ProviderType.OPENAI_COMPATIBLE,
+                CompletableFuture.completedFuture(response("local-model", structuredAnswerWithEvidenceId())));
+        ProviderBackedGenerationPort port = port(EgressClass.LOCAL, EgressDecision.LOCAL_ONLY, adapter,
+                (space, route, profile, model, decision, correlation) -> route(EgressClass.LOCAL, decision));
+
+        GenerationPort.GenerationResult result = port.generate(request(EgressDecision.LOCAL_ONLY),
+                new CancellationToken()).toCompletableFuture().join();
+
+        assertThat(result.claims()).singleElement().extracting(GenerationPort.GeneratedClaim::citationTokens)
+                .isEqualTo(List.of(TOKEN));
+    }
+
+    @Test
     void cloudAllowedIsExplicitAndLocalDecisionCannotSelectCloudRoute() {
         RecordingAdapter cloud = new RecordingAdapter(ProviderType.OPENAI_COMPATIBLE,
                 CompletableFuture.completedFuture(response("local-model", structuredAnswer())));
@@ -210,6 +224,11 @@ class Phase5ProviderIntegrationTest {
     private static String structuredAnswer() {
         return "{\"answer_text\":\"Verified.\",\"claims\":[{\"claim_text\":\"Verified.\",\"citation_tokens\":[\""
                 + TOKEN + "\"]}]}";
+    }
+
+    private static String structuredAnswerWithEvidenceId() {
+        return "{\"answer_text\":\"Verified.\",\"claims\":[{\"claim_text\":\"Verified.\",\"evidence_id\":\""
+                + TOKEN + "\"}]}";
     }
 
     private static String structuredAnswerWithStaleRange() {

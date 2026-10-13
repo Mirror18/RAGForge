@@ -2,6 +2,7 @@ package com.ragforge.server.answer.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ragforge.server.answer.CitationTokenParser;
 import com.ragforge.server.answer.GenerationPort;
 import com.ragforge.server.answer.GenerationStreamObserver;
 import com.ragforge.server.provider.adapter.CancellationToken;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 public final class ProviderBackedGenerationPort implements GenerationPort {
     private static final int MAX_PROVIDER_OUTPUT_BYTES = 1_000_000;
     private static final Logger log = LoggerFactory.getLogger(ProviderBackedGenerationPort.class);
+    private static final CitationTokenParser CITATION_TOKENS = new CitationTokenParser();
 
     private final ProviderRouteResolver routes;
     private final ProviderAdapterRegistry adapters;
@@ -178,18 +180,20 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
             List<GeneratedClaim> claims = new ArrayList<>();
             for (JsonNode claim : root.path("claims")) {
                 if (!claim.isObject() || !claim.path("claim_text").isTextual()
-                        || claim.path("claim_text").textValue().isBlank()
-                        || !claim.path("citation_tokens").isArray()
-                        || claim.path("citation_tokens").isEmpty()) {
+                        || claim.path("claim_text").textValue().isBlank()) {
                     throw invalid(request, "CLAIM_OR_CITATION_FIELDS");
                 }
-                List<String> tokens = new ArrayList<>();
-                for (JsonNode token : claim.path("citation_tokens")) {
-                    if (!token.isTextual() || !token.textValue().matches(
+                List<String> tokens;
+                try {
+                    tokens = extractClaimCitationTokens(claim);
+                } catch (CitationTokenParser.CitationTokenException invalidCitation) {
+                    throw invalid(request, "CLAIM_OR_CITATION_FIELDS");
+                }
+                for (String token : tokens) {
+                    if (!token.matches(
                             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[7][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")) {
                         throw invalid(request, "CITATION_TOKEN_FORMAT");
                     }
-                    tokens.add(token.textValue());
                 }
                 Integer start = optionalInt(claim, "answer_char_start", request);
                 Integer end = optionalInt(claim, "answer_char_end", request);
@@ -210,6 +214,28 @@ public final class ProviderBackedGenerationPort implements GenerationPort {
         } catch (Exception failure) {
             throw invalid(request, "JSON_PARSE");
         }
+    }
+
+    /**
+     * Accepted provider claim citation shapes:
+     * <ol>
+     *   <li>{@code citation_tokens: ["&lt;uuidv7&gt;", ...]}</li>
+     *   <li>{@code evidence_id: "&lt;uuidv7&gt;"} when {@code citation_tokens} is absent</li>
+     * </ol>
+     */
+    static List<String> extractClaimCitationTokens(JsonNode claim) {
+        List<String> fromArray = new ArrayList<>();
+        JsonNode tokensNode = claim.get("citation_tokens");
+        if (tokensNode != null && tokensNode.isArray()) {
+            for (JsonNode token : tokensNode) {
+                if (!token.isTextual()) {
+                    throw new CitationTokenParser.CitationTokenException("citation_tokens must be strings");
+                }
+                fromArray.add(token.textValue());
+            }
+        }
+        String evidenceId = claim.path("evidence_id").isTextual() ? claim.path("evidence_id").textValue() : null;
+        return CITATION_TOKENS.normalizeClaimCitationTokens(fromArray, evidenceId);
     }
 
     private static Integer optionalInt(JsonNode node, String field, GenerationRequest request) {

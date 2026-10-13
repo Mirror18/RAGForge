@@ -3,7 +3,7 @@ id: doc-4
 title: 业务闭环优化方向
 type: guide
 created_date: '2026-10-12 16:20'
-updated_date: '2026-10-12 16:50'
+updated_date: '2026-10-13 14:20'
 ---
 # 业务闭环优化方向
 
@@ -13,7 +13,7 @@ updated_date: '2026-10-12 16:50'
 
 回答路径在 `RAGAnswerService`：授权 → 向量 → 检索 → 版本化 prompt → 生成 → 用 Evidence Bundle 投影引用。无证据、非法引用或出境不匹配一律拒绝。`object-storage.enabled=false` 时 Spring 装配 fail-closed 端口，真正生产图要打开对象存储。
 
-检索是 Dense + BM25 + RRF + rerank。生产 BM25 每次 search 全量 scroll Qdrant 再在内存算分。Worker 种子 profile 上下文约 512 token、最多 5 个 child。服务端 `ChunkingStrategy.p4DefaultV1()` 与 Worker 按字符 `MAX_CHILD_CHARS=2000` 切开，两套默认不一致。
+检索是 Dense + BM25 + RRF + rerank。BM25 按 `space_id + index_version_id` 缓存（RF-19）。新空间 Worker 种子 profile 为 `m1-zh-default-v1`（dense/BM25 top-k 8/8、权重 0.8/0.4、最多 6 child、768 token）；已有 active profile 不自动改写。摄取分块对齐 `p4-default-v1`（RF-18）。
 
 产品面仍要求提问者带齐 route / profile / prompt / index 的 UUID 或 hash。`application.yml` 和对象前缀仍出现 `phase3`、`phase6`。云端 Chat/Embedding 按空间授权 fail-closed，这一点应保留。
 

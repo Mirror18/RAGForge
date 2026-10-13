@@ -1,10 +1,10 @@
 ---
 id: RF-21
 title: 引用 JSON 容错并校验 ID
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-12 16:50'
-updated_date: '2026-10-12 16:50'
+updated_date: '2026-10-13 14:25'
 labels:
   - quality
   - backend
@@ -25,9 +25,9 @@ token_limit: 6000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 两种已文档化 JSON 都能投影出同一条结构化 citation
-- [ ] #2 自由文本、空 claims、bundle 外 ID 仍拒答
-- [ ] #3 契约或解析测试覆盖这三类输入
+- [x] #1 两种已文档化 JSON 都能投影出同一条结构化 citation
+- [x] #2 自由文本、空 claims、bundle 外 ID 仍拒答
+- [x] #3 契约或解析测试覆盖这三类输入
 <!-- AC:END -->
 
 ## Implementation Plan
