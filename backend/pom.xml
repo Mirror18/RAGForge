@@ -17,6 +17,7 @@
         <module>knowledge</module>
         <module>answer</module>
         <module>server</module>
+        <module>gateway</module>
         <module>ingestion-worker</module>
     </modules>
 
@@ -86,6 +87,11 @@
             <dependency>
                 <groupId>com.ragforge</groupId>
                 <artifactId>ragforge-answer</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ragforge</groupId>
+                <artifactId>ragforge-gateway</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -168,25 +168,27 @@ jobs:
         shell: bash
         env:
           RAGFORGE_SERVER_IMAGE: ragforge/server:ci-${{ github.sha }}
+          RAGFORGE_GATEWAY_IMAGE: ragforge/gateway:ci-${{ github.sha }}
           RAGFORGE_WORKER_IMAGE: ragforge/ingestion-worker:ci-${{ github.sha }}
           RAGFORGE_WEB_IMAGE: ragforge/web:ci-${{ github.sha }}
         run: |
           set -euo pipefail
           mkdir -p tests/evidence/ci-logs
-          docker compose -f deploy/compose/compose.yaml --profile app build server worker web
+          docker compose -f deploy/compose/compose.yaml --profile app build server gateway worker web
 
       - name: Record target image digests
         id: image-digests
         shell: bash
         env:
           RAGFORGE_SERVER_IMAGE: ragforge/server:ci-${{ github.sha }}
+          RAGFORGE_GATEWAY_IMAGE: ragforge/gateway:ci-${{ github.sha }}
           RAGFORGE_WORKER_IMAGE: ragforge/ingestion-worker:ci-${{ github.sha }}
           RAGFORGE_WEB_IMAGE: ragforge/web:ci-${{ github.sha }}
         run: |
           set -euo pipefail
           digest_file=tests/evidence/ci-logs/p7d-02-image-digests.txt
           : > "$digest_file"
-          for pair in "server:$RAGFORGE_SERVER_IMAGE" "worker:$RAGFORGE_WORKER_IMAGE" "web:$RAGFORGE_WEB_IMAGE"; do
+          for pair in "server:$RAGFORGE_SERVER_IMAGE" "gateway:$RAGFORGE_GATEWAY_IMAGE" "worker:$RAGFORGE_WORKER_IMAGE" "web:$RAGFORGE_WEB_IMAGE"; do
             name=${pair%%:*}
             image=${pair#*:}
             image_id=$(docker image inspect "$image" --format '{{.Id}}')
@@ -207,6 +209,15 @@ jobs:
           format: cyclonedx-json
           output-file: tests/evidence/ci-logs/p7d-02-server-sbom.cdx.json
           artifact-name: ragforge-p7d-02-server-sbom-${{ github.run_id }}
+          upload-artifact: false
+
+      - name: Generate image-level SBOM (gateway)
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          image: ragforge/gateway:ci-${{ github.sha }}
+          format: cyclonedx-json
+          output-file: tests/evidence/ci-logs/p7d-02-gateway-sbom.cdx.json
+          artifact-name: ragforge-p7d-02-gateway-sbom-${{ github.run_id }}
           upload-artifact: false
 
       - name: Generate image-level SBOM (worker)
@@ -238,6 +249,17 @@ jobs:
           output-format: sarif
           output-file: tests/evidence/ci-logs/p7d-02-server-grype.sarif
 
+      - name: Scan target gateway image with Grype
+        uses: anchore/scan-action@v7
+        id: scan-gateway
+        with:
+          image: ragforge/gateway:ci-${{ github.sha }}
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+          output-format: sarif
+          output-file: tests/evidence/ci-logs/p7d-02-gateway-grype.sarif
+
       - name: Scan target worker image with Grype
         uses: anchore/scan-action@v7
         id: scan-worker
@@ -266,12 +288,14 @@ jobs:
         shell: bash
         env:
           RAGFORGE_SERVER_IMAGE: ragforge/server:ci-${{ github.sha }}
+          RAGFORGE_GATEWAY_IMAGE: ragforge/gateway:ci-${{ github.sha }}
           RAGFORGE_WORKER_IMAGE: ragforge/ingestion-worker:ci-${{ github.sha }}
           RAGFORGE_WEB_IMAGE: ragforge/web:ci-${{ github.sha }}
         run: |
           set -euo pipefail
           python scripts/ci/secret_audit.py \
             --image "$RAGFORGE_SERVER_IMAGE" \
+            --image "$RAGFORGE_GATEWAY_IMAGE" \
             --image "$RAGFORGE_WORKER_IMAGE" \
             --image "$RAGFORGE_WEB_IMAGE" \
             --output tests/evidence/ci-logs/p7d-02-secret-audit.json

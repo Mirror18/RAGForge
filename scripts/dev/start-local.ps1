@@ -2,6 +2,7 @@
 param(
     [string]$ProjectName = "ragforge-p1",
     [int]$ServerPort = 25082,
+    [int]$GatewayPort = 25080,
     [int]$WebPort = 25174,
     [switch]$SkipWeb,
     [switch]$OpenBrowser
@@ -118,7 +119,7 @@ function Invoke-MavenPackage([string]$Module, [string]$JarPath, [string]$LogPath
     try {
         Remove-Item Env:\JAVA_TOOL_OPTIONS -ErrorAction SilentlyContinue
         $ErrorActionPreference = "Continue"
-        & $maven -f (Join-Path $repoRoot "backend\pom.xml") @mavenJava21Arguments "-pl" $Module "clean" "compile" "jar:jar" "spring-boot:repackage" *> $LogPath
+        & $maven -f (Join-Path $repoRoot "backend\pom.xml") @mavenJava21Arguments "-pl" $Module "-am" "clean" "compile" "jar:jar" "spring-boot:repackage" *> $LogPath
     } finally {
         $ErrorActionPreference = $previousErrorAction
         if ($null -ne $previousToolOptions -and $previousToolOptions -ne "") {
@@ -151,6 +152,7 @@ if ($LASTEXITCODE -ne 0) { throw "无法解析 Compose 端口映射。" }
 $ports = $portsJson | ConvertFrom-Json
 
 Assert-PortAvailable $ServerPort "ServerPort"
+Assert-PortAvailable $GatewayPort "GatewayPort"
 if (-not $SkipWeb) { Assert-PortAvailable $WebPort "WebPort" }
 
 $env:JAVA_HOME = $javaHome
@@ -200,12 +202,14 @@ try {
         "-Dmaven.compiler.useIncrementalCompilation=false"
     )
     $serverJar = Join-Path $repoRoot "backend\server\target-ragforge\ragforge-server-0.1.0-SNAPSHOT.jar"
+    $gatewayJar = Join-Path $repoRoot "backend\gateway\target-ragforge\ragforge-gateway-0.1.0-SNAPSHOT.jar"
     $workerJar = Join-Path $repoRoot "backend\ingestion-worker\target-ragforge\ragforge-ingestion-worker-0.1.0-SNAPSHOT.jar"
 
     Assert-NoRunningJarProcess $serverJar "Server"
+    Assert-NoRunningJarProcess $gatewayJar "Gateway"
     Assert-NoRunningJarProcess $workerJar "Worker"
 
-    Write-Host "[2/4] 启动 Server（完整本地 adapter 配置）..."
+    Write-Host "[2/5] 启动 Server（完整本地 adapter 配置）..."
     Invoke-MavenPackage "server" $serverJar (Join-Path $runtimeDirectory "server-compile.log")
     # Run the immutable repackaged JAR so IDE/Maven output refreshes cannot
     # replace classes after the build has completed.
@@ -222,7 +226,24 @@ try {
     $serverApplicationPid = Wait-ForApplicationPid (Join-Path $runtimeDirectory "server.log") "RagForgeServerApplication"
     Set-Content -Path (Join-Path $runtimeDirectory "server.pid") -Value $serverApplicationPid
 
-    Write-Host "[3/4] 启动 Worker..."
+    Write-Host "[3/5] 启动 Gateway（浏览器唯一 API 入口）..."
+    $env:GATEWAY_PORT = "$GatewayPort"
+    $env:RAGFORGE_GATEWAY_UPSTREAM = "http://127.0.0.1:$ServerPort"
+    Invoke-MavenPackage "gateway" $gatewayJar (Join-Path $runtimeDirectory "gateway-compile.log")
+    $gateway = Start-Process -FilePath $java -ArgumentList "-Djava.io.tmpdir=`"$javaTmpDirectory`"", "-jar", "`"$gatewayJar`"" -WorkingDirectory $runtimeDirectory -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "gateway.log") -RedirectStandardError (Join-Path $runtimeDirectory "gateway.err.log") -PassThru
+    Set-Content -Path (Join-Path $runtimeDirectory "gateway.pid") -Value $gateway.Id
+    try {
+        Wait-ForHttp "http://127.0.0.1:$GatewayPort/actuator/health" 120 $gateway
+    } catch {
+        Write-Host "Gateway 最近日志：" -ForegroundColor Yellow
+        Get-Content (Join-Path $runtimeDirectory "gateway.log") -Tail 40 -ErrorAction SilentlyContinue
+        Get-Content (Join-Path $runtimeDirectory "gateway.err.log") -Tail 40 -ErrorAction SilentlyContinue
+        throw
+    }
+    $gatewayApplicationPid = Wait-ForApplicationPid (Join-Path $runtimeDirectory "gateway.log") "RagForgeGatewayApplication"
+    Set-Content -Path (Join-Path $runtimeDirectory "gateway.pid") -Value $gatewayApplicationPid
+
+    Write-Host "[4/5] 启动 Worker..."
     $env:RAGFORGE_INGESTION_ENABLED = "true"
     $env:RAGFORGE_RABBITMQ_HOST = "127.0.0.1"
     $env:RAGFORGE_RABBITMQ_PORT = "$($ports.RABBITMQ_PORT)"
@@ -248,7 +269,7 @@ try {
             & $npm --prefix frontend/ragforge-web ci
             if ($LASTEXITCODE -ne 0) { throw "Web 依赖安装失败。" }
         }
-        $env:VITE_SERVER_TARGET = "http://127.0.0.1:$ServerPort"
+        $env:VITE_SERVER_TARGET = "http://127.0.0.1:$GatewayPort"
         $web = Start-Process -FilePath $npm -ArgumentList "--prefix", "frontend/ragforge-web", "run", "dev", "--", "--host", "127.0.0.1", "--port", "$WebPort", "--cacheDir", (Join-Path $runtimeDirectory "vite") -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $runtimeDirectory "web.log") -RedirectStandardError (Join-Path $runtimeDirectory "web.err.log") -PassThru
         Set-Content -Path (Join-Path $runtimeDirectory "web.pid") -Value $web.Id
         try {
@@ -263,11 +284,12 @@ try {
         Write-Host "已按参数跳过 Web。"
     }
 
-    Write-Host "[4/4] 本地运行环境已就绪。" -ForegroundColor Green
+    Write-Host "[5/5] 本地运行环境已就绪。" -ForegroundColor Green
     Write-Host "  Web:       $(if ($SkipWeb) { '已跳过' } else { "http://127.0.0.1:$WebPort" })"
-    Write-Host "  Server:    http://127.0.0.1:$ServerPort"
+    Write-Host "  Gateway:   http://127.0.0.1:$GatewayPort"
+    Write-Host "  Server:    http://127.0.0.1:$ServerPort (仅本机/排障)"
     Write-Host "  Worker:    PID $workerApplicationPid"
-    Write-Host "  Health:    http://127.0.0.1:$ServerPort/actuator/health"
+    Write-Host "  Health:    http://127.0.0.1:$GatewayPort/actuator/health"
     Write-Host "  RabbitMQ:  http://127.0.0.1:$($ports.RABBITMQ_MANAGEMENT_PORT)"
     Write-Host "  MinIO:     http://127.0.0.1:$($ports.S3_CONSOLE_PORT)"
     Write-Host "  Qdrant:    http://127.0.0.1:$($ports.QDRANT_PORT)/dashboard"

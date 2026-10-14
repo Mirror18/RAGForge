@@ -4,13 +4,22 @@ FROM maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eb
 WORKDIR /workspace
 
 COPY backend/pom.xml backend/pom.xml
+COPY backend/shared/pom.xml backend/shared/pom.xml
+COPY backend/space/pom.xml backend/space/pom.xml
+COPY backend/knowledge/pom.xml backend/knowledge/pom.xml
+COPY backend/answer/pom.xml backend/answer/pom.xml
 COPY backend/server/pom.xml backend/server/pom.xml
+COPY backend/gateway/pom.xml backend/gateway/pom.xml
 COPY backend/ingestion-worker/pom.xml backend/ingestion-worker/pom.xml
 
+COPY backend/shared/src backend/shared/src
+COPY backend/space/src backend/space/src
+COPY backend/knowledge/src backend/knowledge/src
+COPY backend/answer/src backend/answer/src
 COPY backend/server/src backend/server/src
+COPY backend/gateway/src backend/gateway/src
 COPY backend/ingestion-worker/src backend/ingestion-worker/src
 RUN --mount=type=cache,target=/root/.m2 mvn -f backend/pom.xml -B -DskipTests package
-RUN --mount=type=cache,target=/root/.m2 mvn -f backend/pom.xml -B -DskipTests -pl ingestion-worker package spring-boot:repackage
 COPY deploy/docker/HttpHealthcheck.java /tmp/HttpHealthcheck.java
 RUN mkdir -p /tmp/healthcheck-classes \
     && javac --release 21 -d /tmp/healthcheck-classes /tmp/HttpHealthcheck.java \
@@ -32,6 +41,14 @@ COPY --from=java-build /tmp/ragforge-healthcheck.jar /opt/ragforge-healthcheck.j
 USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/ragforge-server.jar"]
+
+FROM java-runtime AS gateway
+WORKDIR /app
+COPY --from=java-build /workspace/backend/gateway/target/ragforge-gateway-*.jar /app/ragforge-gateway.jar
+COPY --from=java-build /tmp/ragforge-healthcheck.jar /opt/ragforge-healthcheck.jar
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/ragforge-gateway.jar"]
 
 FROM java-runtime AS worker
 WORKDIR /app

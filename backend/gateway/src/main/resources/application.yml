@@ -1,0 +1,47 @@
+server:
+  port: ${GATEWAY_PORT:25080}
+
+spring:
+  application:
+    name: ragforge-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            # Product API only. Gateway keeps its own /actuator for liveness;
+            # do not proxy actuator to upstream (avoids masking gateway health).
+            - id: ragforge-api
+              uri: ${RAGFORGE_GATEWAY_UPSTREAM:http://127.0.0.1:25082}
+              predicates:
+                - Path=/api/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+---
+# Opt-in only: build with -Pnacos and run with --spring.profiles.active=nacos.
+# Default startup never contacts Nacos.
+spring:
+  config:
+    activate:
+      on-profile: nacos
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true

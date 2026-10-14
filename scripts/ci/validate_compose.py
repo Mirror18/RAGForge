@@ -79,7 +79,7 @@ def main() -> int:
 
     with_app = run(compose_base(args.project_name, args.env_file, "app") + ["config", "--services"], environment)
     app_services = {line.strip() for line in with_app.stdout.splitlines() if line.strip()}
-    missing_app = {"server", "worker", "web"} - app_services
+    missing_app = {"server", "gateway", "worker", "web"} - app_services
     if with_app.returncode != 0 or missing_app:
         print(f"Compose 校验失败：app profile 缺少服务：{', '.join(sorted(missing_app))}", file=sys.stderr)
         print(with_app.stderr.strip(), file=sys.stderr)
@@ -151,7 +151,7 @@ def main() -> int:
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"Compose 校验失败：无法解析 app profile 端口清单：{exc}", file=sys.stderr)
         return 1
-    expected_app_ports = {expected_ports["APP_SERVER_PORT"], expected_ports["WEB_PORT"]}
+    expected_app_ports = {expected_ports["APP_GATEWAY_PORT"], expected_ports["WEB_PORT"]}
     if app_ports != expected_port_values | expected_app_ports:
         print(
             "Compose 校验失败：app profile host port mismatch; "

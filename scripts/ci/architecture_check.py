@@ -12,7 +12,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.yaml"
 UNIFIED_DOCKERFILE = REPO_ROOT / "deploy" / "docker" / "Dockerfile"
 WEB_PROXY_CONFIG = REPO_ROOT / "deploy" / "docker" / "nginx.conf"
-BUSINESS_SERVICE_NAMES = {"server", "worker", "web", "ai-runtime", "ragforge-server", "ragforge-worker"}
+BUSINESS_SERVICE_NAMES = {
+    "server",
+    "gateway",
+    "worker",
+    "web",
+    "ai-runtime",
+    "ragforge-server",
+    "ragforge-gateway",
+    "ragforge-worker",
+}
 
 
 def main() -> int:

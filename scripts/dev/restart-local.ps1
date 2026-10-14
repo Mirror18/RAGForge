@@ -2,6 +2,7 @@
 param(
     [string]$ProjectName = "ragforge-p1",
     [int]$ServerPort = 25082,
+    [int]$GatewayPort = 25080,
     [int]$WebPort = 25174,
     [switch]$SkipWeb,
     [switch]$OpenBrowser
@@ -15,6 +16,7 @@ if (-not $scriptRoot) {
 $repoRoot = (Resolve-Path (Join-Path $scriptRoot "..\..")).Path
 $runtimeDirectory = Join-Path $repoRoot "tmp\local-run"
 $serverJar = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "backend\server\target-ragforge\ragforge-server-0.1.0-SNAPSHOT.jar"))
+$gatewayJar = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "backend\gateway\target-ragforge\ragforge-gateway-0.1.0-SNAPSHOT.jar"))
 $workerJar = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "backend\ingestion-worker\target-ragforge\ragforge-ingestion-worker-0.1.0-SNAPSHOT.jar"))
 
 function Stop-PidFile([string]$Path) {
@@ -40,13 +42,15 @@ function Stop-Listeners([int[]]$Ports) {
     }
 }
 
-Write-Host "停止本地 Server / Worker / Web..."
+Write-Host "停止本地 Server / Gateway / Worker / Web..."
 Stop-PidFile (Join-Path $runtimeDirectory "server.pid")
+Stop-PidFile (Join-Path $runtimeDirectory "gateway.pid")
 Stop-PidFile (Join-Path $runtimeDirectory "worker.pid")
 Stop-PidFile (Join-Path $runtimeDirectory "web.pid")
 Stop-JavaJar $serverJar
+Stop-JavaJar $gatewayJar
 Stop-JavaJar $workerJar
-$portsToFree = @($ServerPort)
+$portsToFree = @($ServerPort, $GatewayPort)
 if (-not $SkipWeb) { $portsToFree += $WebPort }
 Stop-Listeners $portsToFree
 Start-Sleep -Seconds 1
@@ -54,6 +58,7 @@ Start-Sleep -Seconds 1
 $forward = @{
     ProjectName = $ProjectName
     ServerPort = $ServerPort
+    GatewayPort = $GatewayPort
     WebPort = $WebPort
 }
 if ($SkipWeb) { $forward.SkipWeb = $true }
