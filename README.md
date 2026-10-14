@@ -20,7 +20,7 @@ RAGForge 是面向企业内部、多用户知识空间的商业级 RAG 学习工
 frontend/ragforge-web/     # Vue SPA，页面在 src/views
 backend/server/            # 同步 API
 backend/ingestion-worker/  # 异步摄取
-backend/ai-runtime/        # Python rerank
+backend/knowledge/ai-runtime/  # optional Python rerank (not a Compose service)
 specs/ backlog/            # 规格、任务板、按代码写的说明
 tests/ scripts/
 deploy/

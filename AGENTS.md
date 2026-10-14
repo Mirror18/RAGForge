@@ -161,7 +161,7 @@ An agent halts and reports to the human if and only if any of the following appl
 
 - `backend/server`: the running synchronous API. Identity, space, provider, ingestion, chunk, index, retrieval, answer, and run live in its Java packages.
 - `backend/ingestion-worker`: the running async ingestion process (connector, parser, object store, messaging, pipeline).
-- `backend/ai-runtime`: the Python rerank process required by the architecture check.
+- `backend/knowledge/ai-runtime`: optional Python rerank helper owned by knowledge (not a Compose service).
 - `frontend/ragforge-web`: Vue SPA. Product pages live under `src/views/{access,space,knowledge,answer,admin}`.
 - `backend/contracts`: source of truth for public API and event shapes (OpenAPI and JSON schemas).
 - `specs/` and `backlog/`: speckit specs, the task board, and the code-based documents under `backlog/docs/`.

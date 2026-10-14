@@ -18,7 +18,7 @@ updated_date: '2026-10-14 10:00'
 | `backend/server` | Boot 壳：Flyway、配置、主类；装配四业务库模块。本地 `25082`；Compose 仅内网 expose |
 | `backend/shared` `backend/space` `backend/knowledge` `backend/answer` | Maven 库模块。包名 `com.ragforge.server.{…}`。跨业务持久化端口在 owning 的 `application`；ArchUnit 锁定不得依赖外业务 `*.infrastructure.*Repository` |
 | `backend/ingestion-worker` | 异步摄取：连接器、解析、对象存储、消息、流水线 |
-| `backend/ai-runtime` | Python rerank。`scripts/ci/architecture_check.py` 仍要求这个目录存在 |
+| `backend/knowledge/ai-runtime` | 可选 Python rerank 辅助进程（非 Compose 业务服务；RF-10） |
 
 每个业务根仅含 `api` / `application` / `domain` / `infrastructure`。解析在 worker，不单独成服务。
 
@@ -34,7 +34,7 @@ updated_date: '2026-10-14 10:00'
 
 `backend`（含 `backend/contracts` 接口定义）、`frontend`、`deploy`、`scripts`、`specs`、`backlog`、`tests`（含 `tests/fixtures` 合成样本）。任务板在 `backlog/tasks`，规格在 `specs/`，说明在 `backlog/docs/`。speckit 任务用 `scripts/dev/import_speckit_tasks.py` 入板。演示截图在 `tests/evidence/business-demo/`。
 
-m-1 产品闭环已完成。m-2 进行中：Maven 库模块（RF-8）与 gateway/Nacos opt-in（RF-9）已落地；下一步为 ai-runtime 并入（RF-10）。
+m-1 产品闭环已完成。m-2：Maven 库模块（RF-8）、gateway/Nacos opt-in（RF-9）、ai-runtime 并入 knowledge（RF-10）已落地。
 
 ## 不变量
 

@@ -5,7 +5,7 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 # RAGForge Development
 
-仓库级硬约束以根目录 `AGENTS.md` 为准。现行代码在 `backend/server`、`backend/ingestion-worker`、`backend/ai-runtime` 和 `frontend/ragforge-web`。ADR-0014 的四个进程还没有独立目录。任务源是 `specs/` 与 `backlog/`。
+仓库级硬约束以根目录 `AGENTS.md` 为准。现行代码在 `backend/gateway`、`backend/server`、业务库模块、`backend/ingestion-worker`、`backend/knowledge/ai-runtime`（可选）和 `frontend/ragforge-web`。任务源是 `specs/` 与 `backlog/`。
 
 ## 开始前
 
@@ -19,7 +19,7 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 - `backend/server/`：同步 API。身份、空间、云端模型、摄取入口、分块、索引、检索、回答和 run 都在这里的 Java 包。
 - `backend/ingestion-worker/`：异步摄取。
-- `backend/ai-runtime/`：Python rerank。
+- `backend/knowledge/ai-runtime/`：可选 Python rerank（非 Compose 服务）。
 - `frontend/ragforge-web/`：页面在 `src/views/{access,space,knowledge,answer,admin}`。
 - `backend/contracts/`：OpenAPI 和 JSON schema，描述 HTTP 与事件的字段。不是独立进程。
 - `specs/`、`backlog/`：规格、任务板，以及 `backlog/docs/` 里按代码写的说明。

@@ -7,7 +7,7 @@ updated_date: '2026-10-13 10:00'
 ---
 # 运行与安全
 
-现行进程是 `backend/server`、`backend/ingestion-worker`、`frontend/ragforge-web`，外加 `backend/ai-runtime` 的 rerank。模型只走空间已授权的 OpenAI 兼容或 MiMo 云端 API；未授权调用 fail-closed。
+现行进程是 `gateway`、`server`、`ingestion-worker`、`frontend/ragforge-web`。可选的本地 rerank 辅助代码在 `backend/knowledge/ai-runtime`，不是 Compose 业务服务。模型只走空间已授权的 OpenAI 兼容或 MiMo 云端 API；未授权调用 fail-closed。
 
 本地启动：`scripts/dev/start-local.bat`。它会拉起 `deploy/compose/compose.yaml` 里的 PostgreSQL、Qdrant、RabbitMQ、Valkey 和 MinIO，再在本机启动 Server、Worker 和 Web。凭据放在 gitignore 的 `.env.local`。
 

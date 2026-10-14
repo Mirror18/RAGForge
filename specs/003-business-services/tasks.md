@@ -6,4 +6,4 @@
 - [x] T004 ADR Accepted 后在 server 内按四层收包
 - [x] T005 拆 Maven 模块并用架构测试锁跨业务 Repository
 - [x] T006 接入 Nacos 与 gateway；浏览器只访问 gateway
-- [ ] T007 删除独立 `backend/ai-runtime` 部署面，能力并入 knowledge/answer infrastructure
+- [x] T007 删除独立 `backend/ai-runtime` 部署面，能力并入 knowledge/answer infrastructure
