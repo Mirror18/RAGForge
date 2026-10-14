@@ -338,7 +338,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p tests/evidence/ci-logs
-          mvn -f backend/pom.xml --batch-mode --no-transfer-progress test 2>&1 | tee tests/evidence/ci-logs/maven-test.log
+          mvn -f backend/pom.xml --batch-mode --no-transfer-progress clean test 2>&1 | tee tests/evidence/ci-logs/maven-test.log
 
       - name: Run Phase 5 generation evaluation
         run: python tests/evaluation/generation_evaluation.py
