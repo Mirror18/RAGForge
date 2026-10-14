@@ -20,26 +20,25 @@ RAGForge is a commercial-grade RAG engineering learning project. Product and pro
 
 ### Orchestrator responsibility
 
-- One primary agent acts as orchestrator. It owns task decomposition, dependency ordering, worktree allocation, integration, full verification, project-status updates, and phase closure.
+- One primary agent acts as orchestrator. It owns task decomposition, dependency ordering, branch allocation, integration, full verification, project-status updates, and phase closure.
 - **Daily-entry rule (token efficiency):** The orchestrator first reads `backlog/docs/architecture/doc-1 - 当前代码.md`, `backlog/docs/operations/doc-3 - 任务与文档工作流.md`, and the task files under `backlog/tasks`. Historical phase records stay in Git history. Do not recreate the removed `docs/00–15` novels.
 - **Board rule:** `backlog/tasks` is the only execution queue. Speckit output in `specs/<id>/tasks.md` is a draft until `python scripts/dev/import_speckit_tasks.py --feature-dir specs/<id>` writes or updates cards. Do not implement solely from `tasks.md`.
 - **Commit rule:** After a card meets its acceptance criteria, commit that card immediately (Chinese Conventional Commit). Do not start the next card with uncommitted work from the previous one.
 - Tasks are taken from the board card-by-card (never "do Phase 7" as one task). Each card has an explicit `token_limit` in its frontmatter and, when a worker ticket exists, the same limit in the ticket.
 - Only parallelize concrete tasks that can be completed and tested independently. Contracts, shared schemas, migrations, dependency/BOM files, and architecture decisions are coordination points and must have one explicit owner.
 - Keep at most one agent editing a given file or schema area. If ownership is unclear, serialize the work.
-- The orchestrator keeps the primary worktree on `main`. Worker agents never implement features directly in the primary worktree.
+- Agents implement directly in this repository checkout. Prefer a dedicated feature branch per card; do not create external Git worktrees unless the user explicitly asks.
 - After each batch of 1–3 successfully-merged cards, the orchestrator updates the affected backlog task status and, when the running layout changed, `backlog/docs/architecture/doc-1 - 当前代码.md`.
 
-### Branch and worktree isolation
+### Branch isolation
 
-- Every worker task uses one dedicated branch and one dedicated Git worktree created from a recorded base commit SHA.
+- Every worker task uses one dedicated branch created from a recorded base commit SHA, checked out in this repository.
 - Branch names use `codex/<phase>-<task>-<agent>`, for example `codex/p1-openapi-a1`.
-- Worktrees live outside the repository, preferably under `D:\project\learning\RAGForge-worktrees\<branch-slug>` on this machine.
-- Before creating parallel worktrees, the primary repository must have an initial commit and a clean `main` worktree.
-- A worker must receive: objective, non-goals, owned files/directories, read-only dependencies, acceptance criteria, required tests, worktree path, branch, and base SHA.
-- A worker may inspect the whole repository but may modify only its assigned ownership area. It must not switch branches in another agent's worktree.
-- Do not share generated build directories, local databases, ports, Compose project names, or mutable test data between concurrent worktrees. Assign unique names/ports when concurrent execution requires them.
-- Never use force-push, `git reset --hard`, broad checkout/restore, or delete another agent's branch/worktree. Preserve unrelated user changes.
+- Do not create or use paths under `RAGForge-worktrees/` (or other external worktrees) by default.
+- A worker must receive: objective, non-goals, owned files/directories, read-only dependencies, acceptance criteria, required tests, branch, and base SHA.
+- A worker may inspect the whole repository but may modify only its assigned ownership area.
+- Concurrent agents must not share generated build directories, local databases, ports, Compose project names, or mutable test data; assign unique names/ports when parallel execution requires them.
+- Never use force-push, `git reset --hard`, or broad checkout/restore that discards unrelated user changes. Do not delete another agent's in-progress branch.
 
 ### Parallel task boundaries
 
@@ -75,7 +74,7 @@ Do not mix these contexts inside one agent invocation:
 
 - **Orchestrator**: reads only the compressed state card, task board, and the tickets under creation. Never reads whole-module source code or long governance documents. Owns dispatch, merge order, state-card updates, and phase-closure governance commits.
 - **Audit Agent**: a one-shot high-context role. Invoked only (a) at phase entry, (b) at suspected state-card drift, or (c) at release preparation. It reads `backlog/docs/architecture/doc-1 - 当前代码.md`, the open cards, checklists, and wide code facts. Product: an updated code-map document + updated board + delta plan. After execution, its context is discarded; subsequent workers do not inherit its full-context prompt.
-- **Worker Agent**: owns exactly one ticket. Reads exactly the files in `scope.read_only` of that ticket. Exactly one card per invocation. After pass/fail/blocked report, its worktree remains, but the worker session ends.
+- **Worker Agent**: owns exactly one ticket. Reads exactly the files in `scope.read_only` of that ticket. Exactly one card per invocation. After pass/fail/blocked report, the feature branch remains for integration, but the worker session ends.
 
 When a user prompt says "keep working on Phase 7" (or similar scope), route as: **1 Orchestrator × (2–3 parallel Workers max)**. Never a single big agent doing everything inside one context window.
 
@@ -143,7 +142,7 @@ An agent halts and reports to the human if and only if any of the following appl
 - Do not resolve conflicts with blanket `ours`/`theirs`. Reconcile against the accepted contract and rerun all affected tests.
 - After each integration batch, run repository-level tests and check architecture, contracts, migrations, security boundaries, licenses, and documentation links as applicable.
 - After a milestone meets its exit criteria, update the affected documents under `backlog/docs/`, mark the milestone cards Done, and create a Chinese closure commit such as `docs(m-1): 完成可引用回答产品闭环验收`.
-- Remove a worker worktree and delete its local branch only after the branch is integrated, the worktree is clean, and the integration is verified. Never remove a worktree containing uncommitted work.
+- Delete a worker feature branch only after it is integrated into `main` and the integration is verified. Never delete a branch that still has unmerged useful commits.
 - Stop the execution loop only when the current requested phase is genuinely complete or a material decision/credential/external dependency requires user input. Running out of easy tasks is not completion.
 
 ## Release and versioning

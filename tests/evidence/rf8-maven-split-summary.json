@@ -1,0 +1,15 @@
+{
+  "card": "RF-8",
+  "passed": true,
+  "summary": {
+    "compile": "mvn -pl server -am -DskipTests compile SUCCESS (JDK 21)",
+    "archunit": "BusinessModuleArchitectureTest 4/4 SUCCESS",
+    "architecture_check_py": "passed",
+    "unit_tests": "server -am excluding Integration/E2E/Acceptance/RealOllama/GraphContext/Container"
+  },
+  "notes": [
+    "Maven modules: shared, space, knowledge, answer, server, ingestion-worker",
+    "Cross-business *Repository moved to owning application packages; SpacePromptBindingPort for space→prompt bind",
+    "Phase5ProductionGraphContextTest skipped in local gate: requires Docker/Testcontainers"
+  ]
+}

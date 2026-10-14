@@ -42,7 +42,7 @@ description: Implement, test, review, or reorganize RAGForge source, contracts, 
 
 用户要求：任务验收提交后清理多余 Git 分支；推送到 GitHub 时维护 GitHub Actions 并修复失败。细则见 `.cursor/rules/post-task-git-and-ci.mdc`。
 
-1. **分支清理**：合并完成且 worktree 干净后，`git fetch --prune`，用 `git branch -d` 删除已合并的本地 `codex/*`（等）临时分支；获准时删除对应远程分支；移除已集成的 worktree。不删其他 agent 活跃分支，不用 force-push / hard reset。
+1. **分支清理**：合并完成后，`git fetch --prune`，用 `git branch -d` 删除已合并的本地 `codex/*`（等）临时分支；获准时删除对应远程分支。默认不建外部 worktree。不删其他 agent 活跃分支，不用 force-push / hard reset。
 2. **Actions 跟进**：一旦 push 或更新 PR，用 `gh run list` / `gh pr checks` 查看 CI；失败则修根因（含 `.github/workflows`），再提交推送直到变绿；密钥/环境阻塞则停并报告用户。
 
 ## 参考入口
