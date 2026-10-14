@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.api;
+package com.ragforge.server.knowledge.api;
 
 import com.ragforge.server.shared.domain.SessionPrincipal;
 import com.ragforge.server.knowledge.domain.CursorCodec;

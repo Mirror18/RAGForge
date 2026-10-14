@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.api;
+package com.ragforge.server.answer.api;
 
 import com.ragforge.server.answer.domain.AnswerAuthorizationContext;
 import com.ragforge.server.shared.domain.ApiException;

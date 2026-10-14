@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.infrastructure;
+package com.ragforge.server.answer.infrastructure;
 
 import com.ragforge.server.answer.application.GenerationPort;
 import com.ragforge.server.answer.application.QueryEmbeddingProvider;

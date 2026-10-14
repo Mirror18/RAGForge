@@ -1,4 +1,4 @@
-package com.ragforge.server.answer.domain;
+package com.ragforge.server;
 
 import com.ragforge.server.RagForgeServerApplication;
 import org.awaitility.Awaitility;
@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.ragforge.server.answer.domain.RunEvent;
+import com.ragforge.server.answer.domain.RunEventDraft;
+import com.ragforge.server.answer.domain.RunEventFanout;
 import com.ragforge.server.answer.infrastructure.JdbcRunEventStore;
 import com.ragforge.server.answer.infrastructure.RunEventStore;
 import com.ragforge.server.answer.infrastructure.RunRepository;

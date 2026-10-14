@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.application;
+package com.ragforge.server.knowledge.application;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.application;
+package com.ragforge.server.answer.application;
 
 import com.ragforge.server.answer.application.CitationValidator;
 import com.ragforge.server.knowledge.domain.EvidenceBundle;

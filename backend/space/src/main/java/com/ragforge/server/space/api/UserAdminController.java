@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.api;
+package com.ragforge.server.space.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.servlet.http.HttpServletRequest;

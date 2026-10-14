@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.application;
+package com.ragforge.server.answer.application;
 
 import com.ragforge.server.space.infrastructure.CancellationToken;
 import com.ragforge.server.knowledge.application.RetrievalProfileRepository;

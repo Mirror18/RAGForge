@@ -19,30 +19,31 @@ alwaysApply: true
 
 未获用户允许时：**可以提交前不 push**；但一旦 push，必须跟进 CI。
 
-## A. 提交后的分支与 worktree 清理
+## A. 提交后的分支清理
 
-目标：主工作树与远程保持干净，不堆积已完成的 `codex/*` 临时分支。
+目标：本仓库与远程保持干净，不堆积已完成的 `codex/*` 临时分支。默认不使用外部 Git worktree。
 
 允许清理（全部满足才可删）：
 
 - 分支内容已合并进目标分支（可用 `git branch --merged` / PR merged 确认）
-- 对应 worktree 工作区干净、无未提交改动
-- 不是当前检出分支，也不是其他活跃 agent 正在使用的分支/worktree
+- 工作区干净、无未提交改动（或改动与本清理无关）
+- 不是当前检出分支，也不是其他活跃 agent 正在使用的分支
 - 不是 `main` / 受保护的发布分支
 
 推荐顺序：
 
-1. 确认当前在 `main`（或已回到主工作树）
+1. 确认当前在 `main`（或目标集成分支）
 2. `git fetch --prune` 同步远程删除
 3. 删除已合并的本地分支：`git branch -d <branch>`（优先 `-d`，避免误删未合并历史）
 4. 若远程仍留有已合并分支且用户允许删除远程：`git push origin --delete <branch>`
-5. 已集成且干净的 worktree：先 `git worktree remove <path>`，再删本地分支
-6. 汇报清理了哪些分支/worktree；跳过的写明原因
+5. 若历史上残留外部 worktree：仅在用户明确要求时 `git worktree remove` / `git worktree prune`
+6. 汇报清理了哪些分支；跳过的写明原因
 
 禁止：
 
-- `git push --force` / `git reset --hard` / 删除其他 agent 未完成的分支或含未提交改动的 worktree
+- `git push --force` / `git reset --hard` / 删除其他 agent 未完成的分支
 - 为“清理干净”而丢弃未合并的有用提交
+- 默认新建 `RAGForge-worktrees/` 等外部 worktree
 
 ## B. 推送后的 GitHub Actions 维护
 

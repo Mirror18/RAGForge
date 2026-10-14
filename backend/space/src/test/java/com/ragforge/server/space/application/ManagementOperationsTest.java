@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.application;
+package com.ragforge.server.space.application;
 
 import com.ragforge.server.shared.domain.SessionPrincipal;
 import com.ragforge.server.space.domain.SpaceAuthorization;

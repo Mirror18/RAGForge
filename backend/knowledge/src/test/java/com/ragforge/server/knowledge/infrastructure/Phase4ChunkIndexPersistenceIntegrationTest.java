@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.infrastructure;
+package com.ragforge.server.knowledge.infrastructure;
 
 import java.time.Instant;
 import java.util.List;

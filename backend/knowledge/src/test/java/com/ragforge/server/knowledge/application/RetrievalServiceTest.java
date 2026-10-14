@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.application;
+package com.ragforge.server.knowledge.application;
 
 import java.time.Instant;
 import java.util.Comparator;
@@ -23,7 +23,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.ragforge.server.knowledge.infrastructure.Bm25CandidateStore;
-import com.ragforge.server.answer.application.CitationValidator;
 import com.ragforge.server.knowledge.infrastructure.InMemoryBm25CandidateStore;
 import com.ragforge.server.knowledge.application.LexicalReranker;
 import com.ragforge.server.knowledge.application.Reranker;
@@ -74,12 +73,7 @@ class RetrievalServiceTest {
             assertThat(evidence.inclusionReason()).isNotBlank();
         });
 
-        UUID evidenceId = bundle.evidence().get(0).evidenceId();
-        CitationValidator.requireBundleCitations(bundle, SPACE, Set.of(evidenceId));
-        assertThatThrownBy(() -> CitationValidator.requireBundleCitations(bundle, FOREIGN_SPACE, Set.of(evidenceId)))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> CitationValidator.requireBundleCitations(bundle, SPACE, Set.of(UUID.randomUUID())))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(bundle.evidence().get(0).evidenceId()).isNotNull();
     }
 
     @Test

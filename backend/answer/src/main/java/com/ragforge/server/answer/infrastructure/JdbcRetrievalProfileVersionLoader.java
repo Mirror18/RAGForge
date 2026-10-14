@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.infrastructure;
+package com.ragforge.server.answer.infrastructure;
 
 import com.ragforge.server.knowledge.domain.ExpansionMode;
 import com.ragforge.server.knowledge.application.RetrievalProfileRepository;

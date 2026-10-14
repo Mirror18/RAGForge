@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.application;
+package com.ragforge.server.answer.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.shared.application.AuditOutboxService;

@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.infrastructure;
+package com.ragforge.server.answer.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.answer.application.AnswerPersistencePort;
@@ -20,6 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.Objects;
 import com.ragforge.server.knowledge.application.IndexRepository;
 import com.ragforge.server.knowledge.application.RetrievalProfileRepository;
+import com.ragforge.server.knowledge.application.RevisionArtifactMaterialService;
 import com.ragforge.server.answer.application.V11RagPromptPort;
 
 /**

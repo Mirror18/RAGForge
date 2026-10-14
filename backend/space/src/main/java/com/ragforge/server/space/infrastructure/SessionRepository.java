@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.infrastructure;
+package com.ragforge.server.space.infrastructure;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

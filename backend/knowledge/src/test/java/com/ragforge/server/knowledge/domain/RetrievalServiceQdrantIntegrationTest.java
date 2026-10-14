@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.domain;
+package com.ragforge.server.knowledge.domain;
 
 import java.net.URI;
 import java.time.Instant;

@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.application;
+package com.ragforge.server.knowledge.application;
 
 import java.time.Instant;
 import java.util.ArrayList;

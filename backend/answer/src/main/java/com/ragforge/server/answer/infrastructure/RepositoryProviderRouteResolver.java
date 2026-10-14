@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.infrastructure;
+package com.ragforge.server.answer.infrastructure;
 
 import com.ragforge.server.space.application.ProviderRepository;
 import com.ragforge.server.space.application.SpaceBindingRepository;

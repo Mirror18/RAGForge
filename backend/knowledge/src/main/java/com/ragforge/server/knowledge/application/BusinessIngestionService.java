@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.application;
+package com.ragforge.server.knowledge.application;
 
 import com.ragforge.server.shared.application.AuditOutboxService;
 import com.ragforge.server.shared.domain.ApiException;

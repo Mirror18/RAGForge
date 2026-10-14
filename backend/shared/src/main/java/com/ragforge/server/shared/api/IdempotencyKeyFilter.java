@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.shared.api;
+package com.ragforge.server.shared.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;

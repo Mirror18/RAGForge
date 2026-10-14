@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.knowledge.infrastructure;
+package com.ragforge.server.knowledge.infrastructure;
 
 import com.ragforge.server.knowledge.application.RevisionArtifactMaterialService;
 import io.minio.MinioClient;

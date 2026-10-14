@@ -1,10 +1,10 @@
 ---
 id: RF-8
 title: 拆 Maven 模块并用架构测试锁跨业务 Repository
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-12 16:19'
-updated_date: '2026-10-12 16:19'
+updated_date: '2026-10-14 09:50'
 labels:
   - speckit
 source: speckit
@@ -27,5 +27,5 @@ token_limit: 8000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 T005 按规格完成，并在 `specs/003-business-services/tasks.md` 勾选一致
+- [x] #1 T005 按规格完成，并在 `specs/003-business-services/tasks.md` 勾选一致
 <!-- AC:END -->

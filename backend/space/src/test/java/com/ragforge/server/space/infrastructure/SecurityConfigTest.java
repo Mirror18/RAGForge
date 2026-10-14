@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.infrastructure;
+package com.ragforge.server.space.infrastructure;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.UserDetailsService;

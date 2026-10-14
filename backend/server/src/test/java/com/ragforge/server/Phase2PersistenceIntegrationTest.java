@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.infrastructure;
+package com.ragforge.server;
 
 import com.ragforge.server.answer.infrastructure.PromptRepository;
 import com.ragforge.server.answer.infrastructure.RunRepository;

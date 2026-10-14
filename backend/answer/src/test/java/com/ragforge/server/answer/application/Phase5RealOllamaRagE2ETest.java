@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.application;
+package com.ragforge.server.answer.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.answer.domain.Answer;

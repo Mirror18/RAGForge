@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.infrastructure;
+package com.ragforge.server.answer.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.space.infrastructure.CredentialResolver;

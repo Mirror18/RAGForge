@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.application;
+package com.ragforge.server.space.application;
 
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;

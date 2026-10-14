@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.shared.application;
+package com.ragforge.server.answer.application;
 
 import com.ragforge.server.answer.infrastructure.JdbcAnswerPersistence;
 import com.ragforge.server.answer.infrastructure.JdbcRunEventStore;

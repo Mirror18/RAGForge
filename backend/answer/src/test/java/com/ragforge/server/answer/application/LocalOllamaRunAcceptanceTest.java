@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.application;
+package com.ragforge.server.answer.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

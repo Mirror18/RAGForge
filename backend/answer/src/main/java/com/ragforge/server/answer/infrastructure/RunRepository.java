@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.infrastructure;
+package com.ragforge.server.answer.infrastructure;
 
 import com.ragforge.server.knowledge.domain.CursorCodec;
 import com.ragforge.server.shared.domain.CursorPage;

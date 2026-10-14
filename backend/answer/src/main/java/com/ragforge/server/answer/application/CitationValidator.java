@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.application;
+package com.ragforge.server.answer.application;
 
 import com.ragforge.server.answer.domain.Citation;
 import com.ragforge.server.answer.application.EvidenceBundleSnapshot;

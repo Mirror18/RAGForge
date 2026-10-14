@@ -2,6 +2,7 @@ package com.ragforge.server.answer.infrastructure;
 
 import com.ragforge.server.space.infrastructure.CancellationToken;
 import com.ragforge.server.answer.application.RetrievalPort;
+import com.ragforge.server.knowledge.application.RevisionArtifactMaterialService;
 import com.ragforge.server.knowledge.domain.EvidenceBundle;
 
 import java.util.Objects;

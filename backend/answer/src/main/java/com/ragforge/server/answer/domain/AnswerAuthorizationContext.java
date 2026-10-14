@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.domain;
+package com.ragforge.server.answer.domain;
 
 import com.ragforge.server.shared.domain.SessionPrincipal;
 import com.ragforge.server.space.domain.SpaceRole;

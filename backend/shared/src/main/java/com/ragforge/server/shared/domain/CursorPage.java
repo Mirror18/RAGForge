@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.shared.domain;
+package com.ragforge.server.shared.domain;
 
 import java.util.List;
 

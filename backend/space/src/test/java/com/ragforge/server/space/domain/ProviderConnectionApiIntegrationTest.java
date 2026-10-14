@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.domain;
+package com.ragforge.server.space.domain;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.api;
+package com.ragforge.server.answer.api;
 
 import com.ragforge.server.knowledge.application.IndexRepository;
 import com.ragforge.server.knowledge.domain.IndexState;

@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.domain;
+package com.ragforge.server.space.domain;
 
 import com.ragforge.server.shared.domain.ApiException;
 import com.ragforge.server.shared.domain.SessionPrincipal;

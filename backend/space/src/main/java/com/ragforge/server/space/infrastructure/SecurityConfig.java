@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.space.infrastructure;
+package com.ragforge.server.space.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.shared.api.CorrelationIdFilter;

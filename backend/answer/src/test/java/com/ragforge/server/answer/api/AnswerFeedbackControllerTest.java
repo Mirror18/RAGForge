@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.api;
+package com.ragforge.server.answer.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ragforge.server.shared.domain.SessionPrincipal;

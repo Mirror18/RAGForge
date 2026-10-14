@@ -1,4 +1,4 @@
-﻿package com.ragforge.server.answer.application;
+package com.ragforge.server.answer.application;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ragforge.server.shared.application.AuditOutboxService;
@@ -11,6 +11,7 @@ import com.ragforge.server.knowledge.application.IndexRepository;
 import com.ragforge.server.space.infrastructure.CancellationToken;
 import com.ragforge.server.space.domain.SpaceAuthorization;
 import com.ragforge.server.knowledge.domain.EvidenceBundle;
+import com.ragforge.server.knowledge.application.ChunkStudioService;
 import com.ragforge.server.knowledge.application.RetrievalProfileRepository;
 import com.ragforge.server.knowledge.application.RetrievalService;
 import jakarta.validation.Valid;
